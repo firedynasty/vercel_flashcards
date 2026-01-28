@@ -733,6 +733,13 @@
 
         <!-- Input Section -->
         <div class="input-section" id="inputSection">
+            <div style="margin-bottom: 10px; display: flex; align-items: center; gap: 10px;">
+                <label style="color: #a8d8ea; font-size: 0.9rem;">Mode:</label>
+                <select id="parseMode" style="padding: 8px 12px; border: none; border-radius: 6px; background: rgba(255, 255, 255, 0.9); font-size: 1rem; cursor: pointer;">
+                    <option value="chinese-english">Chinese → English</option>
+                    <option value="line-memorize">Memorization (English only line-by-line)</option>
+                </select>
+            </div>
             <textarea id="inputTextarea" placeholder='Paste content here. Separate cards with blank lines.
 
 Format:
@@ -1058,6 +1065,43 @@ God loves the world
 
         // ============ PARSING FUNCTIONS ============
         function parseFlashcards(text) {
+            const parseMode = document.getElementById('parseMode').value;
+
+            if (parseMode === 'line-memorize') {
+                return parseLineMemorization(text);
+            } else {
+                return parseChineseEnglish(text);
+            }
+        }
+
+        function parseLineMemorization(text) {
+            const cards = [];
+
+            // Remove leading/trailing """ if present
+            let cleanText = text.trim();
+            if (cleanText.startsWith('"""')) {
+                cleanText = cleanText.substring(3);
+            }
+            if (cleanText.endsWith('"""')) {
+                cleanText = cleanText.substring(0, cleanText.length - 3);
+            }
+
+            // Split by newlines and filter out empty lines and ".." lines
+            const lines = cleanText.split('\n')
+                .map(line => line.trim())
+                .filter(line => line && line !== '..');
+
+            lines.forEach(line => {
+                cards.push({
+                    chinese: line,
+                    english: ''
+                });
+            });
+
+            return cards;
+        }
+
+        function parseChineseEnglish(text) {
             const cards = [];
 
             // Remove leading/trailing """ if present
