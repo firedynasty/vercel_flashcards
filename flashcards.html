@@ -878,12 +878,36 @@ The Bible is the foundation of our faith
             renderFileList();
         }
 
-        async function saveCurrentFile() {
+        function getContentToSave() {
+            // If we have loaded flashcards, reconstruct content from allCards
+            if (allCards.length > 0) {
+                const parseMode = document.getElementById('parseMode').value;
+
+                if (parseMode === 'line-memorize') {
+                    // Save each card's chinese text as a separate line
+                    return allCards.map(card => card.chinese).join('\n');
+                } else {
+                    // Save as Chinese/English pairs separated by blank lines
+                    return allCards.map(card => {
+                        if (card.english) {
+                            return `${card.chinese}\n${card.english}`;
+                        } else {
+                            return card.chinese;
+                        }
+                    }).join('\n\n');
+                }
+            }
+
+            // Fallback to textarea content if no cards loaded
             const textarea = document.getElementById('inputTextarea');
-            const content = textarea.value.trim();
+            return textarea.value.trim();
+        }
+
+        async function saveCurrentFile() {
+            const content = getContentToSave();
 
             if (!content) {
-                alert('No content to save!');
+                alert('No content to save! Load flashcards first.');
                 return;
             }
 
@@ -899,6 +923,10 @@ The Bible is the foundation of our faith
             }
 
             await saveFile(selectedFile, content);
+
+            // Also update textarea to show what was saved
+            const textarea = document.getElementById('inputTextarea');
+            textarea.value = content;
         }
 
         async function saveFile(filename, content) {
