@@ -1547,6 +1547,22 @@ God loves the world
             // Flashcard click: reveal then next
             document.getElementById('flashcard').addEventListener('click', handleFlashcardClick);
 
+            // Click outside main-content to go back one card
+            document.addEventListener('click', (e) => {
+                const mainContent = document.querySelector('.main-content');
+                const sidebar = document.getElementById('sidebar');
+                const sidebarToggle = document.getElementById('sidebarToggle');
+                const paginationContainer = document.getElementById('paginationContainer');
+
+                // Check if click is outside main-content and not on sidebar/pagination
+                if (!mainContent.contains(e.target) &&
+                    !sidebar.contains(e.target) &&
+                    !sidebarToggle.contains(e.target) &&
+                    !paginationContainer.contains(e.target)) {
+                    navigate(-1);
+                }
+            });
+
             // Control buttons
             document.getElementById('speakRevealBtn').addEventListener('click', speakAndReveal);
             document.getElementById('nextSpeakBtn').addEventListener('click', nextAndSpeak);
