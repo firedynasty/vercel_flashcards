@@ -685,6 +685,7 @@
             <select id="languageSelect">
                 <option value="zh-CN">Mandarin</option>
                 <option value="zh-HK">Cantonese</option>
+                <option value="en-US">English</option>
                 <option value="es-ES">Spanish</option>
                 <option value="fr-FR">French</option>
             </select>
@@ -700,7 +701,7 @@
                 <span class="toggle-label" id="autoRevealLabel">Auto Reveal</span>
             </div>
             <button class="speak-btn" id="speakRevealBtn">Speak & Reveal</button>
-            <button class="toggle-btn" id="inputToggle">Input</button>
+            <button class="speak-btn" id="nextSpeakBtn">Next & Speak</button>
         </div>
 
         <!-- Flashcard Section -->
@@ -730,8 +731,8 @@
             </div>
         </div>
 
-        <!-- Input Section (hidden by default) -->
-        <div class="input-section" id="inputSection" style="display: none;">
+        <!-- Input Section -->
+        <div class="input-section" id="inputSection">
             <textarea id="inputTextarea" placeholder='Paste content here. Separate cards with blank lines.
 
 Format:
@@ -755,7 +756,7 @@ The Bible is the foundation of our faith
     </div>
 
     <div class="shortcuts-hint">
-        Arrow keys / Click card: Navigate | Space: Speak & Reveal | S: Speak only | Enter: Toggle Input
+        Arrow keys / Click card: Navigate | Space: Speak & Reveal | S: Speak only
     </div>
 
     <script>
@@ -863,10 +864,6 @@ The Bible is the foundation of our faith
             // Load content into textarea
             const textarea = document.getElementById('inputTextarea');
             textarea.value = content;
-
-            // Show input section and load flashcards
-            document.getElementById('inputSection').style.display = 'block';
-            document.getElementById('inputToggle').classList.add('active');
 
             // Parse and display flashcards
             loadFlashcards();
@@ -1178,6 +1175,13 @@ God loves the world
             }
         }
 
+        function nextAndSpeak() {
+            // Go to next card
+            navigate(1);
+            // Then speak the Chinese text
+            speakChinese();
+        }
+
         function revealEnglish() {
             const englishText = document.getElementById('englishText');
             const tapHint = document.getElementById('tapHint');
@@ -1208,10 +1212,6 @@ God loves the world
             allCards = parseFlashcards(text);
             currentIndex = 0;
             updateDisplay();
-
-            // Hide input section after loading
-            document.getElementById('inputSection').style.display = 'none';
-            document.getElementById('inputToggle').classList.remove('active');
         }
 
         // ============ TEXT-TO-SPEECH ============
@@ -1278,20 +1278,6 @@ God loves the world
             }
 
             speechSynthesis.speak(utterance);
-        }
-
-        // ============ INPUT TOGGLE ============
-        function toggleInputSection() {
-            const inputSection = document.getElementById('inputSection');
-            const inputToggle = document.getElementById('inputToggle');
-
-            if (inputSection.style.display === 'none') {
-                inputSection.style.display = 'block';
-                inputToggle.classList.add('active');
-            } else {
-                inputSection.style.display = 'none';
-                inputToggle.classList.remove('active');
-            }
         }
 
         async function pasteFromClipboard() {
@@ -1519,12 +1505,10 @@ God loves the world
 
             // Control buttons
             document.getElementById('speakRevealBtn').addEventListener('click', speakAndReveal);
+            document.getElementById('nextSpeakBtn').addEventListener('click', nextAndSpeak);
             document.getElementById('loadBtn').addEventListener('click', loadFlashcards);
             document.getElementById('pasteBtn').addEventListener('click', pasteFromClipboard);
             document.getElementById('saveFileBtn').addEventListener('click', saveCurrentFile);
-
-            // Input toggle
-            document.getElementById('inputToggle').addEventListener('click', toggleInputSection);
 
             // Auto-reveal toggle
             const autoRevealToggle = document.getElementById('autoRevealToggle');
@@ -1565,10 +1549,6 @@ God loves the world
                     case 'S':
                         e.preventDefault();
                         speakChinese();
-                        break;
-                    case 'Enter':
-                        e.preventDefault();
-                        toggleInputSection();
                         break;
                 }
             });
