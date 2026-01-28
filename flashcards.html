@@ -1,0 +1,1474 @@
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Language Flashcards Loader</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "Microsoft YaHei", "PingFang SC", system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            color: #fff;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+            color: #a8d8ea;
+            text-align: center;
+        }
+
+        /* Sidebar Styles */
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 250px;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid #333;
+            z-index: 1001;
+            background: #1a1a2e;
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+        }
+
+        .sidebar.open {
+            transform: translateX(0);
+        }
+
+        .sidebar-header {
+            padding: 15px 10px;
+            font-size: 14px;
+            font-weight: bold;
+            border-bottom: 1px solid #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #0d0d1a;
+            color: #4da6ff;
+        }
+
+        .sidebar-header button {
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: inherit;
+            font-size: 16px;
+        }
+
+        .sidebar-access-code {
+            padding: 10px;
+            border-bottom: 1px solid #333;
+        }
+
+        .sidebar-access-code input {
+            width: 80px;
+            padding: 8px 12px;
+            font-size: 14px;
+            border: 2px solid #ff9800;
+            border-radius: 6px;
+            background: #2a2a2a;
+            color: #fff;
+            outline: none;
+        }
+
+        .sidebar-access-code span {
+            margin-left: 8px;
+            font-size: 12px;
+            color: #888;
+        }
+
+        .sidebar-new-file-btn {
+            margin: 10px;
+            padding: 12px 16px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .sidebar-new-file-btn:hover {
+            background: #45a049;
+        }
+
+        .sidebar-file-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .sidebar-file-item {
+            margin-bottom: 8px;
+            padding: 10px;
+            background: #2c2c3e;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: white;
+        }
+
+        .sidebar-file-item.selected {
+            background: #3B82F6;
+        }
+
+        .sidebar-file-item:hover {
+            background: #3d3d52;
+        }
+
+        .sidebar-file-item.selected:hover {
+            background: #2563EB;
+        }
+
+        .sidebar-file-name {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-size: 13px;
+        }
+
+        .sidebar-file-actions {
+            display: flex;
+            gap: 4px;
+        }
+
+        .sidebar-file-actions button {
+            padding: 4px 8px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .sidebar-edit-btn {
+            background: #2196F3;
+            color: white;
+        }
+
+        .sidebar-delete-btn {
+            background: #f44336;
+            color: white;
+        }
+
+        .sidebar-refresh-btn {
+            margin: 10px;
+            padding: 10px 16px;
+            background: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+        }
+
+        .sidebar-refresh-btn:hover {
+            background: #1976D2;
+        }
+
+        .sidebar-no-files {
+            padding: 20px;
+            color: #888;
+        }
+
+        .sidebar-rename-input {
+            flex: 1;
+            padding: 4px;
+            background: #1a1a2e;
+            border: 1px solid #444;
+            border-radius: 3px;
+            color: white;
+            font-size: 12px;
+        }
+
+        .sidebar-rename-confirm {
+            padding: 4px 8px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 11px;
+        }
+
+        .sidebar-rename-cancel {
+            padding: 4px 8px;
+            background: #666;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 11px;
+        }
+
+        .sidebar-toggle-btn {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            z-index: 1000;
+            padding: 8px 16px;
+            background: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .sidebar-toggle-btn:hover {
+            background: #1976D2;
+        }
+
+        .sidebar.open ~ .sidebar-toggle-btn {
+            left: 260px;
+        }
+
+        /* Pagination Container */
+        #paginationContainer {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            position: fixed;
+            top: 10px;
+            left: 130px;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.15);
+            padding: 8px 12px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+
+        .sidebar.open ~ #paginationContainer {
+            left: 380px;
+        }
+
+        .nav-btn {
+            width: 36px;
+            height: 36px;
+            border: none;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .nav-btn:hover {
+            background: rgba(255, 255, 255, 0.4);
+            transform: scale(1.1);
+        }
+
+        .nav-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .counter {
+            font-size: 14px;
+            color: #fff;
+            white-space: nowrap;
+            padding: 0 10px;
+        }
+
+        /* Main Content Area */
+        .main-content {
+            margin-top: 70px;
+            width: 100%;
+            max-width: 800px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        /* Flashcard */
+        .flashcard-container {
+            width: 100%;
+            perspective: 1000px;
+        }
+
+        .flashcard {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 40px 30px;
+            text-align: center;
+            min-height: 200px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .flashcard:hover {
+            border-color: rgba(168, 216, 234, 0.5);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .chinese-text {
+            font-size: 2.5rem;
+            line-height: 1.6;
+            color: #fff;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+
+        .english-text {
+            font-size: 1.2rem;
+            color: #a8d8ea;
+            line-height: 1.5;
+            opacity: 0;
+            max-height: 0;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .english-text.revealed {
+            opacity: 1;
+            max-height: 200px;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .tap-hint {
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.5);
+            margin-top: 15px;
+        }
+
+        .tap-hint.hidden {
+            display: none;
+        }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-bottom: 15px;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 1rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        button:active {
+            transform: scale(0.95);
+        }
+
+        .speak-btn {
+            background: #10B981;
+            color: white;
+        }
+
+        .speak-btn:hover {
+            background: #059669;
+        }
+
+        .reveal-btn {
+            background: #3B82F6;
+            color: white;
+        }
+
+        .reveal-btn:hover {
+            background: #2563EB;
+        }
+
+        .clear-btn {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .grid-btn {
+            background: #3498db;
+            color: white;
+        }
+
+        .dark-btn {
+            background: #374151;
+            color: white;
+        }
+
+        .dark-btn.active {
+            background: #fbbf24;
+            color: #000;
+        }
+
+        .paste-btn {
+            background: #8b5cf6;
+            color: white;
+        }
+
+        .paste-btn:hover {
+            background: #7c3aed;
+        }
+
+        /* Language Selector */
+        .language-selector {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+        }
+
+        .language-selector label {
+            color: #a8d8ea;
+            font-size: 0.9rem;
+        }
+
+        select {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.9);
+            font-size: 1rem;
+            cursor: pointer;
+        }
+
+        /* Textarea for input */
+        .input-section {
+            width: 100%;
+            margin-bottom: 20px;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 150px;
+            padding: 15px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            font-family: inherit;
+            font-size: 1rem;
+            resize: vertical;
+        }
+
+        textarea::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #a8d8ea;
+        }
+
+        .input-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .load-btn {
+            background: #10B981;
+            color: white;
+            flex: 1;
+        }
+
+        .input-buttons .paste-btn {
+            flex: 1;
+        }
+
+        /* Canvas Section */
+        .canvas-section {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .canvas-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .stroke-control {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #a8d8ea;
+        }
+
+        input[type="range"] {
+            width: 80px;
+        }
+
+        .canvas-container {
+            position: relative;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        canvas {
+            display: block;
+            background: #fff;
+            touch-action: none;
+        }
+
+        .grid-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            opacity: 0.3;
+        }
+
+        .hint {
+            margin-top: 15px;
+            color: #888;
+            font-size: 0.9rem;
+        }
+
+        /* Toggle button */
+        .toggle-btn {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .toggle-btn.active {
+            background: #3B82F6;
+            border-color: #3B82F6;
+        }
+
+        /* Keyboard shortcuts hint */
+        .shortcuts-hint {
+            position: fixed;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.7);
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            color: #888;
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <span>DOCUMENTS</span>
+            <button onclick="toggleSidebar()">&#10005;</button>
+        </div>
+        <div class="sidebar-access-code" id="accessCodeSection" style="display: none;">
+            <input type="text" id="accessCodeInput" placeholder="123" autocomplete="off">
+            <span>Access code</span>
+        </div>
+        <button class="sidebar-new-file-btn" onclick="createNewFile()">+ New File</button>
+        <div class="sidebar-file-list" id="fileList">
+            <div class="sidebar-no-files">No files yet</div>
+        </div>
+        <button class="sidebar-refresh-btn" onclick="loadFiles()">Refresh</button>
+    </div>
+
+    <!-- Sidebar Toggle Button -->
+    <button class="sidebar-toggle-btn" id="sidebarToggle" onclick="toggleSidebar()">&#9776; Files</button>
+
+    <!-- Pagination -->
+    <div id="paginationContainer">
+        <button class="nav-btn" id="prevBtn">&#9664;</button>
+        <span class="counter" id="counterDisplay">0/0</span>
+        <button class="nav-btn" id="nextBtn">&#9654;</button>
+    </div>
+
+    <div class="main-content">
+        <h1>Language Study Flashcards Loader</h1>
+
+        <!-- Language Selector & Controls -->
+        <div class="language-selector">
+            <label>Language:</label>
+            <select id="languageSelect">
+                <option value="zh-CN">Mandarin</option>
+                <option value="zh-HK">Cantonese</option>
+                <option value="es-ES">Spanish</option>
+                <option value="fr-FR">French</option>
+            </select>
+            <select id="speechRate">
+                <option value="0.7">0.7x</option>
+                <option value="1" selected>1x</option>
+            </select>
+            <button class="speak-btn" id="speakBtn">Speak</button>
+            <button class="reveal-btn" id="revealBtn">Reveal</button>
+            <button class="toggle-btn" id="inputToggle">Input</button>
+        </div>
+
+        <!-- Flashcard Section -->
+        <div class="flashcard-container" id="flashcardSection">
+            <div class="flashcard" id="flashcard">
+                <div class="chinese-text" id="chineseText">Load flashcards to begin</div>
+                <div class="english-text" id="englishText"></div>
+                <p class="tap-hint" id="tapHint">Tap to speak & reveal</p>
+            </div>
+        </div>
+
+        <!-- Canvas Section (always visible below flashcard) -->
+        <div class="canvas-section" id="canvasSection">
+            <div class="canvas-controls">
+                <button class="clear-btn" onclick="clearCanvas()">Clear</button>
+                <button class="dark-btn" onclick="toggleDarkCanvas()">Dark</button>
+                <button class="grid-btn" onclick="toggleGrid()">Grid</button>
+                <div class="stroke-control">
+                    <label>Stroke:</label>
+                    <input type="range" id="strokeSize" min="2" max="20" value="6" onchange="updateStroke()">
+                </div>
+            </div>
+
+            <div class="canvas-container">
+                <canvas id="drawCanvas"></canvas>
+                <canvas id="gridCanvas" class="grid-overlay"></canvas>
+            </div>
+        </div>
+
+        <!-- Input Section (hidden by default) -->
+        <div class="input-section" id="inputSection" style="display: none;">
+            <textarea id="inputTextarea" placeholder='Paste content here. Separate cards with blank lines.
+
+Format:
+Chinese text (front)
+English text (back)
+
+Example:
+"""
+每天读圣经；
+Read the Bible every day
+
+圣经是我们信仰的基础；
+The Bible is the foundation of our faith
+"""'></textarea>
+            <div class="input-buttons">
+                <button class="paste-btn" id="pasteBtn">Paste from Clipboard</button>
+                <button class="load-btn" id="loadBtn">Load Flashcards</button>
+                <button class="save-file-btn" id="saveFileBtn" style="background: #3B82F6; color: white; flex: 1;">&#128190; Save File</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="shortcuts-hint">
+        Arrow keys: Navigate | Space: Speak & Reveal | S: Speak only | Enter: Toggle Input
+    </div>
+
+    <script>
+        // ============ SIDEBAR & FILE MANAGEMENT ============
+        let files = {};
+        let selectedFile = null;
+        let editingFileName = null;
+        let newFileName = '';
+        const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const toggleBtn = document.getElementById('sidebarToggle');
+            sidebar.classList.toggle('open');
+            if (sidebar.classList.contains('open')) {
+                toggleBtn.innerHTML = '&#9664; Hide';
+            } else {
+                toggleBtn.innerHTML = '&#9776; Files';
+            }
+        }
+
+        async function loadFiles() {
+            try {
+                if (isLocalhost) {
+                    const storedFiles = localStorage.getItem('flashcard-files');
+                    files = storedFiles ? JSON.parse(storedFiles) : {};
+                } else {
+                    const response = await fetch('/api/files');
+                    if (response.ok) {
+                        const data = await response.json();
+                        files = data.files || {};
+                    }
+                }
+                renderFileList();
+            } catch (err) {
+                console.error('Error loading files:', err);
+            }
+        }
+
+        function renderFileList() {
+            const fileListEl = document.getElementById('fileList');
+            const filenames = Object.keys(files).sort();
+
+            if (filenames.length === 0) {
+                fileListEl.innerHTML = '<div class="sidebar-no-files">No files yet</div>';
+                return;
+            }
+
+            fileListEl.innerHTML = filenames.map(filename => {
+                const isSelected = selectedFile === filename;
+                const isEditing = editingFileName === filename;
+
+                if (isEditing) {
+                    return `
+                        <div class="sidebar-file-item ${isSelected ? 'selected' : ''}">
+                            <input type="text" class="sidebar-rename-input" id="renameInput" value="${filename}" onkeypress="if(event.key==='Enter')confirmRename()">
+                            <button class="sidebar-rename-confirm" onclick="confirmRename()">&#10003;</button>
+                            <button class="sidebar-rename-cancel" onclick="cancelRename()">&#10005;</button>
+                        </div>
+                    `;
+                }
+
+                return `
+                    <div class="sidebar-file-item ${isSelected ? 'selected' : ''}" onclick="selectFile('${filename}')">
+                        <span class="sidebar-file-name">${filename}</span>
+                        <div class="sidebar-file-actions" onclick="event.stopPropagation()">
+                            <button class="sidebar-edit-btn" onclick="startRenameFile('${filename}')" title="Rename">&#9998;</button>
+                            <button class="sidebar-delete-btn" onclick="deleteFile('${filename}')" title="Delete">&#128465;</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function createNewFile() {
+            const filename = prompt('Enter filename (e.g., lesson1.txt):');
+            if (!filename) return;
+
+            let finalName = filename;
+            if (!finalName.includes('.')) {
+                finalName += '.txt';
+            }
+
+            if (files[finalName]) {
+                alert('File already exists!');
+                return;
+            }
+
+            // Get current textarea content
+            const textarea = document.getElementById('inputTextarea');
+            const content = textarea.value.trim() || '';
+
+            files[finalName] = content;
+            if (isLocalhost) {
+                localStorage.setItem('flashcard-files', JSON.stringify(files));
+            }
+            selectedFile = finalName;
+            renderFileList();
+        }
+
+        function selectFile(filename) {
+            selectedFile = filename;
+            const content = files[filename] || '';
+
+            // Load content into textarea
+            const textarea = document.getElementById('inputTextarea');
+            textarea.value = content;
+
+            // Show input section and load flashcards
+            document.getElementById('inputSection').style.display = 'block';
+            document.getElementById('inputToggle').classList.add('active');
+
+            // Parse and display flashcards
+            loadFlashcards();
+
+            renderFileList();
+        }
+
+        async function saveCurrentFile() {
+            const textarea = document.getElementById('inputTextarea');
+            const content = textarea.value.trim();
+
+            if (!content) {
+                alert('No content to save!');
+                return;
+            }
+
+            if (!selectedFile) {
+                const filename = prompt('Enter filename (e.g., lesson1.txt):');
+                if (!filename) return;
+
+                let finalName = filename;
+                if (!finalName.includes('.')) {
+                    finalName += '.txt';
+                }
+                selectedFile = finalName;
+            }
+
+            await saveFile(selectedFile, content);
+        }
+
+        async function saveFile(filename, content) {
+            try {
+                if (isLocalhost) {
+                    files[filename] = content;
+                    localStorage.setItem('flashcard-files', JSON.stringify(files));
+                    alert('File saved locally!');
+                } else {
+                    const accessCode = document.getElementById('accessCodeInput').value.trim();
+                    if (accessCode !== '123') {
+                        alert('Please enter access code "123" to save');
+                        return;
+                    }
+
+                    const response = await fetch('/api/files', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            filename: filename,
+                            content: content,
+                            accessCode: accessCode,
+                        }),
+                    });
+
+                    if (response.ok) {
+                        files[filename] = content;
+                        alert('File saved!');
+                    } else {
+                        const data = await response.json();
+                        alert('Error saving: ' + (data.error || 'Unknown error'));
+                    }
+                }
+                renderFileList();
+            } catch (err) {
+                console.error('Error saving file:', err);
+                alert('Error saving file');
+            }
+        }
+
+        async function deleteFile(filename) {
+            if (!confirm(`Delete "${filename}"?`)) return;
+
+            try {
+                if (isLocalhost) {
+                    delete files[filename];
+                    localStorage.setItem('flashcard-files', JSON.stringify(files));
+                    if (selectedFile === filename) {
+                        selectedFile = null;
+                    }
+                } else {
+                    const accessCode = document.getElementById('accessCodeInput').value.trim();
+                    if (accessCode !== '123') {
+                        alert('Please enter access code "123" to delete');
+                        return;
+                    }
+
+                    const response = await fetch(`/api/files?filename=${encodeURIComponent(filename)}`, {
+                        method: 'DELETE',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ accessCode: accessCode }),
+                    });
+
+                    if (response.ok) {
+                        delete files[filename];
+                        if (selectedFile === filename) {
+                            selectedFile = null;
+                        }
+                    } else {
+                        alert('Error deleting file');
+                        return;
+                    }
+                }
+                renderFileList();
+            } catch (err) {
+                console.error('Error deleting file:', err);
+                alert('Error deleting file');
+            }
+        }
+
+        function startRenameFile(filename) {
+            editingFileName = filename;
+            newFileName = filename;
+            renderFileList();
+            setTimeout(() => {
+                const input = document.getElementById('renameInput');
+                if (input) input.focus();
+            }, 0);
+        }
+
+        function cancelRename() {
+            editingFileName = null;
+            newFileName = '';
+            renderFileList();
+        }
+
+        async function confirmRename() {
+            const input = document.getElementById('renameInput');
+            const newName = input ? input.value.trim() : '';
+
+            if (!newName || newName === editingFileName) {
+                cancelRename();
+                return;
+            }
+
+            if (files[newName]) {
+                alert('A file with this name already exists!');
+                return;
+            }
+
+            if (!isLocalhost) {
+                const accessCode = document.getElementById('accessCodeInput').value.trim();
+                if (accessCode !== '123') {
+                    alert('Please enter access code "123" to rename');
+                    return;
+                }
+            }
+
+            const content = files[editingFileName];
+
+            if (isLocalhost) {
+                delete files[editingFileName];
+                files[newName] = content;
+                localStorage.setItem('flashcard-files', JSON.stringify(files));
+                if (selectedFile === editingFileName) {
+                    selectedFile = newName;
+                }
+            } else {
+                await saveFile(newName, content);
+                await deleteFile(editingFileName);
+                selectedFile = newName;
+            }
+
+            editingFileName = null;
+            newFileName = '';
+            renderFileList();
+        }
+
+        // ============ FLASHCARD DATA & STATE ============
+        let allCards = [];
+        let currentIndex = 0;
+        let isRevealed = false;
+
+        // Sample data - will be replaced when user loads content
+        // Format: Chinese text (front) followed by English text (back)
+        // Cards separated by blank lines
+        const sampleData = `"""
+每天读圣经；
+Read the Bible every day
+
+圣经是我们信仰的基础；
+The Bible is the foundation of our faith
+
+圣经是神启示给我们的话语
+The Bible is God's word revealed to us
+
+我们要常常祷告
+We should pray often
+
+神爱世人
+God loves the world
+"""`;
+
+        // ============ PARSING FUNCTIONS ============
+        function parseFlashcards(text) {
+            const cards = [];
+
+            // Remove leading/trailing """ if present
+            let cleanText = text.trim();
+            if (cleanText.startsWith('"""')) {
+                cleanText = cleanText.substring(3);
+            }
+            if (cleanText.endsWith('"""')) {
+                cleanText = cleanText.substring(0, cleanText.length - 3);
+            }
+
+            // Split by double newlines (blank lines) to get each card
+            const segments = cleanText.split(/\n\s*\n+/).filter(s => s.trim());
+
+            segments.forEach(segment => {
+                const lines = segment.trim().split('\n').filter(line => line.trim());
+
+                if (lines.length >= 2) {
+                    // First line with Chinese characters is the front (Chinese)
+                    // Following line(s) are the back (English)
+                    let chinese = '';
+                    let englishLines = [];
+                    let foundChinese = false;
+
+                    for (const line of lines) {
+                        const trimmedLine = line.trim();
+                        // Check if line contains Chinese characters
+                        if (/[\u4e00-\u9fff]/.test(trimmedLine) && !foundChinese) {
+                            chinese = trimmedLine.replace(/[；;]$/, ''); // Remove trailing semicolon
+                            foundChinese = true;
+                        } else if (foundChinese && trimmedLine) {
+                            // Collect all English lines
+                            englishLines.push(trimmedLine.replace(/^[\s•\-]+/, '')); // Remove bullet points
+                        }
+                    }
+
+                    if (chinese) {
+                        cards.push({
+                            chinese: chinese,
+                            english: englishLines.join(' ').trim()
+                        });
+                    }
+                } else if (lines.length === 1) {
+                    // Single line - check if it has Chinese
+                    const line = lines[0].trim();
+                    if (/[\u4e00-\u9fff]/.test(line)) {
+                        cards.push({
+                            chinese: line.replace(/[；;]$/, ''),
+                            english: ''
+                        });
+                    }
+                }
+            });
+
+            return cards;
+        }
+
+        // ============ UI UPDATE FUNCTIONS ============
+        function updateDisplay() {
+            const chineseText = document.getElementById('chineseText');
+            const englishText = document.getElementById('englishText');
+            const counterDisplay = document.getElementById('counterDisplay');
+            const tapHint = document.getElementById('tapHint');
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+
+            if (allCards.length === 0) {
+                chineseText.textContent = 'No flashcards loaded';
+                englishText.textContent = '';
+                counterDisplay.textContent = '0/0';
+                prevBtn.disabled = true;
+                nextBtn.disabled = true;
+                return;
+            }
+
+            const card = allCards[currentIndex];
+            chineseText.textContent = card.chinese;
+            englishText.textContent = card.english;
+            counterDisplay.textContent = `${currentIndex + 1}/${allCards.length}`;
+
+            // Reset reveal state
+            isRevealed = false;
+            englishText.classList.remove('revealed');
+            tapHint.classList.remove('hidden');
+
+            // Update nav buttons
+            prevBtn.disabled = currentIndex === 0;
+            nextBtn.disabled = currentIndex === allCards.length - 1;
+        }
+
+        function handleFlashcardClick() {
+            // Speak the Chinese text
+            speakChinese();
+
+            // Toggle reveal
+            revealEnglish();
+        }
+
+        function revealEnglish() {
+            const englishText = document.getElementById('englishText');
+            const tapHint = document.getElementById('tapHint');
+
+            if (!isRevealed) {
+                isRevealed = true;
+                englishText.classList.add('revealed');
+                tapHint.classList.add('hidden');
+            } else {
+                isRevealed = false;
+                englishText.classList.remove('revealed');
+                tapHint.classList.remove('hidden');
+            }
+        }
+
+        function navigate(direction) {
+            const newIndex = currentIndex + direction;
+            if (newIndex >= 0 && newIndex < allCards.length) {
+                currentIndex = newIndex;
+                updateDisplay();
+            }
+        }
+
+        function loadFlashcards() {
+            const textarea = document.getElementById('inputTextarea');
+            const text = textarea.value.trim() || sampleData;
+
+            allCards = parseFlashcards(text);
+            currentIndex = 0;
+            updateDisplay();
+
+            // Hide input section after loading
+            document.getElementById('inputSection').style.display = 'none';
+            document.getElementById('inputToggle').classList.remove('active');
+        }
+
+        // ============ TEXT-TO-SPEECH ============
+        function speakChinese() {
+            if (allCards.length === 0) return;
+
+            const card = allCards[currentIndex];
+            const languageSelect = document.getElementById('languageSelect');
+            const speechRateSelect = document.getElementById('speechRate');
+            const selectedLang = languageSelect.value;
+            const selectedRate = parseFloat(speechRateSelect.value);
+
+            // Cancel any ongoing speech
+            speechSynthesis.cancel();
+
+            const utterance = new SpeechSynthesisUtterance(card.chinese);
+            utterance.lang = selectedLang;
+            utterance.rate = selectedRate;
+            utterance.pitch = 1;
+            utterance.volume = 1;
+
+            // Voice selection - prioritize Google voices (best quality)
+            const voices = speechSynthesis.getVoices();
+            console.log('Available voices:', voices.length);
+
+            let chineseVoice = null;
+
+            // 1. Try Google voice with exact match
+            chineseVoice = voices.find(v =>
+                v.lang === selectedLang && v.name.includes('Google')
+            );
+            console.log('Google exact match:', chineseVoice?.name);
+
+            // 2. Try Enhanced/Premium voices
+            if (!chineseVoice) {
+                chineseVoice = voices.find(v =>
+                    v.lang === selectedLang &&
+                    (v.name.includes('Enhanced') || v.name.includes('Premium'))
+                );
+                console.log('Enhanced/Premium:', chineseVoice?.name);
+            }
+
+            // 3. Any exact language match
+            if (!chineseVoice) {
+                chineseVoice = voices.find(v => v.lang === selectedLang);
+                console.log('Exact lang match:', chineseVoice?.name);
+            }
+
+            // 4. Starts with language code
+            if (!chineseVoice) {
+                chineseVoice = voices.find(v => v.lang.startsWith(selectedLang));
+                console.log('Starts with match:', chineseVoice?.name);
+            }
+
+            // 5. Any Chinese voice as fallback
+            if (!chineseVoice) {
+                chineseVoice = voices.find(v => v.lang.startsWith('zh'));
+                console.log('Any Chinese fallback:', chineseVoice?.name);
+            }
+
+            if (chineseVoice) {
+                utterance.voice = chineseVoice;
+                console.log('Using voice:', chineseVoice.name, chineseVoice.lang);
+            }
+
+            speechSynthesis.speak(utterance);
+        }
+
+        // ============ INPUT TOGGLE ============
+        function toggleInputSection() {
+            const inputSection = document.getElementById('inputSection');
+            const inputToggle = document.getElementById('inputToggle');
+
+            if (inputSection.style.display === 'none') {
+                inputSection.style.display = 'block';
+                inputToggle.classList.add('active');
+            } else {
+                inputSection.style.display = 'none';
+                inputToggle.classList.remove('active');
+            }
+        }
+
+        async function pasteFromClipboard() {
+            const textarea = document.getElementById('inputTextarea');
+
+            try {
+                // Clear textarea first
+                textarea.value = '';
+
+                // Paste from clipboard
+                const text = await navigator.clipboard.readText();
+                textarea.value = text;
+
+                // After 1 second, trigger load
+                setTimeout(() => {
+                    loadFlashcards();
+                }, 1000);
+            } catch (err) {
+                console.error('Failed to read clipboard:', err);
+                alert('Could not access clipboard. Please paste manually.');
+            }
+        }
+
+        // ============ CANVAS DRAWING ============
+        let canvas, ctx, gridCanvas, gridCtx;
+        let isDrawing = false;
+        let lastX = 0;
+        let lastY = 0;
+        let strokeSizeValue = 6;
+        let showGrid = true;
+        let history = [];
+        let canvasInitialized = false;
+        let isDarkMode = false;
+
+        function initCanvas() {
+            if (canvasInitialized) return;
+
+            canvas = document.getElementById('drawCanvas');
+            ctx = canvas.getContext('2d');
+            gridCanvas = document.getElementById('gridCanvas');
+            gridCtx = gridCanvas.getContext('2d');
+
+            // Size canvas
+            const size = Math.min(window.innerWidth - 40, 400);
+            canvas.width = gridCanvas.width = size;
+            canvas.height = gridCanvas.height = size;
+
+            // Drawing settings
+            ctx.strokeStyle = '#000';
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.lineWidth = strokeSizeValue;
+
+            // Event listeners
+            canvas.addEventListener('mousedown', startDrawing);
+            canvas.addEventListener('mousemove', draw);
+            canvas.addEventListener('mouseup', stopDrawing);
+            canvas.addEventListener('mouseout', stopDrawing);
+            canvas.addEventListener('touchstart', startDrawing);
+            canvas.addEventListener('touchmove', draw);
+            canvas.addEventListener('touchend', stopDrawing);
+
+            drawGrid();
+            canvasInitialized = true;
+        }
+
+        function drawGrid() {
+            if (!gridCtx) return;
+
+            gridCtx.clearRect(0, 0, gridCanvas.width, gridCanvas.height);
+            if (!showGrid) return;
+
+            const size = gridCanvas.width;
+            gridCtx.strokeStyle = isDarkMode ? '#6b7280' : '#ccc';
+            gridCtx.lineWidth = 1;
+
+            // Outer box
+            gridCtx.strokeRect(0, 0, size, size);
+
+            // Cross lines
+            gridCtx.beginPath();
+            gridCtx.moveTo(size/2, 0);
+            gridCtx.lineTo(size/2, size);
+            gridCtx.moveTo(0, size/2);
+            gridCtx.lineTo(size, size/2);
+            gridCtx.stroke();
+
+            // Diagonal guides
+            gridCtx.setLineDash([5, 5]);
+            gridCtx.beginPath();
+            gridCtx.moveTo(0, 0);
+            gridCtx.lineTo(size, size);
+            gridCtx.moveTo(size, 0);
+            gridCtx.lineTo(0, size);
+            gridCtx.stroke();
+            gridCtx.setLineDash([]);
+        }
+
+        function saveState() {
+            history.push(canvas.toDataURL());
+            if (history.length > 20) history.shift();
+        }
+
+        function undo() {
+            if (history.length > 0) {
+                const img = new Image();
+                img.onload = () => {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    ctx.drawImage(img, 0, 0);
+                };
+                history.pop();
+                if (history.length > 0) {
+                    img.src = history[history.length - 1];
+                } else {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                }
+            }
+        }
+
+        function getPos(e) {
+            const rect = canvas.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            return {
+                x: clientX - rect.left,
+                y: clientY - rect.top
+            };
+        }
+
+        function startDrawing(e) {
+            e.preventDefault();
+            saveState();
+            isDrawing = true;
+            const pos = getPos(e);
+            lastX = pos.x;
+            lastY = pos.y;
+        }
+
+        function draw(e) {
+            if (!isDrawing) return;
+            e.preventDefault();
+
+            const pos = getPos(e);
+
+            ctx.beginPath();
+            ctx.moveTo(lastX, lastY);
+            ctx.lineTo(pos.x, pos.y);
+            ctx.stroke();
+
+            lastX = pos.x;
+            lastY = pos.y;
+        }
+
+        function stopDrawing() {
+            isDrawing = false;
+        }
+
+        function clearCanvas() {
+            if (!canvas) return;
+            saveState();
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+
+        function toggleGrid() {
+            showGrid = !showGrid;
+            drawGrid();
+        }
+
+        function toggleDarkCanvas() {
+            isDarkMode = !isDarkMode;
+            const darkBtn = document.querySelector('.dark-btn');
+
+            if (isDarkMode) {
+                // Dark mode: dark gray background, white stroke
+                canvas.style.background = '#374151';
+                ctx.strokeStyle = '#fff';
+                darkBtn.classList.add('active');
+                darkBtn.textContent = 'Light';
+            } else {
+                // Light mode: white background, black stroke
+                canvas.style.background = '#fff';
+                ctx.strokeStyle = '#000';
+                darkBtn.classList.remove('active');
+                darkBtn.textContent = 'Dark';
+            }
+            drawGrid();
+        }
+
+        function updateStroke() {
+            strokeSizeValue = document.getElementById('strokeSize').value;
+            if (ctx) ctx.lineWidth = strokeSizeValue;
+        }
+
+        // ============ EVENT LISTENERS ============
+        document.addEventListener('DOMContentLoaded', () => {
+            // Load voices
+            speechSynthesis.addEventListener('voiceschanged', () => {
+                speechSynthesis.getVoices();
+            });
+
+            // Initialize canvas immediately (always visible)
+            initCanvas();
+
+            // Initialize sidebar
+            loadFiles();
+
+            // Show access code input only on production
+            if (!isLocalhost) {
+                document.getElementById('accessCodeSection').style.display = 'block';
+            }
+
+            // Load sample data initially
+            loadFlashcards();
+
+            // Navigation buttons
+            document.getElementById('prevBtn').addEventListener('click', () => navigate(-1));
+            document.getElementById('nextBtn').addEventListener('click', () => navigate(1));
+
+            // Flashcard click: reveal then next
+            document.getElementById('flashcard').addEventListener('click', handleFlashcardClick);
+
+            // Control buttons
+            document.getElementById('speakBtn').addEventListener('click', speakChinese);
+            document.getElementById('revealBtn').addEventListener('click', revealEnglish);
+            document.getElementById('loadBtn').addEventListener('click', loadFlashcards);
+            document.getElementById('pasteBtn').addEventListener('click', pasteFromClipboard);
+            document.getElementById('saveFileBtn').addEventListener('click', saveCurrentFile);
+
+            // Input toggle
+            document.getElementById('inputToggle').addEventListener('click', toggleInputSection);
+
+            // Keyboard shortcuts
+            document.addEventListener('keydown', (e) => {
+                // Don't handle if typing in textarea
+                if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
+
+                switch(e.key) {
+                    case 'ArrowLeft':
+                        e.preventDefault();
+                        navigate(-1);
+                        break;
+                    case 'ArrowRight':
+                        e.preventDefault();
+                        navigate(1);
+                        break;
+                    case ' ':
+                        e.preventDefault();
+                        handleFlashcardClick();
+                        break;
+                    case 's':
+                    case 'S':
+                        e.preventDefault();
+                        speakChinese();
+                        break;
+                    case 'Enter':
+                        e.preventDefault();
+                        toggleInputSection();
+                        break;
+                }
+            });
+        });
+    </script>
+</body>
+</html>
+

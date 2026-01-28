@@ -1,0 +1,12 @@
+{
+  "name": "vercel-flashcards",
+  "version": "1.0.0",
+  "description": "Language flashcards app with Vercel Blob storage",
+  "scripts": {
+    "start": "npx serve .",
+    "dev": "npx serve ."
+  },
+  "dependencies": {
+    "@vercel/blob": "^0.23.0"
+  }
+}
