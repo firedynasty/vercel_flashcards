@@ -587,6 +587,64 @@
             font-size: 0.8rem;
             color: #888;
         }
+
+        /* Toggle Switch Styles */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 26px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider-toggle {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #555;
+            transition: .4s;
+            border-radius: 26px;
+        }
+
+        .slider-toggle:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        input:checked + .slider-toggle {
+            background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+        }
+
+        input:checked + .slider-toggle:before {
+            transform: translateX(24px);
+        }
+
+        .toggle-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .toggle-label {
+            font-size: 0.85rem;
+            color: #a8d8ea;
+        }
     </style>
 </head>
 <body>
@@ -615,6 +673,7 @@
         <button class="nav-btn" id="prevBtn">&#9664;</button>
         <span class="counter" id="counterDisplay">0/0</span>
         <button class="nav-btn" id="nextBtn">&#9654;</button>
+        <button class="nav-btn" id="resetBtn" title="Go to first card">&#8634;</button>
     </div>
 
     <div class="main-content">
@@ -633,8 +692,14 @@
                 <option value="0.7">0.7x</option>
                 <option value="1" selected>1x</option>
             </select>
-            <button class="speak-btn" id="speakBtn">Speak</button>
-            <button class="reveal-btn" id="revealBtn">Reveal</button>
+            <div class="toggle-group">
+                <label class="switch">
+                    <input type="checkbox" id="autoRevealToggle">
+                    <span class="slider-toggle"></span>
+                </label>
+                <span class="toggle-label" id="autoRevealLabel">Auto Reveal</span>
+            </div>
+            <button class="speak-btn" id="speakRevealBtn">Speak & Reveal</button>
             <button class="toggle-btn" id="inputToggle">Input</button>
         </div>
 
@@ -643,7 +708,7 @@
             <div class="flashcard" id="flashcard">
                 <div class="chinese-text" id="chineseText">Load flashcards to begin</div>
                 <div class="english-text" id="englishText"></div>
-                <p class="tap-hint" id="tapHint">Tap to speak & reveal</p>
+                <p class="tap-hint" id="tapHint">Tap card for next</p>
             </div>
         </div>
 
@@ -690,7 +755,7 @@ The Bible is the foundation of our faith
     </div>
 
     <div class="shortcuts-hint">
-        Arrow keys: Navigate | Space: Speak & Reveal | S: Speak only | Enter: Toggle Input
+        Arrow keys / Click card: Navigate | Space: Speak & Reveal | S: Speak only | Enter: Toggle Input
     </div>
 
     <script>
@@ -972,6 +1037,7 @@ The Bible is the foundation of our faith
         let allCards = [];
         let currentIndex = 0;
         let isRevealed = false;
+        let autoReveal = false;
 
         // Sample data - will be replaced when user loads content
         // Format: Chinese text (front) followed by English text (back)
@@ -1075,10 +1141,18 @@ God loves the world
             englishText.textContent = card.english;
             counterDisplay.textContent = `${currentIndex + 1}/${allCards.length}`;
 
-            // Reset reveal state
-            isRevealed = false;
-            englishText.classList.remove('revealed');
-            tapHint.classList.remove('hidden');
+            // Check auto-reveal toggle
+            if (autoReveal) {
+                // Auto-reveal is ON: show English immediately
+                isRevealed = true;
+                englishText.classList.add('revealed');
+                tapHint.classList.add('hidden');
+            } else {
+                // Auto-reveal is OFF: hide English
+                isRevealed = false;
+                englishText.classList.remove('revealed');
+                tapHint.classList.remove('hidden');
+            }
 
             // Update nav buttons
             prevBtn.disabled = currentIndex === 0;
@@ -1086,11 +1160,22 @@ God loves the world
         }
 
         function handleFlashcardClick() {
+            // Click on flashcard goes to next card
+            navigate(1);
+        }
+
+        function speakAndReveal() {
             // Speak the Chinese text
             speakChinese();
 
-            // Toggle reveal
-            revealEnglish();
+            // Reveal the English (don't toggle, just reveal)
+            const englishText = document.getElementById('englishText');
+            const tapHint = document.getElementById('tapHint');
+            if (!isRevealed) {
+                isRevealed = true;
+                englishText.classList.add('revealed');
+                tapHint.classList.add('hidden');
+            }
         }
 
         function revealEnglish() {
@@ -1424,19 +1509,39 @@ God loves the world
             // Navigation buttons
             document.getElementById('prevBtn').addEventListener('click', () => navigate(-1));
             document.getElementById('nextBtn').addEventListener('click', () => navigate(1));
+            document.getElementById('resetBtn').addEventListener('click', () => {
+                currentIndex = 0;
+                updateDisplay();
+            });
 
             // Flashcard click: reveal then next
             document.getElementById('flashcard').addEventListener('click', handleFlashcardClick);
 
             // Control buttons
-            document.getElementById('speakBtn').addEventListener('click', speakChinese);
-            document.getElementById('revealBtn').addEventListener('click', revealEnglish);
+            document.getElementById('speakRevealBtn').addEventListener('click', speakAndReveal);
             document.getElementById('loadBtn').addEventListener('click', loadFlashcards);
             document.getElementById('pasteBtn').addEventListener('click', pasteFromClipboard);
             document.getElementById('saveFileBtn').addEventListener('click', saveCurrentFile);
 
             // Input toggle
             document.getElementById('inputToggle').addEventListener('click', toggleInputSection);
+
+            // Auto-reveal toggle
+            const autoRevealToggle = document.getElementById('autoRevealToggle');
+
+            // Load saved preference
+            const savedAutoReveal = localStorage.getItem('flashcard-autoReveal');
+            if (savedAutoReveal === 'true') {
+                autoReveal = true;
+                autoRevealToggle.checked = true;
+            }
+
+            autoRevealToggle.addEventListener('change', function() {
+                autoReveal = this.checked;
+                localStorage.setItem('flashcard-autoReveal', autoReveal.toString());
+                // Re-display current card with new setting
+                updateDisplay();
+            });
 
             // Keyboard shortcuts
             document.addEventListener('keydown', (e) => {
@@ -1454,7 +1559,7 @@ God loves the world
                         break;
                     case ' ':
                         e.preventDefault();
-                        handleFlashcardClick();
+                        speakAndReveal();
                         break;
                     case 's':
                     case 'S':
