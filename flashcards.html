@@ -1147,40 +1147,16 @@ God loves the world
             segments.forEach(segment => {
                 const lines = segment.trim().split('\n').filter(line => line.trim());
 
-                if (lines.length >= 2) {
-                    // First line with Chinese characters is the front (Chinese)
-                    // Following line(s) are the back (English)
-                    let chinese = '';
-                    let englishLines = [];
-                    let foundChinese = false;
+                if (lines.length >= 1) {
+                    // First line = front of card
+                    // Second line (if exists) = back of card
+                    const front = lines[0].trim().replace(/[；;]$/, ''); // Remove trailing semicolon
+                    const back = lines.length >= 2 ? lines.slice(1).join(' ').trim() : '';
 
-                    for (const line of lines) {
-                        const trimmedLine = line.trim();
-                        // Check if line contains Chinese characters
-                        if (/[\u4e00-\u9fff]/.test(trimmedLine) && !foundChinese) {
-                            chinese = trimmedLine.replace(/[；;]$/, ''); // Remove trailing semicolon
-                            foundChinese = true;
-                        } else if (foundChinese && trimmedLine) {
-                            // Collect all English lines
-                            englishLines.push(trimmedLine.replace(/^[\s•\-]+/, '')); // Remove bullet points
-                        }
-                    }
-
-                    if (chinese) {
-                        cards.push({
-                            chinese: chinese,
-                            english: englishLines.join(' ').trim()
-                        });
-                    }
-                } else if (lines.length === 1) {
-                    // Single line - check if it has Chinese
-                    const line = lines[0].trim();
-                    if (/[\u4e00-\u9fff]/.test(line)) {
-                        cards.push({
-                            chinese: line.replace(/[；;]$/, ''),
-                            english: ''
-                        });
-                    }
+                    cards.push({
+                        chinese: front,
+                        english: back
+                    });
                 }
             });
 
