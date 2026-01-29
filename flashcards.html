@@ -744,13 +744,6 @@
 
         <!-- Input Section -->
         <div class="input-section" id="inputSection">
-            <div style="margin-bottom: 10px; display: flex; align-items: center; gap: 10px;">
-                <label style="color: #a8d8ea; font-size: 0.9rem;">Mode:</label>
-                <select id="parseMode" style="padding: 8px 12px; border: none; border-radius: 6px; background: rgba(255, 255, 255, 0.9); font-size: 1rem; cursor: pointer;">
-                    <option value="chinese-english">Chinese → English</option>
-                    <option value="line-memorize">Memorization (English only line-by-line)</option>
-                </select>
-            </div>
             <textarea id="inputTextarea" placeholder='Paste content here. Separate cards with blank lines.
 
 Format:
@@ -765,6 +758,13 @@ Read the Bible every day
 圣经是我们信仰的基础；
 The Bible is the foundation of our faith
 """'></textarea>
+            <div style="margin-top: 10px; display: flex; align-items: center; gap: 10px;">
+                <label style="color: #a8d8ea; font-size: 0.9rem;">Mode:</label>
+                <select id="parseMode" style="padding: 8px 12px; border: none; border-radius: 6px; background: rgba(255, 255, 255, 0.9); font-size: 1rem; cursor: pointer;">
+                    <option value="chinese-english">Chinese → English</option>
+                    <option value="line-memorize">Memorization (English only line-by-line)</option>
+                </select>
+            </div>
             <div class="input-buttons">
                 <button class="paste-btn" id="pasteBtn">Paste from Clipboard</button>
                 <button class="load-btn" id="loadBtn">Load Flashcards</button>
@@ -1562,12 +1562,13 @@ God loves the world
             isExpanded = !isExpanded;
             const expandBtn = document.getElementById('expandBtn');
             const flashcard = document.getElementById('flashcard');
-            const newSize = isExpanded
+            const originalSize = Math.min(window.innerWidth - 40, 400);
+            const newWidth = isExpanded
                 ? flashcard.offsetWidth - 20
-                : Math.min(window.innerWidth - 40, 400);
+                : originalSize;
 
-            canvas.width = gridCanvas.width = newSize;
-            canvas.height = gridCanvas.height = newSize;
+            canvas.width = gridCanvas.width = newWidth;
+            canvas.height = gridCanvas.height = originalSize;
 
             // Reapply drawing settings after resize
             ctx.strokeStyle = isDarkMode ? '#fff' : '#000';
@@ -1604,8 +1605,8 @@ God loves the world
             loadFlashcards();
 
             // Navigation buttons
-            document.getElementById('prevBtn').addEventListener('click', () => navigate(-1));
-            document.getElementById('nextBtn').addEventListener('click', () => navigate(1));
+            document.getElementById('prevBtn').addEventListener('click', goBackAndSpeak);
+            document.getElementById('nextBtn').addEventListener('click', nextAndSpeak);
             document.getElementById('resetBtn').addEventListener('click', () => {
                 currentIndex = 0;
                 updateDisplay();
