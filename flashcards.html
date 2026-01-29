@@ -1231,8 +1231,11 @@ God loves the world
         }
 
         function handleFlashcardClick() {
-            // Click on flashcard goes to next card
+            // Tap on flashcard goes forward, speaks if Auto Reveal is on
             navigate(1);
+            if (autoReveal) {
+                speakChinese();
+            }
         }
 
         function goBackAndSpeak() {
