@@ -431,6 +431,15 @@
             color: #000;
         }
 
+        .expand-btn {
+            background: #8b5cf6;
+            color: white;
+        }
+
+        .expand-btn.active {
+            background: #a78bfa;
+        }
+
         .paste-btn {
             background: #8b5cf6;
             color: white;
@@ -720,6 +729,7 @@
                 <button class="clear-btn" onclick="clearCanvas()">Clear</button>
                 <button class="dark-btn" onclick="toggleDarkCanvas()">Dark</button>
                 <button class="grid-btn" onclick="toggleGrid()">Grid</button>
+                <button class="expand-btn" id="expandBtn" onclick="toggleExpandCanvas()">Expand</button>
                 <div class="stroke-control">
                     <label>Stroke:</label>
                     <input type="range" id="strokeSize" min="2" max="20" value="6" onchange="updateStroke()">
@@ -1387,6 +1397,7 @@ God loves the world
         let history = [];
         let canvasInitialized = false;
         let isDarkMode = false;
+        let isExpanded = false;
 
         function initCanvas() {
             if (canvasInitialized) return;
@@ -1545,6 +1556,30 @@ God loves the world
         function updateStroke() {
             strokeSizeValue = document.getElementById('strokeSize').value;
             if (ctx) ctx.lineWidth = strokeSizeValue;
+        }
+
+        function toggleExpandCanvas() {
+            isExpanded = !isExpanded;
+            const expandBtn = document.getElementById('expandBtn');
+            const flashcard = document.getElementById('flashcard');
+            const newSize = isExpanded
+                ? flashcard.offsetWidth - 20
+                : Math.min(window.innerWidth - 40, 400);
+
+            canvas.width = gridCanvas.width = newSize;
+            canvas.height = gridCanvas.height = newSize;
+
+            // Reapply drawing settings after resize
+            ctx.strokeStyle = isDarkMode ? '#fff' : '#000';
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.lineWidth = strokeSizeValue;
+
+            expandBtn.classList.toggle('active', isExpanded);
+            expandBtn.textContent = isExpanded ? 'Shrink' : 'Expand';
+
+            drawGrid();
+            history = [];
         }
 
         // ============ EVENT LISTENERS ============
