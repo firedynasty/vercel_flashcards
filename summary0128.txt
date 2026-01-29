@@ -17,4 +17,7 @@ Summary of Changes - January 28, 2026
 
 Result: Save and load now work together properly - what you save is what you get when you load.
 
-Known limitation: When loading a file, you may need to select the correct parse mode dropdown first, then click "Load Flashcards" again. The parse mode is not saved with the file.
+3. Save parse mode with file content (commit 8ff7506)
+   - Files now saved as JSON: {"mode": "...", "content": "..."}
+   - When loading, parse mode dropdown is automatically set to saved mode
+   - Backward compatible with plain text files
