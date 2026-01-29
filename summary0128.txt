@@ -1,0 +1,20 @@
+Summary of Changes - January 28, 2026
+
+1. Fix save to use flashcard content instead of textarea (commit 3b4c054)
+   - Added getContentToSave() function that reconstructs content from loaded flashcards
+   - Save button now saves the actual flashcard data based on current parse mode:
+     * "line-memorize" mode: saves each card as a separate line
+     * "Front → Back" mode: saves as pairs separated by blank lines
+   - Textarea is updated after save to show what was saved
+
+2. Simplify flashcard parsing to work with any language (commit 720f773)
+   - Removed Chinese character detection from parsing logic
+   - Now uses simple line position:
+     * First line = front of card
+     * Second line = back of card
+     * Single line = back is empty string
+   - Works for any language: Chinese, Spanish, English, etc.
+
+Result: Save and load now work together properly - what you save is what you get when you load.
+
+Known limitation: When loading a file, you may need to select the correct parse mode dropdown first, then click "Load Flashcards" again. The parse mode is not saved with the file.

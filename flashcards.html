@@ -866,7 +866,28 @@ The Bible is the foundation of our faith
 
         function selectFile(filename) {
             selectedFile = filename;
-            const content = files[filename] || '';
+            const fileData = files[filename] || '';
+
+            let content = '';
+            let mode = 'chinese-english'; // default
+
+            // Try to parse as JSON (new format with mode)
+            try {
+                const parsed = JSON.parse(fileData);
+                if (parsed.mode && parsed.content !== undefined) {
+                    mode = parsed.mode;
+                    content = parsed.content;
+                } else {
+                    // Not our JSON format, treat as plain text
+                    content = fileData;
+                }
+            } catch (e) {
+                // Not JSON, treat as plain text (backward compatibility)
+                content = fileData;
+            }
+
+            // Set the parse mode dropdown
+            document.getElementById('parseMode').value = mode;
 
             // Load content into textarea
             const textarea = document.getElementById('inputTextarea');
@@ -922,7 +943,11 @@ The Bible is the foundation of our faith
                 selectedFile = finalName;
             }
 
-            await saveFile(selectedFile, content);
+            // Save as JSON with mode and content
+            const mode = document.getElementById('parseMode').value;
+            const fileData = JSON.stringify({ mode: mode, content: content });
+
+            await saveFile(selectedFile, fileData);
 
             // Also update textarea to show what was saved
             const textarea = document.getElementById('inputTextarea');
