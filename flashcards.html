@@ -482,7 +482,7 @@
 
         textarea {
             width: 100%;
-            min-height: 150px;
+            min-height: 188px;
             padding: 15px;
             border: 2px solid rgba(255, 255, 255, 0.2);
             border-radius: 12px;
@@ -732,7 +732,7 @@
                 <button class="expand-btn" id="expandBtn" onclick="toggleExpandCanvas()">Expand</button>
                 <div class="stroke-control">
                     <label>Stroke:</label>
-                    <input type="range" id="strokeSize" min="2" max="20" value="6" onchange="updateStroke()">
+                    <input type="range" id="strokeSize" min="2" max="20" value="2" onchange="updateStroke()">
                 </div>
             </div>
 
@@ -1392,7 +1392,7 @@ God loves the world
         let isDrawing = false;
         let lastX = 0;
         let lastY = 0;
-        let strokeSizeValue = 6;
+        let strokeSizeValue = 2;
         let showGrid = true;
         let history = [];
         let canvasInitialized = false;
