@@ -678,6 +678,7 @@
 
     <div class="main-content">
         <h1>Language Study Flashcards Loader</h1>
+        <p style="font-size: 0.75rem; color: #666; margin: 0 0 10px 0;">Back and Next & Speak only speak when Auto Reveal is on</p>
 
         <!-- Language Selector & Controls -->
         <div class="language-selector">
@@ -703,14 +704,13 @@
             <button class="speak-btn" id="speakRevealBtn">Back</button>
             <button class="speak-btn" id="nextSpeakBtn">Next & Speak</button>
         </div>
-        <p style="font-size: 0.75rem; color: #666; margin: 5px 0 0 0;">Back and Next & Speak only speak when Auto Reveal is on</p>
 
         <!-- Flashcard Section -->
         <div class="flashcard-container" id="flashcardSection">
             <div class="flashcard" id="flashcard">
                 <div class="chinese-text" id="chineseText">Load flashcards to begin</div>
                 <div class="english-text" id="englishText"></div>
-                <p class="tap-hint" id="tapHint">Tap card for back</p>
+                <p class="tap-hint" id="tapHint">Tap card for next, auto reveal on will speak only</p>
             </div>
         </div>
 
@@ -1231,10 +1231,12 @@ God loves the world
         }
 
         function handleFlashcardClick() {
-            // Tap on flashcard goes forward, speaks if Auto Reveal is on
-            navigate(1);
             if (autoReveal) {
+                // Auto Reveal ON: speak only, don't navigate
                 speakChinese();
+            } else {
+                // Auto Reveal OFF: just go next
+                navigate(1);
             }
         }
 
