@@ -1348,7 +1348,7 @@ God loves the world
         function handleDigitInput(digit) {
             digitBuffer += digit;
             // Show accumulating digits in the counter display
-            document.getElementById('counterDisplay').textContent = digitBuffer + '…/' + allCards.length;
+            document.getElementById('counterDisplay').textContent = digitBuffer + '/' + allCards.length;
             // Reset the timeout on each new digit
             if (digitTimeout) clearTimeout(digitTimeout);
             digitTimeout = setTimeout(() => {
@@ -1360,7 +1360,7 @@ God loves the world
                 } else {
                     updateDisplay(); // restore counter
                 }
-            }, 1500);
+            }, 700);
         }
 
         function loadFlashcards() {
