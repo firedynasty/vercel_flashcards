@@ -1751,6 +1751,15 @@ God loves the world
                         goBackAndSpeak();
                         break;
                     case 'Enter':
+                        e.preventDefault();
+                        if (allCards.length > 0) {
+                            speechSynthesis.cancel();
+                            const msg = new SpeechSynthesisUtterance(`${currentIndex + 1} of ${allCards.length}`);
+                            msg.lang = 'en-US';
+                            msg.rate = 1;
+                            speechSynthesis.speak(msg);
+                        }
+                        break;
                     case 'ArrowUp':
                         e.preventDefault();
                         if (autoReveal) speakChinese();
