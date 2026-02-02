@@ -774,7 +774,7 @@ The Bible is the foundation of our faith
     </div>
 
     <div class="shortcuts-hint">
-        Arrow keys / Click card: Navigate | Space: Back | S: Speak only
+        Arrow keys / Click card: Navigate | Space: Back | S: Speak only | 0-9: Go to card #
     </div>
 
     <script>
@@ -1106,6 +1106,8 @@ The Bible is the foundation of our faith
         let currentIndex = 0;
         let isRevealed = false;
         let autoReveal = false;
+        let digitBuffer = '';
+        let digitTimeout = null;
 
         // Sample data - will be replaced when user loads content
         // Format: Chinese text (front) followed by English text (back)
@@ -1289,6 +1291,37 @@ God loves the world
                 currentIndex = newIndex;
                 updateDisplay();
             }
+        }
+
+        function goToCard(cardNumber) {
+            if (allCards.length === 0) return;
+            if (cardNumber < 1 || cardNumber > allCards.length) {
+                console.warn('Invalid card number:', cardNumber, '(valid: 1-' + allCards.length + ')');
+                return;
+            }
+            currentIndex = cardNumber - 1;
+            updateDisplay();
+            if (autoReveal) {
+                speakChinese();
+            }
+        }
+
+        function handleDigitInput(digit) {
+            digitBuffer += digit;
+            // Show accumulating digits in the counter display
+            document.getElementById('counterDisplay').textContent = digitBuffer + '…/' + allCards.length;
+            // Reset the timeout on each new digit
+            if (digitTimeout) clearTimeout(digitTimeout);
+            digitTimeout = setTimeout(() => {
+                const num = parseInt(digitBuffer, 10);
+                digitBuffer = '';
+                digitTimeout = null;
+                if (num > 0) {
+                    goToCard(num);
+                } else {
+                    updateDisplay(); // restore counter
+                }
+            }, 1500);
         }
 
         function loadFlashcards() {
@@ -1642,8 +1675,15 @@ God loves the world
 
             // Keyboard shortcuts
             document.addEventListener('keydown', (e) => {
-                // Don't handle if typing in textarea
-                if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
+                // Don't handle if typing in textarea or input
+                if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+
+                // Number keys (0-9) for card selection - skip if Cmd/Ctrl held (browser tab switching)
+                if (e.key >= '0' && e.key <= '9' && !e.metaKey && !e.ctrlKey) {
+                    e.preventDefault();
+                    handleDigitInput(e.key);
+                    return;
+                }
 
                 switch(e.key) {
                     case 'ArrowLeft':
