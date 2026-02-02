@@ -1740,15 +1740,19 @@ God loves the world
                 switch(e.key) {
                     case 'ArrowLeft':
                         e.preventDefault();
-                        navigate(-1);
+                        goBackAndSpeak();
                         break;
                     case 'ArrowRight':
                         e.preventDefault();
-                        navigate(1);
+                        nextAndSpeak();
                         break;
                     case ' ':
                         e.preventDefault();
                         goBackAndSpeak();
+                        break;
+                    case 'Enter':
+                        e.preventDefault();
+                        if (autoReveal) speakChinese();
                         break;
                     case 's':
                     case 'S':
