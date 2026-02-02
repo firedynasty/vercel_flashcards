@@ -480,26 +480,50 @@
             margin-bottom: 20px;
         }
 
-        textarea {
-            width: 100%;
-            min-height: 188px;
-            padding: 15px;
+        .textarea-wrapper {
+            display: flex;
             border: 2px solid rgba(255, 255, 255, 0.2);
             border-radius: 12px;
             background: rgba(255, 255, 255, 0.1);
+            overflow: hidden;
+            min-height: 188px;
+        }
+
+        .textarea-wrapper:focus-within {
+            border-color: #a8d8ea;
+        }
+
+        .line-numbers {
+            padding: 15px 8px 15px 10px;
+            background: rgba(255, 255, 255, 0.05);
+            color: rgba(255, 255, 255, 0.4);
+            font-family: monospace;
+            font-size: 0.85rem;
+            line-height: 1.5rem;
+            text-align: right;
+            user-select: none;
+            overflow: hidden;
+            min-width: 36px;
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        textarea {
+            flex: 1;
+            min-height: 188px;
+            padding: 15px;
+            border: none;
+            border-radius: 0;
+            background: transparent;
             color: #fff;
             font-family: inherit;
             font-size: 1rem;
+            line-height: 1.5rem;
             resize: vertical;
+            outline: none;
         }
 
         textarea::placeholder {
             color: rgba(255, 255, 255, 0.5);
-        }
-
-        textarea:focus {
-            outline: none;
-            border-color: #a8d8ea;
         }
 
         .input-buttons {
@@ -744,7 +768,9 @@
 
         <!-- Input Section -->
         <div class="input-section" id="inputSection">
-            <textarea id="inputTextarea" placeholder='Paste content here. Separate cards with blank lines.
+            <div class="textarea-wrapper">
+                <div class="line-numbers" id="lineNumbers">1</div>
+                <textarea id="inputTextarea" placeholder='Paste content here. Separate cards with blank lines.
 
 Format:
 Chinese text (front)
@@ -758,6 +784,7 @@ Read the Bible every day
 圣经是我们信仰的基础；
 The Bible is the foundation of our faith
 """'></textarea>
+            </div>
             <div style="margin-top: 10px; display: flex; align-items: center; gap: 10px;">
                 <label style="color: #a8d8ea; font-size: 0.9rem;">Mode:</label>
                 <select id="parseMode" style="padding: 8px 12px; border: none; border-radius: 6px; background: rgba(255, 255, 255, 0.9); font-size: 1rem; cursor: pointer;">
@@ -903,6 +930,7 @@ The Bible is the foundation of our faith
             // Load content into textarea
             const textarea = document.getElementById('inputTextarea');
             textarea.value = content;
+            updateLineNumbers();
 
             // Parse and display flashcards
             loadFlashcards();
@@ -963,6 +991,7 @@ The Bible is the foundation of our faith
             // Also update textarea to show what was saved
             const textarea = document.getElementById('inputTextarea');
             textarea.value = content;
+            updateLineNumbers();
         }
 
         async function saveFile(filename, content) {
@@ -1201,6 +1230,15 @@ God loves the world
             return cards;
         }
 
+        // ============ LINE NUMBERS ============
+        function updateLineNumbers() {
+            const ta = document.getElementById('inputTextarea');
+            const ln = document.getElementById('lineNumbers');
+            if (!ta || !ln) return;
+            const count = ta.value.split('\n').length || 1;
+            ln.textContent = Array.from({length: count}, (_, i) => i + 1).join('\n');
+        }
+
         // ============ UI UPDATE FUNCTIONS ============
         function updateDisplay() {
             const chineseText = document.getElementById('chineseText');
@@ -1409,6 +1447,7 @@ God loves the world
                 // Paste from clipboard
                 const text = await navigator.clipboard.readText();
                 textarea.value = text;
+                updateLineNumbers();
 
                 // After 1 second, trigger load
                 setTimeout(() => {
@@ -1672,6 +1711,18 @@ God loves the world
                 // Re-display current card with new setting
                 updateDisplay();
             });
+
+            // Line numbers for textarea
+            const textareaEl = document.getElementById('inputTextarea');
+            const lineNumbers = document.getElementById('lineNumbers');
+
+            textareaEl.addEventListener('input', updateLineNumbers);
+            textareaEl.addEventListener('scroll', () => {
+                lineNumbers.scrollTop = textareaEl.scrollTop;
+            });
+
+            // Initial line numbers
+            updateLineNumbers();
 
             // Keyboard shortcuts
             document.addEventListener('keydown', (e) => {
