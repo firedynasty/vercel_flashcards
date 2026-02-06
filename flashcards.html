@@ -990,9 +990,11 @@
             <div class="dbx-modal-body">
                 <!-- Sign-in section -->
                 <div id="dbxSignInSection">
-                    <div class="dbx-app-key-row">
+                    <div class="dbx-app-key-row" id="dbxAppKeyRow" style="display: none;">
                         <input type="text" id="dbxAppKeyInput" placeholder="Dropbox App Key">
-                        <button id="dbxSignInBtn">Sign In</button>
+                    </div>
+                    <div class="dbx-app-key-row">
+                        <button id="dbxSignInBtn" style="flex: 1;">Sign In</button>
                     </div>
                 </div>
                 <!-- Search section -->
@@ -1122,11 +1124,14 @@ The Bible is the foundation of our faith
     <script>
         // ============ DROPBOX INTEGRATION ============
         let dropboxAccessToken = null;
+        let dropboxAppKey = '';
         let currentDropboxFilePath = '';
         let currentDropboxFileName = '';
         let dbxSearchResults = [];
         let dbxFolderPath = '';
         let dbxFolderFiles = [];
+
+        const isLocalhost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
 
         // PKCE helpers
         function generateCodeVerifier() {
@@ -1148,12 +1153,30 @@ The Bible is the foundation of our faith
                 .replace(/=+$/, '');
         }
 
-        function openDropboxModal() {
+        async function fetchDropboxAppKey() {
+            if (isLocalhost) {
+                return localStorage.getItem('dropbox-app-key') || '';
+            }
+            try {
+                const res = await fetch('/api/dropbox-key');
+                const data = await res.json();
+                return data.key || '';
+            } catch {
+                return '';
+            }
+        }
+
+        async function openDropboxModal() {
             document.getElementById('dbxModal').style.display = 'flex';
-            // Restore saved app key
-            const savedKey = localStorage.getItem('dropbox-app-key');
-            if (savedKey) {
-                document.getElementById('dbxAppKeyInput').value = savedKey;
+            // Show input only on localhost
+            if (isLocalhost) {
+                document.getElementById('dbxAppKeyRow').style.display = 'flex';
+                const savedKey = localStorage.getItem('dropbox-app-key');
+                if (savedKey) {
+                    document.getElementById('dbxAppKeyInput').value = savedKey;
+                }
+            } else {
+                document.getElementById('dbxAppKeyRow').style.display = 'none';
             }
             // Show correct section based on auth state
             if (dropboxAccessToken) {
@@ -1174,12 +1197,22 @@ The Bible is the foundation of our faith
         }
 
         async function handleDropboxSignIn() {
-            const appKey = document.getElementById('dbxAppKeyInput').value.trim();
-            if (!appKey) {
-                alert('Please enter a Dropbox App Key');
-                return;
+            let appKey;
+            if (isLocalhost) {
+                appKey = document.getElementById('dbxAppKeyInput').value.trim();
+                if (!appKey) {
+                    alert('Please enter a Dropbox App Key');
+                    return;
+                }
+                localStorage.setItem('dropbox-app-key', appKey);
+            } else {
+                appKey = await fetchDropboxAppKey();
+                if (!appKey) {
+                    alert('Dropbox App Key not configured on server');
+                    return;
+                }
             }
-            localStorage.setItem('dropbox-app-key', appKey);
+            dropboxAppKey = appKey;
 
             const verifier = generateCodeVerifier();
             const challenge = await generateCodeChallenge(verifier);
@@ -1196,8 +1229,9 @@ The Bible is the foundation of our faith
             if (!code) return;
 
             const verifier = sessionStorage.getItem('dropbox_code_verifier');
-            const appKey = localStorage.getItem('dropbox-app-key');
+            const appKey = await fetchDropboxAppKey();
             if (!verifier || !appKey) return;
+            dropboxAppKey = appKey;
 
             const redirectUri = window.location.origin + window.location.pathname;
             const body = new URLSearchParams({
