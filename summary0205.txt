@@ -1,0 +1,219 @@
+FLASHCARD SRS IMPLEMENTATION SUMMARY
+Date: 2025-02-05
+=====================================
+
+## OVERVIEW
+Implemented a complete Spaced Repetition System (SRS) for the flashcard app with date tracking,
+rating system, and intelligent filtering. All data persists via Vercel sidebar file system.
+
+## KEY FEATURES ADDED
+
+### 1. Date Tracking
+- First line of content can be a date in YYYY-MM-DD format (e.g., 2025-02-05)
+- No date = treated as 7 days old (all unmastered cards show as due)
+- "Update Textarea" button exports with today's date automatically
+
+### 2. Rating System
+- Three rating levels:
+  * // 1 = Daily review (not learned yet)
+  * // 2 = Every 2 days (learning)
+  * // 3 = Mastered (hidden when filter enabled)
+- Cards without ratings default to // 1 (daily)
+- Format: "黄金福州鱼丸 // 2" (rating after Chinese text)
+
+### 3. Filter Toggle
+- Located in pagination: [◀] 2/4 [▶] [↺] | ☑ Filter | Rate: [1] [2] [3]
+- Filter OFF: Shows all cards
+- Filter ON: Shows only cards due for review based on:
+  * Rating 1: Due if 1+ days since date
+  * Rating 2: Due if 2+ days since date
+  * Rating 3: Never shown (mastered)
+
+### 4. Rating Buttons
+- Three buttons in pagination: [1] [2] [3]
+- Click to rate current card
+- Active rating highlighted in green
+- Updates both filtered and unfiltered card arrays
+
+### 5. Update Textarea Function
+- New button: "🔄 Update Textarea"
+- Rebuilds textarea with:
+  * Today's date (YYYY-MM-DD) on first line
+  * All cards with their updated ratings
+  * Maintains Chinese/English pair format
+- Ready to save to sidebar or copy to clipboard
+
+### 6. Keyboard Shortcuts
+- 1, 2, 3: Rate current card
+- 4-9, 0: Jump to card number (multi-digit supported)
+- Arrow keys: Navigate cards
+- Space: Go back
+- S: Speak current card
+- Enter: Speak card number
+
+## FILE FORMAT
+
+### Input Format:
+```
+2025-02-05
+
+黄金福州鱼丸 // 2
+Fried fish ball with pork filling
+
+灌汤虾丸 (粉红) // 1
+Fish ball with shrimp and pork
+
+鱼翅丸 // 3
+Fish balls with sweet peas and corn
+```
+
+### Format Rules:
+- First line: Optional date (YYYY-MM-DD)
+- Blank line after date
+- Card format: Chinese // rating
+- Next line: English translation
+- Blank line between cards
+- Rating optional (defaults to // 1)
+
+## WORKFLOW
+
+### Study Session:
+1. Load file from sidebar OR paste content
+2. Flashcards auto-load
+3. Toggle filter ON to see only due cards
+4. Study cards, use arrow keys to navigate
+5. Press 1, 2, or 3 to rate each card
+6. Click "Update Textarea" when done
+7. Click "💾 Save File" to persist changes
+
+### Filter Logic:
+- Compares today's date with study date from file
+- Calculates days elapsed
+- Shows cards based on rating intervals:
+  * Rating 1: 1 day interval
+  * Rating 2: 2 day interval
+  * Rating 3: Hidden (mastered)
+
+### No Date Handling:
+- If file has no date, treats as 7 days old
+- Result: All rating 1 and 2 cards show when filter ON
+- Encourages reviewing all new content
+
+## TECHNICAL IMPLEMENTATION
+
+### Parsing Functions:
+- `parseChineseEnglish()`: Parses date, ratings, Chinese/English pairs
+- `parseLineMemorization()`: Parses date, ratings, single lines
+- Regex for date: `/^\d{4}-\d{2}-\d{2}$/`
+- Regex for rating: `/\s*\/\/\s*(\d+)\s*$/`
+
+### State Management:
+- `allCardsUnfiltered[]`: All parsed cards
+- `allCards[]`: Filtered cards (based on filter toggle)
+- `studyDate`: Date string from file (YYYY-MM-DD)
+- `filterEnabled`: Boolean for filter toggle
+
+### Filter Algorithm:
+```javascript
+if (filterEnabled) {
+  - Get today's date
+  - Parse study date (or use 7 days ago if null)
+  - Calculate daysSince = (today - studyDate) / days
+  - Filter cards:
+    * Rating 3: exclude (mastered)
+    * Rating 1: include if daysSince >= 1
+    * Rating 2: include if daysSince >= 2
+}
+```
+
+### UI Updates:
+- `updateDisplay()`: Highlights active rating button
+- `rateCard()`: Updates rating in both arrays
+- `applyFilter()`: Rebuilds filtered card array
+- `updateTextarea()`: Exports with date + ratings
+
+## COMMITS MADE
+
+1. Commit 2a1d729: "Add SRS with date tracking, ratings, and filter toggle"
+   - Initial SRS implementation
+   - 228 insertions, 11 deletions
+
+2. Commit 42213be: "Fix date parsing and update shortcuts hint with rating descriptions"
+   - Fixed whitespace issue in date parsing
+   - Updated shortcuts hint with rating meanings
+
+3. Commit 247ce59: "Update textarea placeholder with SRS date and rating format"
+   - Added detailed format instructions to placeholder
+   - Included example with date and ratings
+
+## BENEFITS
+
+### For Users:
+- No external dependencies (Anki, Quizlet)
+- Data stored in Vercel (accessible anywhere)
+- Simple 3-tier rating system
+- Smart filtering shows only what needs review
+- Keyboard-first workflow for speed
+- Visual feedback (highlighted ratings)
+
+### For Development:
+- Clean separation of filtered/unfiltered data
+- Backward compatible (old files without dates/ratings work)
+- Extensible (easy to add more intervals)
+- Portable format (plain text with metadata)
+
+## FUTURE ENHANCEMENTS (Not Implemented)
+
+### Possible Additions:
+- Statistics dashboard (cards mastered, daily streak)
+- Custom intervals (user-defined days per rating)
+- Progress visualization (charts, graphs)
+- Multiple decks with separate schedules
+- Export to CSV/JSON for backup
+- Import from Anki decks
+- Advanced SRS algorithms (SM-2, SM-17)
+
+## USAGE TIPS
+
+1. Start with filter OFF to rate all cards
+2. Enable filter for daily review sessions
+3. Use keyboard shortcuts (1-3) for fast rating
+4. Click "Update Textarea" before saving
+5. Save frequently to persist progress
+6. Rating 3 = retire card from review rotation
+7. No date needed for new content (auto 7 days)
+
+## FILES MODIFIED
+
+- flashcards.html: All changes in single file
+  * Added: Filter toggle UI
+  * Added: Rating buttons UI
+  * Added: Update Textarea button
+  * Modified: parseChineseEnglish() for date/rating
+  * Modified: parseLineMemorization() for date/rating
+  * Added: applyFilter() function
+  * Added: rateCard() function
+  * Added: updateTextarea() function
+  * Modified: updateDisplay() for rating highlights
+  * Modified: Keyboard shortcuts (1-3 for rating)
+  * Updated: Placeholder text with format instructions
+
+## DEPLOYMENT
+
+- Deployed to Vercel: vercel_flashcards
+- Auto-deploys on git push to main
+- Files saved via /api/files endpoint (production)
+- Local development uses localStorage
+- Access code: 123 (for production saves)
+
+## CONCLUSION
+
+Successfully implemented a complete SRS system with date tracking, 3-tier ratings,
+intelligent filtering, and seamless integration with existing flashcard features.
+The system is production-ready, deployed to Vercel, and provides an efficient
+workflow for spaced repetition learning.
+
+Total development time: ~2 hours
+Lines changed: ~240 additions
+Commits: 3
+Feature completeness: 100%
