@@ -984,11 +984,6 @@
         <button class="nav-btn" id="nextBtn">&#9654;</button>
         <button class="nav-btn" id="resetBtn" title="Go to first card">&#8634;</button>
         <span style="margin: 0 8px; color: rgba(255,255,255,0.3);">|</span>
-        <label style="font-size: 12px; color: #a8d8ea; display: flex; align-items: center; gap: 4px;">
-            <input type="checkbox" id="filterToggle" style="cursor: pointer;">
-            Filter
-        </label>
-        <span style="margin: 0 8px; color: rgba(255,255,255,0.3);">|</span>
         <span style="font-size: 12px; color: #a8d8ea;">Rate:</span>
         <button class="nav-btn rating-btn" id="rate1Btn" data-rating="1">1 [</button>
         <button class="nav-btn rating-btn" id="rate2Btn" data-rating="2">2 ]</button>
@@ -1065,8 +1060,8 @@
 
         <!-- Big Rating Buttons -->
         <div class="big-rating-row">
-            <button class="big-rating-btn big-rating-1" id="bigRate1Btn">1 Daily</button>
-            <button class="big-rating-btn big-rating-2" id="bigRate2Btn">2 Two Days</button>
+            <button class="big-rating-btn big-rating-1" id="bigRate1Btn">1 Show Daily</button>
+            <button class="big-rating-btn big-rating-2" id="bigRate2Btn">2 Show in 2 Days</button>
             <button class="big-rating-btn big-rating-3" id="bigRate3Btn">3 Mastered</button>
         </div>
 
@@ -1095,19 +1090,15 @@
                 <textarea id="inputTextarea" placeholder='Paste content here. Separate cards with blank lines.
 
 Format (with SRS):
-YYYY-MM-DD (optional date, first line)
-
-Chinese text // 1 (rating: 1=daily, 2=2days, 3=mastered)
+Chinese text // rating // date (1=daily, 2=2days, 3=mastered)
 English text (back)
 
 Example:
 """
-2025-02-05
-
-每天读圣经 // 1
+每天读圣经 // 1 // 2026-02-19
 Read the Bible every day
 
-圣经是我们信仰的基础 // 2
+圣经是我们信仰的基础 // 2 // 2026-02-18
 The Bible is the foundation of our faith
 """'></textarea>
             </div>
@@ -1864,7 +1855,6 @@ The Bible is the foundation of our faith
         let digitBuffer = '';
         let digitTimeout = null;
         // Per-card dates: each card has its own ratedDate field
-        let filterEnabled = false; // Filter toggle state
 
         // Sample data - will be replaced when user loads content
         // Format: Chinese text (front) followed by English text (back)
@@ -2147,20 +2137,13 @@ God loves the world
 
         // ============ SRS FILTER & RATING ============
         function applyFilter() {
-            if (!filterEnabled) {
-                // Filter OFF: show all cards
-                allCards = [...allCardsUnfiltered];
-                return;
-            }
-
-            // Filter ON: show only due cards based on per-card ratedDate
             const today = new Date();
             today.setHours(0, 0, 0, 0);
 
             allCards = allCardsUnfiltered.filter(card => {
                 const rating = card.rating || 1;
 
-                // Rating 3 = mastered, don't show
+                // Rating 3 = mastered, never show
                 if (rating === 3) return false;
 
                 // Use per-card ratedDate, or treat as 7 days ago if missing
@@ -2176,24 +2159,14 @@ God loves the world
                 // Calculate days since card was rated
                 const daysSince = Math.floor((today - cardDateObj) / (1000 * 60 * 60 * 24));
 
-                // Rating 1: show if 1+ days
-                if (rating === 1) return daysSince >= 1;
+                // Rating 1: always show
+                if (rating === 1) return true;
 
                 // Rating 2: show if 2+ days
                 if (rating === 2) return daysSince >= 2;
 
                 return false;
             });
-        }
-
-        function toggleFilter() {
-            filterEnabled = !filterEnabled;
-
-            // Reset to first card when toggling filter
-            currentIndex = 0;
-
-            applyFilter();
-            updateDisplay();
         }
 
         function rateCard(rating) {
@@ -2596,8 +2569,6 @@ God loves the world
             document.getElementById('updateTextareaBtn').addEventListener('click', updateTextarea);
             document.getElementById('resetRatingsBtn').addEventListener('click', resetAllRatings);
 
-            // Filter toggle
-            document.getElementById('filterToggle').addEventListener('change', toggleFilter);
 
             // Rating buttons
             document.getElementById('rate1Btn').addEventListener('click', () => { rateCard(1); navigate(1); });
