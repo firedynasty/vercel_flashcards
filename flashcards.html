@@ -2591,10 +2591,11 @@ God loves the world
 
             // Keyboard shortcuts
             document.addEventListener('keydown', (e) => {
-                // Cmd+Option+1/2/3 shortcuts (work even in inputs)
-                if ((e.metaKey || e.ctrlKey) && e.altKey && (e.key === '1' || e.key === '2' || e.key === '3')) {
+                // Ctrl+Option+1/2/3 shortcuts (work even in inputs)
+                if (e.ctrlKey && e.altKey && ['Digit1', 'Digit2', 'Digit3'].includes(e.code)) {
                     e.preventDefault();
-                    console.log(`command,option,${e.key}`);
+                    const num = e.code.replace('Digit', '');
+                    console.log(`control,option,${num}`);
                     return;
                 }
 
