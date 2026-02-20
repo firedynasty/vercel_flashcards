@@ -1863,7 +1863,7 @@ The Bible is the foundation of our faith
         let autoReveal = false;
         let digitBuffer = '';
         let digitTimeout = null;
-        let studyDate = null; // Date from top of textarea (YYYY-MM-DD)
+        // Per-card dates: each card has its own ratedDate field
         let filterEnabled = false; // Filter toggle state
 
         // Sample data - will be replaced when user loads content
@@ -1909,41 +1909,33 @@ God loves the world
                 cleanText = cleanText.substring(0, cleanText.length - 3);
             }
 
-            // Check if first line is a date (YYYY-MM-DD format)
+            // Split by newlines and filter out empty lines, ".." lines, and standalone date lines
             const lines = cleanText.split('\n');
-            let startIndex = 0;
-            if (lines.length > 0) {
-                const firstLine = lines[0].trim();
-                const dateMatch = firstLine.match(/^\d{4}-\d{2}-\d{2}$/);
-                if (dateMatch) {
-                    studyDate = firstLine;
-                    startIndex = 1; // Skip first line when parsing cards
-                } else {
-                    studyDate = null;
-                }
-            }
-
-            // Split by newlines and filter out empty lines, ".." lines, and the date line
-            const cardLines = lines.slice(startIndex)
+            const cardLines = lines
                 .map(line => line.trim())
-                .filter(line => line && line !== '..');
+                .filter(line => line && line !== '..' && !line.match(/^\d{4}-\d{2}-\d{2}$/));
 
             cardLines.forEach(line => {
                 let text = line;
                 let rating = 1; // Default rating
+                let ratedDate = null;
 
-                // Check for rating (e.g., "每天读圣经 // 3")
-                const ratingMatch = text.match(/\s*\/\/\s*(\d+)\s*$/);
+                // Check for rating + optional date (e.g., "每天读圣经 // 3 // 2026-02-19")
+                const ratingMatch = text.match(/\s*\/\/\s*(\d+)(?:\s*\/\/\s*(\d{4}-\d{2}-\d{2}))?\s*$/);
                 if (ratingMatch) {
                     rating = parseInt(ratingMatch[1], 10);
-                    // Remove rating from display text
-                    text = text.replace(/\s*\/\/\s*\d+\s*$/, '').trim();
+                    if (ratingMatch[2]) {
+                        ratedDate = ratingMatch[2];
+                    }
+                    // Remove rating and date from display text
+                    text = text.replace(/\s*\/\/\s*\d+(?:\s*\/\/\s*\d{4}-\d{2}-\d{2})?\s*$/, '').trim();
                 }
 
                 cards.push({
                     chinese: text,
                     english: '',
-                    rating: rating
+                    rating: rating,
+                    ratedDate: ratedDate
                 });
             });
 
@@ -1962,47 +1954,43 @@ God loves the world
                 cleanText = cleanText.substring(0, cleanText.length - 3);
             }
 
-            // Check if first line is a date (YYYY-MM-DD format)
+            // Remove standalone date line from first line (backward compat with old format)
             const lines = cleanText.split('\n');
-            let startIndex = 0;
-            if (lines.length > 0) {
-                const firstLine = lines[0].trim();
-                const dateMatch = firstLine.match(/^\d{4}-\d{2}-\d{2}$/);
-                if (dateMatch) {
-                    studyDate = firstLine;
-                    startIndex = 1; // Skip first line when parsing cards
-                    cleanText = lines.slice(1).join('\n').trim(); // Remove date from text and trim
-                } else {
-                    studyDate = null;
-                }
+            if (lines.length > 0 && lines[0].trim().match(/^\d{4}-\d{2}-\d{2}$/)) {
+                cleanText = lines.slice(1).join('\n').trim();
             }
 
             // Split by double newlines (blank lines) to get each card
             const segments = cleanText.split(/\n\s*\n+/).filter(s => s.trim());
 
             segments.forEach(segment => {
-                const lines = segment.trim().split('\n').filter(line => line.trim());
+                const segLines = segment.trim().split('\n').filter(line => line.trim());
 
-                if (lines.length >= 1) {
+                if (segLines.length >= 1) {
                     // First line = front of card
-                    let front = lines[0].trim().replace(/[；;]$/, ''); // Remove trailing semicolon
+                    let front = segLines[0].trim().replace(/[；;]$/, ''); // Remove trailing semicolon
                     let rating = 1; // Default rating
+                    let ratedDate = null;
 
-                    // Check for rating (e.g., "黄金福州鱼丸 // 3")
-                    const ratingMatch = front.match(/\s*\/\/\s*(\d+)\s*$/);
+                    // Check for rating + optional date (e.g., "黄金福州鱼丸 // 3 // 2026-02-19")
+                    const ratingMatch = front.match(/\s*\/\/\s*(\d+)(?:\s*\/\/\s*(\d{4}-\d{2}-\d{2}))?\s*$/);
                     if (ratingMatch) {
                         rating = parseInt(ratingMatch[1], 10);
-                        // Remove rating from display text
-                        front = front.replace(/\s*\/\/\s*\d+\s*$/, '').trim();
+                        if (ratingMatch[2]) {
+                            ratedDate = ratingMatch[2];
+                        }
+                        // Remove rating and date from display text
+                        front = front.replace(/\s*\/\/\s*\d+(?:\s*\/\/\s*\d{4}-\d{2}-\d{2})?\s*$/, '').trim();
                     }
 
                     // Second line (if exists) = back of card
-                    const back = lines.length >= 2 ? lines.slice(1).join(' ').trim() : '';
+                    const back = segLines.length >= 2 ? segLines.slice(1).join(' ').trim() : '';
 
                     cards.push({
                         chinese: front,
                         english: back,
-                        rating: rating
+                        rating: rating,
+                        ratedDate: ratedDate
                     });
                 }
             });
@@ -2165,19 +2153,9 @@ God loves the world
                 return;
             }
 
-            // Filter ON: show only due cards
+            // Filter ON: show only due cards based on per-card ratedDate
             const today = new Date();
             today.setHours(0, 0, 0, 0);
-
-            let studyDateObj = null;
-            if (studyDate) {
-                studyDateObj = new Date(studyDate);
-                studyDateObj.setHours(0, 0, 0, 0);
-            } else {
-                // No date = treat as if studied 7 days ago
-                studyDateObj = new Date(today);
-                studyDateObj.setDate(studyDateObj.getDate() - 7);
-            }
 
             allCards = allCardsUnfiltered.filter(card => {
                 const rating = card.rating || 1;
@@ -2185,8 +2163,18 @@ God loves the world
                 // Rating 3 = mastered, don't show
                 if (rating === 3) return false;
 
-                // Calculate days since study date
-                const daysSince = Math.floor((today - studyDateObj) / (1000 * 60 * 60 * 24));
+                // Use per-card ratedDate, or treat as 7 days ago if missing
+                let cardDateObj;
+                if (card.ratedDate) {
+                    cardDateObj = new Date(card.ratedDate);
+                    cardDateObj.setHours(0, 0, 0, 0);
+                } else {
+                    cardDateObj = new Date(today);
+                    cardDateObj.setDate(cardDateObj.getDate() - 7);
+                }
+
+                // Calculate days since card was rated
+                const daysSince = Math.floor((today - cardDateObj) / (1000 * 60 * 60 * 24));
 
                 // Rating 1: show if 1+ days
                 if (rating === 1) return daysSince >= 1;
@@ -2213,6 +2201,7 @@ God loves the world
 
             const currentCard = allCards[currentIndex];
             currentCard.rating = rating;
+            currentCard.ratedDate = new Date().toISOString().split('T')[0];
 
             // Also update in unfiltered array
             const unfilteredCard = allCardsUnfiltered.find(c =>
@@ -2220,14 +2209,15 @@ God loves the world
             );
             if (unfilteredCard) {
                 unfilteredCard.rating = rating;
+                unfilteredCard.ratedDate = currentCard.ratedDate;
             }
 
             updateDisplay();
         }
 
         function resetAllRatings() {
-            allCardsUnfiltered.forEach(card => { card.rating = 1; });
-            allCards.forEach(card => { card.rating = 1; });
+            allCardsUnfiltered.forEach(card => { card.rating = 1; card.ratedDate = null; });
+            allCards.forEach(card => { card.rating = 1; card.ratedDate = null; });
             updateDisplay();
         }
 
@@ -2235,26 +2225,24 @@ God loves the world
             const textarea = document.getElementById('inputTextarea');
             const parseMode = document.getElementById('parseMode').value;
 
-            // Get today's date in YYYY-MM-DD format
-            const today = new Date();
-            const dateStr = today.toISOString().split('T')[0];
-
-            let content = dateStr + '\n\n';
+            let content = '';
 
             if (parseMode === 'line-memorize') {
-                // Line memorization mode: just the Chinese text
-                content += allCardsUnfiltered.map(card => {
+                // Line memorization mode: just the Chinese text with per-card dates
+                content = allCardsUnfiltered.map(card => {
                     const rating = card.rating || 1;
-                    return `${card.chinese} // ${rating}`;
+                    const dateSuffix = card.ratedDate ? ` // ${card.ratedDate}` : '';
+                    return `${card.chinese} // ${rating}${dateSuffix}`;
                 }).join('\n');
             } else {
-                // Chinese-English mode: pairs separated by blank lines
-                content += allCardsUnfiltered.map(card => {
+                // Chinese-English mode: pairs separated by blank lines with per-card dates
+                content = allCardsUnfiltered.map(card => {
                     const rating = card.rating || 1;
+                    const dateSuffix = card.ratedDate ? ` // ${card.ratedDate}` : '';
                     if (card.english) {
-                        return `${card.chinese} // ${rating}\n${card.english}`;
+                        return `${card.chinese} // ${rating}${dateSuffix}\n${card.english}`;
                     } else {
-                        return `${card.chinese} // ${rating}`;
+                        return `${card.chinese} // ${rating}${dateSuffix}`;
                     }
                 }).join('\n\n');
             }
