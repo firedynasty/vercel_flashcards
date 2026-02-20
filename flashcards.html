@@ -914,6 +914,22 @@
             background: rgba(248, 113, 113, 0.15);
         }
 
+        .dbx-load-folder-btn {
+            width: calc(100% - 20px);
+            margin: 10px;
+            padding: 10px;
+            background: #0061FF;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+        }
+
+        .dbx-load-folder-btn:hover {
+            background: #0052d4;
+        }
+
         .dbx-status {
             font-size: 12px;
             color: #888;
@@ -997,6 +1013,7 @@
             </div>
             <div class="dbx-breadcrumb" id="dbxBreadcrumb"></div>
             <div class="dbx-sidebar-file-list" id="dbxResults"></div>
+            <button id="dbxLoadFolderBtn" class="dbx-load-folder-btn" style="display: none;">Load This Folder (<span id="dbxFileCount">0</span> files)</button>
             <button id="dbxSignOutBtn" class="dbx-sign-out-btn">Sign Out</button>
         </div>
     </div>
@@ -1110,6 +1127,7 @@ The Bible is the foundation of our faith
         let currentDropboxFilePath = '';
         let currentDropboxFileName = '';
         let dbxRootFilesLoaded = false;
+        let dbxCurrentFolderFiles = [];
 
         const isLocalhost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
 
@@ -1266,7 +1284,9 @@ The Bible is the foundation of our faith
             currentDropboxFilePath = '';
             currentDropboxFileName = '';
             dbxRootFilesLoaded = false;
+            dbxCurrentFolderFiles = [];
             document.getElementById('dbxSaveBtn').style.display = 'none';
+            document.getElementById('dbxLoadFolderBtn').style.display = 'none';
             document.getElementById('dbxSignInSection').style.display = 'block';
             document.getElementById('dbxSearchSection').style.display = 'none';
             document.getElementById('dbxResults').innerHTML = '';
@@ -1278,6 +1298,7 @@ The Bible is the foundation of our faith
             if (!query.trim() || !dropboxAccessToken) return;
             setDbxStatus('Searching...');
             document.getElementById('dbxBreadcrumb').innerHTML = '';
+            document.getElementById('dbxLoadFolderBtn').style.display = 'none';
 
             try {
                 const response = await fetch('https://api.dropboxapi.com/2/files/search_v2', {
@@ -1331,9 +1352,15 @@ The Bible is the foundation of our faith
                     if (a.isFolder !== b.isFolder) return a.isFolder ? -1 : 1;
                     return a.name.localeCompare(b.name);
                 });
+                dbxCurrentFolderFiles = entries.filter(e => !e.isFolder);
                 setDbxStatus(`Loaded ${entries.length} items`);
                 renderDbxBreadcrumb(path);
                 renderDbxResults(entries);
+                // Show load folder button with file count
+                const loadBtn = document.getElementById('dbxLoadFolderBtn');
+                const fileCount = dbxCurrentFolderFiles.length;
+                document.getElementById('dbxFileCount').textContent = fileCount;
+                loadBtn.style.display = fileCount > 0 ? 'block' : 'none';
             } catch (error) {
                 setDbxStatus('Error: ' + error.message);
             }
@@ -1353,6 +1380,45 @@ The Bible is the foundation of our faith
                 html += `<button class="dbx-breadcrumb-link" data-path="${crumbPath}">${part}</button>`;
             });
             container.innerHTML = html;
+        }
+
+        async function loadDropboxFolderFiles() {
+            if (dbxCurrentFolderFiles.length === 0) return;
+            const btn = document.getElementById('dbxLoadFolderBtn');
+            btn.textContent = 'Loading...';
+            btn.disabled = true;
+
+            try {
+                const contents = [];
+                for (const file of dbxCurrentFolderFiles) {
+                    try {
+                        const response = await fetch('https://content.dropboxapi.com/2/files/download', {
+                            method: 'POST',
+                            headers: {
+                                Authorization: `Bearer ${dropboxAccessToken}`,
+                                'Dropbox-API-Arg': JSON.stringify({ path: file.path }),
+                            },
+                        });
+                        if (response.ok) {
+                            const text = await response.text();
+                            contents.push(text);
+                        }
+                    } catch { /* skip unreadable files */ }
+                }
+
+                const textarea = document.getElementById('inputTextarea');
+                textarea.value = contents.join('\n\n');
+                updateLineNumbers();
+                loadFlashcards();
+
+                setDbxStatus(`Loaded ${contents.length} files into textarea`);
+            } catch (error) {
+                setDbxStatus('Error: ' + error.message);
+            } finally {
+                const fileCount = dbxCurrentFolderFiles.length;
+                btn.innerHTML = `Load This Folder (<span id="dbxFileCount">${fileCount}</span> files)`;
+                btn.disabled = false;
+            }
         }
 
         async function loadDropboxFile(path, name) {
@@ -2544,6 +2610,7 @@ God loves the world
                 const link = e.target.closest('.dbx-breadcrumb-link');
                 if (link) loadDropboxFolder(link.dataset.path);
             });
+            document.getElementById('dbxLoadFolderBtn').addEventListener('click', loadDropboxFolderFiles);
             document.getElementById('dbxSaveBtn').addEventListener('click', saveToDropbox);
 
             // Load voices
