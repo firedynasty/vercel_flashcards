@@ -1013,6 +1013,7 @@
             <div class="dbx-search-row" style="padding: 5px 10px 10px;">
                 <input type="text" id="dbxSearchInput" placeholder="Search files...">
                 <button id="dbxSearchBtn">Go</button>
+                <button id="dbxCreateTxtBtn">+ txt</button>
             </div>
             <div class="dbx-breadcrumb" id="dbxBreadcrumb"></div>
             <div class="dbx-sidebar-file-list" id="dbxResults"></div>
@@ -1520,6 +1521,46 @@ The Bible is the foundation of our faith
                 return;
             }
             searchDropboxFiles(query);
+        }
+
+        async function createDbxTxtFile() {
+            if (!dropboxAccessToken) return;
+
+            // Get current folder from breadcrumb
+            const lastCrumb = document.querySelector('#dbxBreadcrumb .dbx-breadcrumb-link:last-child');
+            const folderPath = lastCrumb ? lastCrumb.dataset.path : '';
+
+            const name = window.prompt('Enter filename (without .txt):');
+            if (name === null || name.trim() === '') return;
+
+            const fileName = name.trim().endsWith('.txt') ? name.trim() : name.trim() + '.txt';
+            const targetPath = (folderPath || '') + '/' + fileName;
+
+            setDbxStatus('Creating "' + fileName + '"...');
+            try {
+                const response = await fetch('https://content.dropboxapi.com/2/files/upload', {
+                    method: 'POST',
+                    headers: {
+                        Authorization: 'Bearer ' + dropboxAccessToken,
+                        'Dropbox-API-Arg': JSON.stringify({
+                            path: targetPath,
+                            mode: 'add',
+                            autorename: true,
+                            mute: true,
+                        }),
+                        'Content-Type': 'application/octet-stream',
+                    },
+                    body: '',
+                });
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.error_summary || 'HTTP ' + response.status);
+                }
+                setDbxStatus('Created "' + fileName + '"');
+                loadDropboxFolder(folderPath);
+            } catch (error) {
+                setDbxStatus('Error creating file: ' + error.message);
+            }
         }
 
         // ============ SIDEBAR & FILE MANAGEMENT ============
@@ -2486,6 +2527,7 @@ God loves the world
             document.getElementById('dbxSignInBtn').addEventListener('click', handleDropboxSignIn);
             document.getElementById('dbxSignOutBtn').addEventListener('click', handleDropboxSignOut);
             document.getElementById('dbxSearchBtn').addEventListener('click', handleDbxSearch);
+            document.getElementById('dbxCreateTxtBtn').addEventListener('click', createDbxTxtFile);
             document.getElementById('dbxSearchInput').addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') handleDbxSearch();
             });
