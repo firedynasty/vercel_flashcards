@@ -954,6 +954,82 @@
         .dbx-save-btn:hover {
             background: #0052d4;
         }
+
+        /* Dropbox Content Section */
+        .dbx-content-section {
+            display: none;
+            flex-direction: column;
+            border-top: 1px solid #333;
+            padding: 8px 10px;
+        }
+
+        .dbx-content-toolbar {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 6px;
+            align-items: center;
+        }
+
+        .dbx-content-toolbar button {
+            padding: 5px 10px;
+            border: none;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            color: white;
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .dbx-content-toolbar button:hover {
+            background: rgba(255, 255, 255, 0.25);
+        }
+
+        .dbx-content-toolbar .dbx-toggle-view-btn {
+            background: #0061FF;
+        }
+
+        .dbx-content-toolbar .dbx-toggle-view-btn:hover {
+            background: #0052d4;
+        }
+
+        #dbxContentTextarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.08);
+            color: #e0e0e0;
+            font-size: 13px;
+            font-family: inherit;
+            resize: vertical;
+            outline: none;
+            line-height: 1.5;
+        }
+
+        #dbxContentTextarea:focus {
+            border-color: #4da6ff;
+        }
+
+        #dbxContentView {
+            display: none;
+            max-height: 20lh;
+            overflow-y: auto;
+            padding: 10px 12px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.05);
+            color: #e0e0e0;
+            font-size: 13px;
+            line-height: 1.7;
+        }
+
+        #dbxContentView p {
+            margin-bottom: 0.6em;
+        }
+
+        #dbxContentView p:last-child {
+            margin-bottom: 0;
+        }
     </style>
 </head>
 <body>
@@ -1017,6 +1093,17 @@
             </div>
             <div class="dbx-breadcrumb" id="dbxBreadcrumb"></div>
             <div class="dbx-sidebar-file-list" id="dbxResults"></div>
+            <!-- Content viewer/editor -->
+            <div class="dbx-content-section" id="dbxContentSection">
+                <div class="dbx-content-toolbar">
+                    <button class="dbx-toggle-view-btn" id="dbxToggleViewBtn">View</button>
+                    <button id="dbxSaveBtnSidebar" style="background: #0061FF;">Save &#8593; DB</button>
+                    <button id="dbxFontPlus">A+</button>
+                    <button id="dbxFontMinus">A-</button>
+                </div>
+                <textarea id="dbxContentTextarea" rows="13" placeholder="Dropbox file content will appear here..."></textarea>
+                <div id="dbxContentView"></div>
+            </div>
             <button id="dbxSignOutBtn" class="dbx-sign-out-btn">Sign Out</button>
         </div>
     </div>
@@ -1290,6 +1377,7 @@ The Bible is the foundation of our faith
             dbxRootFilesLoaded = false;
             document.getElementById('dbxSaveBtn').style.display = 'none';
             document.getElementById('saveFileBtn').style.display = '';
+            hideDbxContentSection();
             document.getElementById('dbxSignInSection').style.display = 'block';
             document.getElementById('dbxSearchSection').style.display = 'none';
             document.getElementById('dbxResults').innerHTML = '';
@@ -1399,6 +1487,9 @@ The Bible is the foundation of our faith
                 // Track for saving back
                 currentDropboxFilePath = path;
                 currentDropboxFileName = name;
+
+                // Show content in sidebar
+                showDbxContentSection(content);
 
                 // Show DB save button, hide local save button
                 document.getElementById('dbxSaveBtn').style.display = 'flex';
@@ -1521,6 +1612,64 @@ The Bible is the foundation of our faith
                 return;
             }
             searchDropboxFiles(query);
+        }
+
+        // ============ DROPBOX CONTENT VIEWER ============
+        let dbxContentFontSize = 13;
+        let dbxContentViewMode = false; // false = textarea, true = div view
+
+        function showDbxContentSection(content) {
+            const section = document.getElementById('dbxContentSection');
+            const textarea = document.getElementById('dbxContentTextarea');
+            section.style.display = 'flex';
+            textarea.value = content;
+            // Reset to textarea mode
+            dbxContentViewMode = false;
+            document.getElementById('dbxContentTextarea').style.display = '';
+            document.getElementById('dbxContentView').style.display = 'none';
+            document.getElementById('dbxToggleViewBtn').textContent = 'View';
+        }
+
+        function hideDbxContentSection() {
+            document.getElementById('dbxContentSection').style.display = 'none';
+        }
+
+        function toggleDbxContentView() {
+            dbxContentViewMode = !dbxContentViewMode;
+            const textarea = document.getElementById('dbxContentTextarea');
+            const view = document.getElementById('dbxContentView');
+            const btn = document.getElementById('dbxToggleViewBtn');
+
+            if (dbxContentViewMode) {
+                // Switch to formatted div view
+                const text = textarea.value;
+                const paragraphs = text.split(/\n\s*\n/).filter(p => p.trim());
+                view.innerHTML = paragraphs.length > 0
+                    ? paragraphs.map(p => `<p>${p.replace(/\n/g, '<br>')}</p>`).join('')
+                    : `<p>${text.replace(/\n/g, '<br>')}</p>`;
+                textarea.style.display = 'none';
+                view.style.display = 'block';
+                btn.textContent = 'Edit';
+            } else {
+                // Switch back to textarea
+                textarea.style.display = '';
+                view.style.display = 'none';
+                btn.textContent = 'View';
+            }
+        }
+
+        function changeDbxContentFont(delta) {
+            dbxContentFontSize = Math.max(9, Math.min(24, dbxContentFontSize + delta));
+            document.getElementById('dbxContentTextarea').style.fontSize = dbxContentFontSize + 'px';
+            document.getElementById('dbxContentView').style.fontSize = dbxContentFontSize + 'px';
+        }
+
+        function saveDbxContentToDropbox() {
+            if (!currentDropboxFilePath || !dropboxAccessToken) return;
+            // Update the main textarea with sidebar content, then save
+            const content = document.getElementById('dbxContentTextarea').value;
+            document.getElementById('inputTextarea').value = content;
+            saveToDropbox();
         }
 
         async function createDbxTxtFile() {
@@ -2537,6 +2686,12 @@ God loves the world
                 if (link) loadDropboxFolder(link.dataset.path);
             });
             document.getElementById('dbxSaveBtn').addEventListener('click', saveToDropbox);
+
+            // Dropbox content viewer buttons
+            document.getElementById('dbxToggleViewBtn').addEventListener('click', toggleDbxContentView);
+            document.getElementById('dbxSaveBtnSidebar').addEventListener('click', saveDbxContentToDropbox);
+            document.getElementById('dbxFontPlus').addEventListener('click', () => changeDbxContentFont(1));
+            document.getElementById('dbxFontMinus').addEventListener('click', () => changeDbxContentFont(-1));
 
             // Load voices
             speechSynthesis.addEventListener('voiceschanged', () => {
