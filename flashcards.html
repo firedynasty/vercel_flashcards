@@ -606,6 +606,43 @@
             border-color: #3B82F6;
         }
 
+        /* Big Rating Buttons */
+        .big-rating-row {
+            display: flex;
+            gap: 10px;
+            width: 100%;
+            max-width: 600px;
+            margin: 10px auto;
+        }
+
+        .big-rating-btn {
+            flex: 1;
+            padding: 20px 10px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border: 2px solid transparent;
+            border-radius: 12px;
+            cursor: pointer;
+            color: white;
+            transition: opacity 0.15s;
+        }
+
+        .big-rating-btn:hover {
+            opacity: 0.85;
+        }
+
+        .big-rating-1 {
+            background: #ef4444;
+        }
+
+        .big-rating-2 {
+            background: #f59e0b;
+        }
+
+        .big-rating-3 {
+            background: #22c55e;
+        }
+
         /* Keyboard shortcuts hint */
         .shortcuts-hint {
             position: fixed;
@@ -1024,6 +1061,13 @@
                 <div class="english-text" id="englishText"></div>
                 <p class="tap-hint" id="tapHint">Tap card for next, auto reveal on will speak only</p>
             </div>
+        </div>
+
+        <!-- Big Rating Buttons -->
+        <div class="big-rating-row">
+            <button class="big-rating-btn big-rating-1" id="bigRate1Btn">1 Daily</button>
+            <button class="big-rating-btn big-rating-2" id="bigRate2Btn">2 Two Days</button>
+            <button class="big-rating-btn big-rating-3" id="bigRate3Btn">3 Mastered</button>
         </div>
 
         <!-- Canvas Section (always visible below flashcard) -->
@@ -2572,6 +2616,11 @@ God loves the world
             document.getElementById('rate2Btn').addEventListener('click', () => { rateCard(2); navigate(1); });
             document.getElementById('rate3Btn').addEventListener('click', () => { rateCard(3); navigate(1); });
 
+            // Big rating buttons
+            document.getElementById('bigRate1Btn').addEventListener('click', () => { rateCard(1); navigate(1); });
+            document.getElementById('bigRate2Btn').addEventListener('click', () => { rateCard(2); navigate(1); });
+            document.getElementById('bigRate3Btn').addEventListener('click', () => { rateCard(3); navigate(1); });
+
             // Auto-reveal toggle
             const autoRevealToggle = document.getElementById('autoRevealToggle');
 
@@ -2591,14 +2640,6 @@ God loves the world
 
             // Keyboard shortcuts
             document.addEventListener('keydown', (e) => {
-                // Ctrl+Option+1/2/3 shortcuts (work even in inputs)
-                if (e.ctrlKey && e.altKey && ['Digit1', 'Digit2', 'Digit3'].includes(e.code)) {
-                    e.preventDefault();
-                    const num = e.code.replace('Digit', '');
-                    console.log(`control,option,${num}`);
-                    return;
-                }
-
                 // Don't handle if typing in textarea or input
                 if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
 
