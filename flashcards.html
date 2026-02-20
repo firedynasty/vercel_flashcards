@@ -2591,6 +2591,13 @@ God loves the world
 
             // Keyboard shortcuts
             document.addEventListener('keydown', (e) => {
+                // Cmd+Option+1/2/3 shortcuts (work even in inputs)
+                if ((e.metaKey || e.ctrlKey) && e.altKey && (e.key === '1' || e.key === '2' || e.key === '3')) {
+                    e.preventDefault();
+                    console.log(`command,option,${e.key}`);
+                    return;
+                }
+
                 // Don't handle if typing in textarea or input
                 if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
 
