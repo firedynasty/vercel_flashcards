@@ -1253,6 +1253,7 @@ The Bible is the foundation of our faith
             currentDropboxFileName = '';
             dbxRootFilesLoaded = false;
             document.getElementById('dbxSaveBtn').style.display = 'none';
+            document.getElementById('saveFileBtn').style.display = '';
             document.getElementById('dbxSignInSection').style.display = 'block';
             document.getElementById('dbxSearchSection').style.display = 'none';
             document.getElementById('dbxResults').innerHTML = '';
@@ -1363,8 +1364,9 @@ The Bible is the foundation of our faith
                 currentDropboxFilePath = path;
                 currentDropboxFileName = name;
 
-                // Show save button
+                // Show DB save button, hide local save button
                 document.getElementById('dbxSaveBtn').style.display = 'flex';
+                document.getElementById('saveFileBtn').style.display = 'none';
 
                 // Highlight the loaded file in sidebar
                 document.querySelectorAll('#dbxResults .dbx-result-item').forEach(el => {
