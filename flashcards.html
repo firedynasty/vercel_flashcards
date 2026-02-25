@@ -990,6 +990,8 @@
         <button class="nav-btn rating-btn" id="rate3Btn" data-rating="3">3</button>
         <span style="margin: 0 8px; color: rgba(255,255,255,0.3);">|</span>
         <button class="nav-btn" id="dropboxBtn" title="Dropbox" style="font-size: 12px; font-weight: bold;">DB</button>
+        <button class="nav-btn" id="dbxPrevFileBtn" title="Previous file" disabled>&#9664;</button>
+        <button class="nav-btn" id="dbxNextFileBtn" title="Next file" disabled>&#9654;</button>
     </div>
 
     <!-- Dropbox Sidebar -->
@@ -1023,6 +1025,7 @@
 
     <div class="main-content">
         <h1>Language Study Flashcards Loader</h1>
+        <span id="dbxCurrentFileName" style="display: none; font-size: 0.75rem; color: #a8d8ea; margin-bottom: 6px; text-align: center;"></span>
         <p style="font-size: 0.75rem; color: #666; margin: 0 0 10px 0;">Back and Next & Speak only speak when Auto Reveal is on</p>
 
         <!-- Language Selector & Controls -->
@@ -1132,6 +1135,8 @@ The Bible is the foundation of our faith
         let currentDropboxFilePath = '';
         let currentDropboxFileName = '';
         let dbxRootFilesLoaded = false;
+        let dbxFolderFiles = []; // non-folder entries in current folder
+        let dbxFileIndex = -1;   // index of currently loaded file in dbxFolderFiles
 
         const isLocalhost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
 
@@ -1324,6 +1329,11 @@ The Bible is the foundation of our faith
                         isFolder: metadata['.tag'] === 'folder',
                     };
                 }).filter(item => !item.isFolder);
+                // Store search results for file navigation
+                dbxFolderFiles = results;
+                dbxFileIndex = dbxFolderFiles.findIndex(f => f.path === currentDropboxFilePath);
+                updateDbxFileNavButtons();
+
                 setDbxStatus(`Found ${results.length} files`);
                 renderDbxResults(results, true);
             } catch (error) {
@@ -1354,6 +1364,11 @@ The Bible is the foundation of our faith
                     if (a.isFolder !== b.isFolder) return a.isFolder ? -1 : 1;
                     return a.name.localeCompare(b.name);
                 });
+                // Store non-folder entries for file navigation
+                dbxFolderFiles = entries.filter(e => !e.isFolder);
+                dbxFileIndex = dbxFolderFiles.findIndex(f => f.path === currentDropboxFilePath);
+                updateDbxFileNavButtons();
+
                 setDbxStatus(`Loaded ${entries.length} items`);
                 renderDbxBreadcrumb(path);
                 renderDbxResults(entries);
@@ -1399,6 +1414,15 @@ The Bible is the foundation of our faith
                 // Track for saving back
                 currentDropboxFilePath = path;
                 currentDropboxFileName = name;
+
+                // Update file index for nav buttons
+                dbxFileIndex = dbxFolderFiles.findIndex(f => f.path === path);
+                updateDbxFileNavButtons();
+
+                // Show filename under h1
+                const fileNameSpan = document.getElementById('dbxCurrentFileName');
+                fileNameSpan.textContent = name;
+                fileNameSpan.style.display = 'block';
 
                 // Show DB save button, hide local save button
                 document.getElementById('dbxSaveBtn').style.display = 'flex';
@@ -1505,6 +1529,27 @@ The Bible is the foundation of our faith
                 loadDropboxFolder(path);
             } else {
                 loadDropboxFile(path, name);
+            }
+        }
+
+        function updateDbxFileNavButtons() {
+            const prevBtn = document.getElementById('dbxPrevFileBtn');
+            const nextBtn = document.getElementById('dbxNextFileBtn');
+            prevBtn.disabled = dbxFileIndex <= 0;
+            nextBtn.disabled = dbxFileIndex < 0 || dbxFileIndex >= dbxFolderFiles.length - 1;
+        }
+
+        function dbxPrevFile() {
+            if (dbxFileIndex > 0) {
+                const file = dbxFolderFiles[dbxFileIndex - 1];
+                loadDropboxFile(file.path, file.name);
+            }
+        }
+
+        function dbxNextFile() {
+            if (dbxFileIndex >= 0 && dbxFileIndex < dbxFolderFiles.length - 1) {
+                const file = dbxFolderFiles[dbxFileIndex + 1];
+                loadDropboxFile(file.path, file.name);
             }
         }
 
@@ -2523,6 +2568,8 @@ God loves the world
 
             // Dropbox button listeners
             document.getElementById('dropboxBtn').addEventListener('click', toggleDropboxSidebar);
+            document.getElementById('dbxPrevFileBtn').addEventListener('click', dbxPrevFile);
+            document.getElementById('dbxNextFileBtn').addEventListener('click', dbxNextFile);
             document.getElementById('dbxCloseBtn').addEventListener('click', closeDropboxSidebar);
             document.getElementById('dbxSignInBtn').addEventListener('click', handleDropboxSignIn);
             document.getElementById('dbxSignOutBtn').addEventListener('click', handleDropboxSignOut);
