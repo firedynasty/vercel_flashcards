@@ -222,28 +222,6 @@
             font-size: 11px;
         }
 
-        .sidebar-toggle-btn {
-            position: fixed;
-            top: 10px;
-            left: 10px;
-            z-index: 1000;
-            padding: 8px 16px;
-            background: #2196F3;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-        }
-
-        .sidebar-toggle-btn:hover {
-            background: #1976D2;
-        }
-
-        .sidebar.open ~ .sidebar-toggle-btn {
-            left: 260px;
-        }
-
         /* Pagination Container */
         #paginationContainer {
             display: flex;
@@ -956,7 +934,6 @@
     <div class="sidebar" id="sidebar">
         <div class="sidebar-header">
             <span>DOCUMENTS</span>
-            <button onclick="toggleSidebar()">&#10005;</button>
         </div>
         <div class="sidebar-access-code" id="accessCodeSection" style="display: none;">
             <input type="text" id="accessCodeInput" placeholder="123" autocomplete="off">
@@ -968,9 +945,6 @@
         </div>
         <button class="sidebar-refresh-btn" onclick="loadFiles()">Refresh</button>
     </div>
-
-    <!-- Sidebar Toggle Button -->
-    <button class="sidebar-toggle-btn" id="sidebarToggle" onclick="toggleSidebar()" style="display: none;">&#9776; Files</button>
 
     <!-- Pagination -->
     <div id="paginationContainer">
@@ -1604,17 +1578,6 @@ The Bible is the foundation of our faith
         let selectedFile = null;
         let editingFileName = null;
         let newFileName = '';
-
-        function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            const toggleBtn = document.getElementById('sidebarToggle');
-            sidebar.classList.toggle('open');
-            if (sidebar.classList.contains('open')) {
-                toggleBtn.innerHTML = '&#9664; Hide';
-            } else {
-                toggleBtn.innerHTML = '&#9776; Files';
-            }
-        }
 
         async function loadFiles() {
             try {
