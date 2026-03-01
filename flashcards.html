@@ -31,17 +31,45 @@
         /* Pagination Container */
         #paginationContainer {
             display: flex;
+            flex-wrap: wrap;
             align-items: center;
             gap: 8px;
             position: fixed;
             top: 10px;
             left: 130px;
+            right: 10px;
             z-index: 1000;
             background: rgba(255, 255, 255, 0.15);
             padding: 8px 12px;
             border-radius: 20px;
             backdrop-filter: blur(10px);
             box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+
+        /* Line 1: nav + rating buttons */
+        .nav-line1 {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Line 2: Dropbox controls - wraps to second row on mobile */
+        .nav-line2 {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+            margin-top: 4px;
+        }
+
+        @media (min-width: 768px) {
+            #paginationContainer {
+                right: auto;
+            }
+            .nav-line2 {
+                width: auto;
+                margin-top: 0;
+            }
         }
 
         .nav-btn {
@@ -734,19 +762,25 @@
 <body>
     <!-- Pagination -->
     <div id="paginationContainer">
-        <button class="nav-btn" id="prevBtn">&#9664;</button>
-        <span class="counter" id="counterDisplay">0/0</span>
-        <button class="nav-btn" id="nextBtn">&#9654;</button>
-        <button class="nav-btn" id="resetBtn" title="Go to first card">&#8634;</button>
-        <span style="margin: 0 8px; color: rgba(255,255,255,0.3);">|</span>
-        <span style="font-size: 12px; color: #a8d8ea;">Rate:</span>
-        <button class="nav-btn rating-btn" id="rate1Btn" data-rating="1">1</button>
-        <button class="nav-btn rating-btn" id="rate2Btn" data-rating="2">2</button>
-        <button class="nav-btn rating-btn" id="rate3Btn" data-rating="3">3</button>
-        <span style="margin: 0 8px; color: rgba(255,255,255,0.3);">|</span>
-        <button class="nav-btn" id="dropboxBtn" title="Dropbox" style="font-size: 12px; font-weight: bold;">DB</button>
-        <button class="nav-btn" id="dbxPrevFileBtn" title="Previous file" disabled>&#9664;</button>
-        <button class="nav-btn" id="dbxNextFileBtn" title="Next file" disabled>&#9654;</button>
+        <!-- Line 1: Navigation + Rating -->
+        <div class="nav-line1">
+            <button class="nav-btn" id="prevBtn">&#9664;</button>
+            <span class="counter" id="counterDisplay">0/0</span>
+            <button class="nav-btn" id="nextBtn">&#9654;</button>
+            <button class="nav-btn" id="resetBtn" title="Go to first card">&#8634;</button>
+            <span style="margin: 0 8px; color: rgba(255,255,255,0.3);">|</span>
+            <span style="font-size: 12px; color: #a8d8ea;">Rate:</span>
+            <button class="nav-btn rating-btn" id="rate1Btn" data-rating="1">1</button>
+            <button class="nav-btn rating-btn" id="rate2Btn" data-rating="2">2</button>
+            <button class="nav-btn rating-btn" id="rate3Btn" data-rating="3">3</button>
+        </div>
+        <!-- Line 2: Dropbox controls - wraps below on mobile -->
+        <div class="nav-line2">
+            <span style="margin: 0 4px; color: rgba(255,255,255,0.3);">|</span>
+            <button class="nav-btn" id="dropboxBtn" title="Dropbox" style="font-size: 12px; font-weight: bold;">DB</button>
+            <button class="nav-btn" id="dbxPrevFileBtn" title="Previous file" disabled>&#9664;</button>
+            <button class="nav-btn" id="dbxNextFileBtn" title="Next file" disabled>&#9654;</button>
+        </div>
     </div>
 
     <!-- Dropbox Sidebar -->
