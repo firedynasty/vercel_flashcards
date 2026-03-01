@@ -517,6 +517,28 @@
             color: #a8d8ea;
         }
 
+        .mode-toggle-btn {
+            padding: 4px 12px;
+            border: none;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s, color 0.2s;
+            background: #555;
+            color: #999;
+        }
+
+        .mode-toggle-btn.reveal-active {
+            background: #10B981;
+            color: #fff;
+        }
+
+        .mode-toggle-btn.speak-active {
+            background: #3B82F6;
+            color: #fff;
+        }
+
         /* Dropbox Sidebar Styles */
         .dbx-sidebar {
             position: fixed;
@@ -831,13 +853,8 @@
                 <option value="0.7">0.7x</option>
                 <option value="1" selected>1x</option>
             </select>
-            <div class="toggle-group">
-                <label class="switch">
-                    <input type="checkbox" id="autoRevealToggle">
-                    <span class="slider-toggle"></span>
-                </label>
-                <span class="toggle-label" id="autoRevealLabel">Auto Reveal</span>
-            </div>
+            <button class="mode-toggle-btn" id="autoRevealBtn">Reveal</button>
+            <button class="mode-toggle-btn" id="autoSpeakBtn">Speak</button>
             <button class="speak-btn" id="speakRevealBtn">Back</button>
             <button class="speak-btn" id="nextSpeakBtn">Next & Speak</button>
         </div>
@@ -1399,6 +1416,7 @@ The Bible is the foundation of our faith
         let currentIndex = 0;
         let isRevealed = false;
         let autoReveal = false;
+        let autoSpeak = false;
         // Per-card dates: each card has its own ratedDate field
 
         // Sample data - will be replaced when user loads content
@@ -1589,11 +1607,11 @@ God loves the world
         }
 
         function handleFlashcardClick() {
-            if (autoReveal) {
-                // Auto Reveal ON: speak only, don't navigate
+            if (autoSpeak) {
+                // Auto Speak ON: speak only, don't navigate
                 speakChinese();
             } else {
-                // Auto Reveal OFF: just go next
+                // Auto Speak OFF: just go next
                 navigate(1);
             }
         }
@@ -1601,8 +1619,8 @@ God loves the world
         function goBackAndSpeak() {
             // Go back one card
             navigate(-1);
-            // Only speak if Auto Reveal is on
-            if (autoReveal) {
+            // Only speak if Auto Speak is on
+            if (autoSpeak) {
                 speakChinese();
             }
         }
@@ -1610,8 +1628,8 @@ God loves the world
         function nextAndSpeak() {
             // Go to next card
             navigate(1);
-            // Only speak if Auto Reveal is on
-            if (autoReveal) {
+            // Only speak if Auto Speak is on
+            if (autoSpeak) {
                 speakChinese();
             }
         }
@@ -2087,21 +2105,31 @@ God loves the world
             document.getElementById('bigRate2Btn').addEventListener('click', () => { rateCard(2); navigate(1); });
             document.getElementById('bigRate3Btn').addEventListener('click', () => { rateCard(3); navigate(1); });
 
-            // Auto-reveal toggle
-            const autoRevealToggle = document.getElementById('autoRevealToggle');
+            // Auto-reveal and auto-speak toggle buttons
+            const autoRevealBtn = document.getElementById('autoRevealBtn');
+            const autoSpeakBtn = document.getElementById('autoSpeakBtn');
 
-            // Load saved preference
-            const savedAutoReveal = localStorage.getItem('flashcard-autoReveal');
-            if (savedAutoReveal === 'true') {
+            // Load saved preferences
+            if (localStorage.getItem('flashcard-autoReveal') === 'true') {
                 autoReveal = true;
-                autoRevealToggle.checked = true;
+                autoRevealBtn.classList.add('reveal-active');
+            }
+            if (localStorage.getItem('flashcard-autoSpeak') === 'true') {
+                autoSpeak = true;
+                autoSpeakBtn.classList.add('speak-active');
             }
 
-            autoRevealToggle.addEventListener('change', function() {
-                autoReveal = this.checked;
+            autoRevealBtn.addEventListener('click', function() {
+                autoReveal = !autoReveal;
+                this.classList.toggle('reveal-active', autoReveal);
                 localStorage.setItem('flashcard-autoReveal', autoReveal.toString());
-                // Re-display current card with new setting
                 updateDisplay();
+            });
+
+            autoSpeakBtn.addEventListener('click', function() {
+                autoSpeak = !autoSpeak;
+                this.classList.toggle('speak-active', autoSpeak);
+                localStorage.setItem('flashcard-autoSpeak', autoSpeak.toString());
             });
 
             // Keyboard shortcuts
