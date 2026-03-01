@@ -239,6 +239,11 @@
             color: white;
         }
 
+        .grid-btn.active {
+            background: #2ecc71;
+            color: white;
+        }
+
         .dark-btn {
             background: #374151;
             color: white;
@@ -868,19 +873,22 @@
             </div>
         </div>
 
-        <!-- Big Rating Buttons -->
-        <div class="big-rating-row">
+        <!-- Big Rating Buttons (hidden) -->
+        <div class="big-rating-row" style="display: none;">
             <button class="big-rating-btn big-rating-1" id="bigRate1Btn">1 Show Daily</button>
             <button class="big-rating-btn big-rating-2" id="bigRate2Btn">2 Show in 2 Days</button>
             <button class="big-rating-btn big-rating-3" id="bigRate3Btn">3 Mastered</button>
         </div>
+
+        <input type="file" id="folderFlatInput" accept=".txt,.md" multiple style="display:none">
+        <button class="paste-btn" id="folderFlatBtn" title="Load .txt or .md files" style="border: 2px dotted;">Load .txt File</button>
 
         <!-- Canvas Section (always visible below flashcard) -->
         <div class="canvas-section" id="canvasSection">
             <div class="canvas-controls">
                 <button class="clear-btn" onclick="clearCanvas()">Clear</button>
                 <button class="dark-btn" onclick="toggleDarkCanvas()">Dark</button>
-                <button class="grid-btn" onclick="toggleGrid()">Grid</button>
+                <button class="grid-btn" onclick="toggleGrid()" id="gridToggleBtn">Grid</button>
                 <button class="expand-btn" id="expandBtn" onclick="toggleExpandCanvas()">Expand</button>
                 <div class="stroke-control">
                     <label>Stroke:</label>
@@ -888,7 +896,7 @@
                 </div>
             </div>
 
-            <div class="canvas-container">
+            <div class="canvas-container" style="display: none;">
                 <canvas id="drawCanvas"></canvas>
                 <canvas id="gridCanvas" class="grid-overlay"></canvas>
             </div>
@@ -1986,8 +1994,19 @@ God loves the world
         }
 
         function toggleGrid() {
-            showGrid = !showGrid;
-            drawGrid();
+            const container = document.querySelector('.canvas-container');
+            const btn = document.getElementById('gridToggleBtn');
+            if (container.style.display === 'none') {
+                container.style.display = '';
+                btn.classList.add('active');
+                showGrid = true;
+                resizeCanvas();
+                drawGrid();
+            } else {
+                container.style.display = 'none';
+                btn.classList.remove('active');
+                showGrid = false;
+            }
         }
 
         function toggleDarkCanvas() {
@@ -2104,6 +2123,24 @@ God loves the world
             document.getElementById('bigRate1Btn').addEventListener('click', () => { rateCard(1); navigate(1); });
             document.getElementById('bigRate2Btn').addEventListener('click', () => { rateCard(2); navigate(1); });
             document.getElementById('bigRate3Btn').addEventListener('click', () => { rateCard(3); navigate(1); });
+
+            // Folder Flat file input
+            document.getElementById('folderFlatBtn').addEventListener('click', () => {
+                document.getElementById('folderFlatInput').click();
+            });
+
+            document.getElementById('folderFlatInput').addEventListener('change', async function() {
+                if (!this.files.length) return;
+                const textarea = document.getElementById('inputTextarea');
+                const contents = [];
+                for (const file of this.files) {
+                    const text = await file.text();
+                    contents.push(text.trim());
+                }
+                textarea.value = contents.join('\n\n');
+                loadFlashcards();
+                this.value = '';
+            });
 
             // Auto-reveal and auto-speak toggle buttons
             const autoRevealBtn = document.getElementById('autoRevealBtn');
