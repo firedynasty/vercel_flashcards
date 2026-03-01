@@ -807,6 +807,7 @@
             <button class="nav-btn" id="dropboxBtn" title="Dropbox" style="font-size: 12px; font-weight: bold;">DB</button>
             <button class="nav-btn" id="dbxPrevFileBtn" title="Previous file" disabled>&#9664;</button>
             <button class="nav-btn" id="dbxNextFileBtn" title="Next file" disabled>&#9654;</button>
+            <button class="nav-btn" id="appendCardBtn" title="Append new flashcard">+</button>
         </div>
     </div>
 
@@ -932,6 +933,7 @@ The Bible is the foundation of our faith
                 <button class="dbx-save-btn" id="dbxSaveBtn" style="display: none;">Save Textarea &#8593; DB</button>
                 <button class="save-file-btn" id="updateTextareaBtn" style="background: #8b5cf6; color: white; flex: 1;">&#8635; Update Textarea</button>
                 <button class="save-file-btn" id="resetRatingsBtn" style="background: #ef4444; color: white; flex: 1;">Reset Ratings to 1</button>
+                <button class="save-file-btn" id="clearFlashcardsBtn" style="background: #6b7280; color: white; flex: 1;">Clr</button>
             </div>
         </div>
     </div>
@@ -2112,6 +2114,29 @@ God loves the world
             document.getElementById('pasteBtn').addEventListener('click', pasteFromClipboard);
             document.getElementById('updateTextareaBtn').addEventListener('click', updateTextarea);
             document.getElementById('resetRatingsBtn').addEventListener('click', resetAllRatings);
+
+            // Append from clipboard button
+            document.getElementById('appendCardBtn').addEventListener('click', async () => {
+                if (!confirm('Append clipboard content to existing flashcards?')) return;
+                try {
+                    const text = await navigator.clipboard.readText();
+                    if (!text || !text.trim()) return;
+                    const textarea = document.getElementById('inputTextarea');
+                    textarea.value = textarea.value.trim() + '\n' + text.trim();
+                    loadFlashcards();
+                } catch (err) {
+                    console.error('Failed to read clipboard:', err);
+                    alert('Could not access clipboard.');
+                }
+            });
+
+            // Clear flashcards button
+            document.getElementById('clearFlashcardsBtn').addEventListener('click', () => {
+                if (!confirm('Clear all flashcards? This cannot be undone.')) return;
+                const textarea = document.getElementById('inputTextarea');
+                textarea.value = '';
+                loadFlashcards();
+            });
 
 
             // Rating buttons
