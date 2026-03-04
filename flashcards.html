@@ -861,8 +861,10 @@
             </select>
             <button class="mode-toggle-btn" id="autoRevealBtn">Reveal</button>
             <button class="mode-toggle-btn" id="autoSpeakBtn">Speak</button>
-            <button class="speak-btn" id="speakRevealBtn">Back</button>
-            <button class="speak-btn" id="nextSpeakBtn">Next & Speak</button>
+            <button class="speak-btn" id="speakRevealBtn" style="display:none">Back</button>
+            <button class="speak-btn" id="nextSpeakBtn" style="display:none">Next & Speak</button>
+            <button class="speak-btn" id="grabClipBtn" style="background:#1a3a1a;border-color:#52c97a;color:#52c97a">Grab</button>
+            <button class="speak-btn" id="exportAnswersBtn" style="background:#1a1a3a;border-color:#4fc3c3;color:#4fc3c3">Export</button>
         </div>
 
         <!-- Flashcard Section -->
@@ -1427,6 +1429,7 @@ The Bible is the foundation of our faith
         let isRevealed = false;
         let autoReveal = false;
         let autoSpeak = false;
+        let userAnswers = {}; // card index → clipboard answer text
         // Per-card dates: each card has its own ratedDate field
 
         // Sample data - will be replaced when user loads content
@@ -2111,6 +2114,44 @@ God loves the world
             // Control buttons
             document.getElementById('speakRevealBtn').addEventListener('click', goBackAndSpeak);
             document.getElementById('nextSpeakBtn').addEventListener('click', nextAndSpeak);
+
+            // Grab from clipboard: save answer for current card, advance to next
+            document.getElementById('grabClipBtn').addEventListener('click', async () => {
+                if (allCards.length === 0) return;
+                try {
+                    const text = await navigator.clipboard.readText();
+                    if (text && text.trim()) {
+                        userAnswers[currentIndex] = text.trim();
+                    }
+                } catch (err) {
+                    console.error('Clipboard read failed:', err);
+                }
+                navigate(1);
+            });
+
+            // Export all answers to clipboard for AI grading
+            document.getElementById('exportAnswersBtn').addEventListener('click', async () => {
+                if (allCards.length === 0) return;
+                const lines = [];
+                lines.push('Grade my answers for accuracy:\n');
+                allCards.forEach((card, i) => {
+                    const q = card.chinese || '(no prompt)';
+                    const expected = card.english || '';
+                    const answer = userAnswers[i] || '(no answer)';
+                    lines.push(`Q${i+1}: ${q}`);
+                    if (expected) lines.push(`Expected: ${expected}`);
+                    lines.push(`My Answer: ${answer}`);
+                    lines.push('');
+                });
+                const output = lines.join('\n');
+                try {
+                    await navigator.clipboard.writeText(output);
+                    alert('Answers copied to clipboard! Paste into AI chat for grading.');
+                } catch (err) {
+                    console.error('Clipboard write failed:', err);
+                    alert('Could not copy. Check clipboard permissions.');
+                }
+            });
             document.getElementById('pasteBtn').addEventListener('click', pasteFromClipboard);
             document.getElementById('updateTextareaBtn').addEventListener('click', updateTextarea);
             document.getElementById('resetRatingsBtn').addEventListener('click', resetAllRatings);
