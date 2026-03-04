@@ -876,17 +876,7 @@
             </div>
         </div>
 
-        <!-- Big Rating Buttons (hidden) -->
-        <div class="big-rating-row" style="display: none;">
-            <button class="big-rating-btn big-rating-1" id="bigRate1Btn">1 Show Daily</button>
-            <button class="big-rating-btn big-rating-2" id="bigRate2Btn">2 Show in 2 Days</button>
-            <button class="big-rating-btn big-rating-3" id="bigRate3Btn">3 Mastered</button>
-        </div>
-
-        <input type="file" id="folderFlatInput" accept=".txt,.md" multiple style="display:none">
-        <button class="paste-btn" id="folderFlatBtn" title="Load .txt or .md files" style="border: 2px dotted;">Load .txt File</button>
-
-        <!-- Canvas Section (always visible below flashcard) -->
+        <!-- Canvas Section (below flashcard for writing practice) -->
         <div class="canvas-section" id="canvasSection">
             <div class="canvas-controls">
                 <button class="clear-btn" onclick="clearCanvas()">Clear</button>
@@ -904,6 +894,17 @@
                 <canvas id="gridCanvas" class="grid-overlay"></canvas>
             </div>
         </div>
+
+        <!-- Big Rating Buttons (hidden) -->
+        <div class="big-rating-row" style="display: none;">
+            <button class="big-rating-btn big-rating-1" id="bigRate1Btn">1 Show Daily</button>
+            <button class="big-rating-btn big-rating-2" id="bigRate2Btn">2 Show in 2 Days</button>
+            <button class="big-rating-btn big-rating-3" id="bigRate3Btn">3 Mastered</button>
+        </div>
+
+        <input type="file" id="folderFlatInput" accept=".txt,.md" multiple style="display:none">
+        <button class="paste-btn" id="folderFlatBtn" title="Load .txt or .md files" style="border: 2px dotted;">Load .txt File</button>
+        <button class="paste-btn" id="roleplayBtn" title="Open Role-playing trainer" style="border: 2px solid #2563eb; color: #2563eb;">Role-playing</button>
 
         <!-- Input Section -->
         <div class="input-section" id="inputSection">
@@ -2193,6 +2194,10 @@ God loves the world
             // Folder Flat file input
             document.getElementById('folderFlatBtn').addEventListener('click', () => {
                 document.getElementById('folderFlatInput').click();
+            });
+
+            document.getElementById('roleplayBtn').addEventListener('click', () => {
+                window.open('role-playing.html', '_blank');
             });
 
             document.getElementById('folderFlatInput').addEventListener('change', async function() {

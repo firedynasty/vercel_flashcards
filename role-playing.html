@@ -1,0 +1,1194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sales Roleplay — Discovery Call</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, 'Inter', sans-serif;
+    background: #f9f9f7;
+    min-height: 100vh;
+    color: #1a1a1a;
+  }
+
+  .container {
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 32px 20px;
+  }
+
+  .header-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #888;
+    margin-bottom: 6px;
+  }
+
+  h1 {
+    font-size: 22px;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin: 0 0 4px 0;
+  }
+
+  .dbx-current-file {
+    display: none;
+    font-size: 12px;
+    color: #2563eb;
+    margin-bottom: 12px;
+  }
+
+  /* Input section */
+  .input-section {
+    margin-bottom: 24px;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    background: white;
+    overflow: hidden;
+  }
+
+  .input-section.collapsed .input-body { display: none; }
+
+  .input-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    background: #f5f5f5;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .input-header span {
+    font-size: 13px;
+    font-weight: 600;
+    color: #555;
+  }
+
+  .input-header .toggle-arrow {
+    font-size: 12px;
+    color: #999;
+  }
+
+  .input-body { padding: 12px 16px; }
+
+  .input-body textarea {
+    width: 100%;
+    height: 120px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-family: inherit;
+    font-size: 13px;
+    line-height: 1.5;
+    resize: vertical;
+    color: #333;
+  }
+
+  .input-body textarea::placeholder { color: #aaa; }
+
+  .input-btns {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+  }
+
+  .input-btn {
+    padding: 8px 16px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    background: white;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .input-btn:hover { border-color: #999; }
+  .input-btn.primary { background: #2563eb; color: white; border-color: #2563eb; }
+  .input-btn.primary:hover { background: #1d4ed8; }
+  .input-btn.db-btn { background: #0061FF; color: white; border-color: #0061FF; }
+  .input-btn.db-btn:hover { background: #0052d4; }
+
+  .format-hint {
+    margin-top: 8px;
+    font-size: 11px;
+    color: #aaa;
+    line-height: 1.5;
+  }
+
+  .chat { display: flex; flex-direction: column; gap: 14px; }
+
+  .line { display: none; gap: 10px; align-items: flex-start; }
+  .line.visible { display: flex; }
+  .line.is-you { flex-direction: row-reverse; }
+
+  .avatar {
+    width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700;
+  }
+  .avatar.you { background: #2563eb; color: white; }
+  .avatar.prospect { background: #e5e7eb; color: #555; }
+
+  .bubble-wrap { max-width: 75%; }
+
+  .bubble {
+    padding: 12px 16px;
+    font-size: 14.5px;
+    line-height: 1.55;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.07);
+  }
+  .bubble.you {
+    background: #2563eb; color: white;
+    border-radius: 16px 4px 16px 16px;
+  }
+  .bubble.prospect {
+    background: white; color: #1a1a1a;
+    border-radius: 4px 16px 16px 16px;
+    border: 1px solid #e8e8e8;
+  }
+
+  .answer-area {
+    margin-top: 8px;
+    padding: 10px 14px;
+    background: #f0f4ff;
+    border: 1px dashed #93b4f5;
+    border-radius: 10px;
+    font-size: 13px;
+    color: #1e40af;
+    min-height: 36px;
+    line-height: 1.5;
+  }
+  .answer-area.empty { color: #93b4f5; font-style: italic; }
+
+  .tip-toggle {
+    margin-top: 6px;
+    font-size: 11.5px;
+    color: #2563eb;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 2px 0;
+    font-weight: 600;
+  }
+
+  .tip-box {
+    display: none;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 13px;
+    color: #1e40af;
+    margin-top: 4px;
+    line-height: 1.5;
+  }
+  .tip-box.show { display: block; }
+
+  .controls {
+    margin-top: 28px;
+    display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+  }
+
+  .btn {
+    border: none; border-radius: 8px;
+    padding: 11px 22px; font-weight: 600; font-size: 14px;
+    cursor: pointer; transition: opacity 0.2s;
+  }
+  .btn:hover { opacity: 0.85; }
+  .btn.primary { background: #2563eb; color: white; }
+  .btn.grab { background: #16a34a; color: white; }
+  .btn.export { background: #0891b2; color: white; }
+  .btn.outline {
+    background: none; border: 1px solid #ccc;
+    color: #555; font-size: 13px; padding: 9px 18px;
+  }
+
+  .done-msg { font-size: 14px; color: #16a34a; font-weight: 600; }
+
+  .progress {
+    margin-top: 20px;
+    font-size: 12px;
+    color: #aaa;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: #999;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  /* Sticky navbar */
+  .sticky-nav {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: #f9f9f7;
+    border-bottom: 1px solid #e0e0e0;
+    padding: 8px 0;
+    margin-bottom: 16px;
+    display: none;
+    align-items: center;
+    gap: 10px;
+  }
+  .sticky-nav.active { display: flex; }
+
+  .sticky-nav .reveal-btn {
+    padding: 7px 16px;
+    border-radius: 6px;
+    border: 1px solid #ddd;
+    background: white;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .sticky-nav .reveal-btn.on {
+    background: #2563eb;
+    color: white;
+    border-color: #2563eb;
+  }
+
+  .sticky-nav .nav-label {
+    font-size: 12px;
+    color: #888;
+  }
+
+  /* Truncated bubble text */
+  .bubble.truncated {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+  }
+
+  /* ── DROPBOX SIDEBAR ── */
+  .dbx-sidebar {
+    position: fixed;
+    right: 0;
+    top: 0;
+    width: 280px;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    border-left: 1px solid #333;
+    z-index: 1001;
+    background: #1a1a2e;
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+  }
+  .dbx-sidebar.open { transform: translateX(0); }
+
+  .dbx-sidebar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 10px;
+    font-size: 14px;
+    font-weight: bold;
+    border-bottom: 1px solid #333;
+    color: #4da6ff;
+  }
+  .dbx-sidebar-header button {
+    background: transparent;
+    border: none;
+    color: #888;
+    font-size: 18px;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+  }
+  .dbx-sidebar-header button:hover { color: #fff; background: rgba(255,255,255,0.1); }
+
+  .dbx-sidebar-file-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 5px;
+  }
+
+  .dbx-app-key-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .dbx-app-key-row input {
+    flex: 1;
+    padding: 10px 12px;
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 6px;
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+    font-size: 14px;
+    outline: none;
+  }
+  .dbx-app-key-row input:focus { border-color: #4da6ff; }
+  .dbx-app-key-row button {
+    padding: 10px 16px;
+    background: #0061FF;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  .dbx-app-key-row button:hover { background: #0052d4; }
+
+  .dbx-search-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .dbx-search-row input {
+    flex: 1;
+    padding: 10px 12px;
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 6px;
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+    font-size: 14px;
+    outline: none;
+  }
+  .dbx-search-row input:focus { border-color: #4da6ff; }
+  .dbx-search-row button {
+    padding: 10px 16px;
+    background: #0061FF;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  .dbx-search-row button:hover { background: #0052d4; }
+
+  .dbx-result-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .dbx-result-item:hover { background: rgba(255,255,255,0.1); }
+  .dbx-result-item.selected {
+    background: rgba(77,166,255,0.2);
+    border-left: 3px solid #4da6ff;
+  }
+  .dbx-result-icon { font-size: 18px; flex-shrink: 0; }
+  .dbx-result-info { flex: 1; min-width: 0; }
+  .dbx-result-name {
+    font-size: 14px;
+    color: #fff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .dbx-result-path {
+    font-size: 11px;
+    color: #888;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .dbx-show-all-btn {
+    background: transparent;
+    border: none;
+    color: #4da6ff;
+    font-size: 12px;
+    cursor: pointer;
+    padding: 4px 8px;
+  }
+  .dbx-show-all-btn:hover { text-decoration: underline; }
+
+  .dbx-breadcrumb {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    padding: 6px 10px;
+    font-size: 12px;
+    color: #888;
+    gap: 2px;
+  }
+  .dbx-breadcrumb-link {
+    color: #4da6ff;
+    cursor: pointer;
+    background: none;
+    border: none;
+    font-size: 12px;
+    padding: 0;
+  }
+  .dbx-breadcrumb-link:hover { text-decoration: underline; }
+  .dbx-breadcrumb-sep { color: #666; margin: 0 2px; }
+
+  .dbx-sign-out-btn {
+    width: calc(100% - 20px);
+    margin: 10px;
+    padding: 10px;
+    background: rgba(255,255,255,0.1);
+    color: #f87171;
+    border: 1px solid rgba(248,113,113,0.3);
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .dbx-sign-out-btn:hover { background: rgba(248,113,113,0.15); }
+
+  .dbx-status {
+    font-size: 12px;
+    color: #888;
+    margin-bottom: 10px;
+    min-height: 18px;
+  }
+
+  /* File nav buttons in sticky nav */
+  .sticky-nav .file-nav-btn {
+    padding: 5px 10px;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+    background: white;
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .sticky-nav .file-nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header-label">Sales Roleplay</div>
+  <h1 id="sceneTitle">Load a script to begin</h1>
+  <div class="dbx-current-file" id="dbxCurrentFileName"></div>
+
+  <!-- Input Section -->
+  <div class="input-section" id="inputSection">
+    <div class="input-header" onclick="toggleInput()">
+      <span>Script Input</span>
+      <span class="toggle-arrow" id="toggleArrow">▼</span>
+    </div>
+    <div class="input-body">
+      <textarea id="scriptTextarea" placeholder="You: Your line here (coaching tip in parentheses)
+Prospect: Their response here
+
+You: Next line (another tip)
+Prospect: Their next response"></textarea>
+      <div class="input-btns">
+        <button class="input-btn primary" onclick="loadScript()">Load Script</button>
+        <button class="input-btn" onclick="pasteClipboard()">Paste from Clipboard</button>
+        <button class="input-btn" onclick="loadTxtFile()">Load .txt File</button>
+        <button class="input-btn db-btn" id="dropboxBtn">DB</button>
+      </div>
+      <div class="format-hint">
+        Format: Lines starting with <b>You:</b> or <b>Prospect:</b> — coaching tips in (parentheses) at end of Your lines.
+      </div>
+      <input type="file" id="fileInput" accept=".txt" style="display:none">
+    </div>
+  </div>
+
+  <!-- Sticky Navbar -->
+  <div class="sticky-nav" id="stickyNav">
+    <button class="reveal-btn" id="revealToggle" onclick="toggleRevealMode()">Reveal</button>
+    <span class="nav-label" id="revealLabel">Lines truncated to 50 chars</span>
+    <button class="file-nav-btn" id="dbxPrevFileBtn" disabled title="Previous file">◀</button>
+    <button class="file-nav-btn" id="dbxNextFileBtn" disabled title="Next file">▶</button>
+  </div>
+
+  <div class="chat" id="chat"></div>
+
+  <div class="controls" id="controls"></div>
+
+  <div class="progress" id="progress"></div>
+</div>
+
+<!-- Dropbox Sidebar -->
+<div class="dbx-sidebar" id="dbxSidebar">
+  <div class="dbx-sidebar-header">
+    <span>DROPBOX</span>
+    <button id="dbxCloseBtn">&#10005;</button>
+  </div>
+  <div id="dbxSignInSection" style="padding: 15px;">
+    <div class="dbx-app-key-row" id="dbxAppKeyRow" style="display: none;">
+      <input type="text" id="dbxAppKeyInput" placeholder="Dropbox App Key">
+    </div>
+    <div class="dbx-app-key-row">
+      <button id="dbxSignInBtn" style="flex: 1;">Sign In</button>
+    </div>
+  </div>
+  <div id="dbxSearchSection" style="display: none; flex-direction: column; flex: 1; overflow: hidden;">
+    <div class="dbx-status" id="dbxStatus" style="padding: 5px 10px 0;"></div>
+    <div class="dbx-search-row" style="padding: 5px 10px 10px;">
+      <input type="text" id="dbxSearchInput" placeholder="Search files...">
+      <button id="dbxSearchBtn">Go</button>
+    </div>
+    <div class="dbx-breadcrumb" id="dbxBreadcrumb"></div>
+    <div class="dbx-sidebar-file-list" id="dbxResults"></div>
+    <button id="dbxSignOutBtn" class="dbx-sign-out-btn">Sign Out</button>
+  </div>
+</div>
+
+<script>
+let script = [];
+let revealed = 0;
+let userAnswers = {};
+let revealFull = false;
+
+// ── PARSE SCRIPT TEXT ──────────────────────────────────────────
+function parseScript(raw) {
+  let text = raw.trim();
+  if (text.startsWith('"""')) text = text.slice(3);
+  if (text.endsWith('"""')) text = text.slice(0, -3);
+  text = text.trim();
+
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  const result = [];
+
+  for (const line of lines) {
+    let speaker, rest;
+    if (/^you:/i.test(line)) {
+      speaker = 'you';
+      rest = line.replace(/^you:\s*/i, '');
+    } else if (/^prospect:/i.test(line)) {
+      speaker = 'prospect';
+      rest = line.replace(/^prospect:\s*/i, '');
+    } else {
+      if (result.length > 0) {
+        result[result.length - 1].text += ' ' + line;
+      }
+      continue;
+    }
+
+    let tip = null;
+    if (speaker === 'you') {
+      const tipMatch = rest.match(/\(([^()]+)\)\s*$/);
+      if (tipMatch) {
+        tip = tipMatch[1].trim();
+        rest = rest.slice(0, tipMatch.index).trim();
+      }
+    }
+
+    result.push({ speaker, text: rest, tip });
+  }
+
+  return result;
+}
+
+// ── LOAD / INPUT HANDLERS ──────────────────────────────────────
+function loadScript() {
+  const raw = document.getElementById('scriptTextarea').value;
+  if (!raw.trim()) return;
+  script = parseScript(raw);
+  revealed = 0;
+  userAnswers = {};
+  if (script.length > 0) {
+    document.getElementById('inputSection').classList.add('collapsed');
+    document.getElementById('toggleArrow').textContent = '►';
+    document.getElementById('sceneTitle').textContent = 'Roleplay Session';
+  }
+  render();
+}
+
+async function pasteClipboard() {
+  try {
+    const text = await navigator.clipboard.readText();
+    if (text && text.trim()) {
+      document.getElementById('scriptTextarea').value = text;
+      loadScript();
+    }
+  } catch(e) {
+    alert('Could not access clipboard. Please paste manually.');
+  }
+}
+
+function loadTxtFile() {
+  document.getElementById('fileInput').click();
+}
+
+document.getElementById('fileInput').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    document.getElementById('scriptTextarea').value = ev.target.result;
+    loadScript();
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+});
+
+function toggleRevealMode() {
+  revealFull = !revealFull;
+  const btn = document.getElementById('revealToggle');
+  const label = document.getElementById('revealLabel');
+  btn.classList.toggle('on', revealFull);
+  label.textContent = revealFull ? 'Showing full lines' : 'Lines truncated to 50 chars';
+  render();
+}
+
+function toggleInput() {
+  const section = document.getElementById('inputSection');
+  const arrow = document.getElementById('toggleArrow');
+  section.classList.toggle('collapsed');
+  arrow.textContent = section.classList.contains('collapsed') ? '►' : '▼';
+}
+
+// ── RENDER ─────────────────────────────────────────────────────
+function render() {
+  const chat = document.getElementById('chat');
+  chat.innerHTML = '';
+
+  const stickyNav = document.getElementById('stickyNav');
+
+  if (script.length === 0) {
+    chat.innerHTML = '<div class="empty-state">Paste or load a roleplay script above to begin.</div>';
+    document.getElementById('controls').innerHTML = '';
+    document.getElementById('progress').textContent = '';
+    stickyNav.classList.remove('active');
+    return;
+  }
+
+  stickyNav.classList.add('active');
+
+  script.forEach((line, i) => {
+    const isYou = line.speaker === 'you';
+    const visible = i <= revealed;
+
+    const row = document.createElement('div');
+    row.className = `line${visible ? ' visible' : ''}${isYou ? ' is-you' : ''}`;
+
+    const avatar = document.createElement('div');
+    avatar.className = `avatar ${line.speaker}`;
+    avatar.textContent = isYou ? 'Y' : 'P';
+
+    const wrap = document.createElement('div');
+    wrap.className = 'bubble-wrap';
+
+    const shouldTruncate = isYou && !revealFull;
+    const bubble = document.createElement('div');
+    bubble.className = `bubble ${line.speaker}${shouldTruncate ? ' truncated' : ''}`;
+    bubble.textContent = shouldTruncate && line.text.length > 50
+      ? line.text.slice(0, 50) + '…'
+      : line.text;
+    wrap.appendChild(bubble);
+
+    if (isYou && visible) {
+      const answer = document.createElement('div');
+      answer.className = `answer-area${userAnswers[i] ? '' : ' empty'}`;
+      answer.id = `answer-${i}`;
+      answer.textContent = userAnswers[i] || '(your answer will appear here after Grab)';
+      wrap.appendChild(answer);
+    }
+
+    if (line.tip && visible) {
+      const tipBtn = document.createElement('button');
+      tipBtn.className = 'tip-toggle';
+      tipBtn.textContent = '💡 Why this works';
+      const tipBox = document.createElement('div');
+      tipBox.className = 'tip-box';
+      tipBox.textContent = line.tip;
+      tipBtn.onclick = () => {
+        const showing = tipBox.classList.toggle('show');
+        tipBtn.textContent = showing ? '▲ Hide tip' : '💡 Why this works';
+      };
+      wrap.appendChild(tipBtn);
+      wrap.appendChild(tipBox);
+    }
+
+    row.appendChild(avatar);
+    row.appendChild(wrap);
+    chat.appendChild(row);
+  });
+
+  renderControls();
+}
+
+function renderControls() {
+  const controls = document.getElementById('controls');
+  controls.innerHTML = '';
+  if (script.length === 0) return;
+
+  const isComplete = revealed >= script.length - 1;
+  const currentIsYou = script[revealed] && script[revealed].speaker === 'you';
+
+  if (!isComplete) {
+    if (currentIsYou) {
+      const grab = document.createElement('button');
+      grab.className = 'btn grab';
+      grab.textContent = '📋 Grab & Next';
+      grab.onclick = grabAndNext;
+      controls.appendChild(grab);
+    }
+
+    const next = document.createElement('button');
+    next.className = 'btn primary';
+    next.textContent = 'Next Line →';
+    next.onclick = () => { revealed = Math.min(revealed + 1, script.length - 1); render(); };
+    controls.appendChild(next);
+  } else {
+    if (currentIsYou && !userAnswers[revealed]) {
+      const grab = document.createElement('button');
+      grab.className = 'btn grab';
+      grab.textContent = '📋 Grab Answer';
+      grab.onclick = async () => {
+        try {
+          const text = await navigator.clipboard.readText();
+          if (text && text.trim()) userAnswers[revealed] = text.trim();
+        } catch(e) {}
+        render();
+      };
+      controls.appendChild(grab);
+    }
+
+    const done = document.createElement('span');
+    done.className = 'done-msg';
+    done.textContent = '✅ Roleplay complete!';
+    controls.appendChild(done);
+
+    const exp = document.createElement('button');
+    exp.className = 'btn export';
+    exp.textContent = '📤 Export Answers';
+    exp.onclick = exportAnswers;
+    controls.appendChild(exp);
+
+    const restart = document.createElement('button');
+    restart.className = 'btn outline';
+    restart.textContent = 'Restart';
+    restart.onclick = () => { revealed = 0; userAnswers = {}; render(); };
+    controls.appendChild(restart);
+
+    const newScript = document.createElement('button');
+    newScript.className = 'btn outline';
+    newScript.textContent = 'New Script';
+    newScript.onclick = () => {
+      script = [];
+      revealed = 0;
+      userAnswers = {};
+      document.getElementById('scriptTextarea').value = '';
+      document.getElementById('inputSection').classList.remove('collapsed');
+      document.getElementById('toggleArrow').textContent = '▼';
+      document.getElementById('sceneTitle').textContent = 'Load a script to begin';
+      document.getElementById('dbxCurrentFileName').style.display = 'none';
+      render();
+    };
+    controls.appendChild(newScript);
+  }
+
+  document.getElementById('progress').textContent =
+    `Line ${Math.min(revealed + 1, script.length)} of ${script.length}`;
+}
+
+async function grabAndNext() {
+  try {
+    const text = await navigator.clipboard.readText();
+    if (text && text.trim()) userAnswers[revealed] = text.trim();
+  } catch(e) {
+    console.error('Clipboard read failed:', e);
+  }
+  revealed = Math.min(revealed + 1, script.length - 1);
+  render();
+}
+
+async function exportAnswers() {
+  const lines = ['Grade my roleplay answers for accuracy and sales technique:\n'];
+  script.forEach((line, i) => {
+    if (line.speaker === 'prospect') {
+      lines.push(`Prospect: ${line.text}`);
+      lines.push('');
+    } else {
+      lines.push(`Expected (You): ${line.text}`);
+      lines.push(`My Answer: ${userAnswers[i] || '(no answer)'}`);
+      if (line.tip) lines.push(`Coaching Note: ${line.tip}`);
+      lines.push('');
+    }
+  });
+  const output = lines.join('\n');
+  try {
+    await navigator.clipboard.writeText(output);
+    alert('Answers copied to clipboard! Paste into AI chat for grading.');
+  } catch(e) {
+    alert('Could not copy. Check clipboard permissions.');
+  }
+}
+
+// ── DROPBOX INTEGRATION ────────────────────────────────────────
+let dropboxAccessToken = null;
+let dropboxAppKey = '';
+let currentDropboxFilePath = '';
+let currentDropboxFileName = '';
+let dbxRootFilesLoaded = false;
+let dbxFolderFiles = [];
+let dbxFileIndex = -1;
+
+const isLocalhost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+
+// PKCE helpers
+function generateCodeVerifier() {
+  const array = new Uint8Array(64);
+  crypto.getRandomValues(array);
+  return btoa(String.fromCharCode(...array))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+async function generateCodeChallenge(verifier) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(verifier);
+  const digest = await crypto.subtle.digest('SHA-256', data);
+  return btoa(String.fromCharCode(...new Uint8Array(digest)))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+async function fetchDropboxAppKey() {
+  if (isLocalhost) {
+    return localStorage.getItem('dropbox-app-key') || '';
+  }
+  try {
+    const res = await fetch('/api/dropbox-key');
+    const data = await res.json();
+    return data.key || '';
+  } catch { return ''; }
+}
+
+async function toggleDropboxSidebar() {
+  const sidebar = document.getElementById('dbxSidebar');
+  sidebar.classList.toggle('open');
+  if (!sidebar.classList.contains('open')) return;
+
+  if (isLocalhost) {
+    document.getElementById('dbxAppKeyRow').style.display = 'flex';
+    const savedKey = localStorage.getItem('dropbox-app-key');
+    if (savedKey) document.getElementById('dbxAppKeyInput').value = savedKey;
+  } else {
+    document.getElementById('dbxAppKeyRow').style.display = 'none';
+  }
+
+  if (dropboxAccessToken) {
+    document.getElementById('dbxSignInSection').style.display = 'none';
+    document.getElementById('dbxSearchSection').style.display = 'flex';
+    if (!dbxRootFilesLoaded) {
+      dbxRootFilesLoaded = true;
+      loadDropboxFolder('');
+    }
+  } else {
+    document.getElementById('dbxSignInSection').style.display = 'block';
+    document.getElementById('dbxSearchSection').style.display = 'none';
+  }
+}
+
+function closeDropboxSidebar() {
+  document.getElementById('dbxSidebar').classList.remove('open');
+}
+
+function setDbxStatus(msg) {
+  document.getElementById('dbxStatus').textContent = msg;
+}
+
+async function handleDropboxSignIn() {
+  let appKey;
+  if (isLocalhost) {
+    appKey = document.getElementById('dbxAppKeyInput').value.trim();
+    if (!appKey) { alert('Please enter a Dropbox App Key'); return; }
+    localStorage.setItem('dropbox-app-key', appKey);
+  } else {
+    appKey = await fetchDropboxAppKey();
+    if (!appKey) { alert('Dropbox App Key not configured on server'); return; }
+  }
+  dropboxAppKey = appKey;
+
+  const verifier = generateCodeVerifier();
+  const challenge = await generateCodeChallenge(verifier);
+  sessionStorage.setItem('dropbox_code_verifier', verifier);
+
+  const redirectUri = window.location.origin + window.location.pathname;
+  const authUrl = `https://www.dropbox.com/oauth2/authorize?client_id=${appKey}&response_type=code&code_challenge=${challenge}&code_challenge_method=S256&redirect_uri=${encodeURIComponent(redirectUri)}&token_access_type=online`;
+  window.location.href = authUrl;
+}
+
+async function handleDropboxOAuthRedirect() {
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get('code');
+  if (!code) return;
+
+  const verifier = sessionStorage.getItem('dropbox_code_verifier');
+  const appKey = await fetchDropboxAppKey();
+  if (!verifier || !appKey) return;
+  dropboxAppKey = appKey;
+
+  const redirectUri = window.location.origin + window.location.pathname;
+  const body = new URLSearchParams({
+    code,
+    grant_type: 'authorization_code',
+    client_id: appKey,
+    redirect_uri: redirectUri,
+    code_verifier: verifier,
+  });
+
+  try {
+    const res = await fetch('https://api.dropboxapi.com/oauth2/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: body.toString(),
+    });
+    const data = await res.json();
+    if (data.access_token) {
+      dropboxAccessToken = data.access_token;
+      sessionStorage.removeItem('dropbox_code_verifier');
+      window.history.replaceState({}, document.title, window.location.pathname);
+      toggleDropboxSidebar();
+    }
+  } catch (err) {
+    console.error('Dropbox auth error:', err);
+  }
+}
+
+async function handleDropboxSignOut() {
+  if (dropboxAccessToken) {
+    try {
+      await fetch('https://api.dropboxapi.com/2/auth/token/revoke', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${dropboxAccessToken}` },
+      });
+    } catch {}
+  }
+  dropboxAccessToken = null;
+  currentDropboxFilePath = '';
+  currentDropboxFileName = '';
+  dbxRootFilesLoaded = false;
+  document.getElementById('dbxSignInSection').style.display = 'block';
+  document.getElementById('dbxSearchSection').style.display = 'none';
+  document.getElementById('dbxResults').innerHTML = '';
+  document.getElementById('dbxBreadcrumb').innerHTML = '';
+  setDbxStatus('Signed out');
+}
+
+async function searchDropboxFiles(query) {
+  if (!query.trim() || !dropboxAccessToken) return;
+  setDbxStatus('Searching...');
+  document.getElementById('dbxBreadcrumb').innerHTML = '';
+
+  try {
+    const response = await fetch('https://api.dropboxapi.com/2/files/search_v2', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${dropboxAccessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ query, options: { max_results: 20 } }),
+    });
+    if (!response.ok) throw new Error('Search failed');
+    const data = await response.json();
+    const results = (data.matches || []).map(m => {
+      const metadata = m.metadata?.metadata || m.metadata;
+      return {
+        name: metadata.name,
+        path: metadata.path_lower || metadata.path_display,
+        isFolder: metadata['.tag'] === 'folder',
+      };
+    }).filter(item => !item.isFolder);
+
+    dbxFolderFiles = results;
+    dbxFileIndex = dbxFolderFiles.findIndex(f => f.path === currentDropboxFilePath);
+    updateDbxFileNavButtons();
+
+    setDbxStatus(`Found ${results.length} files`);
+    renderDbxResults(results, true);
+  } catch (error) {
+    setDbxStatus('Error: ' + error.message);
+  }
+}
+
+async function loadDropboxFolder(path) {
+  setDbxStatus('Loading folder...');
+  try {
+    const response = await fetch('https://api.dropboxapi.com/2/files/list_folder', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${dropboxAccessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ path }),
+    });
+    if (!response.ok) throw new Error('Failed to list folder');
+    const data = await response.json();
+    const entries = (data.entries || []).map(entry => ({
+      name: entry.name,
+      path: entry.path_lower || entry.path_display,
+      isFolder: entry['.tag'] === 'folder',
+    }));
+    entries.sort((a, b) => {
+      if (a.isFolder !== b.isFolder) return a.isFolder ? -1 : 1;
+      return a.name.localeCompare(b.name);
+    });
+
+    dbxFolderFiles = entries.filter(e => !e.isFolder);
+    dbxFileIndex = dbxFolderFiles.findIndex(f => f.path === currentDropboxFilePath);
+    updateDbxFileNavButtons();
+
+    setDbxStatus(`Loaded ${entries.length} items`);
+    renderDbxBreadcrumb(path);
+    renderDbxResults(entries);
+  } catch (error) {
+    setDbxStatus('Error: ' + error.message);
+  }
+}
+
+function renderDbxBreadcrumb(path) {
+  const container = document.getElementById('dbxBreadcrumb');
+  if (!path) { container.innerHTML = ''; return; }
+  const parts = path.replace(/^\//, '').split('/').filter(Boolean);
+  let html = '';
+  parts.forEach((part, i) => {
+    const crumbPath = '/' + parts.slice(0, i + 1).join('/');
+    if (i > 0) html += '<span class="dbx-breadcrumb-sep">/</span>';
+    html += `<button class="dbx-breadcrumb-link" data-path="${crumbPath}">${part}</button>`;
+  });
+  container.innerHTML = html;
+}
+
+async function loadDropboxFile(path, name) {
+  setDbxStatus(`Loading ${name}...`);
+  try {
+    const response = await fetch('https://content.dropboxapi.com/2/files/download', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${dropboxAccessToken}`,
+        'Dropbox-API-Arg': JSON.stringify({ path }),
+      },
+    });
+    if (!response.ok) throw new Error('Download failed');
+    const content = await response.text();
+
+    // Load into textarea and parse as roleplay script
+    document.getElementById('scriptTextarea').value = content;
+    loadScript();
+
+    currentDropboxFilePath = path;
+    currentDropboxFileName = name;
+
+    dbxFileIndex = dbxFolderFiles.findIndex(f => f.path === path);
+    updateDbxFileNavButtons();
+
+    // Show filename
+    const fileNameEl = document.getElementById('dbxCurrentFileName');
+    fileNameEl.textContent = name;
+    fileNameEl.style.display = 'block';
+
+    document.getElementById('sceneTitle').textContent = name.replace(/\.txt$/i, '');
+
+    // Highlight in sidebar
+    document.querySelectorAll('#dbxResults .dbx-result-item').forEach(el => {
+      el.classList.toggle('selected', el.dataset.path === path);
+    });
+    setDbxStatus(`Loaded: ${name}`);
+  } catch (error) {
+    setDbxStatus('Error: ' + error.message);
+  }
+}
+
+function renderDbxResults(items, isSearch) {
+  const container = document.getElementById('dbxResults');
+  if (items.length === 0) {
+    container.innerHTML = '<div style="padding: 15px; color: #888; text-align: center;">No results</div>';
+    return;
+  }
+  let html = '';
+  if (isSearch) {
+    html += '<div style="padding: 2px 10px;"><button class="dbx-show-all-btn" id="dbxShowAllBtn">Show All</button></div>';
+  }
+  html += items.map(item => {
+    const icon = item.isFolder ? '📁' : '📄';
+    const isSelected = !item.isFolder && currentDropboxFilePath && item.path === currentDropboxFilePath;
+    const pathHtml = isSearch ? `<div class="dbx-result-path">${item.path}</div>` : '';
+    return `
+      <div class="dbx-result-item${isSelected ? ' selected' : ''}" data-path="${item.path}" data-name="${item.name}" data-folder="${item.isFolder}">
+        <span class="dbx-result-icon">${icon}</span>
+        <div class="dbx-result-info">
+          <div class="dbx-result-name">${item.name}</div>
+          ${pathHtml}
+        </div>
+      </div>
+    `;
+  }).join('');
+  container.innerHTML = html;
+}
+
+function handleDbxResultClick(e) {
+  if (e.target.id === 'dbxShowAllBtn') {
+    document.getElementById('dbxSearchInput').value = '';
+    document.getElementById('dbxBreadcrumb').innerHTML = '';
+    loadDropboxFolder('');
+    return;
+  }
+  const item = e.target.closest('.dbx-result-item');
+  if (!item) return;
+  const path = item.dataset.path;
+  const name = item.dataset.name;
+  const isFolder = item.dataset.folder === 'true';
+  if (isFolder) {
+    loadDropboxFolder(path);
+  } else {
+    loadDropboxFile(path, name);
+  }
+}
+
+function updateDbxFileNavButtons() {
+  document.getElementById('dbxPrevFileBtn').disabled = dbxFileIndex <= 0;
+  document.getElementById('dbxNextFileBtn').disabled = dbxFileIndex < 0 || dbxFileIndex >= dbxFolderFiles.length - 1;
+}
+
+function dbxPrevFile() {
+  if (dbxFileIndex > 0) {
+    const file = dbxFolderFiles[dbxFileIndex - 1];
+    loadDropboxFile(file.path, file.name);
+  }
+}
+
+function dbxNextFile() {
+  if (dbxFileIndex >= 0 && dbxFileIndex < dbxFolderFiles.length - 1) {
+    const file = dbxFolderFiles[dbxFileIndex + 1];
+    loadDropboxFile(file.path, file.name);
+  }
+}
+
+function handleDbxSearch() {
+  const query = document.getElementById('dbxSearchInput').value.trim();
+  if (!query) { loadDropboxFolder(''); return; }
+  if (query.startsWith('/')) {
+    loadDropboxFolder(query.replace(/\/+$/, '') || '');
+    return;
+  }
+  searchDropboxFiles(query);
+}
+
+// ── INIT ───────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  handleDropboxOAuthRedirect();
+
+  document.getElementById('dropboxBtn').addEventListener('click', toggleDropboxSidebar);
+  document.getElementById('dbxPrevFileBtn').addEventListener('click', dbxPrevFile);
+  document.getElementById('dbxNextFileBtn').addEventListener('click', dbxNextFile);
+  document.getElementById('dbxCloseBtn').addEventListener('click', closeDropboxSidebar);
+  document.getElementById('dbxSignInBtn').addEventListener('click', handleDropboxSignIn);
+  document.getElementById('dbxSignOutBtn').addEventListener('click', handleDropboxSignOut);
+  document.getElementById('dbxSearchBtn').addEventListener('click', handleDbxSearch);
+  document.getElementById('dbxSearchInput').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') handleDbxSearch();
+  });
+  document.getElementById('dbxResults').addEventListener('click', handleDbxResultClick);
+  document.getElementById('dbxBreadcrumb').addEventListener('click', (e) => {
+    const link = e.target.closest('.dbx-breadcrumb-link');
+    if (link) loadDropboxFolder(link.dataset.path);
+  });
+});
+
+render();
+</script>
+</body>
+</html>

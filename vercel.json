@@ -1,6 +1,7 @@
 {
   "rewrites": [
     { "source": "/api/:path*", "destination": "/api/:path*" },
+    { "source": "/role-playing.html", "destination": "/role-playing.html" },
     { "source": "/(.*)", "destination": "/flashcards.html" }
   ]
 }
