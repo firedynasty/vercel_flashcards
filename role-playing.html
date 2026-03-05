@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sales Roleplay — Discovery Call</title>
+<title>Drill Mode</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -226,6 +226,129 @@
     font-size: 14px;
     line-height: 1.6;
   }
+
+  /* Mode toggle */
+  .mode-toggle {
+    display: flex;
+    gap: 0;
+    margin-bottom: 16px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    overflow: hidden;
+    width: fit-content;
+  }
+  .mode-toggle label {
+    padding: 8px 18px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    background: white;
+    color: #555;
+    border-right: 1px solid #ddd;
+    transition: all 0.15s;
+    user-select: none;
+  }
+  .mode-toggle label:last-child { border-right: none; }
+  .mode-toggle input { display: none; }
+  .mode-toggle input:checked + label {
+    background: #2563eb;
+    color: white;
+  }
+
+  /* Bible Drill cards */
+  .drill-card {
+    background: white;
+    border: 1px solid #e8e8e8;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  }
+  .drill-card + .drill-card { margin-top: 14px; }
+
+  .drill-card .q-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: #2563eb;
+    margin-bottom: 6px;
+  }
+
+  .drill-card .q-text {
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.5;
+    color: #1a1a1a;
+    margin-bottom: 12px;
+  }
+
+  .drill-card .a-reveal-btn {
+    padding: 8px 16px;
+    border: 1px dashed #93b4f5;
+    border-radius: 8px;
+    background: #f0f4ff;
+    color: #2563eb;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    width: 100%;
+    text-align: left;
+    transition: all 0.15s;
+  }
+  .drill-card .a-reveal-btn:hover { background: #e0ecff; }
+
+  .drill-card .a-text {
+    padding: 12px 14px;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 8px;
+    font-size: 14px;
+    line-height: 1.55;
+    color: #15803d;
+  }
+
+  .drill-card .a-ref {
+    margin-top: 6px;
+    font-size: 12px;
+    color: #888;
+    font-style: italic;
+  }
+
+  .drill-card .my-answer {
+    margin-top: 8px;
+    padding: 10px 14px;
+    background: #f0f4ff;
+    border: 1px dashed #93b4f5;
+    border-radius: 8px;
+    font-size: 13px;
+    color: #1e40af;
+    line-height: 1.5;
+  }
+  .drill-card .my-answer.empty {
+    color: #93b4f5;
+    font-style: italic;
+  }
+  .drill-card .my-answer-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: #6b7280;
+    margin-top: 10px;
+    margin-bottom: 4px;
+  }
+  .drill-card .grab-btn {
+    margin-top: 8px;
+    padding: 7px 14px;
+    border: 1px solid #16a34a;
+    border-radius: 6px;
+    background: #16a34a;
+    color: white;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .drill-card .grab-btn:hover { background: #15803d; }
 
   /* Sticky navbar */
   .sticky-nav {
@@ -465,7 +588,13 @@
 <body>
 
 <div class="container">
-  <div class="header-label">Sales Roleplay</div>
+  <div class="mode-toggle">
+    <input type="radio" name="mode" id="modeRoleplay" value="roleplay" checked>
+    <label for="modeRoleplay">Role Playing</label>
+    <input type="radio" name="mode" id="modeDrill" value="drill">
+    <label for="modeDrill">Bible Drill</label>
+  </div>
+  <div class="header-label" id="headerLabel">Sales Roleplay</div>
   <h1 id="sceneTitle">Load a script to begin</h1>
   <div class="dbx-current-file" id="dbxCurrentFileName"></div>
 
@@ -540,6 +669,14 @@ let script = [];
 let revealed = 0;
 let userAnswers = {};
 let revealFull = false;
+let drillCards = [];
+let drillRevealed = {};
+let drillAnswers = {};
+let drillIndex = 0;
+
+function getMode() {
+  return document.querySelector('input[name="mode"]:checked').value;
+}
 
 // ── PARSE SCRIPT TEXT ──────────────────────────────────────────
 function parseScript(raw) {
@@ -581,17 +718,92 @@ function parseScript(raw) {
   return result;
 }
 
+// ── PARSE DRILL Q&A ──────────────────────────────────────────
+function parseDrill(raw) {
+  let text = raw.trim();
+  if (text.startsWith('"""')) text = text.slice(3);
+  if (text.endsWith('"""')) text = text.slice(0, -3);
+  text = text.trim();
+
+  const cards = [];
+  let currentQ = null;
+  let currentA = null;
+
+  function flush() {
+    if (currentQ && currentA) {
+      const answer = currentA.trim();
+      let ref = null;
+      const refMatch = answer.match(/\(([^)]*\d+:\d+[^)]*)\)\s*$/);
+      if (refMatch) ref = refMatch[1].trim();
+      cards.push({ question: currentQ.trim(), answer, ref });
+    }
+    currentQ = null;
+    currentA = null;
+  }
+
+  const lines = text.split('\n');
+  for (const line of lines) {
+    const trimmed = line.trim();
+
+    // Skip --- separators and empty lines
+    if (/^-{2,}$/.test(trimmed) || !trimmed) continue;
+
+    // Strip ** bold markers, then check for Q: or A:
+    const stripped = trimmed.replace(/^\*{1,2}/, '').replace(/\*{1,2}$/, '').trim();
+
+    // Check if line contains both Q: and A: on same line
+    const inlineMatch = stripped.match(/^Q:\s*(.*?)\s+A:\s*(.*)/i);
+    if (inlineMatch) {
+      flush();
+      currentQ = inlineMatch[1].replace(/\*{1,2}$/, '').trim();
+      currentA = inlineMatch[2];
+      flush();
+      continue;
+    }
+
+    if (/^Q:\s*/i.test(stripped)) {
+      flush();
+      currentQ = stripped.replace(/^Q:\s*/i, '').replace(/\*{1,2}$/, '').trim();
+    } else if (/^A:\s*/i.test(stripped)) {
+      currentA = stripped.replace(/^A:\s*/i, '');
+    } else if (currentA !== null) {
+      // Continuation of answer
+      currentA += ' ' + trimmed;
+    } else if (currentQ !== null && currentA === null) {
+      // Continuation of question (multi-line question)
+      currentQ += ' ' + trimmed.replace(/\*{1,2}$/, '');
+    }
+  }
+  flush();
+
+  return cards;
+}
+
 // ── LOAD / INPUT HANDLERS ──────────────────────────────────────
 function loadScript() {
   const raw = document.getElementById('scriptTextarea').value;
   if (!raw.trim()) return;
-  script = parseScript(raw);
-  revealed = 0;
-  userAnswers = {};
-  if (script.length > 0) {
-    document.getElementById('inputSection').classList.add('collapsed');
-    document.getElementById('toggleArrow').textContent = '►';
-    document.getElementById('sceneTitle').textContent = 'Roleplay Session';
+
+  const mode = getMode();
+  if (mode === 'drill') {
+    drillCards = parseDrill(raw);
+    drillRevealed = {};
+    drillAnswers = {};
+    drillIndex = 0;
+    if (drillCards.length > 0) {
+      document.getElementById('inputSection').classList.add('collapsed');
+      document.getElementById('toggleArrow').textContent = '►';
+      document.getElementById('sceneTitle').textContent = 'Bible Drill';
+    }
+  } else {
+    script = parseScript(raw);
+    revealed = 0;
+    userAnswers = {};
+    if (script.length > 0) {
+      document.getElementById('inputSection').classList.add('collapsed');
+      document.getElementById('toggleArrow').textContent = '►';
+      document.getElementById('sceneTitle').textContent = 'Roleplay Session';
+    }
   }
   render();
 }
@@ -642,6 +854,200 @@ function toggleInput() {
 
 // ── RENDER ─────────────────────────────────────────────────────
 function render() {
+  const mode = getMode();
+  if (mode === 'drill') {
+    renderDrill();
+  } else {
+    renderRoleplay();
+  }
+}
+
+function renderDrill() {
+  const chat = document.getElementById('chat');
+  chat.innerHTML = '';
+  const stickyNav = document.getElementById('stickyNav');
+  stickyNav.classList.remove('active');
+
+  if (drillCards.length === 0) {
+    chat.innerHTML = '<div class="empty-state">Paste or load Q&A drill content above to begin.<br><br>Format:<br><b>Q: Your question here</b><br>A: The answer<br><br>Separate cards with ---</div>';
+    document.getElementById('controls').innerHTML = '';
+    document.getElementById('progress').textContent = '';
+    return;
+  }
+
+  // Show all cards, each with input + Grab + Clr
+  drillCards.forEach((card, i) => {
+    const div = document.createElement('div');
+    div.className = 'drill-card';
+
+    const label = document.createElement('div');
+    label.className = 'q-label';
+    label.textContent = `Question ${i + 1}`;
+    div.appendChild(label);
+
+    const q = document.createElement('div');
+    q.className = 'q-text';
+    q.textContent = card.question;
+    div.appendChild(q);
+
+    // Input textarea for user's answer
+    const input = document.createElement('textarea');
+    input.id = `drillInput-${i}`;
+    input.placeholder = 'Type or dictate your answer...';
+    input.value = drillAnswers[i] || '';
+    input.style.cssText = 'width:100%;min-height:50px;border:1px solid #ddd;border-radius:8px;padding:10px 12px;font-family:inherit;font-size:13px;line-height:1.5;resize:vertical;color:#333;margin-top:4px;';
+    // Save as user types so it persists across re-renders
+    input.oninput = () => {
+      const val = input.value.trim();
+      if (val) drillAnswers[i] = val;
+      else delete drillAnswers[i];
+      updateDrillProgress();
+    };
+    div.appendChild(input);
+
+    // Buttons row: Grab + Clr
+    const btns = document.createElement('div');
+    btns.style.cssText = 'display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;';
+
+    const grab = document.createElement('button');
+    grab.className = 'grab-btn';
+    grab.textContent = 'Grab';
+    grab.onclick = async () => {
+      const inputEl = document.getElementById(`drillInput-${i}`);
+      if (inputEl.value.trim()) {
+        // Already has text — save it
+        drillAnswers[i] = inputEl.value.trim();
+      } else {
+        // Empty — try clipboard
+        try {
+          const text = await navigator.clipboard.readText();
+          if (text && text.trim()) {
+            inputEl.value = text.trim();
+            drillAnswers[i] = text.trim();
+          }
+        } catch(e) {}
+      }
+      updateDrillProgress();
+    };
+    btns.appendChild(grab);
+
+    const clr = document.createElement('button');
+    clr.style.cssText = 'padding:7px 14px;border:1px solid #ddd;border-radius:6px;background:white;font-size:12px;font-weight:600;cursor:pointer;';
+    clr.textContent = 'Clr';
+    clr.onclick = () => {
+      const inputEl = document.getElementById(`drillInput-${i}`);
+      inputEl.value = '';
+      delete drillAnswers[i];
+      inputEl.focus();
+      updateDrillProgress();
+    };
+    btns.appendChild(clr);
+
+    div.appendChild(btns);
+
+    // Reveal correct answer
+    if (drillRevealed[i]) {
+      const a = document.createElement('div');
+      a.className = 'a-text';
+      a.style.marginTop = '10px';
+      a.textContent = card.answer;
+      div.appendChild(a);
+    } else {
+      const revBtn = document.createElement('button');
+      revBtn.className = 'a-reveal-btn';
+      revBtn.style.marginTop = '10px';
+      revBtn.textContent = 'Tap to reveal answer';
+      revBtn.onclick = () => { drillRevealed[i] = true; render(); };
+      div.appendChild(revBtn);
+    }
+
+    chat.appendChild(div);
+  });
+
+  // Controls: Export, Reveal All, Hide All, New Drill
+  const controls = document.getElementById('controls');
+  controls.innerHTML = '';
+
+  const exp = document.createElement('button');
+  exp.className = 'btn export';
+  exp.textContent = 'Export for Grading';
+  exp.onclick = exportDrillAnswers;
+  controls.appendChild(exp);
+
+  const allRevealed = drillCards.every((_, i) => drillRevealed[i]);
+
+  if (!allRevealed) {
+    const revealAll = document.createElement('button');
+    revealAll.className = 'btn primary';
+    revealAll.textContent = 'Reveal All';
+    revealAll.onclick = () => { drillCards.forEach((_, i) => drillRevealed[i] = true); render(); };
+    controls.appendChild(revealAll);
+  }
+
+  const hideAll = document.createElement('button');
+  hideAll.className = 'btn outline';
+  hideAll.textContent = allRevealed ? 'Hide All' : 'Hide All';
+  hideAll.onclick = () => { drillRevealed = {}; render(); };
+  controls.appendChild(hideAll);
+
+  const newDrill = document.createElement('button');
+  newDrill.className = 'btn outline';
+  newDrill.textContent = 'New Drill';
+  newDrill.onclick = () => {
+    drillCards = [];
+    drillRevealed = {};
+    drillAnswers = {};
+    drillIndex = 0;
+    document.getElementById('scriptTextarea').value = '';
+    document.getElementById('inputSection').classList.remove('collapsed');
+    document.getElementById('toggleArrow').textContent = '▼';
+    document.getElementById('sceneTitle').textContent = 'Load a script to begin';
+    document.getElementById('dbxCurrentFileName').style.display = 'none';
+    render();
+  };
+  controls.appendChild(newDrill);
+
+  updateDrillProgress();
+}
+
+function updateDrillProgress() {
+  const answered = Object.keys(drillAnswers).length;
+  document.getElementById('progress').textContent =
+    `${answered} of ${drillCards.length} answered`;
+}
+
+async function exportDrillAnswers() {
+  const lines = [];
+  lines.push('Grade my Bible drill answers. For each question, format your response exactly like this:');
+  lines.push('');
+  lines.push('Q#: [question]');
+  lines.push('Rating: Strong / Partial Credit / Missed / Incorrect');
+  lines.push('My Answer: [quote exactly what I wrote]');
+  lines.push('');
+  lines.push('Right: What I got right');
+  lines.push('Missed: What I missed or got wrong');
+  lines.push('Improve: How to improve — be specific, reference the text, quote key phrases from the passage');
+  lines.push('');
+  lines.push('Then at the end, give an Overall assessment of my theological precision and what patterns I need to work on.');
+  lines.push('');
+  lines.push('---');
+  lines.push('');
+  drillCards.forEach((card, i) => {
+    lines.push(`Q${i + 1}: ${card.question}`);
+    lines.push(`My Answer: ${drillAnswers[i] || '(skipped)'}`);
+    lines.push(`Correct Answer: ${card.answer}`);
+    lines.push('');
+  });
+  const output = lines.join('\n');
+  try {
+    await navigator.clipboard.writeText(output);
+    alert('Copied to clipboard! Paste into AI chat for grading.');
+  } catch(e) {
+    alert('Could not copy. Check clipboard permissions.');
+  }
+}
+
+function renderRoleplay() {
   const chat = document.getElementById('chat');
   chat.innerHTML = '';
 
@@ -690,13 +1096,13 @@ function render() {
     if (line.tip && visible) {
       const tipBtn = document.createElement('button');
       tipBtn.className = 'tip-toggle';
-      tipBtn.textContent = '💡 Why this works';
+      tipBtn.textContent = 'Why this works';
       const tipBox = document.createElement('div');
       tipBox.className = 'tip-box';
       tipBox.textContent = line.tip;
       tipBtn.onclick = () => {
         const showing = tipBox.classList.toggle('show');
-        tipBtn.textContent = showing ? '▲ Hide tip' : '💡 Why this works';
+        tipBtn.textContent = showing ? 'Hide tip' : 'Why this works';
       };
       wrap.appendChild(tipBtn);
       wrap.appendChild(tipBox);
@@ -1167,9 +1573,36 @@ function handleDbxSearch() {
   searchDropboxFiles(query);
 }
 
+// ── MODE UI ────────────────────────────────────────────────────
+function updateModeUI() {
+  const mode = getMode();
+  const textarea = document.getElementById('scriptTextarea');
+  const hint = document.querySelector('.format-hint');
+  const headerLabel = document.getElementById('headerLabel');
+
+  if (mode === 'drill') {
+    headerLabel.textContent = 'Bible Drill';
+    textarea.placeholder = 'Q: Why is an unrepentant heart dangerous?\nA: Because you\'re storing up wrath for yourself. (Romans 2:5)\n\n---\n\nQ: Next question?\nA: The answer here.';
+    hint.innerHTML = 'Format: Lines starting with <b>Q:</b> and <b>A:</b> — separate cards with <b>---</b>';
+  } else {
+    headerLabel.textContent = 'Sales Roleplay';
+    textarea.placeholder = 'You: Your line here (coaching tip in parentheses)\nProspect: Their response here\n\nYou: Next line (another tip)\nProspect: Their next response';
+    hint.innerHTML = 'Format: Lines starting with <b>You:</b> or <b>Prospect:</b> — coaching tips in (parentheses) at end of Your lines.';
+  }
+}
+
 // ── INIT ───────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   handleDropboxOAuthRedirect();
+
+  // Mode toggle
+  document.querySelectorAll('input[name="mode"]').forEach(radio => {
+    radio.addEventListener('change', () => {
+      updateModeUI();
+      render();
+    });
+  });
+  updateModeUI();
 
   document.getElementById('dropboxBtn').addEventListener('click', toggleDropboxSidebar);
   document.getElementById('dbxPrevFileBtn').addEventListener('click', dbxPrevFile);
