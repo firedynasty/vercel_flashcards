@@ -863,7 +863,9 @@
             <button class="mode-toggle-btn" id="autoSpeakBtn">Speak</button>
             <button class="speak-btn" id="speakRevealBtn" style="display:none">Back</button>
             <button class="speak-btn" id="nextSpeakBtn" style="display:none">Next & Speak</button>
+            <input type="text" id="dictateInput" placeholder="Dictate answer here..." style="flex:1;padding:8px 12px;border:none;border-radius:8px;background:rgba(255,255,255,0.15);color:#fff;font-size:0.9rem;">
             <button class="speak-btn" id="grabClipBtn" style="background:#1a3a1a;border-color:#52c97a;color:#52c97a">Grab</button>
+            <button class="speak-btn" id="clearDictateBtn" style="background:#3a1a1a;border-color:#c95252;color:#c95252">Clr</button>
             <button class="speak-btn" id="exportAnswersBtn" style="background:#1a1a3a;border-color:#4fc3c3;color:#4fc3c3">Export</button>
         </div>
 
@@ -2116,18 +2118,30 @@ God loves the world
             document.getElementById('speakRevealBtn').addEventListener('click', goBackAndSpeak);
             document.getElementById('nextSpeakBtn').addEventListener('click', nextAndSpeak);
 
-            // Grab from clipboard: save answer for current card, advance to next
+            // Grab from dictate input (preferred) or clipboard fallback
             document.getElementById('grabClipBtn').addEventListener('click', async () => {
                 if (allCards.length === 0) return;
-                try {
-                    const text = await navigator.clipboard.readText();
-                    if (text && text.trim()) {
-                        userAnswers[currentIndex] = text.trim();
+                const input = document.getElementById('dictateInput');
+                const inputText = input.value.trim();
+                if (inputText) {
+                    userAnswers[currentIndex] = inputText;
+                    input.value = '';
+                } else {
+                    try {
+                        const clipText = await navigator.clipboard.readText();
+                        if (clipText && clipText.trim()) {
+                            userAnswers[currentIndex] = clipText.trim();
+                        }
+                    } catch (err) {
+                        console.error('Clipboard read failed:', err);
                     }
-                } catch (err) {
-                    console.error('Clipboard read failed:', err);
                 }
                 navigate(1);
+            });
+
+            // Clear dictate input
+            document.getElementById('clearDictateBtn').addEventListener('click', () => {
+                document.getElementById('dictateInput').value = '';
             });
 
             // Export all answers to clipboard for AI grading
