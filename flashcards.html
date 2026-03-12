@@ -785,6 +785,47 @@
         .dbx-save-btn:hover {
             background: #0052d4;
         }
+
+        /* Image Viewer Mode */
+        .image-viewer {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .image-viewer img {
+            max-width: 100%;
+            max-height: 70vh;
+            border-radius: 12px;
+            object-fit: contain;
+        }
+        .image-viewer .img-caption {
+            font-size: 0.85rem;
+            color: #a8d8ea;
+            margin-top: 8px;
+        }
+
+        /* Image folder & prompts selects in nav */
+        .img-folder-select {
+            padding: 4px 8px;
+            border: none;
+            border-radius: 6px;
+            background: rgba(255,255,255,0.15);
+            color: #fff;
+            font-size: 12px;
+            cursor: pointer;
+            max-width: 160px;
+        }
+        .img-folder-select option {
+            background: #1a1a2e;
+            color: #fff;
+        }
+        .nav-btn.img-exit-btn {
+            background: #ef4444;
+            color: white;
+            font-size: 11px;
+            padding: 4px 8px;
+        }
     </style>
 </head>
 <body>
@@ -809,6 +850,11 @@
             <button class="nav-btn" id="dbxPrevFileBtn" title="Previous file" disabled>&#9664;</button>
             <button class="nav-btn" id="dbxNextFileBtn" title="Next file" disabled>&#9654;</button>
             <button class="nav-btn" id="appendCardBtn" title="Append new flashcard">+</button>
+            <span style="margin: 0 4px; color: rgba(255,255,255,0.3);">|</span>
+            <select class="img-folder-select" id="imgFolderSelect" title="Image folders">
+                <option value="" disabled selected>IMG</option>
+            </select>
+            <button class="nav-btn nav-btn.img-exit-btn" id="imgExitBtn" title="Exit image mode" style="display:none;background:#ef4444;color:white;font-size:11px;padding:4px 8px;">X</button>
         </div>
     </div>
 
@@ -878,6 +924,11 @@
                 <div class="chinese-text" id="chineseText">Load flashcards to begin</div>
                 <div class="english-text" id="englishText"></div>
                 <p class="tap-hint" id="tapHint">Tap card for next, auto reveal on will speak only</p>
+            </div>
+            <!-- Image Viewer (hidden by default, replaces flashcard) -->
+            <div class="image-viewer" id="imageViewer" style="display:none;">
+                <img id="imageViewerImg" src="" alt="Reference image">
+                <div class="img-caption" id="imageCaption"></div>
             </div>
         </div>
 
@@ -960,6 +1011,13 @@ The Bible is the foundation of our faith
         let dbxFolderFiles = []; // non-folder entries in current folder
         let dbxFileIndex = -1;   // index of currently loaded file in dbxFolderFiles
 
+        // Image viewer mode
+        const IMG_BASE_PATH = '/blob_vercel_replacement/images';
+        let imageMode = false;
+        let imgFiles = [];       // [{name, path}, ...]
+        let imgCurrentIndex = 0;
+        let imgCurrentObjectURL = null;
+
         const isLocalhost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
 
         // PKCE helpers
@@ -1019,6 +1077,7 @@ The Bible is the foundation of our faith
                 if (!dbxRootFilesLoaded) {
                     dbxRootFilesLoaded = true;
                     loadDropboxFolder('');
+                    loadImageFolders();
                 }
             } else {
                 document.getElementById('dbxSignInSection').style.display = 'block';
@@ -1094,6 +1153,8 @@ The Bible is the foundation of our faith
                     window.history.replaceState({}, document.title, window.location.pathname);
                     // Auto-open sidebar in signed-in state
                     toggleDropboxSidebar();
+                    // Auto-load image folders and prompts
+                    loadImageFolders();
                 } else {
                     console.error('Dropbox auth failed:', data);
                 }
@@ -1570,6 +1631,120 @@ God loves the world
             return cards;
         }
 
+        // ============ IMAGE VIEWER & PROMPTS ============
+        async function loadImageFolders() {
+            if (!dropboxAccessToken) return;
+            try {
+                const response = await fetch('https://api.dropboxapi.com/2/files/list_folder', {
+                    method: 'POST',
+                    headers: {
+                        Authorization: `Bearer ${dropboxAccessToken}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ path: IMG_BASE_PATH }),
+                });
+                if (!response.ok) return;
+                const data = await response.json();
+                const folders = (data.entries || [])
+                    .filter(e => e['.tag'] === 'folder')
+                    .sort((a, b) => a.name.localeCompare(b.name));
+                const select = document.getElementById('imgFolderSelect');
+                select.innerHTML = '<option value="" disabled selected>IMG</option>';
+                folders.forEach(f => {
+                    const opt = document.createElement('option');
+                    opt.value = f.path_lower || f.path_display;
+                    opt.textContent = f.name;
+                    select.appendChild(opt);
+                });
+            } catch (err) {
+                console.error('Failed to load image folders:', err);
+            }
+        }
+
+        async function loadImageFiles(folderPath) {
+            if (!dropboxAccessToken) return;
+            const imgExts = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg'];
+            try {
+                const response = await fetch('https://api.dropboxapi.com/2/files/list_folder', {
+                    method: 'POST',
+                    headers: {
+                        Authorization: `Bearer ${dropboxAccessToken}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ path: folderPath }),
+                });
+                if (!response.ok) throw new Error('Failed to list image folder');
+                const data = await response.json();
+                imgFiles = (data.entries || [])
+                    .filter(e => e['.tag'] === 'file' && imgExts.some(ext => e.name.toLowerCase().endsWith(ext)))
+                    .map(e => ({ name: e.name, path: e.path_lower || e.path_display }))
+                    .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+
+                if (imgFiles.length === 0) {
+                    alert('No images found in this folder');
+                    return;
+                }
+                imgCurrentIndex = 0;
+                enterImageMode();
+                loadDropboxImage(imgCurrentIndex);
+            } catch (err) {
+                console.error('Failed to load image files:', err);
+                alert('Error loading images: ' + err.message);
+            }
+        }
+
+        function enterImageMode() {
+            imageMode = true;
+            document.getElementById('flashcard').style.display = 'none';
+            document.getElementById('imageViewer').style.display = 'flex';
+            document.getElementById('imgExitBtn').style.display = '';
+            updateImageCounter();
+        }
+
+        function exitImageMode() {
+            imageMode = false;
+            document.getElementById('flashcard').style.display = '';
+            document.getElementById('imageViewer').style.display = 'none';
+            document.getElementById('imgExitBtn').style.display = 'none';
+            if (imgCurrentObjectURL) {
+                URL.revokeObjectURL(imgCurrentObjectURL);
+                imgCurrentObjectURL = null;
+            }
+            document.getElementById('imgFolderSelect').selectedIndex = 0;
+            updateDisplay();
+        }
+
+        async function loadDropboxImage(index) {
+            if (index < 0 || index >= imgFiles.length) return;
+            imgCurrentIndex = index;
+            const file = imgFiles[index];
+            try {
+                const response = await fetch('https://content.dropboxapi.com/2/files/download', {
+                    method: 'POST',
+                    headers: {
+                        Authorization: `Bearer ${dropboxAccessToken}`,
+                        'Dropbox-API-Arg': JSON.stringify({ path: file.path }),
+                    },
+                });
+                if (!response.ok) throw new Error('Download failed');
+                if (imgCurrentObjectURL) URL.revokeObjectURL(imgCurrentObjectURL);
+                const blob = await response.blob();
+                imgCurrentObjectURL = URL.createObjectURL(blob);
+                document.getElementById('imageViewerImg').src = imgCurrentObjectURL;
+                document.getElementById('imageCaption').textContent = file.name;
+                updateImageCounter();
+            } catch (err) {
+                console.error('Failed to load image:', err);
+            }
+        }
+
+        function updateImageCounter() {
+            if (!imageMode) return;
+            document.getElementById('counterDisplay').textContent = `${imgCurrentIndex + 1}/${imgFiles.length}`;
+            document.getElementById('prevBtn').disabled = imgCurrentIndex === 0;
+            document.getElementById('nextBtn').disabled = imgCurrentIndex === imgFiles.length - 1;
+        }
+
         // ============ UI UPDATE FUNCTIONS ============
         function updateDisplay() {
             const chineseText = document.getElementById('chineseText');
@@ -1626,31 +1801,30 @@ God loves the world
         }
 
         function handleFlashcardClick() {
+            if (imageMode) return; // image viewer handles its own clicks
             if (autoSpeak) {
-                // Auto Speak ON: speak only, don't navigate
                 speakChinese();
             } else {
-                // Auto Speak OFF: just go next
                 navigate(1);
             }
         }
 
         function goBackAndSpeak() {
-            // Go back one card
-            navigate(-1);
-            // Only speak if Auto Speak is on
-            if (autoSpeak) {
-                speakChinese();
+            if (imageMode) {
+                if (imgCurrentIndex > 0) loadDropboxImage(imgCurrentIndex - 1);
+                return;
             }
+            navigate(-1);
+            if (autoSpeak) speakChinese();
         }
 
         function nextAndSpeak() {
-            // Go to next card
-            navigate(1);
-            // Only speak if Auto Speak is on
-            if (autoSpeak) {
-                speakChinese();
+            if (imageMode) {
+                if (imgCurrentIndex < imgFiles.length - 1) loadDropboxImage(imgCurrentIndex + 1);
+                return;
             }
+            navigate(1);
+            if (autoSpeak) speakChinese();
         }
 
         function revealEnglish() {
@@ -2093,6 +2267,12 @@ God loves the world
                 if (link) loadDropboxFolder(link.dataset.path);
             });
             document.getElementById('dbxSaveBtn').addEventListener('click', saveToDropbox);
+
+            // Image folder select
+            document.getElementById('imgFolderSelect').addEventListener('change', (e) => {
+                if (e.target.value) loadImageFiles(e.target.value);
+            });
+            document.getElementById('imgExitBtn').addEventListener('click', exitImageMode);
 
             // Load voices
             speechSynthesis.addEventListener('voiceschanged', () => {
