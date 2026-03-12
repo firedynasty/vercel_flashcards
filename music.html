@@ -678,7 +678,7 @@ html[data-useragent*="Chrome"] .plSel:hover { background-color:#161616!important
           </div>
         </div>
 
-        <div style="margin-bottom: 10px; text-align: center;">
+        <div style="margin-bottom: 10px; text-align: center; display: none;">
           <label for="collectionSelect" style="color: white; margin-right: 10px;">Playlist:</label>
           <select id="collectionSelect" style="padding: 5px; background: #131313; color: white; border: 1px solid #333;">
             <!-- Options will be populated dynamically -->
@@ -696,6 +696,9 @@ html[data-useragent*="Chrome"] .plSel:hover { background-color:#161616!important
       </div>
 
       <div class="lv-controls">
+        <select id="dbxLyricsSelect" class="lv-select" disabled>
+          <option value="" disabled selected>DB Lyrics</option>
+        </select>
         <select id="lvSongSelect" class="lv-select">
           <option value="">Select a song...</option>
         </select>
@@ -2094,6 +2097,7 @@ Hell lost another one, I am free (oh, I am free)`;
     btn.style.background = '#10B981';
     document.getElementById('dbxMusicStatus').textContent = 'Signed in';
     loadDbxMusicFolders();
+    loadDbxLyricsFiles();
   }
 
   async function loadDbxMusicFolders() {
@@ -2202,6 +2206,123 @@ Hell lost another one, I am free (oh, I am free)`;
       status.textContent = 'Error: ' + err.message;
     }
   }
+
+  // ============ DROPBOX LYRICS ============
+  var DBX_LYRICS_PATH = '/blob_vercel_replacement/lyrics';
+  var dbxLyricsFiles = []; // [{name, path}, ...]
+  var dbxLyricsIndex = -1;
+
+  async function loadDbxLyricsFiles() {
+    if (!dbxMusicToken) return;
+    try {
+      var response = await fetch('https://api.dropboxapi.com/2/files/list_folder', {
+        method: 'POST',
+        headers: {
+          Authorization: 'Bearer ' + dbxMusicToken,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ path: DBX_LYRICS_PATH })
+      });
+      if (!response.ok) return;
+      var data = await response.json();
+      dbxLyricsFiles = (data.entries || [])
+        .filter(function(e) { return e['.tag'] === 'file' && e.name.toLowerCase().endsWith('.txt'); })
+        .map(function(e) { return { name: e.name, path: e.path_lower || e.path_display }; })
+        .sort(function(a, b) { return a.name.localeCompare(b.name, undefined, { numeric: true }); });
+      var select = document.getElementById('dbxLyricsSelect');
+      select.disabled = false;
+      select.innerHTML = '<option value="" disabled selected>DB Lyrics</option>';
+      dbxLyricsFiles.forEach(function(f, i) {
+        var opt = document.createElement('option');
+        opt.value = i;
+        opt.textContent = f.name.replace(/\.txt$/i, '');
+        select.appendChild(opt);
+      });
+    } catch (err) {
+      console.error('Failed to load lyrics files:', err);
+    }
+  }
+
+  async function loadDbxLyric(idx) {
+    idx = parseInt(idx);
+    if (idx < 0 || idx >= dbxLyricsFiles.length || !dbxMusicToken) return;
+    dbxLyricsIndex = idx;
+    var file = dbxLyricsFiles[idx];
+    try {
+      var response = await fetch('https://content.dropboxapi.com/2/files/download', {
+        method: 'POST',
+        headers: {
+          Authorization: 'Bearer ' + dbxMusicToken,
+          'Dropbox-API-Arg': JSON.stringify({ path: file.path })
+        }
+      });
+      if (!response.ok) throw new Error('Download failed');
+      var content = await response.text();
+
+      // Filter out comment lines (lines starting with .)
+      var filtered = content.split('\n')
+        .filter(function(line) { return !line.trimStart().startsWith('.'); })
+        .join('\n');
+
+      var title = file.name.replace(/\.txt$/i, '');
+      var lyricsDisplay = document.getElementById('lvLyricsDisplay');
+      var formattedLyrics = formatLyricsContent(filtered);
+      lyricsDisplay.innerHTML =
+        '<div class="lv-song-title">' + title + '</div>' +
+        '<div class="lv-lyrics-content">' + formattedLyrics + '</div>';
+      lyricsDisplay.scrollTop = 0;
+
+      // Update nav buttons for DB lyrics
+      document.getElementById('lvPrevBtn').disabled = dbxLyricsIndex === 0;
+      document.getElementById('lvNextBtn').disabled = dbxLyricsIndex === dbxLyricsFiles.length - 1;
+    } catch (err) {
+      console.error('Failed to load lyric:', err);
+    }
+  }
+
+  // Override prev/next to work with DB lyrics when active
+  var origLvNextSong = lvNextSong;
+  var origLvPrevSong = lvPrevSong;
+  lvNextSong = function() {
+    if (dbxLyricsIndex >= 0 && dbxLyricsIndex < dbxLyricsFiles.length - 1) {
+      dbxLyricsIndex++;
+      document.getElementById('dbxLyricsSelect').value = dbxLyricsIndex;
+      loadDbxLyric(dbxLyricsIndex);
+    } else if (dbxLyricsIndex < 0) {
+      origLvNextSong();
+    }
+  };
+  lvPrevSong = function() {
+    if (dbxLyricsIndex > 0) {
+      dbxLyricsIndex--;
+      document.getElementById('dbxLyricsSelect').value = dbxLyricsIndex;
+      loadDbxLyric(dbxLyricsIndex);
+    } else if (dbxLyricsIndex < 0) {
+      origLvPrevSong();
+    }
+  };
+
+  // Re-bind nav buttons with updated functions
+  document.getElementById('lvNextBtn').removeEventListener('click', origLvNextSong);
+  document.getElementById('lvPrevBtn').removeEventListener('click', origLvPrevSong);
+  document.getElementById('lvNextBtn').addEventListener('click', lvNextSong);
+  document.getElementById('lvPrevBtn').addEventListener('click', lvPrevSong);
+
+  // DB lyrics select handler
+  document.getElementById('dbxLyricsSelect').addEventListener('change', function() {
+    if (this.value !== '') {
+      // Reset the hardcoded song select
+      document.getElementById('lvSongSelect').value = '';
+      loadDbxLyric(this.value);
+    }
+  });
+
+  // When hardcoded song is selected, reset DB lyrics mode
+  var origLvSelectHandler = lvSongSelect.onchange;
+  lvSongSelect.addEventListener('change', function() {
+    dbxLyricsIndex = -1;
+    document.getElementById('dbxLyricsSelect').selectedIndex = 0;
+  });
 
   // Wire up Dropbox events
   document.getElementById('dbxMusicSignInBtn').addEventListener('click', handleDbxMusicSignIn);
