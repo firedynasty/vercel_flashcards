@@ -795,9 +795,14 @@
         }
         .image-viewer img {
             max-width: 100%;
-            max-height: 70vh;
+            max-height: 50vh;
             border-radius: 12px;
             object-fit: contain;
+            cursor: pointer;
+            transition: max-height 0.3s ease;
+        }
+        .image-viewer img.img-expanded {
+            max-height: 90vh;
         }
         .image-viewer .img-caption {
             font-size: 0.85rem;
@@ -2047,6 +2052,7 @@ God loves the world
         let history = [];
         let canvasInitialized = false;
         let isDarkMode = false;
+        let expandState = 0; // 0=small, 1=wide, 2=wide+tall
         let isExpanded = false;
 
         function initCanvas() {
@@ -2220,16 +2226,29 @@ God loves the world
         }
 
         function toggleExpandCanvas() {
-            isExpanded = !isExpanded;
+            expandState = (expandState + 1) % 3;
+            isExpanded = expandState > 0;
             const expandBtn = document.getElementById('expandBtn');
             const flashcard = document.getElementById('flashcard');
             const originalSize = Math.min(window.innerWidth - 40, 400);
-            const newWidth = isExpanded
-                ? flashcard.offsetWidth - 20
-                : originalSize;
+
+            let newWidth, newHeight;
+            if (expandState === 0) {
+                // Small: original square
+                newWidth = originalSize;
+                newHeight = originalSize;
+            } else if (expandState === 1) {
+                // Wide: expand horizontally
+                newWidth = flashcard.offsetWidth - 20;
+                newHeight = originalSize;
+            } else {
+                // Wide + Tall: expand both
+                newWidth = flashcard.offsetWidth - 20;
+                newHeight = originalSize * 2;
+            }
 
             canvas.width = gridCanvas.width = newWidth;
-            canvas.height = gridCanvas.height = originalSize;
+            canvas.height = gridCanvas.height = newHeight;
 
             // Reapply drawing settings after resize
             ctx.strokeStyle = isDarkMode ? '#fff' : '#000';
@@ -2237,8 +2256,9 @@ God loves the world
             ctx.lineJoin = 'round';
             ctx.lineWidth = strokeSizeValue;
 
-            expandBtn.classList.toggle('active', isExpanded);
-            expandBtn.textContent = isExpanded ? 'Shrink' : 'Expand';
+            const labels = ['Expand', 'Taller', 'Shrink'];
+            expandBtn.textContent = labels[expandState];
+            expandBtn.classList.toggle('active', expandState > 0);
 
             drawGrid();
             history = [];
@@ -2273,6 +2293,9 @@ God loves the world
                 if (e.target.value) loadImageFiles(e.target.value);
             });
             document.getElementById('imgExitBtn').addEventListener('click', exitImageMode);
+            document.getElementById('imageViewerImg').addEventListener('click', () => {
+                document.getElementById('imageViewerImg').classList.toggle('img-expanded');
+            });
 
             // Load voices
             speechSynthesis.addEventListener('voiceschanged', () => {
