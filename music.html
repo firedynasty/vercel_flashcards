@@ -540,6 +540,91 @@ html[data-useragent*="Chrome"] .plSel:hover { background-color:#161616!important
     font-style: italic;
 }
 
+/* Lyrics line wrapper */
+.lyrics-viewer-section .lv-line {
+    display: block;
+    transition: background 0.2s;
+    border-radius: 4px;
+    padding: 0 4px;
+}
+
+/* Study mode toggle */
+.lyrics-viewer-section .lv-study-toggle-group {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+.lyrics-viewer-section .lv-study-switch {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 26px;
+}
+.lyrics-viewer-section .lv-study-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+.lyrics-viewer-section .lv-study-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: #ddd;
+    transition: .4s;
+    border-radius: 26px;
+}
+.lyrics-viewer-section .lv-study-slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+.lyrics-viewer-section .lv-study-switch input:checked + .lv-study-slider {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+.lyrics-viewer-section .lv-study-switch input:checked + .lv-study-slider:before {
+    transform: translateX(24px);
+}
+.lyrics-viewer-section .lv-study-label {
+    font-size: 14px;
+    color: #495057;
+    font-weight: 500;
+}
+.lyrics-viewer-section .lv-study-mode-label {
+    font-size: 13px;
+    color: #764ba2;
+    font-weight: 600;
+    min-width: 100px;
+}
+
+/* Hide odd lines (1st, 3rd, 5th...) - hover to reveal */
+.lv-lyrics-content.lv-hide-odd .lv-line:nth-child(odd):not(.lv-line-label):not(.lv-line-empty) {
+    color: transparent;
+    background: #e8e8f0;
+}
+.lv-lyrics-content.lv-hide-odd .lv-line:nth-child(odd):not(.lv-line-label):not(.lv-line-empty):hover {
+    color: #333;
+    background: #d4d8f8;
+}
+
+/* Hide even lines (2nd, 4th, 6th...) - hover to reveal */
+.lv-lyrics-content.lv-hide-even .lv-line:nth-child(even):not(.lv-line-label):not(.lv-line-empty) {
+    color: transparent;
+    background: #e8e8f0;
+}
+.lv-lyrics-content.lv-hide-even .lv-line:nth-child(even):not(.lv-line-label):not(.lv-line-empty):hover {
+    color: #333;
+    background: #d4d8f8;
+}
+
 /* Custom scrollbar for lyrics */
 .lyrics-viewer-section .lv-lyrics-container::-webkit-scrollbar {
     width: 8px;
@@ -706,6 +791,16 @@ html[data-useragent*="Chrome"] .plSel:hover { background-color:#161616!important
           <button id="lvPrevBtn" class="lv-btn" title="Previous song">◀ Prev</button>
           <button id="lvNextBtn" class="lv-btn" title="Next song">Next ▶</button>
         </div>
+      </div>
+
+      <div class="lv-study-toggle-group">
+        <span class="lv-study-label">Study Mode:</span>
+        <button id="lvStudyBtn" class="lv-btn" style="padding:8px 16px; font-size:14px; background:#ccc; color:#333;">Off</button>
+        <label class="lv-study-switch" id="lvStudySwitchWrap" style="display:none;" title="Toggle: hide odd vs even lines">
+          <input type="checkbox" id="lvStudyToggle">
+          <span class="lv-study-slider"></span>
+        </label>
+        <span class="lv-study-mode-label" id="lvStudyModeLabel" style="display:none;">Hide Top Line</span>
       </div>
 
       <div class="lv-lyrics-container" id="lvLyricsDisplay">
@@ -1892,20 +1987,19 @@ Hell lost another one, I am free (oh, I am free)`;
     lines.forEach(line => {
       line = line.trim();
       if (!line) {
-        formatted += '\n';
+        formatted += '<span class="lv-line lv-line-empty">\n</span>';
       } else if (line === '||') {
-        formatted += '\n';
+        formatted += '<span class="lv-line lv-line-empty">\n</span>';
       } else if (line.match(/^\[.*\]$/)) {
-        // Section labels like [Verse 1], [Chorus], etc.
-        formatted += `<div class="lv-verse-label">${line}</div>\n`;
+        formatted += `<span class="lv-line lv-line-label"><div class="lv-verse-label">${line}</div></span>`;
       } else if (line.toLowerCase().startsWith('verse') ||
                  line.toLowerCase().startsWith('chorus') ||
                  line.toLowerCase().startsWith('bridge') ||
                  line.toLowerCase().startsWith('pre-chorus') ||
                  line.toLowerCase().startsWith('hook')) {
-        formatted += `<div class="lv-verse-label">[${line}]</div>\n`;
+        formatted += `<span class="lv-line lv-line-label"><div class="lv-verse-label">[${line}]</div></span>`;
       } else {
-        formatted += line + '\n';
+        formatted += `<span class="lv-line">${line}\n</span>`;
       }
     });
 
@@ -1979,6 +2073,88 @@ Hell lost another one, I am free (oh, I am free)`;
     lvDisplaySong(0);
   }
 
+  // Study mode: hide alternating lines with hover-to-reveal
+  let lvStudyMode = 'off'; // 'off', 'odd', 'even'
+  const lvStudyBtn = document.getElementById('lvStudyBtn');
+  const lvStudyToggle = document.getElementById('lvStudyToggle');
+  const lvStudySwitchWrap = document.getElementById('lvStudySwitchWrap');
+  const lvStudyModeLabel = document.getElementById('lvStudyModeLabel');
+
+  function lvApplyStudyMode() {
+    const lyricsContent = document.querySelector('.lv-lyrics-content');
+    if (!lyricsContent) return;
+    lyricsContent.classList.remove('lv-hide-odd', 'lv-hide-even');
+    if (lvStudyMode === 'odd') {
+      lyricsContent.classList.add('lv-hide-odd');
+    } else if (lvStudyMode === 'even') {
+      lyricsContent.classList.add('lv-hide-even');
+    }
+  }
+
+  lvStudyBtn.addEventListener('click', function() {
+    if (lvStudyMode === 'off') {
+      lvStudyMode = 'odd';
+      lvStudyBtn.textContent = 'On';
+      lvStudyBtn.style.background = '#667eea';
+      lvStudyBtn.style.color = 'white';
+      lvStudySwitchWrap.style.display = '';
+      lvStudyModeLabel.style.display = '';
+      lvStudyToggle.checked = false;
+      lvStudyModeLabel.textContent = 'Hide Top Line';
+    } else {
+      lvStudyMode = 'off';
+      lvStudyBtn.textContent = 'Off';
+      lvStudyBtn.style.background = '#ccc';
+      lvStudyBtn.style.color = '#333';
+      lvStudySwitchWrap.style.display = 'none';
+      lvStudyModeLabel.style.display = 'none';
+    }
+    lvApplyStudyMode();
+    localStorage.setItem('lvStudyMode', lvStudyMode);
+    localStorage.setItem('lvStudyToggle', lvStudyToggle.checked.toString());
+  });
+
+  lvStudyToggle.addEventListener('change', function() {
+    if (lvStudyToggle.checked) {
+      lvStudyMode = 'even';
+      lvStudyModeLabel.textContent = 'Hide Bottom Line';
+    } else {
+      lvStudyMode = 'odd';
+      lvStudyModeLabel.textContent = 'Hide Top Line';
+    }
+    lvApplyStudyMode();
+    localStorage.setItem('lvStudyMode', lvStudyMode);
+    localStorage.setItem('lvStudyToggle', lvStudyToggle.checked.toString());
+  });
+
+  // Load saved study mode preference
+  (function loadStudyPref() {
+    const savedMode = localStorage.getItem('lvStudyMode');
+    const savedToggle = localStorage.getItem('lvStudyToggle');
+    if (savedMode && savedMode !== 'off') {
+      lvStudyMode = savedMode;
+      lvStudyBtn.textContent = 'On';
+      lvStudyBtn.style.background = '#667eea';
+      lvStudyBtn.style.color = 'white';
+      lvStudySwitchWrap.style.display = '';
+      lvStudyModeLabel.style.display = '';
+      if (savedMode === 'even') {
+        lvStudyToggle.checked = true;
+        lvStudyModeLabel.textContent = 'Hide Bottom Line';
+      } else {
+        lvStudyToggle.checked = false;
+        lvStudyModeLabel.textContent = 'Hide Top Line';
+      }
+      lvApplyStudyMode();
+    }
+  })();
+
+  // Re-apply study mode after song changes
+  const origLvDisplaySong = lvDisplaySong;
+  lvDisplaySong = function(index) {
+    origLvDisplaySong(index);
+    lvApplyStudyMode();
+  };
 
   // Cancel the loop timer
   function cancelLoopTimer() {
@@ -2271,6 +2447,7 @@ Hell lost another one, I am free (oh, I am free)`;
         '<div class="lv-song-title">' + title + '</div>' +
         '<div class="lv-lyrics-content">' + formattedLyrics + '</div>';
       lyricsDisplay.scrollTop = 0;
+      lvApplyStudyMode();
 
       // Update nav buttons for DB lyrics
       document.getElementById('lvPrevBtn').disabled = dbxLyricsIndex === 0;
