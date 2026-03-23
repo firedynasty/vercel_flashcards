@@ -441,10 +441,6 @@ function renderDrill() {
   }
   area.classList.add('active');
 
-  // Collapse setup
-  document.getElementById('setupSection').classList.add('collapsed');
-  document.getElementById('setupArrow').textContent = '►';
-
   var lesson = document.getElementById('lessonSelect').value || 'All Lessons';
   document.getElementById('lessonTag').textContent = lesson;
   document.getElementById('countLabel').textContent = filteredRows.length + ' items';
