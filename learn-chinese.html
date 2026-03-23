@@ -79,7 +79,10 @@
   .vocab-card {
     background: white; border: 1px solid #e8e8e8; border-radius: 12px;
     padding: 16px 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    cursor: pointer; transition: background-color 0.15s;
   }
+  .vocab-card:hover { background-color: #e8e8e8; }
+  .vocab-card.speaking { background-color: #dbeafe; border-color: #93c5fd; }
   .vocab-card + .vocab-card { margin-top: 10px; }
   .vocab-card .num { font-size: 11px; font-weight: 700; color: #888; margin-bottom: 4px; }
   .vocab-card .chinese { font-size: 22px; font-weight: 600; margin-bottom: 4px; }
@@ -136,6 +139,49 @@
     user-select: none; transition: all 0.15s;
   }
   .toggle-chip.on { background: #2563eb; color: white; border-color: #2563eb; }
+
+  /* ── TTS CONTROLS ── */
+  .tts-controls {
+    display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+    margin-bottom: 14px; padding: 10px 16px;
+    background: white; border: 1px solid #e0e0e0; border-radius: 10px;
+  }
+  .tts-controls label { font-size: 12px; font-weight: 600; color: #555; }
+  .tts-controls select, .tts-controls input[type="range"] {
+    font-size: 13px; font-family: inherit;
+  }
+  .tts-controls select { padding: 4px 8px; border: 1px solid #ccc; border-radius: 6px; }
+  .tts-controls .rate-value { font-size: 12px; color: #888; min-width: 30px; }
+
+  /* ── AUTO-ADVANCE TOGGLE ── */
+  .auto-advance-bar {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    margin-bottom: 14px; padding: 8px 16px;
+    border-radius: 8px;
+    transition: background-color 0.2s;
+  }
+  .auto-advance-bar.on { background: #e6ffe6; }
+  .auto-advance-bar.off { background: #f0f0f0; }
+  .auto-advance-label {
+    font-weight: 700; font-size: 12px; color: #666;
+    cursor: pointer; padding: 4px 8px; border-radius: 4px;
+  }
+  .switch-wrap {
+    position: relative; display: inline-block; width: 50px; height: 24px; cursor: pointer;
+  }
+  .switch-wrap input { opacity: 0; width: 0; height: 0; }
+  .switch-track {
+    position: absolute; inset: 0;
+    background-color: #ddd; transition: .4s; border-radius: 24px;
+  }
+  .switch-track.on { background-color: #4CAF50; }
+  .switch-knob {
+    position: absolute; height: 18px; width: 18px;
+    bottom: 3px; left: 3px;
+    background-color: white; transition: .4s; border-radius: 50%;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  }
+  .switch-knob.on { left: 29px; }
 </style>
 </head>
 <body>
@@ -187,6 +233,35 @@
       <span class="toggle-chip on" id="toggleChinese" onclick="toggleChinese()">Chinese</span>
     </div>
 
+    <!-- TTS Controls -->
+    <div class="tts-controls">
+      <label>Language</label>
+      <select id="languageSelect" onchange="onLanguageChange()">
+        <option value="zh-HK">Cantonese</option>
+        <option value="en-US">English</option>
+        <option value="fr-FR">French</option>
+        <option value="es-ES">Spanish</option>
+        <option value="zh-CN" selected>Mandarin</option>
+        <option value="ko-KR">Korean</option>
+        <option value="he-IL">Hebrew</option>
+      </select>
+      <label>Speed</label>
+      <input type="range" id="speechRateSlider" min="0.25" max="2" step="0.25" value="1" oninput="onRateChange()">
+      <span class="rate-value" id="rateValue">1x</span>
+    </div>
+
+    <!-- Auto-advance toggle -->
+    <div class="auto-advance-bar on" id="autoAdvanceBar">
+      <span class="auto-advance-label" id="stopLabel" onmouseenter="setAutoAdvance(false)" style="background: transparent;">Stop After Card</span>
+      <label class="switch-wrap">
+        <input type="checkbox" checked id="autoAdvanceCheckbox" onchange="setAutoAdvance(this.checked)">
+        <span class="switch-track on" id="switchTrack">
+          <span class="switch-knob on" id="switchKnob"></span>
+        </span>
+      </label>
+      <span class="auto-advance-label" id="autoLabel" onmouseenter="setAutoAdvance(true)" style="color: #4CAF50; background: #c8e6c9;">Auto Next Card</span>
+    </div>
+
     <!-- Controls -->
     <div class="controls-bar">
       <button class="btn primary" onclick="startDrill()">Start Drill</button>
@@ -228,6 +303,10 @@ let showEnglish = false;
 let showChinese = true;
 let recognition = null;
 let isListening = false;
+let ttsLang = 'zh-CN';
+let ttsRate = 1;
+let autoAdvance = true;
+let currentSpeakingIndex = -1;
 
 // ── GOOGLE SHEETS ──
 function setStatus(msg) { document.getElementById('status').textContent = msg; }
@@ -456,6 +535,7 @@ function renderDrill() {
   filteredRows.forEach(function(row, i) {
     var card = document.createElement('div');
     card.className = 'vocab-card';
+    card.onclick = (function(idx) { return function() { speakCard(idx); }; })(i);
 
     var num = document.createElement('div');
     num.className = 'num';
@@ -691,6 +771,82 @@ async function exportForGrading() {
     document.getElementById('dictationBox').value = output;
     alert('Could not copy to clipboard. The export text is in the dictation box — select all and copy manually.');
   }
+}
+
+// ── TTS (Text-to-Speech) ──
+function onLanguageChange() {
+  ttsLang = document.getElementById('languageSelect').value;
+}
+
+function onRateChange() {
+  ttsRate = parseFloat(document.getElementById('speechRateSlider').value);
+  document.getElementById('rateValue').textContent = ttsRate + 'x';
+}
+
+function setAutoAdvance(val) {
+  autoAdvance = val;
+  document.getElementById('autoAdvanceCheckbox').checked = val;
+  var bar = document.getElementById('autoAdvanceBar');
+  var track = document.getElementById('switchTrack');
+  var knob = document.getElementById('switchKnob');
+  var stopLabel = document.getElementById('stopLabel');
+  var autoLabel = document.getElementById('autoLabel');
+
+  bar.className = 'auto-advance-bar ' + (val ? 'on' : 'off');
+  track.className = 'switch-track' + (val ? ' on' : '');
+  knob.className = 'switch-knob' + (val ? ' on' : '');
+
+  stopLabel.style.backgroundColor = !val ? '#ffcdd2' : 'transparent';
+  autoLabel.style.color = val ? '#4CAF50' : '#666';
+  autoLabel.style.backgroundColor = val ? '#c8e6c9' : 'transparent';
+}
+
+function speakCard(index) {
+  speechSynthesis.cancel();
+  if (index < 0 || index >= filteredRows.length) {
+    clearSpeakingHighlight();
+    currentSpeakingIndex = -1;
+    return;
+  }
+
+  var row = filteredRows[index];
+  // Determine what text to read based on language
+  var text = row.chinese; // default: read Chinese
+  if (ttsLang === 'en-US') {
+    text = row.english;
+  }
+
+  currentSpeakingIndex = index;
+  highlightCard(index);
+
+  var utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = ttsLang;
+  utterance.rate = ttsRate;
+
+  utterance.onend = function() {
+    if (autoAdvance && currentSpeakingIndex === index) {
+      speakCard(index + 1);
+    } else {
+      clearSpeakingHighlight();
+      currentSpeakingIndex = -1;
+    }
+  };
+
+  speechSynthesis.speak(utterance);
+}
+
+function highlightCard(index) {
+  clearSpeakingHighlight();
+  var cards = document.getElementById('cardsContainer').children;
+  if (cards[index]) {
+    cards[index].classList.add('speaking');
+    cards[index].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+}
+
+function clearSpeakingHighlight() {
+  var cards = document.getElementById('cardsContainer').querySelectorAll('.vocab-card.speaking');
+  cards.forEach(function(c) { c.classList.remove('speaking'); });
 }
 </script>
 </body>
