@@ -196,10 +196,11 @@
 
     <!-- Dictation -->
     <div class="dictation-section">
-      <div class="label">Dictate your answers (say "1. morning 2. you polite 3. ...")</div>
+      <div class="label" id="dictationLabel">Dictate your answers (say "1. morning 2. you polite 3. ...")</div>
       <textarea id="dictationBox" placeholder="Your spoken answers appear here..."></textarea>
       <div class="dictation-btns">
         <button class="btn" id="micBtn" onclick="toggleMic()" style="background:#ef4444;color:white;">🎤 Start Dictation</button>
+        <button class="btn outline" onclick="pasteFromClipboard()">Paste from Clipboard</button>
         <button class="btn outline" onclick="clearDictation()">Clear</button>
       </div>
     </div>
@@ -502,9 +503,47 @@ function revealAll() {
   renderDrill();
 }
 
-function togglePinyin() { showPinyin = !showPinyin; renderDrill(); }
-function toggleEnglish() { showEnglish = !showEnglish; renderDrill(); }
-function toggleChinese() { showChinese = !showChinese; renderDrill(); }
+function togglePinyin() { showPinyin = !showPinyin; renderDrill(); updateDictationLabel(); }
+function toggleEnglish() { showEnglish = !showEnglish; renderDrill(); updateDictationLabel(); }
+function toggleChinese() { showChinese = !showChinese; renderDrill(); updateDictationLabel(); }
+
+function getTestMode() {
+  // What's hidden is what you're being tested on
+  if (!showEnglish && !showChinese) return 'both';
+  if (!showEnglish) return 'english';
+  if (!showChinese) return 'chinese';
+  if (!showPinyin) return 'pinyin';
+  return 'english'; // default
+}
+
+function updateDictationLabel() {
+  var mode = getTestMode();
+  var label = document.getElementById('dictationLabel');
+  if (mode === 'chinese') {
+    label.textContent = 'Speak or paste your Chinese answers (e.g. "1. 早上好 2. 您 3. ...")';
+  } else if (mode === 'pinyin') {
+    label.textContent = 'Speak or type pinyin answers (e.g. "1. zǎoshang hǎo 2. nín 3. ...")';
+  } else {
+    label.textContent = 'Dictate your answers (say "1. morning 2. you polite 3. ...")';
+  }
+}
+
+async function pasteFromClipboard() {
+  try {
+    var text = await navigator.clipboard.readText();
+    if (text && text.trim()) {
+      var box = document.getElementById('dictationBox');
+      // Append to existing content if any
+      if (box.value.trim()) {
+        box.value += ' ' + text.trim();
+      } else {
+        box.value = text.trim();
+      }
+    }
+  } catch(e) {
+    alert('Could not access clipboard. Check permissions.');
+  }
+}
 
 function toggleSetup() {
   var section = document.getElementById('setupSection');
@@ -590,18 +629,28 @@ async function exportForGrading() {
   var lines = [];
   var transcript = document.getElementById('dictationBox').value.trim();
 
-  lines.push('Grade my Chinese vocabulary answers. I spoke all my answers at once via speech-to-text.');
-  lines.push('Match each numbered answer to the corresponding vocabulary item. Be LENIENT:');
-  lines.push('- Accept informal/casual English that captures the meaning (e.g. "how\'s your health" = "How is your health?")');
-  lines.push('- Accept synonyms and close paraphrases (e.g. "thanks" = "Thank you", "you formal" = "You (polite)")');
-  lines.push('- Ignore speech-to-text errors, punctuation, capitalization');
-  lines.push('- "I don\'t know" or "not sure" or "I got" = Skipped, not Wrong');
+  var mode = getTestMode();
+  var testingWhat = mode === 'chinese' ? 'Chinese characters'
+    : mode === 'pinyin' ? 'Pinyin'
+    : mode === 'both' ? 'both Chinese and English'
+    : 'English translations';
+
+  var correctCol = mode === 'chinese' ? 'Chinese'
+    : mode === 'pinyin' ? 'Pinyin'
+    : 'English';
+
+  lines.push('Grade my Chinese vocabulary test. I was tested on: ' + testingWhat);
+  lines.push('I spoke/typed all my answers at once. Match each numbered answer to the corresponding item. Be LENIENT:');
+  lines.push('- Accept informal/casual answers that capture the meaning');
+  lines.push('- Accept synonyms and close paraphrases');
+  lines.push('- Ignore speech-to-text errors, punctuation, capitalization, tone marks');
+  lines.push('- "I don\'t know" or "not sure" = Skipped, not Wrong');
   lines.push('- Grade on whether the student understands the MEANING, not exact wording');
   lines.push('');
   lines.push('Format your response as:');
   lines.push('');
-  lines.push('#N: [Chinese]');
-  lines.push('Correct: [English]');
+  lines.push('#N: [prompt shown]');
+  lines.push('Correct: [correct answer]');
   lines.push('My Answer: [what you matched from my transcript]');
   lines.push('Rating: ✅ Correct / ⚠️ Partial / ❌ Wrong / ⏭️ Skipped');
   lines.push('Note: [brief feedback if partial/wrong]');
@@ -610,8 +659,9 @@ async function exportForGrading() {
   lines.push('');
   lines.push('---');
   lines.push('Lesson: ' + lesson);
+  lines.push('Testing: ' + testingWhat);
   lines.push('');
-  lines.push('MY SPOKEN ANSWERS (raw transcript):');
+  lines.push('MY ANSWERS (raw transcript):');
   lines.push(transcript || '(no answers recorded)');
   lines.push('');
   lines.push('---');
@@ -619,8 +669,20 @@ async function exportForGrading() {
   lines.push('');
 
   filteredRows.forEach(function(row, i) {
-    lines.push('#' + (row.num || (i + 1)) + ': ' + row.chinese + ' (' + row.pinyin + ')');
-    lines.push('Correct English: ' + row.english);
+    var num = row.num || (i + 1);
+    if (mode === 'chinese') {
+      // Tested on Chinese — prompt was English, correct answer is Chinese
+      lines.push('#' + num + ' Prompt: ' + row.english);
+      lines.push('Correct Chinese: ' + row.chinese + ' (' + row.pinyin + ')');
+    } else if (mode === 'pinyin') {
+      // Tested on Pinyin — prompt was Chinese + English, correct answer is Pinyin
+      lines.push('#' + num + ' Prompt: ' + row.chinese + ' — ' + row.english);
+      lines.push('Correct Pinyin: ' + row.pinyin);
+    } else {
+      // Tested on English — prompt was Chinese, correct answer is English
+      lines.push('#' + num + ' Prompt: ' + row.chinese + ' (' + row.pinyin + ')');
+      lines.push('Correct English: ' + row.english);
+    }
     lines.push('');
   });
 
