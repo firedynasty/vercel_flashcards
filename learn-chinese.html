@@ -594,21 +594,50 @@ function clearDictation() {
 }
 
 // ── PARSE DICTATION INTO ANSWERS ──
+var spokenNumbers = {
+  'one':1,'won':1,'want':1,'two':2,'too':2,'to':2,'tu':2,
+  'three':3,'tree':3,'free':3,'four':4,'for':4,'fore':4,
+  'five':5,'vibe':5,'hive':5,'six':6,'sex':6,'sicks':6,
+  'seven':7,'eight':8,'ate':8,'nine':9,'ten':10,
+  'eleven':11,'twelve':12,'thirteen':13,'fourteen':14,'fifteen':15,
+  'sixteen':16,'seventeen':17,'eighteen':18,'nineteen':19,'twenty':20,
+  'number one':1,'number two':2,'number three':3,'number four':4,
+  'number five':5,'number six':6,'number seven':7,'number eight':8,
+  'number nine':9,'number ten':10,
+};
+
+function normalizeSpokenNumbers(text) {
+  // Replace "number X" phrases first (longer match)
+  var result = text;
+  Object.keys(spokenNumbers).sort(function(a,b) { return b.length - a.length; }).forEach(function(word) {
+    var re = new RegExp('(^|\\s)' + word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?=\\s|[.,;:!?]|$)', 'gi');
+    result = result.replace(re, function(match, prefix) {
+      return prefix + spokenNumbers[word.toLowerCase()] + '.';
+    });
+  });
+  return result;
+}
+
 function parseDictation() {
   var raw = document.getElementById('dictationBox').value.trim();
   if (!raw) return;
 
   userAnswers = {};
 
-  // Try to split by numbered patterns: "1." or "1 " or "one." etc.
-  // Pattern: number followed by period/space/colon, then the answer text
-  var segments = raw.split(/(?:^|\s)(\d+)\s*[.):]\s*/);
+  // Normalize spoken numbers to digits: "one is morning" → "1. is morning"
+  var normalized = normalizeSpokenNumbers(raw);
+
+  // Split by numbered patterns: "1." or "1 " or "1:" or "1 is"
+  // Also handle "1 is morning" → strip the "is"
+  var segments = normalized.split(/(?:^|\s)(\d+)\s*[.):]?\s*(?:is\s+)?/i);
 
   // segments alternates: [prefix, "1", answer1, "2", answer2, ...]
   if (segments.length >= 3) {
     for (var i = 1; i < segments.length; i += 2) {
       var num = parseInt(segments[i]);
       var answer = (segments[i + 1] || '').trim();
+      // Clean up trailing punctuation from speech
+      answer = answer.replace(/[.,;:!?]+$/, '').trim();
       // Map to 0-based index
       if (num >= 1 && num <= filteredRows.length && answer) {
         userAnswers[num - 1] = answer;
@@ -621,7 +650,6 @@ function parseDictation() {
     var lines = raw.split('\n').map(function(l) { return l.trim(); }).filter(Boolean);
     lines.forEach(function(line, i) {
       if (i < filteredRows.length) {
-        // Strip leading number if present
         userAnswers[i] = line.replace(/^\d+\s*[.):]?\s*/, '');
       }
     });
@@ -636,7 +664,12 @@ function parseDictation() {
 async function exportForGrading() {
   var lesson = document.getElementById('lessonSelect').value || 'All Lessons';
   var lines = [];
-  lines.push('Grade my Chinese vocabulary answers. For each item, compare my answer to the correct English translation.');
+  lines.push('Grade my Chinese vocabulary answers. These were spoken aloud via speech-to-text, so be LENIENT:');
+  lines.push('- Accept informal/casual English that captures the meaning (e.g. "how\'s your health" = "How is your health?")');
+  lines.push('- Accept synonyms and close paraphrases (e.g. "thanks" = "Thank you", "you formal" = "You (polite)")');
+  lines.push('- Ignore minor speech-to-text errors, punctuation, capitalization');
+  lines.push('- "I don\'t know" or "not sure" or "I got" = Skipped, not Wrong');
+  lines.push('- Grade on whether the student understands the MEANING, not exact wording');
   lines.push('');
   lines.push('Format your response as:');
   lines.push('');
