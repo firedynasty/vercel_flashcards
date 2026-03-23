@@ -200,7 +200,6 @@
       <textarea id="dictationBox" placeholder="Your spoken answers appear here..."></textarea>
       <div class="dictation-btns">
         <button class="btn" id="micBtn" onclick="toggleMic()" style="background:#ef4444;color:white;">🎤 Start Dictation</button>
-        <button class="btn outline" onclick="parseDictation()">Parse Answers</button>
         <button class="btn outline" onclick="clearDictation()">Clear</button>
       </div>
     </div>
@@ -483,14 +482,6 @@ function renderDrill() {
     en.textContent = row.english;
     card.appendChild(en);
 
-    // Show user answer if exists
-    if (userAnswers[i] !== undefined) {
-      var ans = document.createElement('div');
-      ans.className = 'my-answer';
-      ans.textContent = 'Your answer: ' + userAnswers[i];
-      card.appendChild(ans);
-    }
-
     container.appendChild(card);
   });
 }
@@ -593,81 +584,17 @@ function clearDictation() {
   renderDrill();
 }
 
-// ── PARSE DICTATION INTO ANSWERS ──
-var spokenNumbers = {
-  'one':1,'won':1,'want':1,'two':2,'too':2,'to':2,'tu':2,
-  'three':3,'tree':3,'free':3,'four':4,'for':4,'fore':4,
-  'five':5,'vibe':5,'hive':5,'six':6,'sex':6,'sicks':6,
-  'seven':7,'eight':8,'ate':8,'nine':9,'ten':10,
-  'eleven':11,'twelve':12,'thirteen':13,'fourteen':14,'fifteen':15,
-  'sixteen':16,'seventeen':17,'eighteen':18,'nineteen':19,'twenty':20,
-  'number one':1,'number two':2,'number three':3,'number four':4,
-  'number five':5,'number six':6,'number seven':7,'number eight':8,
-  'number nine':9,'number ten':10,
-};
-
-function normalizeSpokenNumbers(text) {
-  // Replace "number X" phrases first (longer match)
-  var result = text;
-  Object.keys(spokenNumbers).sort(function(a,b) { return b.length - a.length; }).forEach(function(word) {
-    var re = new RegExp('(^|\\s)' + word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?=\\s|[.,;:!?]|$)', 'gi');
-    result = result.replace(re, function(match, prefix) {
-      return prefix + spokenNumbers[word.toLowerCase()] + '.';
-    });
-  });
-  return result;
-}
-
-function parseDictation() {
-  var raw = document.getElementById('dictationBox').value.trim();
-  if (!raw) return;
-
-  userAnswers = {};
-
-  // Normalize spoken numbers to digits: "one is morning" → "1. is morning"
-  var normalized = normalizeSpokenNumbers(raw);
-
-  // Split by numbered patterns: "1." or "1 " or "1:" or "1 is"
-  // Also handle "1 is morning" → strip the "is"
-  var segments = normalized.split(/(?:^|\s)(\d+)\s*[.):]?\s*(?:is\s+)?/i);
-
-  // segments alternates: [prefix, "1", answer1, "2", answer2, ...]
-  if (segments.length >= 3) {
-    for (var i = 1; i < segments.length; i += 2) {
-      var num = parseInt(segments[i]);
-      var answer = (segments[i + 1] || '').trim();
-      // Clean up trailing punctuation from speech
-      answer = answer.replace(/[.,;:!?]+$/, '').trim();
-      // Map to 0-based index
-      if (num >= 1 && num <= filteredRows.length && answer) {
-        userAnswers[num - 1] = answer;
-      }
-    }
-  }
-
-  // If no numbered answers found, try line-by-line
-  if (Object.keys(userAnswers).length === 0) {
-    var lines = raw.split('\n').map(function(l) { return l.trim(); }).filter(Boolean);
-    lines.forEach(function(line, i) {
-      if (i < filteredRows.length) {
-        userAnswers[i] = line.replace(/^\d+\s*[.):]?\s*/, '');
-      }
-    });
-  }
-
-  var count = Object.keys(userAnswers).length;
-  setStatus('Parsed ' + count + ' answer(s) from dictation');
-  renderDrill();
-}
-
 // ── EXPORT FOR AI GRADING ──
 async function exportForGrading() {
   var lesson = document.getElementById('lessonSelect').value || 'All Lessons';
   var lines = [];
-  lines.push('Grade my Chinese vocabulary answers. These were spoken aloud via speech-to-text, so be LENIENT:');
+  var transcript = document.getElementById('dictationBox').value.trim();
+
+  lines.push('Grade my Chinese vocabulary answers. I spoke all my answers at once via speech-to-text.');
+  lines.push('Match each numbered answer to the corresponding vocabulary item. Be LENIENT:');
   lines.push('- Accept informal/casual English that captures the meaning (e.g. "how\'s your health" = "How is your health?")');
   lines.push('- Accept synonyms and close paraphrases (e.g. "thanks" = "Thank you", "you formal" = "You (polite)")');
-  lines.push('- Ignore minor speech-to-text errors, punctuation, capitalization');
+  lines.push('- Ignore speech-to-text errors, punctuation, capitalization');
   lines.push('- "I don\'t know" or "not sure" or "I got" = Skipped, not Wrong');
   lines.push('- Grade on whether the student understands the MEANING, not exact wording');
   lines.push('');
@@ -675,7 +602,7 @@ async function exportForGrading() {
   lines.push('');
   lines.push('#N: [Chinese]');
   lines.push('Correct: [English]');
-  lines.push('My Answer: [what I said]');
+  lines.push('My Answer: [what you matched from my transcript]');
   lines.push('Rating: ✅ Correct / ⚠️ Partial / ❌ Wrong / ⏭️ Skipped');
   lines.push('Note: [brief feedback if partial/wrong]');
   lines.push('');
@@ -684,18 +611,23 @@ async function exportForGrading() {
   lines.push('---');
   lines.push('Lesson: ' + lesson);
   lines.push('');
+  lines.push('MY SPOKEN ANSWERS (raw transcript):');
+  lines.push(transcript || '(no answers recorded)');
+  lines.push('');
+  lines.push('---');
+  lines.push('VOCABULARY LIST:');
+  lines.push('');
 
   filteredRows.forEach(function(row, i) {
     lines.push('#' + (row.num || (i + 1)) + ': ' + row.chinese + ' (' + row.pinyin + ')');
     lines.push('Correct English: ' + row.english);
-    lines.push('My Answer: ' + (userAnswers[i] || '(skipped)'));
     lines.push('');
   });
 
   var output = lines.join('\n');
   try {
     await navigator.clipboard.writeText(output);
-    alert('Copied to clipboard! Paste into AI chat for grading.\n\n' + Object.keys(userAnswers).length + ' of ' + filteredRows.length + ' answered.');
+    alert('Copied to clipboard! Paste into AI chat for grading.');
   } catch(e) {
     // Fallback: show in textarea
     document.getElementById('dictationBox').value = output;
