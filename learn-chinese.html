@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Learn Chinese</title>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, 'Inter', sans-serif;
+    background: #f9f9f7;
+    min-height: 100vh;
+    color: #1a1a1a;
+  }
+  .container {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 24px 20px;
+  }
+  h1 { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+  .subtitle { font-size: 12px; color: #888; margin-bottom: 16px; }
+
+  /* ── SETUP SECTION ── */
+  .setup-section {
+    margin-bottom: 20px;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    background: white;
+    overflow: hidden;
+  }
+  .setup-section.collapsed .setup-body { display: none; }
+  .setup-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 16px; background: #f5f5f5; cursor: pointer; user-select: none;
+  }
+  .setup-header span { font-size: 13px; font-weight: 600; color: #555; }
+  .setup-header .toggle-arrow { font-size: 12px; color: #999; }
+  .setup-body { padding: 12px 16px; }
+  .setup-row { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; align-items: center; }
+  .setup-row label { font-size: 13px; font-weight: 600; color: #555; min-width: 50px; }
+  .setup-row select, .setup-row input[type="text"] {
+    flex: 1; padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px;
+    font-size: 13px; font-family: inherit; min-width: 120px;
+  }
+  .setup-row select:disabled { opacity: 0.5; }
+
+  .btn {
+    border: none; border-radius: 6px; padding: 8px 16px;
+    font-weight: 600; font-size: 13px; cursor: pointer; transition: opacity 0.15s;
+  }
+  .btn:hover { opacity: 0.85; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn.primary { background: #2563eb; color: white; }
+  .btn.google { background: #4285f4; color: white; }
+  .btn.green { background: #16a34a; color: white; }
+  .btn.orange { background: #ea580c; color: white; }
+  .btn.outline { background: none; border: 1px solid #ccc; color: #555; }
+  .btn.red-outline { background: none; border: 1px solid #ef4444; color: #ef4444; }
+
+  .status { font-size: 12px; color: #888; min-height: 18px; margin-top: 6px; }
+  .hint { font-size: 11px; color: #aaa; margin-top: 4px; line-height: 1.4; }
+
+  /* ── DRILL AREA ── */
+  .drill-area { display: none; }
+  .drill-area.active { display: block; }
+
+  .drill-info {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 14px; flex-wrap: wrap; gap: 8px;
+  }
+  .drill-info .lesson-tag {
+    font-size: 11px; font-weight: 700; letter-spacing: 2px;
+    text-transform: uppercase; color: #2563eb;
+  }
+  .drill-info .count { font-size: 12px; color: #888; }
+
+  .vocab-card {
+    background: white; border: 1px solid #e8e8e8; border-radius: 12px;
+    padding: 16px 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  }
+  .vocab-card + .vocab-card { margin-top: 10px; }
+  .vocab-card .num { font-size: 11px; font-weight: 700; color: #888; margin-bottom: 4px; }
+  .vocab-card .chinese { font-size: 22px; font-weight: 600; margin-bottom: 4px; }
+  .vocab-card .pinyin {
+    font-size: 14px; color: #888; font-style: italic; margin-bottom: 4px;
+  }
+  .vocab-card .pinyin.hidden { visibility: hidden; }
+  .vocab-card .english {
+    font-size: 14px; color: #15803d; background: #f0fdf4;
+    border: 1px solid #bbf7d0; border-radius: 6px; padding: 8px 12px;
+  }
+  .vocab-card .english.hidden {
+    visibility: hidden; height: 0; padding: 0; border: none; margin: 0; overflow: hidden;
+  }
+  .vocab-card .my-answer {
+    margin-top: 8px; padding: 8px 12px; background: #f0f4ff;
+    border: 1px dashed #93b4f5; border-radius: 8px;
+    font-size: 13px; color: #1e40af; line-height: 1.5;
+  }
+  .vocab-card .my-answer.empty { color: #93b4f5; font-style: italic; }
+
+  /* ── CONTROLS ── */
+  .controls-bar {
+    display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+    margin-bottom: 16px;
+  }
+
+  /* ── DICTATION ── */
+  .dictation-section {
+    margin-bottom: 16px; padding: 14px 16px;
+    background: white; border: 1px solid #e0e0e0; border-radius: 10px;
+  }
+  .dictation-section .label { font-size: 13px; font-weight: 600; color: #555; margin-bottom: 8px; }
+  .dictation-section textarea {
+    width: 100%; min-height: 80px; border: 1px solid #ddd; border-radius: 8px;
+    padding: 10px 12px; font-family: inherit; font-size: 13px;
+    line-height: 1.5; resize: vertical; color: #333;
+  }
+  .dictation-section textarea::placeholder { color: #aaa; }
+  .dictation-btns { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; align-items: center; }
+  .mic-active { animation: pulse 1s infinite; }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.4); }
+    50% { box-shadow: 0 0 0 8px rgba(239,68,68,0); }
+  }
+
+  /* ── REVEAL TOGGLE ── */
+  .toggle-row {
+    display: flex; gap: 12px; align-items: center; margin-bottom: 14px; flex-wrap: wrap;
+  }
+  .toggle-chip {
+    padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 600;
+    cursor: pointer; border: 1px solid #ddd; background: white; color: #555;
+    user-select: none; transition: all 0.15s;
+  }
+  .toggle-chip.on { background: #2563eb; color: white; border-color: #2563eb; }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1>Learn Chinese</h1>
+  <div class="subtitle">Google Sheets vocabulary drills with speech-to-text</div>
+
+  <!-- Setup Section -->
+  <div class="setup-section" id="setupSection">
+    <div class="setup-header" onclick="toggleSetup()">
+      <span>Google Sheets Setup</span>
+      <span class="toggle-arrow" id="setupArrow">▼</span>
+    </div>
+    <div class="setup-body">
+      <div class="setup-row">
+        <button class="btn google" id="authBtn" onclick="gdriveSignIn()">Sign In</button>
+        <input type="text" id="searchInput" placeholder="Spreadsheet name to search..." value="chinese">
+        <button class="btn primary" id="searchBtn" onclick="gdriveSearch()" disabled>Load</button>
+      </div>
+      <div class="setup-row">
+        <label>Sheet</label>
+        <select id="sheetSelect" disabled onchange="onSheetSelect()">
+          <option value="">Sign in first</option>
+        </select>
+      </div>
+      <div class="setup-row">
+        <label>Lesson</label>
+        <select id="lessonSelect" disabled onchange="onLessonSelect()">
+          <option value="">Select sheet first</option>
+        </select>
+      </div>
+      <div class="status" id="status"></div>
+      <div class="hint">Sheet format: Lesson | # | Chinese | Pinyin | English (5 columns, first row = header)</div>
+    </div>
+  </div>
+
+  <!-- Drill Area -->
+  <div class="drill-area" id="drillArea">
+    <div class="drill-info">
+      <span class="lesson-tag" id="lessonTag"></span>
+      <span class="count" id="countLabel"></span>
+    </div>
+
+    <!-- Toggle chips -->
+    <div class="toggle-row">
+      <span class="toggle-chip" id="togglePinyin" onclick="togglePinyin()">Pinyin</span>
+      <span class="toggle-chip" id="toggleEnglish" onclick="toggleEnglish()">English</span>
+      <span class="toggle-chip on" id="toggleChinese" onclick="toggleChinese()">Chinese</span>
+    </div>
+
+    <!-- Controls -->
+    <div class="controls-bar">
+      <button class="btn primary" onclick="startDrill()">Start Drill</button>
+      <button class="btn green" onclick="revealAll()">Reveal All</button>
+      <button class="btn orange" onclick="exportForGrading()">Export for Grading</button>
+    </div>
+
+    <!-- Dictation -->
+    <div class="dictation-section">
+      <div class="label">Dictate your answers (say "1. morning 2. you polite 3. ...")</div>
+      <textarea id="dictationBox" placeholder="Your spoken answers appear here..."></textarea>
+      <div class="dictation-btns">
+        <button class="btn" id="micBtn" onclick="toggleMic()" style="background:#ef4444;color:white;">🎤 Start Dictation</button>
+        <button class="btn outline" onclick="parseDictation()">Parse Answers</button>
+        <button class="btn outline" onclick="clearDictation()">Clear</button>
+      </div>
+    </div>
+
+    <!-- Cards -->
+    <div id="cardsContainer"></div>
+  </div>
+</div>
+
+<script>
+// ── STATE ──
+const GDRIVE_CLIENT_ID = '1095683227908-7ro25k16mprkf408i3lf583gti8v759b.apps.googleusercontent.com';
+const GDRIVE_SCOPES = 'https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/spreadsheets.readonly';
+
+let gdriveAccessToken = null;
+let gdriveTokenClient = null;
+let gdriveWorkbook = null;
+let gdriveFileId = null;
+
+let allRows = [];       // all data rows (excluding header)
+let filteredRows = [];  // rows for selected lesson
+let userAnswers = {};   // { index: "answer text" }
+let showPinyin = false;
+let showEnglish = false;
+let showChinese = true;
+let recognition = null;
+let isListening = false;
+
+// ── GOOGLE SHEETS ──
+function setStatus(msg) { document.getElementById('status').textContent = msg; }
+
+function gdriveInitClient() {
+  if (window.google && window.google.accounts) {
+    gdriveTokenClient = window.google.accounts.oauth2.initTokenClient({
+      client_id: GDRIVE_CLIENT_ID,
+      scope: GDRIVE_SCOPES,
+      callback: function(response) {
+        if (response.access_token) {
+          gdriveAccessToken = response.access_token;
+          document.getElementById('authBtn').textContent = 'Sign Out';
+          document.getElementById('searchBtn').disabled = false;
+          setStatus('Signed in. Click Load to fetch spreadsheet.');
+        }
+      },
+    });
+  }
+}
+
+const checkGoogle = setInterval(function() {
+  if (window.google && window.google.accounts) {
+    clearInterval(checkGoogle);
+    gdriveInitClient();
+  }
+}, 200);
+
+function gdriveSignIn() {
+  if (gdriveAccessToken) {
+    gdriveAccessToken = null;
+    gdriveWorkbook = null;
+    gdriveFileId = null;
+    document.getElementById('authBtn').textContent = 'Sign In';
+    document.getElementById('searchBtn').disabled = true;
+    document.getElementById('sheetSelect').innerHTML = '<option value="">Sign in first</option>';
+    document.getElementById('sheetSelect').disabled = true;
+    document.getElementById('lessonSelect').innerHTML = '<option value="">Select sheet first</option>';
+    document.getElementById('lessonSelect').disabled = true;
+    document.getElementById('drillArea').classList.remove('active');
+    allRows = [];
+    filteredRows = [];
+    setStatus('Signed out');
+    return;
+  }
+  if (gdriveTokenClient) {
+    gdriveTokenClient.requestAccessToken();
+  } else {
+    setStatus('Google API not loaded yet. Try again.');
+  }
+}
+
+async function gdriveSearch() {
+  var searchTerm = document.getElementById('searchInput').value.trim();
+  if (!searchTerm) { setStatus('Enter a spreadsheet name'); return; }
+  try {
+    setStatus('Searching for "' + searchTerm + '"...');
+    var query = encodeURIComponent("name contains '" + searchTerm + "' and trashed=false and mimeType='application/vnd.google-apps.spreadsheet'");
+    var resp = await fetch('https://www.googleapis.com/drive/v3/files?q=' + query + '&fields=files(id,name,mimeType)&orderBy=name', {
+      headers: { Authorization: 'Bearer ' + gdriveAccessToken }
+    });
+    if (!resp.ok) throw new Error('Search failed');
+    var data = await resp.json();
+    if (!data.files || data.files.length === 0) {
+      setStatus('No spreadsheet matching "' + searchTerm + '" found');
+      return;
+    }
+    var file = data.files[0];
+    setStatus('Loading "' + file.name + '"...');
+    await loadSpreadsheet(file.id, file.name);
+  } catch (err) {
+    setStatus('Error: ' + err.message);
+  }
+}
+
+async function loadSpreadsheet(fileId, fileName) {
+  try {
+    gdriveFileId = fileId;
+    var exportMime = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+    var resp = await fetch('https://www.googleapis.com/drive/v3/files/' + fileId + '/export?mimeType=' + encodeURIComponent(exportMime), {
+      headers: { Authorization: 'Bearer ' + gdriveAccessToken }
+    });
+    if (!resp.ok) throw new Error('Export failed');
+    var arrayBuffer = await resp.arrayBuffer();
+    gdriveWorkbook = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array' });
+
+    var sel = document.getElementById('sheetSelect');
+    sel.innerHTML = '<option value="">-- select sheet --</option>';
+    gdriveWorkbook.SheetNames.forEach(function(name) {
+      var opt = document.createElement('option');
+      opt.value = name;
+      opt.textContent = name;
+      sel.appendChild(opt);
+    });
+    sel.disabled = false;
+    // Auto-select first sheet if only one
+    if (gdriveWorkbook.SheetNames.length === 1) {
+      sel.value = gdriveWorkbook.SheetNames[0];
+      onSheetSelect();
+    }
+    setStatus('Loaded "' + fileName + '" — ' + gdriveWorkbook.SheetNames.length + ' sheet(s)');
+  } catch (err) {
+    setStatus('Error: ' + err.message);
+  }
+}
+
+function parseCsvRow(text) {
+  var cells = [];
+  var current = '';
+  var inQuotes = false;
+  for (var i = 0; i < text.length; i++) {
+    var ch = text[i];
+    if (inQuotes) {
+      if (ch === '"' && text[i + 1] === '"') { current += '"'; i++; }
+      else if (ch === '"') { inQuotes = false; }
+      else { current += ch; }
+    } else {
+      if (ch === '"') { inQuotes = true; }
+      else if (ch === ',') { cells.push(current); current = ''; }
+      else if (ch === '\n' || (ch === '\r' && text[i + 1] === '\n')) {
+        cells.push(current); current = '';
+        if (ch === '\r') i++;
+        return { cells: cells, rest: text.slice(i + 1) };
+      } else { current += ch; }
+    }
+  }
+  cells.push(current);
+  return { cells: cells, rest: '' };
+}
+
+function parseCsv(text) {
+  var result = [];
+  var remaining = text.trim();
+  while (remaining.length > 0) {
+    var parsed = parseCsvRow(remaining);
+    result.push(parsed.cells);
+    remaining = parsed.rest;
+  }
+  return result;
+}
+
+function onSheetSelect() {
+  var sheetName = document.getElementById('sheetSelect').value;
+  if (!sheetName || !gdriveWorkbook) return;
+
+  var sheet = gdriveWorkbook.Sheets[sheetName];
+  var csv = XLSX.utils.sheet_to_csv(sheet);
+  var rows = parseCsv(csv);
+
+  if (rows.length < 2) {
+    setStatus('Sheet is empty or has only headers');
+    return;
+  }
+
+  // Skip header row, parse data rows
+  // Expected: Lesson | # | Chinese | Pinyin | English
+  allRows = [];
+  for (var i = 1; i < rows.length; i++) {
+    var r = rows[i];
+    if (!r[0] && !r[2]) continue; // skip empty rows
+    allRows.push({
+      lesson: (r[0] || '').trim(),
+      num: (r[1] || '').trim(),
+      chinese: (r[2] || '').trim(),
+      pinyin: (r[3] || '').trim(),
+      english: (r[4] || '').trim(),
+    });
+  }
+
+  // Populate lesson dropdown from unique values in column 1
+  var lessons = [];
+  var seen = {};
+  allRows.forEach(function(row) {
+    if (row.lesson && !seen[row.lesson]) {
+      seen[row.lesson] = true;
+      lessons.push(row.lesson);
+    }
+  });
+
+  var lessonSel = document.getElementById('lessonSelect');
+  lessonSel.innerHTML = '<option value="">-- all lessons --</option>';
+  lessons.forEach(function(l) {
+    var opt = document.createElement('option');
+    opt.value = l;
+    opt.textContent = l + ' (' + allRows.filter(function(r) { return r.lesson === l; }).length + ')';
+    lessonSel.appendChild(opt);
+  });
+  lessonSel.disabled = false;
+
+  setStatus('Loaded ' + allRows.length + ' vocab items, ' + lessons.length + ' lesson(s)');
+  onLessonSelect();
+}
+
+function onLessonSelect() {
+  var lesson = document.getElementById('lessonSelect').value;
+  if (lesson) {
+    filteredRows = allRows.filter(function(r) { return r.lesson === lesson; });
+  } else {
+    filteredRows = allRows.slice();
+  }
+  userAnswers = {};
+  renderDrill();
+}
+
+// ── DRILL RENDERING ──
+function renderDrill() {
+  var area = document.getElementById('drillArea');
+  if (filteredRows.length === 0) {
+    area.classList.remove('active');
+    return;
+  }
+  area.classList.add('active');
+
+  // Collapse setup
+  document.getElementById('setupSection').classList.add('collapsed');
+  document.getElementById('setupArrow').textContent = '►';
+
+  var lesson = document.getElementById('lessonSelect').value || 'All Lessons';
+  document.getElementById('lessonTag').textContent = lesson;
+  document.getElementById('countLabel').textContent = filteredRows.length + ' items';
+
+  // Update toggle chips
+  document.getElementById('togglePinyin').className = 'toggle-chip' + (showPinyin ? ' on' : '');
+  document.getElementById('toggleEnglish').className = 'toggle-chip' + (showEnglish ? ' on' : '');
+  document.getElementById('toggleChinese').className = 'toggle-chip' + (showChinese ? ' on' : '');
+
+  var container = document.getElementById('cardsContainer');
+  container.innerHTML = '';
+
+  filteredRows.forEach(function(row, i) {
+    var card = document.createElement('div');
+    card.className = 'vocab-card';
+
+    var num = document.createElement('div');
+    num.className = 'num';
+    num.textContent = '#' + (row.num || (i + 1));
+    card.appendChild(num);
+
+    if (showChinese) {
+      var ch = document.createElement('div');
+      ch.className = 'chinese';
+      ch.textContent = row.chinese;
+      card.appendChild(ch);
+    }
+
+    var py = document.createElement('div');
+    py.className = 'pinyin' + (showPinyin ? '' : ' hidden');
+    py.textContent = row.pinyin;
+    card.appendChild(py);
+
+    var en = document.createElement('div');
+    en.className = 'english' + (showEnglish ? '' : ' hidden');
+    en.textContent = row.english;
+    card.appendChild(en);
+
+    // Show user answer if exists
+    if (userAnswers[i] !== undefined) {
+      var ans = document.createElement('div');
+      ans.className = 'my-answer';
+      ans.textContent = 'Your answer: ' + userAnswers[i];
+      card.appendChild(ans);
+    }
+
+    container.appendChild(card);
+  });
+}
+
+function startDrill() {
+  showPinyin = false;
+  showEnglish = false;
+  showChinese = true;
+  userAnswers = {};
+  document.getElementById('dictationBox').value = '';
+  renderDrill();
+}
+
+function revealAll() {
+  showPinyin = true;
+  showEnglish = true;
+  showChinese = true;
+  renderDrill();
+}
+
+function togglePinyin() { showPinyin = !showPinyin; renderDrill(); }
+function toggleEnglish() { showEnglish = !showEnglish; renderDrill(); }
+function toggleChinese() { showChinese = !showChinese; renderDrill(); }
+
+function toggleSetup() {
+  var section = document.getElementById('setupSection');
+  var arrow = document.getElementById('setupArrow');
+  section.classList.toggle('collapsed');
+  arrow.textContent = section.classList.contains('collapsed') ? '►' : '▼';
+}
+
+// ── DICTATION (Speech-to-Text) ──
+function toggleMic() {
+  if (isListening) {
+    stopMic();
+  } else {
+    startMic();
+  }
+}
+
+function startMic() {
+  var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    alert('Speech recognition not supported in this browser. Use Chrome.');
+    return;
+  }
+
+  recognition = new SpeechRecognition();
+  recognition.continuous = true;
+  recognition.interimResults = true;
+  recognition.lang = 'en-US';
+
+  var finalTranscript = document.getElementById('dictationBox').value;
+
+  recognition.onresult = function(event) {
+    var interim = '';
+    for (var i = event.resultIndex; i < event.results.length; i++) {
+      if (event.results[i].isFinal) {
+        finalTranscript += event.results[i][0].transcript;
+      } else {
+        interim += event.results[i][0].transcript;
+      }
+    }
+    document.getElementById('dictationBox').value = finalTranscript + interim;
+  };
+
+  recognition.onerror = function(event) {
+    console.error('Speech error:', event.error);
+    if (event.error !== 'no-speech') stopMic();
+  };
+
+  recognition.onend = function() {
+    // Auto-restart if still listening (Chrome stops after silence)
+    if (isListening) {
+      try { recognition.start(); } catch(e) {}
+    }
+  };
+
+  recognition.start();
+  isListening = true;
+  var btn = document.getElementById('micBtn');
+  btn.textContent = '🎤 Stop Dictation';
+  btn.classList.add('mic-active');
+}
+
+function stopMic() {
+  isListening = false;
+  if (recognition) {
+    recognition.onend = null;
+    recognition.stop();
+  }
+  var btn = document.getElementById('micBtn');
+  btn.textContent = '🎤 Start Dictation';
+  btn.classList.remove('mic-active');
+}
+
+function clearDictation() {
+  document.getElementById('dictationBox').value = '';
+  userAnswers = {};
+  renderDrill();
+}
+
+// ── PARSE DICTATION INTO ANSWERS ──
+function parseDictation() {
+  var raw = document.getElementById('dictationBox').value.trim();
+  if (!raw) return;
+
+  userAnswers = {};
+
+  // Try to split by numbered patterns: "1." or "1 " or "one." etc.
+  // Pattern: number followed by period/space/colon, then the answer text
+  var segments = raw.split(/(?:^|\s)(\d+)\s*[.):]\s*/);
+
+  // segments alternates: [prefix, "1", answer1, "2", answer2, ...]
+  if (segments.length >= 3) {
+    for (var i = 1; i < segments.length; i += 2) {
+      var num = parseInt(segments[i]);
+      var answer = (segments[i + 1] || '').trim();
+      // Map to 0-based index
+      if (num >= 1 && num <= filteredRows.length && answer) {
+        userAnswers[num - 1] = answer;
+      }
+    }
+  }
+
+  // If no numbered answers found, try line-by-line
+  if (Object.keys(userAnswers).length === 0) {
+    var lines = raw.split('\n').map(function(l) { return l.trim(); }).filter(Boolean);
+    lines.forEach(function(line, i) {
+      if (i < filteredRows.length) {
+        // Strip leading number if present
+        userAnswers[i] = line.replace(/^\d+\s*[.):]?\s*/, '');
+      }
+    });
+  }
+
+  var count = Object.keys(userAnswers).length;
+  setStatus('Parsed ' + count + ' answer(s) from dictation');
+  renderDrill();
+}
+
+// ── EXPORT FOR AI GRADING ──
+async function exportForGrading() {
+  var lesson = document.getElementById('lessonSelect').value || 'All Lessons';
+  var lines = [];
+  lines.push('Grade my Chinese vocabulary answers. For each item, compare my answer to the correct English translation.');
+  lines.push('');
+  lines.push('Format your response as:');
+  lines.push('');
+  lines.push('#N: [Chinese]');
+  lines.push('Correct: [English]');
+  lines.push('My Answer: [what I said]');
+  lines.push('Rating: ✅ Correct / ⚠️ Partial / ❌ Wrong / ⏭️ Skipped');
+  lines.push('Note: [brief feedback if partial/wrong]');
+  lines.push('');
+  lines.push('Then give an Overall Score (X/' + filteredRows.length + ') and summary.');
+  lines.push('');
+  lines.push('---');
+  lines.push('Lesson: ' + lesson);
+  lines.push('');
+
+  filteredRows.forEach(function(row, i) {
+    lines.push('#' + (row.num || (i + 1)) + ': ' + row.chinese + ' (' + row.pinyin + ')');
+    lines.push('Correct English: ' + row.english);
+    lines.push('My Answer: ' + (userAnswers[i] || '(skipped)'));
+    lines.push('');
+  });
+
+  var output = lines.join('\n');
+  try {
+    await navigator.clipboard.writeText(output);
+    alert('Copied to clipboard! Paste into AI chat for grading.\n\n' + Object.keys(userAnswers).length + ' of ' + filteredRows.length + ' answered.');
+  } catch(e) {
+    // Fallback: show in textarea
+    document.getElementById('dictationBox').value = output;
+    alert('Could not copy to clipboard. The export text is in the dictation box — select all and copy manually.');
+  }
+}
+</script>
+</body>
+</html>
