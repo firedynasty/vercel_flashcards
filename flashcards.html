@@ -966,6 +966,8 @@
         <input type="file" id="folderFlatInput" accept=".txt,.md" multiple style="display:none">
         <button class="paste-btn" id="folderFlatBtn" title="Load .txt or .md files" style="border: 2px dotted;">Load .txt File</button>
         <button class="paste-btn" id="roleplayBtn" title="Open Role-playing trainer" style="border: 2px solid #2563eb; color: #2563eb;">Role-playing</button>
+        <button class="paste-btn" id="learnChineseBtn" title="Open Learn Chinese" style="border: 2px solid #ea580c; color: #ea580c;">Learn Chinese</button>
+        <button class="paste-btn" id="musicBtn" title="Open Music" style="border: 2px solid #16a34a; color: #16a34a;">Music</button>
 
         <!-- Input Section -->
         <div class="input-section" id="inputSection">
@@ -2418,6 +2420,14 @@ God loves the world
 
             document.getElementById('roleplayBtn').addEventListener('click', () => {
                 window.open('role-playing.html', '_blank');
+            });
+
+            document.getElementById('learnChineseBtn').addEventListener('click', () => {
+                window.open('learn-chinese.html', '_blank');
+            });
+
+            document.getElementById('musicBtn').addEventListener('click', () => {
+                window.open('music.html', '_blank');
             });
 
             document.getElementById('folderFlatInput').addEventListener('change', async function() {
