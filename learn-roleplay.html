@@ -771,10 +771,27 @@ function onModalKey(e) {
     e.preventDefault();
     submitModal();
   }
-  if (e.key === 'Escape') {
-    closeModal();
-  }
 }
+
+// ── GLOBAL KEYBOARD SHORTCUT FOR DICTATION ──
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    // Find the last visible blank "you" bubble and click it to open modal
+    var blanks = document.querySelectorAll('.chat-bubble.blank');
+    if (blanks.length > 0) {
+      e.preventDefault();
+      blanks[blanks.length - 1].click();
+    }
+  }
+
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+    var slider = document.getElementById('lineSlider');
+    if (document.activeElement !== slider) {
+      e.preventDefault();
+      slider.focus();
+    }
+  }
+});
 
 // ── DRILL CONTROLS ──
 function startDrill() {
