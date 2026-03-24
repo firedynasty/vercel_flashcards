@@ -1,0 +1,1022 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Learn Roleplay</title>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, 'Inter', sans-serif;
+    background: #f9f9f7;
+    min-height: 100vh;
+    color: #1a1a1a;
+  }
+  .container {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 24px 20px;
+  }
+  h1 { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+  .subtitle { font-size: 12px; color: #888; margin-bottom: 16px; }
+
+  .setup-section {
+    margin-bottom: 20px;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    background: white;
+    overflow: hidden;
+  }
+  .setup-section.collapsed .setup-body { display: none; }
+  .setup-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 16px; background: #f5f5f5; cursor: pointer; user-select: none;
+  }
+  .setup-header span { font-size: 13px; font-weight: 600; color: #555; }
+  .setup-header .toggle-arrow { font-size: 12px; color: #999; }
+  .setup-body { padding: 12px 16px; }
+  .setup-row { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; align-items: center; }
+  .setup-row label { font-size: 13px; font-weight: 600; color: #555; min-width: 50px; }
+  .setup-row select, .setup-row input[type="text"] {
+    flex: 1; padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px;
+    font-size: 13px; font-family: inherit; min-width: 120px;
+  }
+  .setup-row select:disabled { opacity: 0.5; }
+
+  .btn {
+    border: none; border-radius: 6px; padding: 8px 16px;
+    font-weight: 600; font-size: 13px; cursor: pointer; transition: opacity 0.15s;
+  }
+  .btn:hover { opacity: 0.85; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn.primary { background: #2563eb; color: white; }
+  .btn.google { background: #4285f4; color: white; }
+  .btn.green { background: #16a34a; color: white; }
+  .btn.orange { background: #ea580c; color: white; }
+  .btn.outline { background: none; border: 1px solid #ccc; color: #555; }
+
+  .status { font-size: 12px; color: #888; min-height: 18px; margin-top: 6px; }
+  .hint { font-size: 11px; color: #aaa; margin-top: 4px; line-height: 1.4; }
+
+  .drill-area { display: none; }
+  .drill-area.active { display: block; }
+
+  .drill-info {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 14px; flex-wrap: wrap; gap: 8px;
+  }
+  .drill-info .lesson-tag {
+    font-size: 11px; font-weight: 700; letter-spacing: 2px;
+    text-transform: uppercase; color: #2563eb;
+  }
+  .drill-info .count { font-size: 12px; color: #888; }
+
+  .controls-bar {
+    display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+    margin-bottom: 16px;
+  }
+
+  .tts-controls {
+    display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+    margin-bottom: 14px; padding: 10px 16px;
+    background: white; border: 1px solid #e0e0e0; border-radius: 10px;
+  }
+  .tts-controls label { font-size: 12px; font-weight: 600; color: #555; }
+  .tts-controls select, .tts-controls input[type="range"] {
+    font-size: 13px; font-family: inherit;
+  }
+  .tts-controls select { padding: 4px 8px; border: 1px solid #ccc; border-radius: 6px; }
+  .tts-controls .rate-value { font-size: 12px; color: #888; min-width: 30px; }
+
+  .auto-advance-bar {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    margin-bottom: 14px; padding: 8px 16px;
+    border-radius: 8px;
+    transition: background-color 0.2s;
+  }
+  .auto-advance-bar.on { background: #e6ffe6; }
+  .auto-advance-bar.off { background: #f0f0f0; }
+  .auto-advance-label {
+    font-weight: 700; font-size: 12px; color: #666;
+    cursor: pointer; padding: 4px 8px; border-radius: 4px;
+  }
+  .switch-wrap {
+    position: relative; display: inline-block; width: 50px; height: 24px; cursor: pointer;
+  }
+  .switch-wrap input { opacity: 0; width: 0; height: 0; }
+  .switch-track {
+    position: absolute; inset: 0;
+    background-color: #ddd; transition: .4s; border-radius: 24px;
+  }
+  .switch-track.on { background-color: #4CAF50; }
+  .switch-knob {
+    position: absolute; height: 18px; width: 18px;
+    bottom: 3px; left: 3px;
+    background-color: white; transition: .4s; border-radius: 50%;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  }
+  .switch-knob.on { left: 29px; }
+
+  .dictation-section {
+    margin-bottom: 16px; padding: 14px 16px;
+    background: white; border: 1px solid #e0e0e0; border-radius: 10px;
+  }
+  .dictation-section .label { font-size: 13px; font-weight: 600; color: #555; margin-bottom: 8px; }
+  .dictation-section textarea {
+    width: 100%; min-height: 80px; border: 1px solid #ddd; border-radius: 8px;
+    padding: 10px 12px; font-family: inherit; font-size: 13px;
+    line-height: 1.5; resize: vertical; color: #333;
+  }
+  .dictation-section textarea::placeholder { color: #aaa; }
+  .dictation-btns { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; align-items: center; }
+  .mic-active { animation: pulse 1s infinite; }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.4); }
+    50% { box-shadow: 0 0 0 8px rgba(239,68,68,0); }
+  }
+
+  .toggle-row {
+    display: flex; gap: 12px; align-items: center; margin-bottom: 14px; flex-wrap: wrap;
+  }
+  .toggle-chip {
+    padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 600;
+    cursor: pointer; border: 1px solid #ddd; background: white; color: #555;
+    user-select: none; transition: all 0.15s;
+  }
+  .toggle-chip.on { background: #2563eb; color: white; border-color: #2563eb; }
+
+  /* ── STICKY SLIDER ── */
+  .sticky-bar {
+    position: sticky; top: 0; z-index: 100;
+    padding: 10px 16px;
+    background: white; border: 1px solid #e0e0e0; border-radius: 10px;
+    margin-bottom: 14px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+  }
+  .sticky-bar label { font-size: 12px; font-weight: 600; color: #555; white-space: nowrap; }
+  .sticky-bar input[type="range"] { flex: 1; min-width: 100px; }
+  .sticky-bar .slider-value { font-size: 12px; color: #888; min-width: 90px; white-space: nowrap; }
+  .sticky-bar select { padding: 4px 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 12px; }
+
+  /* ── CHAT BUBBLES ── */
+  .chat-container {
+    display: flex; flex-direction: column; gap: 0;
+  }
+  .chat-bubble {
+    max-width: 85%;
+    padding: 10px 14px;
+    border-radius: 12px;
+    margin-bottom: 8px;
+    font-size: 14px;
+    line-height: 1.5;
+    cursor: pointer;
+    transition: background-color 0.15s;
+  }
+  .chat-bubble.speaking { outline: 2px solid #93c5fd; }
+  .chat-bubble.you {
+    background: #dbeafe;
+    margin-left: auto;
+    border-bottom-right-radius: 4px;
+  }
+  .chat-bubble.prospect {
+    background: #f3f4f6;
+    margin-right: auto;
+    border-bottom-left-radius: 4px;
+  }
+  .chat-bubble:hover { opacity: 0.85; }
+  .chat-speaker {
+    font-size: 11px;
+    font-weight: 700;
+    margin-bottom: 2px;
+    color: #888;
+  }
+  .chat-bubble.you .chat-speaker { color: #2563eb; text-align: right; }
+
+  /* Blank bubble in test mode */
+  .chat-bubble.blank {
+    background: #fef3c7;
+    border: 2px dashed #f59e0b;
+    min-height: 48px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  .chat-bubble.blank .chat-line-text {
+    color: #b45309;
+    font-style: italic;
+    font-size: 13px;
+  }
+  .chat-bubble.answered {
+    background: #d1fae5;
+    border: 2px solid #10b981;
+  }
+  .chat-bubble.answered .chat-speaker { color: #047857; }
+
+  /* ── ANSWER MODAL ── */
+  .modal-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-overlay.active { display: flex; }
+  .modal-box {
+    background: white;
+    border-radius: 12px;
+    padding: 24px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  }
+  .modal-box h3 {
+    font-size: 16px; font-weight: 700; margin-bottom: 4px; color: #1a1a1a;
+  }
+  .modal-box .modal-hint {
+    font-size: 12px; color: #888; margin-bottom: 12px;
+  }
+  .modal-box textarea {
+    width: 100%; min-height: 100px; border: 2px solid #ddd; border-radius: 8px;
+    padding: 12px; font-family: inherit; font-size: 15px;
+    line-height: 1.5; resize: vertical; color: #333;
+  }
+  .modal-box textarea:focus { outline: none; border-color: #2563eb; }
+  .modal-btns {
+    display: flex; gap: 8px; margin-top: 12px; justify-content: flex-end;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1>Learn Roleplay</h1>
+  <div class="subtitle">Practice sales scripts loaded from Google Sheets</div>
+
+  <div class="setup-section" id="setupSection">
+    <div class="setup-header" onclick="toggleSetup()">
+      <span>Google Sheets Setup</span>
+      <span class="toggle-arrow" id="setupArrow">&#9660;</span>
+    </div>
+    <div class="setup-body">
+      <div class="setup-row">
+        <button class="btn google" id="authBtn" onclick="gdriveSignIn()">Sign In</button>
+        <input type="text" id="searchInput" placeholder="Spreadsheet name to search..." value="roleplay">
+        <button class="btn primary" id="searchBtn" onclick="gdriveSearch()" disabled>Load</button>
+      </div>
+      <div class="setup-row">
+        <label>Sheet</label>
+        <select id="sheetSelect" disabled onchange="onSheetSelect()">
+          <option value="">Sign in first</option>
+        </select>
+      </div>
+      <div class="setup-row">
+        <label>Section</label>
+        <select id="sectionSelect" disabled onchange="onSectionSelect()">
+          <option value="">Select sheet first</option>
+        </select>
+      </div>
+      <div class="status" id="status"></div>
+      <div class="hint">Sheet format: Section | Speaker | Line (3 columns, first row = header)</div>
+    </div>
+  </div>
+
+  <div class="drill-area" id="drillArea">
+    <div class="drill-info">
+      <span class="lesson-tag" id="sectionTag"></span>
+      <span class="count" id="countLabel"></span>
+    </div>
+
+    <!-- Practice-as selector (hidden — always the second/responding speaker) -->
+    <select id="practiceAsSelect" onchange="onPracticeAsChange()" style="display:none">
+      <option value="">-- select speaker --</option>
+    </select>
+
+    <!-- Sticky slider -->
+    <div class="sticky-bar" id="stickyBar">
+      <label>Lines</label>
+      <input type="range" id="lineSlider" min="0" max="0" value="0" oninput="onSliderChange()">
+      <span class="slider-value" id="sliderLabel">Showing 0 of 0 lines</span>
+      <span class="toggle-chip" id="toggleTestMode" onclick="toggleTestMode()">Test Mode</span>
+    </div>
+
+    <div class="tts-controls">
+      <label>Language</label>
+      <select id="languageSelect" onchange="onLanguageChange()">
+        <option value="en-US" selected>English</option>
+        <option value="es-ES">Spanish</option>
+        <option value="es-MX">Spanish (Mexico)</option>
+        <option value="fr-FR">French</option>
+        <option value="ko-KR">Korean</option>
+        <option value="zh-CN">Mandarin</option>
+        <option value="zh-HK">Cantonese</option>
+        <option value="he-IL">Hebrew</option>
+      </select>
+      <label>Speed</label>
+      <input type="range" id="speechRateSlider" min="0.25" max="2" step="0.25" value="1" oninput="onRateChange()">
+      <span class="rate-value" id="rateValue">1x</span>
+    </div>
+
+    <div class="auto-advance-bar off" id="autoAdvanceBar">
+      <span class="auto-advance-label" id="stopLabel" onmouseenter="setAutoAdvance(false)" style="background: #ffcdd2;">Stop After Card</span>
+      <label class="switch-wrap">
+        <input type="checkbox" id="autoAdvanceCheckbox" onchange="setAutoAdvance(this.checked)">
+        <span class="switch-track" id="switchTrack">
+          <span class="switch-knob" id="switchKnob"></span>
+        </span>
+      </label>
+      <span class="auto-advance-label" id="autoLabel" onmouseenter="setAutoAdvance(true)" style="color: #666; background: transparent;">Auto Next Card</span>
+    </div>
+
+    <!-- Instructions -->
+    <div style="margin-bottom: 14px; padding: 12px 16px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; font-size: 12px; color: #64748b; line-height: 1.6;">
+      <strong style="color: #334155;">How it works:</strong>
+      The <strong>second speaker</strong> (the responder) is who you're being tested on.
+      Use the <strong>slider</strong> to reveal lines one at a time.
+      Turn on <strong>Test Mode</strong> to hide the responder's lines &mdash; click the yellow bubbles to type your answer.
+      Press <strong>Enter</strong> to submit, or click a green answered bubble to edit.
+      <strong>Export for Grading</strong> copies your answers + the expected script to paste into AI for feedback.
+      <span id="practiceAsLabel" style="display: none; font-weight: 600; color: #2563eb;"></span>
+    </div>
+
+    <div class="controls-bar">
+      <button class="btn primary" onclick="startDrill()">Start Drill</button>
+      <button class="btn green" onclick="revealAll()">Reveal All</button>
+      <button class="btn orange" onclick="exportForGrading()">Export for Grading</button>
+    </div>
+
+    <div class="dictation-section">
+      <div class="label">Practice your responses below</div>
+      <textarea id="dictationBox" placeholder="Type or dictate your practice responses here..."></textarea>
+      <div class="dictation-btns">
+        <button class="btn" id="micBtn" onclick="toggleMic()" style="background:#ef4444;color:white;">&#127908; Start Dictation</button>
+        <button class="btn outline" onclick="pasteFromClipboard()">Paste from Clipboard</button>
+        <button class="btn outline" onclick="clearDictation()">Clear</button>
+      </div>
+    </div>
+
+    <div class="chat-container" id="chatContainer"></div>
+  </div>
+</div>
+
+<!-- Answer Modal -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <h3 id="modalSpeaker">Your response</h3>
+    <div class="modal-hint" id="modalHint">Type your answer and press Enter to submit</div>
+    <textarea id="modalInput" placeholder="Type your response..." onkeydown="onModalKey(event)"></textarea>
+    <div class="modal-btns">
+      <button class="btn outline" onclick="closeModal()">Cancel</button>
+      <button class="btn primary" onclick="submitModal()">Submit</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var GDRIVE_CLIENT_ID = '1095683227908-7ro25k16mprkf408i3lf583gti8v759b.apps.googleusercontent.com';
+var GDRIVE_SCOPES = 'https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/spreadsheets.readonly';
+
+var gdriveAccessToken = null;
+var gdriveTokenClient = null;
+var gdriveWorkbook = null;
+var gdriveFileId = null;
+
+var allRows = [];
+var filteredRows = [];
+var speakers = [];
+var practiceAs = '';      // speaker name the user is practicing as
+var testMode = false;
+var userAnswers = {};     // { filteredIndex: "user's answer text" }
+var recognition = null;
+var isListening = false;
+var ttsLang = 'en-US';
+var ttsRate = 1;
+var autoAdvance = false;
+var currentSpeakingIndex = -1;
+var revealCount = 0;
+var modalTargetIndex = -1;
+
+function setStatus(msg) { document.getElementById('status').textContent = msg; }
+
+function gdriveInitClient() {
+  if (window.google && window.google.accounts) {
+    gdriveTokenClient = window.google.accounts.oauth2.initTokenClient({
+      client_id: GDRIVE_CLIENT_ID,
+      scope: GDRIVE_SCOPES,
+      callback: function(response) {
+        if (response.access_token) {
+          gdriveAccessToken = response.access_token;
+          document.getElementById('authBtn').textContent = 'Sign Out';
+          document.getElementById('searchBtn').disabled = false;
+          setStatus('Signed in. Click Load to fetch spreadsheet.');
+        }
+      },
+    });
+  }
+}
+
+var checkGoogle = setInterval(function() {
+  if (window.google && window.google.accounts) {
+    clearInterval(checkGoogle);
+    gdriveInitClient();
+  }
+}, 200);
+
+function gdriveSignIn() {
+  if (gdriveAccessToken) {
+    gdriveAccessToken = null;
+    gdriveWorkbook = null;
+    gdriveFileId = null;
+    document.getElementById('authBtn').textContent = 'Sign In';
+    document.getElementById('searchBtn').disabled = true;
+    document.getElementById('sheetSelect').innerHTML = '<option value="">Sign in first</option>';
+    document.getElementById('sheetSelect').disabled = true;
+    document.getElementById('sectionSelect').innerHTML = '<option value="">Select sheet first</option>';
+    document.getElementById('sectionSelect').disabled = true;
+    document.getElementById('drillArea').classList.remove('active');
+    allRows = [];
+    filteredRows = [];
+    setStatus('Signed out');
+    return;
+  }
+  if (gdriveTokenClient) {
+    gdriveTokenClient.requestAccessToken();
+  } else {
+    setStatus('Google API not loaded yet. Try again.');
+  }
+}
+
+async function gdriveSearch() {
+  var searchTerm = document.getElementById('searchInput').value.trim();
+  if (!searchTerm) { setStatus('Enter a spreadsheet name'); return; }
+  try {
+    setStatus('Searching for "' + searchTerm + '"...');
+    var query = encodeURIComponent("name contains '" + searchTerm + "' and trashed=false and mimeType='application/vnd.google-apps.spreadsheet'");
+    var resp = await fetch('https://www.googleapis.com/drive/v3/files?q=' + query + '&fields=files(id,name,mimeType)&orderBy=name', {
+      headers: { Authorization: 'Bearer ' + gdriveAccessToken }
+    });
+    if (!resp.ok) throw new Error('Search failed');
+    var data = await resp.json();
+    if (!data.files || data.files.length === 0) {
+      setStatus('No spreadsheet matching "' + searchTerm + '" found');
+      return;
+    }
+    var file = data.files[0];
+    setStatus('Loading "' + file.name + '"...');
+    await loadSpreadsheet(file.id, file.name);
+  } catch (err) {
+    setStatus('Error: ' + err.message);
+  }
+}
+
+async function loadSpreadsheet(fileId, fileName) {
+  try {
+    gdriveFileId = fileId;
+    var exportMime = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+    var resp = await fetch('https://www.googleapis.com/drive/v3/files/' + fileId + '/export?mimeType=' + encodeURIComponent(exportMime), {
+      headers: { Authorization: 'Bearer ' + gdriveAccessToken }
+    });
+    if (!resp.ok) throw new Error('Export failed');
+    var arrayBuffer = await resp.arrayBuffer();
+    gdriveWorkbook = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array' });
+
+    var sel = document.getElementById('sheetSelect');
+    sel.innerHTML = '<option value="">-- select sheet --</option>';
+    gdriveWorkbook.SheetNames.forEach(function(name) {
+      var opt = document.createElement('option');
+      opt.value = name;
+      opt.textContent = name;
+      sel.appendChild(opt);
+    });
+    sel.disabled = false;
+    if (gdriveWorkbook.SheetNames.length === 1) {
+      sel.value = gdriveWorkbook.SheetNames[0];
+      onSheetSelect();
+    }
+    setStatus('Loaded "' + fileName + '" \u2014 ' + gdriveWorkbook.SheetNames.length + ' sheet(s)');
+  } catch (err) {
+    setStatus('Error: ' + err.message);
+  }
+}
+
+function parseCsvRow(text) {
+  var cells = [];
+  var current = '';
+  var inQuotes = false;
+  for (var i = 0; i < text.length; i++) {
+    var ch = text[i];
+    if (inQuotes) {
+      if (ch === '"' && text[i + 1] === '"') { current += '"'; i++; }
+      else if (ch === '"') { inQuotes = false; }
+      else { current += ch; }
+    } else {
+      if (ch === '"') { inQuotes = true; }
+      else if (ch === ',') { cells.push(current); current = ''; }
+      else if (ch === '\n' || (ch === '\r' && text[i + 1] === '\n')) {
+        cells.push(current); current = '';
+        if (ch === '\r') i++;
+        return { cells: cells, rest: text.slice(i + 1) };
+      } else { current += ch; }
+    }
+  }
+  cells.push(current);
+  return { cells: cells, rest: '' };
+}
+
+function parseCsv(text) {
+  var result = [];
+  var remaining = text.trim();
+  while (remaining.length > 0) {
+    var parsed = parseCsvRow(remaining);
+    result.push(parsed.cells);
+    remaining = parsed.rest;
+  }
+  return result;
+}
+
+function onSheetSelect() {
+  var sheetName = document.getElementById('sheetSelect').value;
+  if (!sheetName || !gdriveWorkbook) return;
+
+  var sheet = gdriveWorkbook.Sheets[sheetName];
+  var csv = XLSX.utils.sheet_to_csv(sheet);
+  var rows = parseCsv(csv);
+
+  if (rows.length < 2) {
+    setStatus('Sheet is empty or has only headers');
+    return;
+  }
+
+  allRows = [];
+  speakers = [];
+  var speakerSet = {};
+  for (var i = 1; i < rows.length; i++) {
+    var r = rows[i];
+    var section = (r[0] || '').trim();
+    var speaker = (r[1] || '').trim();
+    var line = (r[2] || '').trim();
+    if (!speaker && !line) continue;
+    allRows.push({ section: section, speaker: speaker, line: line });
+    if (speaker && !speakerSet[speaker]) {
+      speakerSet[speaker] = true;
+      speakers.push(speaker);
+    }
+  }
+
+  // Populate section dropdown
+  var sections = [];
+  var seen = {};
+  allRows.forEach(function(row) {
+    if (row.section && !seen[row.section]) {
+      seen[row.section] = true;
+      sections.push(row.section);
+    }
+  });
+
+  var sectionSel = document.getElementById('sectionSelect');
+  sectionSel.innerHTML = '<option value="">-- all sections --</option>';
+  sections.forEach(function(s) {
+    var opt = document.createElement('option');
+    opt.value = s;
+    opt.textContent = s + ' (' + allRows.filter(function(r) { return r.section === s; }).length + ')';
+    sectionSel.appendChild(opt);
+  });
+  sectionSel.disabled = false;
+
+  // Populate practice-as dropdown — default to second speaker (the responder)
+  var paSel = document.getElementById('practiceAsSelect');
+  paSel.innerHTML = '<option value="">-- none (read mode) --</option>';
+  speakers.forEach(function(sp) {
+    var opt = document.createElement('option');
+    opt.value = sp;
+    opt.textContent = sp;
+    paSel.appendChild(opt);
+  });
+  // Auto-select second speaker as the one you practice as
+  if (speakers.length >= 2) {
+    practiceAs = speakers[1];
+    paSel.value = speakers[1];
+  } else {
+    practiceAs = '';
+  }
+  testMode = false;
+  document.getElementById('toggleTestMode').className = 'toggle-chip';
+
+  // Show who you're practicing as
+  var paLabel = document.getElementById('practiceAsLabel');
+  if (practiceAs) {
+    paLabel.textContent = 'You are practicing as: ' + practiceAs;
+    paLabel.style.display = 'inline';
+  } else {
+    paLabel.style.display = 'none';
+  }
+
+  setStatus('Loaded ' + allRows.length + ' lines, ' + sections.length + ' section(s), speakers: ' + speakers.join(', '));
+  onSectionSelect();
+}
+
+function onSectionSelect() {
+  var section = document.getElementById('sectionSelect').value;
+  if (section) {
+    filteredRows = allRows.filter(function(r) { return r.section === section; });
+  } else {
+    filteredRows = allRows.slice();
+  }
+  userAnswers = {};
+  revealCount = 0;
+  var slider = document.getElementById('lineSlider');
+  slider.max = filteredRows.length;
+  slider.value = 0;
+  updateSliderLabel();
+  renderChat();
+}
+
+function onSliderChange() {
+  revealCount = parseInt(document.getElementById('lineSlider').value, 10);
+  updateSliderLabel();
+  renderChat();
+}
+
+function updateSliderLabel() {
+  document.getElementById('sliderLabel').textContent = 'Showing ' + revealCount + ' of ' + filteredRows.length + ' lines';
+}
+
+function onPracticeAsChange() {
+  practiceAs = document.getElementById('practiceAsSelect').value;
+  userAnswers = {};
+  renderChat();
+}
+
+function toggleTestMode() {
+  testMode = !testMode;
+  document.getElementById('toggleTestMode').className = 'toggle-chip' + (testMode ? ' on' : '');
+  userAnswers = {};
+  renderChat();
+}
+
+function getSpeakerClass(speaker) {
+  if (speakers.length >= 2 && speaker === speakers[1]) return 'you';
+  return 'prospect';
+}
+
+function renderChat() {
+  var area = document.getElementById('drillArea');
+  if (filteredRows.length === 0) {
+    area.classList.remove('active');
+    return;
+  }
+  area.classList.add('active');
+
+  var section = document.getElementById('sectionSelect').value || 'All Sections';
+  document.getElementById('sectionTag').textContent = section;
+  document.getElementById('countLabel').textContent = filteredRows.length + ' lines';
+
+  var container = document.getElementById('chatContainer');
+  container.innerHTML = '';
+
+  for (var i = 0; i < revealCount; i++) {
+    var row = filteredRows[i];
+    var cls = getSpeakerClass(row.speaker);
+    var isMyLine = testMode && practiceAs && row.speaker === practiceAs;
+    var hasAnswer = userAnswers[i] !== undefined;
+
+    var bubble = document.createElement('div');
+
+    if (isMyLine && !hasAnswer) {
+      // Blank bubble — click to answer
+      bubble.className = 'chat-bubble ' + cls + ' blank';
+      bubble.onclick = (function(idx) { return function() { openModal(idx); }; })(i);
+
+      var speakerLabel = document.createElement('div');
+      speakerLabel.className = 'chat-speaker';
+      speakerLabel.textContent = row.speaker + ' (you)';
+      bubble.appendChild(speakerLabel);
+
+      var placeholder = document.createElement('div');
+      placeholder.className = 'chat-line-text';
+      placeholder.textContent = 'Click to type your response...';
+      bubble.appendChild(placeholder);
+    } else if (isMyLine && hasAnswer) {
+      // Answered bubble
+      bubble.className = 'chat-bubble ' + cls + ' answered';
+      bubble.onclick = (function(idx) { return function() { openModal(idx); }; })(i);
+
+      var speakerLabel = document.createElement('div');
+      speakerLabel.className = 'chat-speaker';
+      speakerLabel.textContent = row.speaker + ' (you)';
+      bubble.appendChild(speakerLabel);
+
+      var answerText = document.createElement('div');
+      answerText.textContent = userAnswers[i];
+      bubble.appendChild(answerText);
+    } else {
+      // Normal bubble (other speaker or no test mode)
+      bubble.className = 'chat-bubble ' + cls;
+      bubble.onclick = (function(idx) { return function() { speakBubble(idx); }; })(i);
+
+      var speakerLabel = document.createElement('div');
+      speakerLabel.className = 'chat-speaker';
+      speakerLabel.textContent = row.speaker;
+      bubble.appendChild(speakerLabel);
+
+      var lineText = document.createElement('div');
+      lineText.textContent = row.line;
+      bubble.appendChild(lineText);
+    }
+
+    container.appendChild(bubble);
+  }
+
+  if (revealCount > 0) {
+    var lastBubble = container.lastElementChild;
+    if (lastBubble) lastBubble.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+}
+
+// ── MODAL ──
+function openModal(index) {
+  modalTargetIndex = index;
+  var row = filteredRows[index];
+  document.getElementById('modalSpeaker').textContent = row.speaker + ' \u2014 your response';
+  document.getElementById('modalHint').textContent = 'Type your answer and press Enter to submit';
+  var input = document.getElementById('modalInput');
+  input.value = userAnswers[index] || '';
+  document.getElementById('modalOverlay').classList.add('active');
+  setTimeout(function() { input.focus(); }, 100);
+}
+
+function closeModal(e) {
+  if (e && e.target !== document.getElementById('modalOverlay')) return;
+  document.getElementById('modalOverlay').classList.remove('active');
+  modalTargetIndex = -1;
+}
+
+function submitModal() {
+  if (modalTargetIndex < 0) return;
+  var input = document.getElementById('modalInput');
+  var answer = input.value.trim();
+  if (answer) {
+    userAnswers[modalTargetIndex] = answer;
+  }
+  document.getElementById('modalOverlay').classList.remove('active');
+  modalTargetIndex = -1;
+  renderChat();
+}
+
+function onModalKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    submitModal();
+  }
+  if (e.key === 'Escape') {
+    closeModal();
+  }
+}
+
+// ── DRILL CONTROLS ──
+function startDrill() {
+  revealCount = 0;
+  userAnswers = {};
+  var slider = document.getElementById('lineSlider');
+  slider.value = 0;
+  document.getElementById('dictationBox').value = '';
+  updateSliderLabel();
+  renderChat();
+}
+
+function revealAll() {
+  revealCount = filteredRows.length;
+  var slider = document.getElementById('lineSlider');
+  slider.value = filteredRows.length;
+  updateSliderLabel();
+  renderChat();
+}
+
+// ── TTS ──
+function speakBubble(index) {
+  speechSynthesis.cancel();
+  if (index < 0 || index >= filteredRows.length) {
+    clearSpeakingHighlight();
+    currentSpeakingIndex = -1;
+    return;
+  }
+
+  var row = filteredRows[index];
+  currentSpeakingIndex = index;
+  highlightBubble(index);
+
+  var utterance = new SpeechSynthesisUtterance(row.line);
+  utterance.lang = ttsLang;
+  utterance.rate = ttsRate;
+
+  utterance.onend = function() {
+    if (autoAdvance && currentSpeakingIndex === index) {
+      var next = index + 1;
+      if (next < revealCount) {
+        speakBubble(next);
+      } else {
+        clearSpeakingHighlight();
+        currentSpeakingIndex = -1;
+      }
+    } else {
+      clearSpeakingHighlight();
+      currentSpeakingIndex = -1;
+    }
+  };
+
+  speechSynthesis.speak(utterance);
+}
+
+function highlightBubble(index) {
+  clearSpeakingHighlight();
+  var bubbles = document.getElementById('chatContainer').children;
+  if (bubbles[index]) {
+    bubbles[index].classList.add('speaking');
+    bubbles[index].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+}
+
+function clearSpeakingHighlight() {
+  var bubbles = document.getElementById('chatContainer').querySelectorAll('.chat-bubble.speaking');
+  bubbles.forEach(function(b) { b.classList.remove('speaking'); });
+}
+
+function onLanguageChange() {
+  ttsLang = document.getElementById('languageSelect').value;
+}
+
+function onRateChange() {
+  ttsRate = parseFloat(document.getElementById('speechRateSlider').value);
+  document.getElementById('rateValue').textContent = ttsRate + 'x';
+}
+
+function setAutoAdvance(val) {
+  autoAdvance = val;
+  document.getElementById('autoAdvanceCheckbox').checked = val;
+  var bar = document.getElementById('autoAdvanceBar');
+  var track = document.getElementById('switchTrack');
+  var knob = document.getElementById('switchKnob');
+  var stopLabel = document.getElementById('stopLabel');
+  var autoLabel = document.getElementById('autoLabel');
+
+  bar.className = 'auto-advance-bar ' + (val ? 'on' : 'off');
+  track.className = 'switch-track' + (val ? ' on' : '');
+  knob.className = 'switch-knob' + (val ? ' on' : '');
+
+  stopLabel.style.backgroundColor = !val ? '#ffcdd2' : 'transparent';
+  autoLabel.style.color = val ? '#4CAF50' : '#666';
+  autoLabel.style.backgroundColor = val ? '#c8e6c9' : 'transparent';
+}
+
+function toggleSetup() {
+  var section = document.getElementById('setupSection');
+  var arrow = document.getElementById('setupArrow');
+  section.classList.toggle('collapsed');
+  arrow.textContent = section.classList.contains('collapsed') ? '\u25ba' : '\u25bc';
+}
+
+// ── DICTATION ──
+function toggleMic() {
+  if (isListening) { stopMic(); } else { startMic(); }
+}
+
+function startMic() {
+  var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    alert('Speech recognition not supported in this browser. Use Chrome.');
+    return;
+  }
+
+  recognition = new SpeechRecognition();
+  recognition.continuous = true;
+  recognition.interimResults = true;
+  recognition.lang = 'en-US';
+
+  var finalTranscript = document.getElementById('dictationBox').value;
+
+  recognition.onresult = function(event) {
+    var interim = '';
+    for (var i = event.resultIndex; i < event.results.length; i++) {
+      if (event.results[i].isFinal) {
+        finalTranscript += event.results[i][0].transcript;
+      } else {
+        interim += event.results[i][0].transcript;
+      }
+    }
+    document.getElementById('dictationBox').value = finalTranscript + interim;
+  };
+
+  recognition.onerror = function(event) {
+    console.error('Speech error:', event.error);
+    if (event.error !== 'no-speech') stopMic();
+  };
+
+  recognition.onend = function() {
+    if (isListening) {
+      try { recognition.start(); } catch(e) {}
+    }
+  };
+
+  recognition.start();
+  isListening = true;
+  var btn = document.getElementById('micBtn');
+  btn.textContent = '\ud83c\udfa4 Stop Dictation';
+  btn.classList.add('mic-active');
+}
+
+function stopMic() {
+  isListening = false;
+  if (recognition) {
+    recognition.onend = null;
+    recognition.stop();
+  }
+  var btn = document.getElementById('micBtn');
+  btn.textContent = '\ud83c\udfa4 Start Dictation';
+  btn.classList.remove('mic-active');
+}
+
+async function pasteFromClipboard() {
+  try {
+    var text = await navigator.clipboard.readText();
+    if (text && text.trim()) {
+      var box = document.getElementById('dictationBox');
+      if (box.value.trim()) {
+        box.value += ' ' + text.trim();
+      } else {
+        box.value = text.trim();
+      }
+    }
+  } catch(e) {
+    alert('Could not access clipboard. Check permissions.');
+  }
+}
+
+function clearDictation() {
+  document.getElementById('dictationBox').value = '';
+}
+
+// ── EXPORT ──
+async function exportForGrading() {
+  var transcript = document.getElementById('dictationBox').value.trim();
+  var lines = [];
+
+  lines.push('Grade my sales roleplay practice. I was practicing as: ' + (practiceAs || 'not specified'));
+  lines.push('For each section, compare my answers against the expected script lines.');
+  lines.push('Grade on: key points hit, tone/approach, sales technique.');
+  lines.push('Be LENIENT \u2014 accept paraphrases that capture the same meaning and intent.');
+  lines.push('');
+
+  var sectionGroups = {};
+  var sectionOrder = [];
+  var rowsToExport = filteredRows.length > 0 ? filteredRows : allRows;
+
+  rowsToExport.forEach(function(row, idx) {
+    var sec = row.section || 'General';
+    if (!sectionGroups[sec]) {
+      sectionGroups[sec] = [];
+      sectionOrder.push(sec);
+    }
+    sectionGroups[sec].push({ row: row, idx: idx });
+  });
+
+  sectionOrder.forEach(function(sec) {
+    lines.push('--- SECTION: ' + sec + ' ---');
+    sectionGroups[sec].forEach(function(item) {
+      var row = item.row;
+      var idx = item.idx;
+      if (practiceAs && row.speaker === practiceAs) {
+        // My line — show my answer first, then the expected
+        if (userAnswers[idx]) {
+          lines.push('My answer: ' + userAnswers[idx]);
+        } else {
+          lines.push('My answer: [no answer provided]');
+        }
+        lines.push('Expected (' + row.speaker + '): ' + row.line);
+      } else {
+        // Other speaker (prospect) — just show their line
+        lines.push('[' + row.speaker + ']: ' + row.line);
+      }
+    });
+    lines.push('');
+  });
+
+  if (transcript) {
+    lines.push('ADDITIONAL NOTES (raw transcript):');
+    lines.push(transcript);
+  }
+
+  var output = lines.join('\n');
+  try {
+    await navigator.clipboard.writeText(output);
+    alert('Copied to clipboard! Paste into AI chat for grading.');
+  } catch(e) {
+    document.getElementById('dictationBox').value = output;
+    alert('Could not copy to clipboard. The export text is in the dictation box \u2014 select all and copy manually.');
+  }
+}
+</script>
+</body>
+</html>
