@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Learn Chinese</title>
+<title>Learn Korean</title>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -85,11 +85,11 @@
   .vocab-card.speaking { background-color: #dbeafe; border-color: #93c5fd; }
   .vocab-card + .vocab-card { margin-top: 10px; }
   .vocab-card .num { font-size: 11px; font-weight: 700; color: #888; margin-bottom: 4px; }
-  .vocab-card .chinese { font-size: 22px; font-weight: 600; margin-bottom: 4px; }
-  .vocab-card .pinyin {
+  .vocab-card .korean { font-size: 22px; font-weight: 600; margin-bottom: 4px; }
+  .vocab-card .romanization {
     font-size: 14px; color: #888; font-style: italic; margin-bottom: 4px;
   }
-  .vocab-card .pinyin.hidden { visibility: hidden; }
+  .vocab-card .romanization.hidden { visibility: hidden; }
   .vocab-card .english {
     font-size: 14px; color: #15803d; background: #f0fdf4;
     border: 1px solid #bbf7d0; border-radius: 6px; padding: 8px 12px;
@@ -187,19 +187,19 @@
 <body>
 
 <div class="container">
-  <h1>Learn Chinese</h1>
+  <h1>Learn Korean</h1>
   <div class="subtitle">Google Sheets vocabulary drills with speech-to-text</div>
 
   <!-- Setup Section -->
   <div class="setup-section" id="setupSection">
     <div class="setup-header" onclick="toggleSetup()">
       <span>Google Sheets Setup</span>
-      <span class="toggle-arrow" id="setupArrow">▼</span>
+      <span class="toggle-arrow" id="setupArrow">&#9660;</span>
     </div>
     <div class="setup-body">
       <div class="setup-row">
         <button class="btn google" id="authBtn" onclick="gdriveSignIn()">Sign In</button>
-        <input type="text" id="searchInput" placeholder="Spreadsheet name to search..." value="chinese">
+        <input type="text" id="searchInput" placeholder="Spreadsheet name to search..." value="korean">
         <button class="btn primary" id="searchBtn" onclick="gdriveSearch()" disabled>Load</button>
       </div>
       <div class="setup-row">
@@ -215,7 +215,7 @@
         </select>
       </div>
       <div class="status" id="status"></div>
-      <div class="hint">Sheet format: Lesson | # | Chinese | Pinyin | English (5 columns, first row = header)</div>
+      <div class="hint">Sheet format: Lesson | # | Korean | Romanization | English (5 columns, first row = header)</div>
     </div>
   </div>
 
@@ -228,21 +228,21 @@
 
     <!-- Toggle chips -->
     <div class="toggle-row">
-      <span class="toggle-chip" id="togglePinyin" onclick="togglePinyin()">Pinyin</span>
+      <span class="toggle-chip" id="toggleRomanization" onclick="toggleRomanization()">Romanization</span>
       <span class="toggle-chip" id="toggleEnglish" onclick="toggleEnglish()">English</span>
-      <span class="toggle-chip on" id="toggleChinese" onclick="toggleChinese()">Chinese</span>
+      <span class="toggle-chip on" id="toggleKorean" onclick="toggleKorean()">Korean</span>
     </div>
 
     <!-- TTS Controls -->
     <div class="tts-controls">
       <label>Language</label>
       <select id="languageSelect" onchange="onLanguageChange()">
-        <option value="zh-HK">Cantonese</option>
+        <option value="ko-KR" selected>Korean</option>
         <option value="en-US">English</option>
+        <option value="zh-CN">Mandarin</option>
+        <option value="zh-HK">Cantonese</option>
         <option value="fr-FR">French</option>
         <option value="es-ES">Spanish</option>
-        <option value="zh-CN" selected>Mandarin</option>
-        <option value="ko-KR">Korean</option>
         <option value="he-IL">Hebrew</option>
       </select>
       <label>Speed</label>
@@ -271,10 +271,10 @@
 
     <!-- Dictation -->
     <div class="dictation-section">
-      <div class="label" id="dictationLabel">Dictate your answers (say "1. morning 2. you polite 3. ...")</div>
+      <div class="label" id="dictationLabel">Dictate your answers (say "1. hello 2. goodbye 3. ...")</div>
       <textarea id="dictationBox" placeholder="Your spoken answers appear here..."></textarea>
       <div class="dictation-btns">
-        <button class="btn" id="micBtn" onclick="toggleMic()" style="background:#ef4444;color:white;">🎤 Start Dictation</button>
+        <button class="btn" id="micBtn" onclick="toggleMic()" style="background:#ef4444;color:white;">&#127908; Start Dictation</button>
         <button class="btn outline" onclick="pasteFromClipboard()">Paste from Clipboard</button>
         <button class="btn outline" onclick="clearDictation()">Clear</button>
       </div>
@@ -298,12 +298,12 @@ let gdriveFileId = null;
 let allRows = [];       // all data rows (excluding header)
 let filteredRows = [];  // rows for selected lesson
 let userAnswers = {};   // { index: "answer text" }
-let showPinyin = false;
+let showRomanization = false;
 let showEnglish = false;
-let showChinese = true;
+let showKorean = true;
 let recognition = null;
 let isListening = false;
-let ttsLang = 'zh-CN';
+let ttsLang = 'ko-KR';
 let ttsRate = 1;
 let autoAdvance = false;
 let currentSpeakingIndex = -1;
@@ -462,7 +462,7 @@ function onSheetSelect() {
   }
 
   // Skip header row, parse data rows
-  // Expected: Lesson | # | Chinese | Pinyin | English
+  // Expected: Lesson | # | Korean | Romanization | English
   allRows = [];
   for (var i = 1; i < rows.length; i++) {
     var r = rows[i];
@@ -470,8 +470,8 @@ function onSheetSelect() {
     allRows.push({
       lesson: (r[0] || '').trim(),
       num: (r[1] || '').trim(),
-      chinese: (r[2] || '').trim(),
-      pinyin: (r[3] || '').trim(),
+      korean: (r[2] || '').trim(),
+      romanization: (r[3] || '').trim(),
       english: (r[4] || '').trim(),
     });
   }
@@ -525,9 +525,9 @@ function renderDrill() {
   document.getElementById('countLabel').textContent = filteredRows.length + ' items';
 
   // Update toggle chips
-  document.getElementById('togglePinyin').className = 'toggle-chip' + (showPinyin ? ' on' : '');
+  document.getElementById('toggleRomanization').className = 'toggle-chip' + (showRomanization ? ' on' : '');
   document.getElementById('toggleEnglish').className = 'toggle-chip' + (showEnglish ? ' on' : '');
-  document.getElementById('toggleChinese').className = 'toggle-chip' + (showChinese ? ' on' : '');
+  document.getElementById('toggleKorean').className = 'toggle-chip' + (showKorean ? ' on' : '');
 
   var container = document.getElementById('cardsContainer');
   container.innerHTML = '';
@@ -542,17 +542,17 @@ function renderDrill() {
     num.textContent = '#' + (row.num || (i + 1));
     card.appendChild(num);
 
-    if (showChinese) {
-      var ch = document.createElement('div');
-      ch.className = 'chinese';
-      ch.textContent = row.chinese;
-      card.appendChild(ch);
+    if (showKorean) {
+      var kr = document.createElement('div');
+      kr.className = 'korean';
+      kr.textContent = row.korean;
+      card.appendChild(kr);
     }
 
-    var py = document.createElement('div');
-    py.className = 'pinyin' + (showPinyin ? '' : ' hidden');
-    py.textContent = row.pinyin;
-    card.appendChild(py);
+    var rom = document.createElement('div');
+    rom.className = 'romanization' + (showRomanization ? '' : ' hidden');
+    rom.textContent = row.romanization;
+    card.appendChild(rom);
 
     var en = document.createElement('div');
     en.className = 'english' + (showEnglish ? '' : ' hidden');
@@ -564,43 +564,43 @@ function renderDrill() {
 }
 
 function startDrill() {
-  showPinyin = false;
+  showRomanization = false;
   showEnglish = false;
-  showChinese = true;
+  showKorean = true;
   userAnswers = {};
   document.getElementById('dictationBox').value = '';
   renderDrill();
 }
 
 function revealAll() {
-  showPinyin = true;
+  showRomanization = true;
   showEnglish = true;
-  showChinese = true;
+  showKorean = true;
   renderDrill();
 }
 
-function togglePinyin() { showPinyin = !showPinyin; renderDrill(); updateDictationLabel(); }
+function toggleRomanization() { showRomanization = !showRomanization; renderDrill(); updateDictationLabel(); }
 function toggleEnglish() { showEnglish = !showEnglish; renderDrill(); updateDictationLabel(); }
-function toggleChinese() { showChinese = !showChinese; renderDrill(); updateDictationLabel(); }
+function toggleKorean() { showKorean = !showKorean; renderDrill(); updateDictationLabel(); }
 
 function getTestMode() {
   // What's hidden is what you're being tested on
-  if (!showEnglish && !showChinese) return 'both';
+  if (!showEnglish && !showKorean) return 'both';
   if (!showEnglish) return 'english';
-  if (!showChinese) return 'chinese';
-  if (!showPinyin) return 'pinyin';
+  if (!showKorean) return 'korean';
+  if (!showRomanization) return 'romanization';
   return 'english'; // default
 }
 
 function updateDictationLabel() {
   var mode = getTestMode();
   var label = document.getElementById('dictationLabel');
-  if (mode === 'chinese') {
-    label.textContent = 'Speak or paste your Chinese answers (e.g. "1. 早上好 2. 您 3. ...")';
-  } else if (mode === 'pinyin') {
-    label.textContent = 'Speak or type pinyin answers (e.g. "1. zǎoshang hǎo 2. nín 3. ...")';
+  if (mode === 'korean') {
+    label.textContent = 'Speak or paste your Korean answers (e.g. "1. \uc548\ub155\ud558\uc138\uc694 2. \uac10\uc0ac\ud569\ub2c8\ub2e4 3. ...")';
+  } else if (mode === 'romanization') {
+    label.textContent = 'Speak or type romanization answers (e.g. "1. annyeonghaseyo 2. gamsahamnida 3. ...")';
   } else {
-    label.textContent = 'Dictate your answers (say "1. morning 2. you polite 3. ...")';
+    label.textContent = 'Dictate your answers (say "1. hello 2. thank you 3. ...")';
   }
 }
 
@@ -625,7 +625,7 @@ function toggleSetup() {
   var section = document.getElementById('setupSection');
   var arrow = document.getElementById('setupArrow');
   section.classList.toggle('collapsed');
-  arrow.textContent = section.classList.contains('collapsed') ? '►' : '▼';
+  arrow.textContent = section.classList.contains('collapsed') ? '\u25ba' : '\u25bc';
 }
 
 // ── DICTATION (Speech-to-Text) ──
@@ -678,7 +678,7 @@ function startMic() {
   recognition.start();
   isListening = true;
   var btn = document.getElementById('micBtn');
-  btn.textContent = '🎤 Stop Dictation';
+  btn.textContent = '\ud83c\udfa4 Stop Dictation';
   btn.classList.add('mic-active');
 }
 
@@ -689,7 +689,7 @@ function stopMic() {
     recognition.stop();
   }
   var btn = document.getElementById('micBtn');
-  btn.textContent = '🎤 Start Dictation';
+  btn.textContent = '\ud83c\udfa4 Start Dictation';
   btn.classList.remove('mic-active');
 }
 
@@ -706,20 +706,16 @@ async function exportForGrading() {
   var transcript = document.getElementById('dictationBox').value.trim();
 
   var mode = getTestMode();
-  var testingWhat = mode === 'chinese' ? 'Chinese characters'
-    : mode === 'pinyin' ? 'Pinyin'
-    : mode === 'both' ? 'both Chinese and English'
+  var testingWhat = mode === 'korean' ? 'Korean (Hangul)'
+    : mode === 'romanization' ? 'Romanization'
+    : mode === 'both' ? 'both Korean and English'
     : 'English translations';
 
-  var correctCol = mode === 'chinese' ? 'Chinese'
-    : mode === 'pinyin' ? 'Pinyin'
-    : 'English';
-
-  lines.push('Grade my Chinese vocabulary test. I was tested on: ' + testingWhat);
+  lines.push('Grade my Korean vocabulary test. I was tested on: ' + testingWhat);
   lines.push('I spoke/typed all my answers at once. Match each numbered answer to the corresponding item. Be LENIENT:');
   lines.push('- Accept informal/casual answers that capture the meaning');
   lines.push('- Accept synonyms and close paraphrases');
-  lines.push('- Ignore speech-to-text errors, punctuation, capitalization, tone marks');
+  lines.push('- Ignore speech-to-text errors, punctuation, capitalization');
   lines.push('- "I don\'t know" or "not sure" = Skipped, not Wrong');
   lines.push('- Grade on whether the student understands the MEANING, not exact wording');
   lines.push('');
@@ -728,7 +724,7 @@ async function exportForGrading() {
   lines.push('#N: [prompt shown]');
   lines.push('Correct: [correct answer]');
   lines.push('My Answer: [what you matched from my transcript]');
-  lines.push('Rating: ✅ Correct / ⚠️ Partial / ❌ Wrong / ⏭️ Skipped');
+  lines.push('Rating: \u2705 Correct / \u26a0\ufe0f Partial / \u274c Wrong / \u23ed\ufe0f Skipped');
   lines.push('Note: [brief feedback if partial/wrong]');
   lines.push('');
   lines.push('Then give an Overall Score (X/' + filteredRows.length + ') and summary.');
@@ -746,17 +742,17 @@ async function exportForGrading() {
 
   filteredRows.forEach(function(row, i) {
     var num = row.num || (i + 1);
-    if (mode === 'chinese') {
-      // Tested on Chinese — prompt was English, correct answer is Chinese
+    if (mode === 'korean') {
+      // Tested on Korean — prompt was English, correct answer is Korean
       lines.push('#' + num + ' Prompt: ' + row.english);
-      lines.push('Correct Chinese: ' + row.chinese + ' (' + row.pinyin + ')');
-    } else if (mode === 'pinyin') {
-      // Tested on Pinyin — prompt was Chinese + English, correct answer is Pinyin
-      lines.push('#' + num + ' Prompt: ' + row.chinese + ' — ' + row.english);
-      lines.push('Correct Pinyin: ' + row.pinyin);
+      lines.push('Correct Korean: ' + row.korean + ' (' + row.romanization + ')');
+    } else if (mode === 'romanization') {
+      // Tested on Romanization — prompt was Korean + English, correct answer is Romanization
+      lines.push('#' + num + ' Prompt: ' + row.korean + ' \u2014 ' + row.english);
+      lines.push('Correct Romanization: ' + row.romanization);
     } else {
-      // Tested on English — prompt was Chinese, correct answer is English
-      lines.push('#' + num + ' Prompt: ' + row.chinese + ' (' + row.pinyin + ')');
+      // Tested on English — prompt was Korean, correct answer is English
+      lines.push('#' + num + ' Prompt: ' + row.korean + ' (' + row.romanization + ')');
       lines.push('Correct English: ' + row.english);
     }
     lines.push('');
@@ -769,7 +765,7 @@ async function exportForGrading() {
   } catch(e) {
     // Fallback: show in textarea
     document.getElementById('dictationBox').value = output;
-    alert('Could not copy to clipboard. The export text is in the dictation box — select all and copy manually.');
+    alert('Could not copy to clipboard. The export text is in the dictation box \u2014 select all and copy manually.');
   }
 }
 
@@ -811,7 +807,7 @@ function speakCard(index) {
 
   var row = filteredRows[index];
   // Determine what text to read based on language
-  var text = row.chinese; // default: read Chinese
+  var text = row.korean; // default: read Korean
   if (ttsLang === 'en-US') {
     text = row.english;
   }

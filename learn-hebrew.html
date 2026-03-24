@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Learn Chinese</title>
+<title>Learn Hebrew</title>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -15,7 +15,7 @@
     color: #1a1a1a;
   }
   .container {
-    max-width: 720px;
+    max-width: 780px;
     margin: 0 auto;
     padding: 24px 20px;
   }
@@ -76,33 +76,64 @@
   }
   .drill-info .count { font-size: 12px; color: #888; }
 
-  .vocab-card {
+  /* ── VERSE CARD ── */
+  .verse-card {
     background: white; border: 1px solid #e8e8e8; border-radius: 12px;
     padding: 16px 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-    cursor: pointer; transition: background-color 0.15s;
   }
-  .vocab-card:hover { background-color: #e8e8e8; }
-  .vocab-card.speaking { background-color: #dbeafe; border-color: #93c5fd; }
-  .vocab-card + .vocab-card { margin-top: 10px; }
-  .vocab-card .num { font-size: 11px; font-weight: 700; color: #888; margin-bottom: 4px; }
-  .vocab-card .chinese { font-size: 22px; font-weight: 600; margin-bottom: 4px; }
-  .vocab-card .pinyin {
-    font-size: 14px; color: #888; font-style: italic; margin-bottom: 4px;
+  .verse-card + .verse-card { margin-top: 14px; }
+  .verse-card .verse-ref {
+    font-size: 12px; font-weight: 700; color: #2563eb; margin-bottom: 8px;
+    letter-spacing: 0.5px;
   }
-  .vocab-card .pinyin.hidden { visibility: hidden; }
-  .vocab-card .english {
+
+  /* Phrase (main sentence) */
+  .phrase-row {
+    cursor: pointer; padding: 10px 12px; border-radius: 8px;
+    transition: background-color 0.15s; margin-bottom: 8px;
+  }
+  .phrase-row:hover { background-color: #f0f0f0; }
+  .phrase-row.speaking { background-color: #dbeafe; }
+  .phrase-row .hebrew {
+    font-size: 22px; font-weight: 600; direction: rtl; text-align: right;
+    margin-bottom: 4px; line-height: 1.5;
+  }
+  .phrase-row .transliteration {
+    font-size: 13px; color: #888; font-style: italic; margin-bottom: 4px;
+  }
+  .phrase-row .transliteration.hidden { visibility: hidden; height: 0; margin: 0; overflow: hidden; }
+  .phrase-row .english {
     font-size: 14px; color: #15803d; background: #f0fdf4;
     border: 1px solid #bbf7d0; border-radius: 6px; padding: 8px 12px;
   }
-  .vocab-card .english.hidden {
+  .phrase-row .english.hidden {
     visibility: hidden; height: 0; padding: 0; border: none; margin: 0; overflow: hidden;
   }
-  .vocab-card .my-answer {
-    margin-top: 8px; padding: 8px 12px; background: #f0f4ff;
-    border: 1px dashed #93b4f5; border-radius: 8px;
-    font-size: 13px; color: #1e40af; line-height: 1.5;
+
+  /* Gloss (word breakdown) */
+  .gloss-section { margin-top: 4px; }
+  .gloss-section.hidden { display: none; }
+  .gloss-row {
+    display: grid; grid-template-columns: 1fr 1fr 1.2fr;
+    gap: 8px; align-items: center;
+    padding: 6px 12px 6px 24px;
+    border-radius: 6px; cursor: pointer;
+    transition: background-color 0.15s;
+    font-size: 13px;
   }
-  .vocab-card .my-answer.empty { color: #93b4f5; font-style: italic; }
+  .gloss-row:hover { background-color: #f5f5f5; }
+  .gloss-row.speaking { background-color: #dbeafe; }
+  .gloss-row + .gloss-row { border-top: 1px solid #f0f0f0; }
+  .gloss-row .g-hebrew {
+    font-size: 16px; font-weight: 500; direction: rtl; text-align: right;
+  }
+  .gloss-row .g-translit { color: #888; font-style: italic; }
+  .gloss-row .g-english { color: #555; }
+  .gloss-row .g-strongs {
+    font-size: 10px; font-weight: 600; color: #9333ea;
+    background: #f3e8ff; padding: 2px 6px; border-radius: 4px;
+    white-space: nowrap;
+  }
 
   /* ── CONTROLS ── */
   .controls-bar {
@@ -187,19 +218,19 @@
 <body>
 
 <div class="container">
-  <h1>Learn Chinese</h1>
-  <div class="subtitle">Google Sheets vocabulary drills with speech-to-text</div>
+  <h1>Learn Hebrew</h1>
+  <div class="subtitle">Biblical Hebrew vocabulary drills from Google Sheets</div>
 
   <!-- Setup Section -->
   <div class="setup-section" id="setupSection">
     <div class="setup-header" onclick="toggleSetup()">
       <span>Google Sheets Setup</span>
-      <span class="toggle-arrow" id="setupArrow">▼</span>
+      <span class="toggle-arrow" id="setupArrow">&#9660;</span>
     </div>
     <div class="setup-body">
       <div class="setup-row">
         <button class="btn google" id="authBtn" onclick="gdriveSignIn()">Sign In</button>
-        <input type="text" id="searchInput" placeholder="Spreadsheet name to search..." value="chinese">
+        <input type="text" id="searchInput" placeholder="Spreadsheet name to search..." value="hebrew">
         <button class="btn primary" id="searchBtn" onclick="gdriveSearch()" disabled>Load</button>
       </div>
       <div class="setup-row">
@@ -209,13 +240,13 @@
         </select>
       </div>
       <div class="setup-row">
-        <label>Lesson</label>
-        <select id="lessonSelect" disabled onchange="onLessonSelect()">
+        <label>Verse</label>
+        <select id="verseSelect" disabled onchange="onVerseSelect()">
           <option value="">Select sheet first</option>
         </select>
       </div>
       <div class="status" id="status"></div>
-      <div class="hint">Sheet format: Lesson | # | Chinese | Pinyin | English (5 columns, first row = header)</div>
+      <div class="hint">Sheet format: # (verse ref) | Hebrew | Transliteration | English | Strong's (optional) &mdash; phrase rows have a verse ref, gloss rows below have individual words</div>
     </div>
   </div>
 
@@ -228,22 +259,23 @@
 
     <!-- Toggle chips -->
     <div class="toggle-row">
-      <span class="toggle-chip" id="togglePinyin" onclick="togglePinyin()">Pinyin</span>
+      <span class="toggle-chip" id="toggleTransliteration" onclick="toggleTransliteration()">Transliteration</span>
       <span class="toggle-chip" id="toggleEnglish" onclick="toggleEnglish()">English</span>
-      <span class="toggle-chip on" id="toggleChinese" onclick="toggleChinese()">Chinese</span>
+      <span class="toggle-chip on" id="toggleHebrew" onclick="toggleHebrew()">Hebrew</span>
+      <span class="toggle-chip on" id="toggleGloss" onclick="toggleGloss()">Word Breakdown</span>
     </div>
 
     <!-- TTS Controls -->
     <div class="tts-controls">
       <label>Language</label>
       <select id="languageSelect" onchange="onLanguageChange()">
-        <option value="zh-HK">Cantonese</option>
+        <option value="he-IL" selected>Hebrew</option>
         <option value="en-US">English</option>
+        <option value="ko-KR">Korean</option>
+        <option value="zh-CN">Mandarin</option>
+        <option value="zh-HK">Cantonese</option>
         <option value="fr-FR">French</option>
         <option value="es-ES">Spanish</option>
-        <option value="zh-CN" selected>Mandarin</option>
-        <option value="ko-KR">Korean</option>
-        <option value="he-IL">Hebrew</option>
       </select>
       <label>Speed</label>
       <input type="range" id="speechRateSlider" min="0.25" max="2" step="0.25" value="1" oninput="onRateChange()">
@@ -271,10 +303,10 @@
 
     <!-- Dictation -->
     <div class="dictation-section">
-      <div class="label" id="dictationLabel">Dictate your answers (say "1. morning 2. you polite 3. ...")</div>
+      <div class="label" id="dictationLabel">Dictate your answers (say "1. in the beginning 2. created 3. ...")</div>
       <textarea id="dictationBox" placeholder="Your spoken answers appear here..."></textarea>
       <div class="dictation-btns">
-        <button class="btn" id="micBtn" onclick="toggleMic()" style="background:#ef4444;color:white;">🎤 Start Dictation</button>
+        <button class="btn" id="micBtn" onclick="toggleMic()" style="background:#ef4444;color:white;">&#127908; Start Dictation</button>
         <button class="btn outline" onclick="pasteFromClipboard()">Paste from Clipboard</button>
         <button class="btn outline" onclick="clearDictation()">Clear</button>
       </div>
@@ -287,26 +319,28 @@
 
 <script>
 // ── STATE ──
-const GDRIVE_CLIENT_ID = '1095683227908-7ro25k16mprkf408i3lf583gti8v759b.apps.googleusercontent.com';
-const GDRIVE_SCOPES = 'https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/spreadsheets.readonly';
+var GDRIVE_CLIENT_ID = '1095683227908-7ro25k16mprkf408i3lf583gti8v759b.apps.googleusercontent.com';
+var GDRIVE_SCOPES = 'https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/spreadsheets.readonly';
 
-let gdriveAccessToken = null;
-let gdriveTokenClient = null;
-let gdriveWorkbook = null;
-let gdriveFileId = null;
+var gdriveAccessToken = null;
+var gdriveTokenClient = null;
+var gdriveWorkbook = null;
+var gdriveFileId = null;
 
-let allRows = [];       // all data rows (excluding header)
-let filteredRows = [];  // rows for selected lesson
-let userAnswers = {};   // { index: "answer text" }
-let showPinyin = false;
-let showEnglish = false;
-let showChinese = true;
-let recognition = null;
-let isListening = false;
-let ttsLang = 'zh-CN';
-let ttsRate = 1;
-let autoAdvance = false;
-let currentSpeakingIndex = -1;
+// Parsed data: array of verse objects
+// { ref: "Gen 1:1", hebrew, translit, english, gloss: [{hebrew, translit, english, strongs}] }
+var allVerses = [];
+var filteredVerses = [];
+var showTransliteration = false;
+var showEnglish = false;
+var showHebrew = true;
+var showGloss = true;
+var recognition = null;
+var isListening = false;
+var ttsLang = 'he-IL';
+var ttsRate = 1;
+var autoAdvance = false;
+var currentSpeakingEl = null;
 
 // ── GOOGLE SHEETS ──
 function setStatus(msg) { document.getElementById('status').textContent = msg; }
@@ -328,7 +362,7 @@ function gdriveInitClient() {
   }
 }
 
-const checkGoogle = setInterval(function() {
+var checkGoogle = setInterval(function() {
   if (window.google && window.google.accounts) {
     clearInterval(checkGoogle);
     gdriveInitClient();
@@ -344,11 +378,11 @@ function gdriveSignIn() {
     document.getElementById('searchBtn').disabled = true;
     document.getElementById('sheetSelect').innerHTML = '<option value="">Sign in first</option>';
     document.getElementById('sheetSelect').disabled = true;
-    document.getElementById('lessonSelect').innerHTML = '<option value="">Select sheet first</option>';
-    document.getElementById('lessonSelect').disabled = true;
+    document.getElementById('verseSelect').innerHTML = '<option value="">Select sheet first</option>';
+    document.getElementById('verseSelect').disabled = true;
     document.getElementById('drillArea').classList.remove('active');
-    allRows = [];
-    filteredRows = [];
+    allVerses = [];
+    filteredVerses = [];
     setStatus('Signed out');
     return;
   }
@@ -402,12 +436,11 @@ async function loadSpreadsheet(fileId, fileName) {
       sel.appendChild(opt);
     });
     sel.disabled = false;
-    // Auto-select first sheet if only one
     if (gdriveWorkbook.SheetNames.length === 1) {
       sel.value = gdriveWorkbook.SheetNames[0];
       onSheetSelect();
     }
-    setStatus('Loaded "' + fileName + '" — ' + gdriveWorkbook.SheetNames.length + ' sheet(s)');
+    setStatus('Loaded "' + fileName + '" \u2014 ' + gdriveWorkbook.SheetNames.length + ' sheet(s)');
   } catch (err) {
     setStatus('Error: ' + err.message);
   }
@@ -461,155 +494,199 @@ function onSheetSelect() {
     return;
   }
 
-  // Skip header row, parse data rows
-  // Expected: Lesson | # | Chinese | Pinyin | English
-  allRows = [];
+  // Parse rows into verse objects
+  // Format: # (verse ref) | Hebrew | Transliteration | English | Strong's
+  // Phrase rows have a verse ref in col 0; gloss rows don't
+  allVerses = [];
+  var currentVerse = null;
+
   for (var i = 1; i < rows.length; i++) {
     var r = rows[i];
-    if (!r[0] && !r[2]) continue; // skip empty rows
-    allRows.push({
-      lesson: (r[0] || '').trim(),
-      num: (r[1] || '').trim(),
-      chinese: (r[2] || '').trim(),
-      pinyin: (r[3] || '').trim(),
-      english: (r[4] || '').trim(),
-    });
+    var col0 = (r[0] || '').trim();
+    var col1 = (r[1] || '').trim();
+    var col2 = (r[2] || '').trim();
+    var col3 = (r[3] || '').trim();
+    var col4 = (r[4] || '').trim();
+
+    if (!col0 && !col1) continue; // skip empty rows
+
+    if (col0) {
+      // Phrase row — new verse
+      currentVerse = {
+        ref: col0,
+        hebrew: col1,
+        translit: col2,
+        english: col3,
+        gloss: []
+      };
+      allVerses.push(currentVerse);
+    } else if (currentVerse && col1) {
+      // Gloss row — word breakdown under current verse
+      currentVerse.gloss.push({
+        hebrew: col1,
+        translit: col2,
+        english: col3,
+        strongs: col4
+      });
+    }
   }
 
-  // Populate lesson dropdown from unique values in column 1
-  var lessons = [];
-  var seen = {};
-  allRows.forEach(function(row) {
-    if (row.lesson && !seen[row.lesson]) {
-      seen[row.lesson] = true;
-      lessons.push(row.lesson);
-    }
-  });
-
-  var lessonSel = document.getElementById('lessonSelect');
-  lessonSel.innerHTML = '<option value="">-- all lessons --</option>';
-  lessons.forEach(function(l) {
+  // Populate verse dropdown
+  var verseSel = document.getElementById('verseSelect');
+  verseSel.innerHTML = '<option value="">-- all verses (' + allVerses.length + ') --</option>';
+  allVerses.forEach(function(v, idx) {
     var opt = document.createElement('option');
-    opt.value = l;
-    opt.textContent = l + ' (' + allRows.filter(function(r) { return r.lesson === l; }).length + ')';
-    lessonSel.appendChild(opt);
+    opt.value = idx;
+    opt.textContent = v.ref;
+    verseSel.appendChild(opt);
   });
-  lessonSel.disabled = false;
+  verseSel.disabled = false;
 
-  setStatus('Loaded ' + allRows.length + ' vocab items, ' + lessons.length + ' lesson(s)');
-  onLessonSelect();
+  var totalWords = allVerses.reduce(function(sum, v) { return sum + v.gloss.length; }, 0);
+  setStatus('Loaded ' + allVerses.length + ' verse(s), ' + totalWords + ' words');
+  onVerseSelect();
 }
 
-function onLessonSelect() {
-  var lesson = document.getElementById('lessonSelect').value;
-  if (lesson) {
-    filteredRows = allRows.filter(function(r) { return r.lesson === lesson; });
+function onVerseSelect() {
+  var val = document.getElementById('verseSelect').value;
+  if (val !== '') {
+    filteredVerses = [allVerses[parseInt(val)]];
   } else {
-    filteredRows = allRows.slice();
+    filteredVerses = allVerses.slice();
   }
-  userAnswers = {};
   renderDrill();
 }
 
 // ── DRILL RENDERING ──
 function renderDrill() {
   var area = document.getElementById('drillArea');
-  if (filteredRows.length === 0) {
+  if (filteredVerses.length === 0) {
     area.classList.remove('active');
     return;
   }
   area.classList.add('active');
 
-  var lesson = document.getElementById('lessonSelect').value || 'All Lessons';
-  document.getElementById('lessonTag').textContent = lesson;
-  document.getElementById('countLabel').textContent = filteredRows.length + ' items';
+  var verseVal = document.getElementById('verseSelect').value;
+  var label = verseVal !== '' ? filteredVerses[0].ref : 'All Verses';
+  document.getElementById('lessonTag').textContent = label;
+  var totalWords = filteredVerses.reduce(function(s, v) { return s + v.gloss.length; }, 0);
+  document.getElementById('countLabel').textContent = filteredVerses.length + ' verse(s), ' + totalWords + ' words';
 
   // Update toggle chips
-  document.getElementById('togglePinyin').className = 'toggle-chip' + (showPinyin ? ' on' : '');
+  document.getElementById('toggleTransliteration').className = 'toggle-chip' + (showTransliteration ? ' on' : '');
   document.getElementById('toggleEnglish').className = 'toggle-chip' + (showEnglish ? ' on' : '');
-  document.getElementById('toggleChinese').className = 'toggle-chip' + (showChinese ? ' on' : '');
+  document.getElementById('toggleHebrew').className = 'toggle-chip' + (showHebrew ? ' on' : '');
+  document.getElementById('toggleGloss').className = 'toggle-chip' + (showGloss ? ' on' : '');
 
   var container = document.getElementById('cardsContainer');
   container.innerHTML = '';
 
-  filteredRows.forEach(function(row, i) {
+  filteredVerses.forEach(function(verse, vi) {
     var card = document.createElement('div');
-    card.className = 'vocab-card';
-    card.onclick = (function(idx) { return function() { speakCard(idx); }; })(i);
+    card.className = 'verse-card';
 
-    var num = document.createElement('div');
-    num.className = 'num';
-    num.textContent = '#' + (row.num || (i + 1));
-    card.appendChild(num);
+    // Verse reference
+    var refEl = document.createElement('div');
+    refEl.className = 'verse-ref';
+    refEl.textContent = verse.ref;
+    card.appendChild(refEl);
 
-    if (showChinese) {
-      var ch = document.createElement('div');
-      ch.className = 'chinese';
-      ch.textContent = row.chinese;
-      card.appendChild(ch);
+    // Phrase row (clickable for TTS)
+    var phraseRow = document.createElement('div');
+    phraseRow.className = 'phrase-row';
+    phraseRow.setAttribute('data-verse-idx', vi);
+    phraseRow.onclick = function() { speakText(verse.hebrew, phraseRow, vi, -1); };
+
+    if (showHebrew) {
+      var hb = document.createElement('div');
+      hb.className = 'hebrew';
+      hb.textContent = verse.hebrew;
+      phraseRow.appendChild(hb);
     }
 
-    var py = document.createElement('div');
-    py.className = 'pinyin' + (showPinyin ? '' : ' hidden');
-    py.textContent = row.pinyin;
-    card.appendChild(py);
+    var tl = document.createElement('div');
+    tl.className = 'transliteration' + (showTransliteration ? '' : ' hidden');
+    tl.textContent = verse.translit;
+    phraseRow.appendChild(tl);
 
     var en = document.createElement('div');
     en.className = 'english' + (showEnglish ? '' : ' hidden');
-    en.textContent = row.english;
-    card.appendChild(en);
+    en.textContent = verse.english;
+    phraseRow.appendChild(en);
+
+    card.appendChild(phraseRow);
+
+    // Gloss section (word breakdown)
+    if (verse.gloss.length > 0) {
+      var glossSection = document.createElement('div');
+      glossSection.className = 'gloss-section' + (showGloss ? '' : ' hidden');
+
+      verse.gloss.forEach(function(word, wi) {
+        var glossRow = document.createElement('div');
+        glossRow.className = 'gloss-row';
+        glossRow.setAttribute('data-verse-idx', vi);
+        glossRow.setAttribute('data-word-idx', wi);
+        glossRow.onclick = function() { speakText(word.hebrew, glossRow, vi, wi); };
+
+        var gHb = document.createElement('span');
+        gHb.className = 'g-hebrew';
+        gHb.textContent = showHebrew ? word.hebrew : '';
+        glossRow.appendChild(gHb);
+
+        var gTl = document.createElement('span');
+        gTl.className = 'g-translit';
+        gTl.textContent = showTransliteration ? word.translit : '';
+        glossRow.appendChild(gTl);
+
+        var gEn = document.createElement('span');
+        gEn.className = 'g-english';
+        gEn.textContent = showEnglish ? word.english : '';
+        glossRow.appendChild(gEn);
+
+        if (word.strongs) {
+          var gSt = document.createElement('span');
+          gSt.className = 'g-strongs';
+          gSt.textContent = word.strongs;
+          glossRow.appendChild(gSt);
+        }
+
+        glossSection.appendChild(glossRow);
+      });
+
+      card.appendChild(glossSection);
+    }
 
     container.appendChild(card);
   });
 }
 
 function startDrill() {
-  showPinyin = false;
+  showTransliteration = false;
   showEnglish = false;
-  showChinese = true;
-  userAnswers = {};
+  showHebrew = true;
+  showGloss = true;
   document.getElementById('dictationBox').value = '';
   renderDrill();
 }
 
 function revealAll() {
-  showPinyin = true;
+  showTransliteration = true;
   showEnglish = true;
-  showChinese = true;
+  showHebrew = true;
+  showGloss = true;
   renderDrill();
 }
 
-function togglePinyin() { showPinyin = !showPinyin; renderDrill(); updateDictationLabel(); }
-function toggleEnglish() { showEnglish = !showEnglish; renderDrill(); updateDictationLabel(); }
-function toggleChinese() { showChinese = !showChinese; renderDrill(); updateDictationLabel(); }
-
-function getTestMode() {
-  // What's hidden is what you're being tested on
-  if (!showEnglish && !showChinese) return 'both';
-  if (!showEnglish) return 'english';
-  if (!showChinese) return 'chinese';
-  if (!showPinyin) return 'pinyin';
-  return 'english'; // default
-}
-
-function updateDictationLabel() {
-  var mode = getTestMode();
-  var label = document.getElementById('dictationLabel');
-  if (mode === 'chinese') {
-    label.textContent = 'Speak or paste your Chinese answers (e.g. "1. 早上好 2. 您 3. ...")';
-  } else if (mode === 'pinyin') {
-    label.textContent = 'Speak or type pinyin answers (e.g. "1. zǎoshang hǎo 2. nín 3. ...")';
-  } else {
-    label.textContent = 'Dictate your answers (say "1. morning 2. you polite 3. ...")';
-  }
-}
+function toggleTransliteration() { showTransliteration = !showTransliteration; renderDrill(); }
+function toggleEnglish() { showEnglish = !showEnglish; renderDrill(); }
+function toggleHebrew() { showHebrew = !showHebrew; renderDrill(); }
+function toggleGloss() { showGloss = !showGloss; renderDrill(); }
 
 async function pasteFromClipboard() {
   try {
     var text = await navigator.clipboard.readText();
     if (text && text.trim()) {
       var box = document.getElementById('dictationBox');
-      // Append to existing content if any
       if (box.value.trim()) {
         box.value += ' ' + text.trim();
       } else {
@@ -625,16 +702,12 @@ function toggleSetup() {
   var section = document.getElementById('setupSection');
   var arrow = document.getElementById('setupArrow');
   section.classList.toggle('collapsed');
-  arrow.textContent = section.classList.contains('collapsed') ? '►' : '▼';
+  arrow.textContent = section.classList.contains('collapsed') ? '\u25ba' : '\u25bc';
 }
 
 // ── DICTATION (Speech-to-Text) ──
 function toggleMic() {
-  if (isListening) {
-    stopMic();
-  } else {
-    startMic();
-  }
+  if (isListening) { stopMic(); } else { startMic(); }
 }
 
 function startMic() {
@@ -669,7 +742,6 @@ function startMic() {
   };
 
   recognition.onend = function() {
-    // Auto-restart if still listening (Chrome stops after silence)
     if (isListening) {
       try { recognition.start(); } catch(e) {}
     }
@@ -678,7 +750,7 @@ function startMic() {
   recognition.start();
   isListening = true;
   var btn = document.getElementById('micBtn');
-  btn.textContent = '🎤 Stop Dictation';
+  btn.textContent = '\ud83c\udfa4 Stop Dictation';
   btn.classList.add('mic-active');
 }
 
@@ -689,87 +761,57 @@ function stopMic() {
     recognition.stop();
   }
   var btn = document.getElementById('micBtn');
-  btn.textContent = '🎤 Start Dictation';
+  btn.textContent = '\ud83c\udfa4 Start Dictation';
   btn.classList.remove('mic-active');
 }
 
 function clearDictation() {
   document.getElementById('dictationBox').value = '';
-  userAnswers = {};
   renderDrill();
 }
 
 // ── EXPORT FOR AI GRADING ──
 async function exportForGrading() {
-  var lesson = document.getElementById('lessonSelect').value || 'All Lessons';
   var lines = [];
   var transcript = document.getElementById('dictationBox').value.trim();
 
-  var mode = getTestMode();
-  var testingWhat = mode === 'chinese' ? 'Chinese characters'
-    : mode === 'pinyin' ? 'Pinyin'
-    : mode === 'both' ? 'both Chinese and English'
-    : 'English translations';
-
-  var correctCol = mode === 'chinese' ? 'Chinese'
-    : mode === 'pinyin' ? 'Pinyin'
-    : 'English';
-
-  lines.push('Grade my Chinese vocabulary test. I was tested on: ' + testingWhat);
-  lines.push('I spoke/typed all my answers at once. Match each numbered answer to the corresponding item. Be LENIENT:');
+  lines.push('Grade my Biblical Hebrew vocabulary test.');
+  lines.push('I spoke/typed all my answers at once. Match each numbered answer to the corresponding word. Be LENIENT:');
   lines.push('- Accept informal/casual answers that capture the meaning');
   lines.push('- Accept synonyms and close paraphrases');
-  lines.push('- Ignore speech-to-text errors, punctuation, capitalization, tone marks');
+  lines.push('- Ignore speech-to-text errors, punctuation, capitalization');
   lines.push('- "I don\'t know" or "not sure" = Skipped, not Wrong');
-  lines.push('- Grade on whether the student understands the MEANING, not exact wording');
   lines.push('');
   lines.push('Format your response as:');
-  lines.push('');
-  lines.push('#N: [prompt shown]');
+  lines.push('#N: [Hebrew word]');
   lines.push('Correct: [correct answer]');
   lines.push('My Answer: [what you matched from my transcript]');
-  lines.push('Rating: ✅ Correct / ⚠️ Partial / ❌ Wrong / ⏭️ Skipped');
-  lines.push('Note: [brief feedback if partial/wrong]');
-  lines.push('');
-  lines.push('Then give an Overall Score (X/' + filteredRows.length + ') and summary.');
-  lines.push('');
-  lines.push('---');
-  lines.push('Lesson: ' + lesson);
-  lines.push('Testing: ' + testingWhat);
-  lines.push('');
-  lines.push('MY ANSWERS (raw transcript):');
-  lines.push(transcript || '(no answers recorded)');
-  lines.push('');
-  lines.push('---');
-  lines.push('VOCABULARY LIST:');
+  lines.push('Rating: \u2705 Correct / \u26a0\ufe0f Partial / \u274c Wrong / \u23ed\ufe0f Skipped');
   lines.push('');
 
-  filteredRows.forEach(function(row, i) {
-    var num = row.num || (i + 1);
-    if (mode === 'chinese') {
-      // Tested on Chinese — prompt was English, correct answer is Chinese
-      lines.push('#' + num + ' Prompt: ' + row.english);
-      lines.push('Correct Chinese: ' + row.chinese + ' (' + row.pinyin + ')');
-    } else if (mode === 'pinyin') {
-      // Tested on Pinyin — prompt was Chinese + English, correct answer is Pinyin
-      lines.push('#' + num + ' Prompt: ' + row.chinese + ' — ' + row.english);
-      lines.push('Correct Pinyin: ' + row.pinyin);
-    } else {
-      // Tested on English — prompt was Chinese, correct answer is English
-      lines.push('#' + num + ' Prompt: ' + row.chinese + ' (' + row.pinyin + ')');
-      lines.push('Correct English: ' + row.english);
-    }
+  var wordNum = 1;
+  filteredVerses.forEach(function(verse) {
+    lines.push('--- ' + verse.ref + ' ---');
+    lines.push('Full: ' + verse.hebrew + ' \u2014 ' + verse.english);
     lines.push('');
+    verse.gloss.forEach(function(w) {
+      lines.push('#' + wordNum + ' ' + w.hebrew + ' (' + w.translit + ') [' + (w.strongs || '') + ']');
+      lines.push('Correct English: ' + w.english);
+      lines.push('');
+      wordNum++;
+    });
   });
+
+  lines.push('MY ANSWERS (raw transcript):');
+  lines.push(transcript || '(no answers recorded)');
 
   var output = lines.join('\n');
   try {
     await navigator.clipboard.writeText(output);
     alert('Copied to clipboard! Paste into AI chat for grading.');
   } catch(e) {
-    // Fallback: show in textarea
     document.getElementById('dictationBox').value = output;
-    alert('Could not copy to clipboard. The export text is in the dictation box — select all and copy manually.');
+    alert('Could not copy to clipboard. The export text is in the dictation box \u2014 select all and copy manually.');
   }
 }
 
@@ -801,52 +843,82 @@ function setAutoAdvance(val) {
   autoLabel.style.backgroundColor = val ? '#c8e6c9' : 'transparent';
 }
 
-function speakCard(index) {
+// Build a flat list of speakable items for auto-advance
+function buildSpeakList() {
+  var list = [];
+  filteredVerses.forEach(function(verse, vi) {
+    // phrase
+    list.push({ type: 'phrase', verseIdx: vi, wordIdx: -1, hebrew: verse.hebrew, english: verse.english });
+    // gloss words
+    if (showGloss) {
+      verse.gloss.forEach(function(w, wi) {
+        list.push({ type: 'gloss', verseIdx: vi, wordIdx: wi, hebrew: w.hebrew, english: w.english });
+      });
+    }
+  });
+  return list;
+}
+
+function speakText(hebrewText, el, verseIdx, wordIdx) {
   speechSynthesis.cancel();
-  if (index < 0 || index >= filteredRows.length) {
-    clearSpeakingHighlight();
-    currentSpeakingIndex = -1;
-    return;
-  }
+  clearSpeakingHighlight();
 
-  var row = filteredRows[index];
-  // Determine what text to read based on language
-  var text = row.chinese; // default: read Chinese
-  if (ttsLang === 'en-US') {
-    text = row.english;
-  }
+  var text = (ttsLang === 'en-US')
+    ? (wordIdx >= 0 ? filteredVerses[verseIdx].gloss[wordIdx].english : filteredVerses[verseIdx].english)
+    : hebrewText;
 
-  currentSpeakingIndex = index;
-  highlightCard(index);
+  currentSpeakingEl = el;
+  el.classList.add('speaking');
+  el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
   var utterance = new SpeechSynthesisUtterance(text);
   utterance.lang = ttsLang;
   utterance.rate = ttsRate;
 
   utterance.onend = function() {
-    if (autoAdvance && currentSpeakingIndex === index) {
-      speakCard(index + 1);
-    } else {
-      clearSpeakingHighlight();
-      currentSpeakingIndex = -1;
+    el.classList.remove('speaking');
+    if (autoAdvance) {
+      advanceToNext(verseIdx, wordIdx);
     }
   };
 
   speechSynthesis.speak(utterance);
 }
 
-function highlightCard(index) {
-  clearSpeakingHighlight();
-  var cards = document.getElementById('cardsContainer').children;
-  if (cards[index]) {
-    cards[index].classList.add('speaking');
-    cards[index].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+function advanceToNext(verseIdx, wordIdx) {
+  var speakList = buildSpeakList();
+  // Find current position in the list
+  var currentIdx = -1;
+  for (var i = 0; i < speakList.length; i++) {
+    if (speakList[i].verseIdx === verseIdx && speakList[i].wordIdx === wordIdx) {
+      currentIdx = i;
+      break;
+    }
+  }
+  var nextIdx = currentIdx + 1;
+  if (nextIdx >= speakList.length) {
+    clearSpeakingHighlight();
+    return;
+  }
+
+  var next = speakList[nextIdx];
+  // Find the DOM element
+  var container = document.getElementById('cardsContainer');
+  var el = null;
+  if (next.type === 'phrase') {
+    el = container.querySelector('.phrase-row[data-verse-idx="' + next.verseIdx + '"]');
+  } else {
+    el = container.querySelector('.gloss-row[data-verse-idx="' + next.verseIdx + '"][data-word-idx="' + next.wordIdx + '"]');
+  }
+  if (el) {
+    speakText(next.hebrew, el, next.verseIdx, next.wordIdx);
   }
 }
 
 function clearSpeakingHighlight() {
-  var cards = document.getElementById('cardsContainer').querySelectorAll('.vocab-card.speaking');
-  cards.forEach(function(c) { c.classList.remove('speaking'); });
+  var els = document.querySelectorAll('.speaking');
+  els.forEach(function(e) { e.classList.remove('speaking'); });
+  currentSpeakingEl = null;
 }
 </script>
 </body>
