@@ -182,6 +182,57 @@
     box-shadow: 0 1px 3px rgba(0,0,0,0.3);
   }
   .switch-knob.on { left: 29px; }
+
+  /* ── DICTATION MODAL ── */
+  .dictate-fab {
+    position: fixed; bottom: 24px; right: 24px; z-index: 200;
+    width: 56px; height: 56px; border-radius: 50%;
+    background: #ef4444; color: white; border: none;
+    font-size: 24px; cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+    display: flex; align-items: center; justify-content: center;
+    transition: transform 0.15s;
+  }
+  .dictate-fab:hover { transform: scale(1.1); }
+  .dictate-fab:active { transform: scale(0.95); }
+
+  .modal-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 300;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-overlay.active { display: flex; }
+  .modal-box {
+    background: white;
+    border-radius: 12px;
+    padding: 24px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    opacity: 0.1;
+    transition: opacity 0.2s;
+  }
+  .modal-box.has-text {
+    opacity: 1;
+  }
+  .modal-box h3 {
+    font-size: 16px; font-weight: 700; margin-bottom: 4px; color: #1a1a1a;
+  }
+  .modal-box .modal-hint {
+    font-size: 12px; color: #888; margin-bottom: 12px;
+  }
+  .modal-box textarea {
+    width: 100%; min-height: 120px; border: 2px solid #ddd; border-radius: 8px;
+    padding: 12px; font-family: inherit; font-size: 15px;
+    line-height: 1.5; resize: vertical; color: #333;
+  }
+  .modal-box textarea:focus { outline: none; border-color: #2563eb; }
+  .modal-btns {
+    display: flex; gap: 8px; margin-top: 12px; justify-content: flex-end;
+  }
 </style>
 </head>
 <body>
@@ -282,6 +333,23 @@
 
     <!-- Cards -->
     <div id="cardsContainer"></div>
+  </div>
+</div>
+
+<!-- Dictation FAB -->
+<button class="dictate-fab" id="dictateFab" onclick="openDictateModal()" title="Dictate (Esc)">&#127908;</button>
+
+<!-- Dictation Modal -->
+<div class="modal-overlay" id="dictateModalOverlay" onclick="closeDictateModal(event)">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <h3>Dictate Answer</h3>
+    <div class="modal-hint">Speak or type here, then submit to append to your answers</div>
+    <textarea id="dictateModalInput" placeholder="Dictate or type here..."></textarea>
+    <div class="modal-btns">
+      <button class="btn outline" onclick="closeDictateModal()">Cancel</button>
+      <button class="btn outline" onclick="clearDictateModal()">Clear</button>
+      <button class="btn primary" onclick="submitDictateModal()">Append</button>
+    </div>
   </div>
 </div>
 
@@ -844,6 +912,77 @@ function clearSpeakingHighlight() {
   var cards = document.getElementById('cardsContainer').querySelectorAll('.vocab-card.speaking');
   cards.forEach(function(c) { c.classList.remove('speaking'); });
 }
+
+// ── DICTATION MODAL ──
+function openDictateModal() {
+  document.getElementById('dictateModalOverlay').classList.add('active');
+  var input = document.getElementById('dictateModalInput');
+  updateModalOpacity();
+  setTimeout(function() { input.focus(); }, 100);
+}
+
+function updateModalOpacity() {
+  var box = document.querySelector('.modal-box');
+  var input = document.getElementById('dictateModalInput');
+  if (input.value.trim()) {
+    box.classList.add('has-text');
+  } else {
+    box.classList.remove('has-text');
+  }
+}
+
+document.getElementById('dictateModalInput').addEventListener('input', updateModalOpacity);
+
+function closeDictateModal(e) {
+  if (e && e.target !== document.getElementById('dictateModalOverlay')) return;
+  appendAndCloseModal();
+}
+
+function clearDictateModal() {
+  document.getElementById('dictateModalInput').value = '';
+  document.getElementById('dictateModalInput').focus();
+}
+
+function appendAndCloseModal() {
+  var modalInput = document.getElementById('dictateModalInput');
+  var text = modalInput.value.trim();
+  if (text) {
+    var box = document.getElementById('dictationBox');
+    if (box.value.trim()) {
+      box.value += ' ' + text;
+    } else {
+      box.value = text;
+    }
+  }
+  modalInput.value = '';
+  document.getElementById('dictateModalOverlay').classList.remove('active');
+}
+
+function submitDictateModal() {
+  appendAndCloseModal();
+}
+
+// ── GLOBAL KEYBOARD SHORTCUT ──
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    var overlay = document.getElementById('dictateModalOverlay');
+    if (overlay.classList.contains('active')) {
+      // Close if open — auto-append
+      appendAndCloseModal();
+    } else {
+      // Open if closed (and not typing in dictation textarea)
+      if (document.activeElement !== document.getElementById('dictationBox')) {
+        e.preventDefault();
+        openDictateModal();
+      }
+    }
+  }
+  // Enter in modal submits
+  if (e.key === 'Enter' && !e.shiftKey && document.activeElement === document.getElementById('dictateModalInput')) {
+    e.preventDefault();
+    submitDictateModal();
+  }
+});
 </script>
 </body>
 </html>
