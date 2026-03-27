@@ -173,18 +173,19 @@
   }
   .toggle-chip.on { background: #2563eb; color: white; border-color: #2563eb; }
 
-  /* ── STICKY CONTROL BAR (merged TTS + auto-advance) ── */
+  /* ── FIXED CONTROL BAR (merged TTS + auto-advance) ── */
   .sticky-bar {
-    position: sticky; top: 0; z-index: 50;
-    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    position: fixed; top: 0; left: 0; right: 0; z-index: 150;
+    display: flex; align-items: center; justify-content: center;
+    gap: 8px; flex-wrap: wrap;
     padding: 8px 12px;
-    border-radius: 8px;
-    margin-bottom: 14px;
     transition: background-color 0.2s;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
   }
   .sticky-bar.on { background: #e6ffe6; }
   .sticky-bar.off { background: #f0f0f0; }
+  /* offset body content so it's not hidden behind the fixed bar */
+  .drill-area.active { padding-top: 50px; }
   .sticky-bar select {
     font-size: 12px; font-family: inherit;
     padding: 3px 6px; border: 1px solid #ccc; border-radius: 5px;
