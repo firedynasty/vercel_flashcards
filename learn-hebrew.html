@@ -171,28 +171,25 @@
   }
   .toggle-chip.on { background: #2563eb; color: white; border-color: #2563eb; }
 
-  /* ── TTS CONTROLS ── */
-  .tts-controls {
-    display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
-    margin-bottom: 14px; padding: 10px 16px;
-    background: white; border: 1px solid #e0e0e0; border-radius: 10px;
-  }
-  .tts-controls label { font-size: 12px; font-weight: 600; color: #555; }
-  .tts-controls select, .tts-controls input[type="range"] {
-    font-size: 13px; font-family: inherit;
-  }
-  .tts-controls select { padding: 4px 8px; border: 1px solid #ccc; border-radius: 6px; }
-  .tts-controls .rate-value { font-size: 12px; color: #888; min-width: 30px; }
-
-  /* ── AUTO-ADVANCE TOGGLE ── */
-  .auto-advance-bar {
-    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-    margin-bottom: 14px; padding: 8px 16px;
-    border-radius: 8px;
+  /* ── FIXED CONTROL BAR (merged TTS + auto-advance) ── */
+  .sticky-bar {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 150;
+    display: flex; align-items: center; justify-content: center;
+    gap: 8px; flex-wrap: wrap;
+    padding: 8px 12px;
     transition: background-color 0.2s;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
   }
-  .auto-advance-bar.on { background: #e6ffe6; }
-  .auto-advance-bar.off { background: #f0f0f0; }
+  .sticky-bar.on { background: #e6ffe6; }
+  .sticky-bar.off { background: #f0f0f0; }
+  .sticky-bar select {
+    font-size: 12px; font-family: inherit;
+    padding: 3px 6px; border: 1px solid #ccc; border-radius: 5px;
+  }
+  .sticky-bar .sep {
+    width: 1px; height: 18px; background: #ccc; margin: 0 2px;
+  }
+  .drill-area.active { padding-top: 50px; }
   .auto-advance-label {
     font-weight: 700; font-size: 12px; color: #666;
     cursor: pointer; padding: 4px 8px; border-radius: 4px;
@@ -316,33 +313,34 @@
       <span class="toggle-chip on" id="toggleGloss" onclick="toggleGloss()">Word Breakdown</span>
     </div>
 
-    <!-- TTS Controls -->
-    <div class="tts-controls">
-      <label>Language</label>
-      <select id="languageSelect" onchange="onLanguageChange()">
-        <option value="he-IL" selected>Hebrew</option>
-        <option value="en-US">English</option>
-        <option value="ko-KR">Korean</option>
-        <option value="zh-CN">Mandarin</option>
-        <option value="zh-HK">Cantonese</option>
-        <option value="fr-FR">French</option>
-        <option value="es-ES">Spanish</option>
+    <!-- Sticky control bar (TTS + auto-advance merged) -->
+    <div class="sticky-bar off" id="autoAdvanceBar">
+      <select id="languageSelect" onchange="onLanguageChange()" title="Language">
+        <option value="he-IL" selected>עב</option>
+        <option value="en-US">EN</option>
+        <option value="ko-KR">한</option>
+        <option value="zh-CN">中</option>
+        <option value="zh-HK">粵</option>
+        <option value="fr-FR">FR</option>
+        <option value="es-ES">ES</option>
       </select>
-      <label>Speed</label>
-      <input type="range" id="speechRateSlider" min="0.25" max="2" step="0.25" value="1" oninput="onRateChange()">
-      <span class="rate-value" id="rateValue">1x</span>
-    </div>
-
-    <!-- Auto-advance toggle -->
-    <div class="auto-advance-bar off" id="autoAdvanceBar">
-      <span class="auto-advance-label" id="stopLabel" onmouseenter="setAutoAdvance(false)" style="background: #ffcdd2;">Stop After Card</span>
+      <select id="speechRateSelect" onchange="onRateChange()" title="Speed">
+        <option value="0.5">0.5x</option>
+        <option value="0.7">0.7x</option>
+        <option value="1" selected>1x</option>
+        <option value="1.25">1.25x</option>
+        <option value="1.5">1.5x</option>
+        <option value="2">2x</option>
+      </select>
+      <div class="sep"></div>
+      <span class="auto-advance-label" id="stopLabel" onmouseenter="setAutoAdvance(false)" style="background: #ffcdd2;">Stop</span>
       <label class="switch-wrap">
         <input type="checkbox" id="autoAdvanceCheckbox" onchange="setAutoAdvance(this.checked)">
         <span class="switch-track" id="switchTrack">
           <span class="switch-knob" id="switchKnob"></span>
         </span>
       </label>
-      <span class="auto-advance-label" id="autoLabel" onmouseenter="setAutoAdvance(true)" style="color: #666; background: transparent;">Auto Next Card</span>
+      <span class="auto-advance-label" id="autoLabel" onmouseenter="setAutoAdvance(true)" style="color: #666; background: transparent;">Auto</span>
     </div>
 
     <!-- Controls -->
@@ -889,8 +887,7 @@ function onLanguageChange() {
 }
 
 function onRateChange() {
-  ttsRate = parseFloat(document.getElementById('speechRateSlider').value);
-  document.getElementById('rateValue').textContent = ttsRate + 'x';
+  ttsRate = parseFloat(document.getElementById('speechRateSelect').value);
 }
 
 function setAutoAdvance(val) {
@@ -902,7 +899,7 @@ function setAutoAdvance(val) {
   var stopLabel = document.getElementById('stopLabel');
   var autoLabel = document.getElementById('autoLabel');
 
-  bar.className = 'auto-advance-bar ' + (val ? 'on' : 'off');
+  bar.className = 'sticky-bar ' + (val ? 'on' : 'off');
   track.className = 'switch-track' + (val ? ' on' : '');
   knob.className = 'switch-knob' + (val ? ' on' : '');
 

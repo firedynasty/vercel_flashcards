@@ -190,8 +190,6 @@
     font-size: 12px; font-family: inherit;
     padding: 3px 6px; border: 1px solid #ccc; border-radius: 5px;
   }
-  .sticky-bar input[type="range"] { width: 60px; }
-  .sticky-bar .rate-value { font-size: 11px; color: #888; min-width: 24px; }
   .sticky-bar .sep {
     width: 1px; height: 18px; background: #ccc; margin: 0 2px;
   }
@@ -328,8 +326,14 @@
         <option value="ko-KR">한</option>
         <option value="he-IL">עב</option>
       </select>
-      <input type="range" id="speechRateSlider" min="0.25" max="2" step="0.25" value="1" oninput="onRateChange()" title="Speed">
-      <span class="rate-value" id="rateValue">1x</span>
+      <select id="speechRateSelect" onchange="onRateChange()" title="Speed">
+        <option value="0.5">0.5x</option>
+        <option value="0.7">0.7x</option>
+        <option value="1" selected>1x</option>
+        <option value="1.25">1.25x</option>
+        <option value="1.5">1.5x</option>
+        <option value="2">2x</option>
+      </select>
       <div class="sep"></div>
       <span class="auto-advance-label" id="stopLabel" onmouseenter="setAutoAdvance(false)" style="background: #ffcdd2;">Stop</span>
       <label class="switch-wrap">
@@ -892,8 +896,7 @@ function onLanguageChange() {
 }
 
 function onRateChange() {
-  ttsRate = parseFloat(document.getElementById('speechRateSlider').value);
-  document.getElementById('rateValue').textContent = ttsRate + 'x';
+  ttsRate = parseFloat(document.getElementById('speechRateSelect').value);
 }
 
 function setAutoAdvance(val) {
