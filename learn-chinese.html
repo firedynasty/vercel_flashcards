@@ -97,6 +97,39 @@
   .vocab-card .english.hidden {
     visibility: hidden; height: 0; padding: 0; border: none; margin: 0; overflow: hidden;
   }
+  /* ── TOOLTIP ── */
+  .vocab-card { position: relative; }
+  .vocab-card .tooltip {
+    display: none;
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1a1a1a;
+    color: #fff;
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    line-height: 1.5;
+    white-space: nowrap;
+    z-index: 100;
+    pointer-events: none;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+  }
+  .vocab-card .tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-top-color: #1a1a1a;
+  }
+  .vocab-card:hover .tooltip { display: block; }
+  .tooltip .tip-pinyin { color: #93c5fd; font-style: italic; }
+  .tooltip .tip-english { color: #86efac; }
+  .tooltip .tip-chinese { color: #fde68a; font-size: 15px; }
+
   .vocab-card .my-answer {
     margin-top: 8px; padding: 8px 12px; background: #f0f4ff;
     border: 1px dashed #93b4f5; border-radius: 8px;
@@ -376,6 +409,13 @@ let ttsRate = 1;
 let autoAdvance = false;
 let currentSpeakingIndex = -1;
 
+// ── HELPERS ──
+function escHtml(s) {
+  var d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
 // ── GOOGLE SHEETS ──
 function setStatus(msg) { document.getElementById('status').textContent = msg; }
 
@@ -626,6 +666,16 @@ function renderDrill() {
     en.className = 'english' + (showEnglish ? '' : ' hidden');
     en.textContent = row.english;
     card.appendChild(en);
+
+    // Tooltip on hover
+    var tip = document.createElement('div');
+    tip.className = 'tooltip';
+    var parts = [];
+    if (row.chinese) parts.push('<span class="tip-chinese">' + escHtml(row.chinese) + '</span>');
+    if (row.pinyin) parts.push('<span class="tip-pinyin">' + escHtml(row.pinyin) + '</span>');
+    if (row.english) parts.push('<span class="tip-english">' + escHtml(row.english) + '</span>');
+    tip.innerHTML = parts.join(' &nbsp;·&nbsp; ');
+    card.appendChild(tip);
 
     container.appendChild(card);
   });
