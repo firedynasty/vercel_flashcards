@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Learn Scripture</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, 'Inter', sans-serif;
+    background: #f9f9f7;
+    min-height: 100vh;
+    color: #1a1a1a;
+  }
+  .container {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 24px 20px;
+  }
+  h1 { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+  .subtitle { font-size: 12px; color: #888; margin-bottom: 16px; }
+
+  /* ── BUTTONS ── */
+  .btn {
+    border: none; border-radius: 6px; padding: 8px 16px;
+    font-weight: 600; font-size: 13px; cursor: pointer; transition: opacity 0.15s;
+  }
+  .btn:hover { opacity: 0.85; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn.primary { background: #2563eb; color: white; }
+  .btn.green { background: #16a34a; color: white; }
+  .btn.orange { background: #ea580c; color: white; }
+  .btn.outline { background: none; border: 1px solid #ccc; color: #555; }
+  .btn.red-outline { background: none; border: 1px solid #ef4444; color: #ef4444; }
+
+  /* ── SETUP SECTION ── */
+  .setup-section {
+    margin-bottom: 20px;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    background: white;
+    overflow: hidden;
+  }
+  .setup-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 16px; background: #f5f5f5; cursor: pointer; user-select: none;
+  }
+  .setup-header span { font-size: 13px; font-weight: 600; color: #555; }
+  .setup-header .toggle-arrow { font-size: 12px; color: #999; }
+  .setup-body { padding: 12px 16px; }
+  .setup-section.collapsed .setup-body { display: none; }
+
+  .setup-body textarea {
+    width: 100%; min-height: 180px; border: 1px solid #ddd; border-radius: 8px;
+    padding: 10px 12px; font-family: inherit; font-size: 13px;
+    line-height: 1.6; resize: vertical; color: #333;
+  }
+  .setup-body textarea::placeholder { color: #aaa; }
+  .setup-btns { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; align-items: center; }
+  .hint { font-size: 11px; color: #aaa; margin-top: 6px; line-height: 1.4; }
+
+  /* ── DRILL AREA ── */
+  .drill-area { display: none; }
+  .drill-area.active { display: block; }
+
+  .drill-info {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 14px; flex-wrap: wrap; gap: 8px;
+  }
+  .drill-info .lesson-tag {
+    font-size: 11px; font-weight: 700; letter-spacing: 2px;
+    text-transform: uppercase; color: #2563eb;
+  }
+  .drill-info .count { font-size: 12px; color: #888; }
+
+  /* ── VERSE CARDS ── */
+  .verse-card {
+    background: white; border: 1px solid #e8e8e8; border-radius: 12px;
+    padding: 16px 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    transition: background-color 0.15s;
+  }
+  .verse-card.speaking { background-color: #dbeafe; border-color: #93c5fd; }
+  .verse-card + .verse-card { margin-top: 10px; }
+  .verse-card .num { font-size: 11px; font-weight: 700; color: #888; margin-bottom: 4px; }
+  .verse-card .verse-text {
+    font-size: 15px; line-height: 1.6; color: #1a1a1a;
+  }
+  .verse-card .verse-text.hidden-text {
+    filter: blur(6px); user-select: none; pointer-events: none;
+  }
+
+  /* ── LISTEN INPUT ── */
+  .listen-bar {
+    display: flex; gap: 8px; margin-bottom: 16px; align-items: center; flex-wrap: wrap;
+  }
+  .listen-bar input[type="text"] {
+    width: 80px; padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px;
+    font-size: 14px; font-family: inherit; text-align: center;
+  }
+  .listen-bar .listen-hint { font-size: 12px; color: #888; }
+
+  /* ── CONTROLS ── */
+  .controls-bar {
+    display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+    margin-bottom: 16px;
+  }
+
+  /* ── DICTATION ── */
+  .dictation-section {
+    margin-bottom: 16px; padding: 14px 16px;
+    background: white; border: 1px solid #e0e0e0; border-radius: 10px;
+  }
+  .dictation-section .label { font-size: 13px; font-weight: 600; color: #555; margin-bottom: 8px; }
+  .dictation-section textarea {
+    width: 100%; min-height: 80px; border: 1px solid #ddd; border-radius: 8px;
+    padding: 10px 12px; font-family: inherit; font-size: 13px;
+    line-height: 1.5; resize: vertical; color: #333;
+  }
+  .dictation-section textarea::placeholder { color: #aaa; }
+  .dictation-btns { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; align-items: center; }
+
+  /* ── RESULTS ── */
+  .results-section { display: none; margin-bottom: 20px; }
+  .results-section.active { display: block; }
+  .results-card {
+    background: white; border: 1px solid #e0e0e0; border-radius: 10px;
+    padding: 16px 20px; margin-bottom: 10px;
+  }
+  .results-card .result-header {
+    display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;
+  }
+  .results-card .result-header .verse-label { font-weight: 700; font-size: 13px; color: #555; }
+  .results-card .result-header .score { font-weight: 700; font-size: 14px; }
+  .score.perfect { color: #16a34a; }
+  .score.great { color: #2563eb; }
+  .score.ok { color: #ea580c; }
+  .score.low { color: #ef4444; }
+  .results-card .missed { font-size: 12px; color: #888; margin-top: 4px; }
+  .results-card .correct-text {
+    font-size: 13px; color: #15803d; background: #f0fdf4;
+    border: 1px solid #bbf7d0; border-radius: 6px; padding: 8px 12px; margin-top: 8px;
+  }
+  .overall-score {
+    text-align: center; font-size: 28px; font-weight: 700; margin: 16px 0;
+  }
+
+  /* ── SPEECH RATE ── */
+  .rate-select {
+    padding: 6px 8px; border: 1px solid #ddd; border-radius: 6px;
+    font-size: 12px; font-family: inherit;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Learn Scripture</h1>
+  <div class="subtitle">Paste scripture, listen, recite, get graded</div>
+
+  <!-- ── SETUP ── -->
+  <div class="setup-section" id="setupSection">
+    <div class="setup-header" onclick="toggleSetup()">
+      <span>Scripture Input</span>
+      <span class="toggle-arrow" id="setupArrow">▼</span>
+    </div>
+    <div class="setup-body">
+      <textarea id="scriptureInput" placeholder="Paste numbered scripture here, e.g.:
+
+1
+Blessed is the man who doesn't walk in the counsel of the wicked, nor stand on the path of sinners, nor sit in the seat of scoffers;
+
+2
+but his delight is in Yahweh's law. On his law he meditates day and night.
+
+3
+He will be like a tree planted by the streams of water, that produces its fruit in its season, whose leaf also does not wither. Whatever he does shall prosper."></textarea>
+      <div class="setup-btns">
+        <button class="btn primary" onclick="loadFromPaste()">Load Scripture</button>
+        <button class="btn outline" onclick="pasteFromClipboard()">Paste from Clipboard</button>
+        <button class="btn red-outline" onclick="clearInput()">Clear</button>
+      </div>
+      <div class="hint">Each verse number on its own line, followed by the verse text. Numbering can be anything (1-4, 6-9, etc.)</div>
+    </div>
+  </div>
+
+  <!-- ── DRILL ── -->
+  <div class="drill-area" id="drillArea">
+    <div class="drill-info">
+      <span class="lesson-tag" id="verseCount"></span>
+      <span class="count">
+        Speed: <select class="rate-select" id="speechRate" onchange="onRateChange()">
+          <option value="0.6">0.6x</option>
+          <option value="0.8">0.8x</option>
+          <option value="1" selected>1x</option>
+          <option value="1.2">1.2x</option>
+          <option value="1.5">1.5x</option>
+        </select>
+      </span>
+    </div>
+
+    <!-- Listen bar -->
+    <div class="listen-bar">
+      <input type="text" id="listenInput" placeholder="#" onkeydown="if(event.key==='Enter')listenToVerse()">
+      <button class="btn primary" onclick="listenToVerse()">Read Aloud</button>
+      <button class="btn outline" onclick="listenAll()">Read All</button>
+      <button class="btn outline" onclick="stopSpeech()">Stop</button>
+      <span class="listen-hint">Type verse # and press Enter to hear it</span>
+    </div>
+
+    <!-- Controls -->
+    <div class="controls-bar">
+      <button class="btn green" onclick="startQuiz()">Start Quiz</button>
+      <button class="btn outline" onclick="toggleVerses()">Show / Hide Verses</button>
+      <button class="btn outline" onclick="resetAll()">Reset</button>
+    </div>
+
+    <!-- Verse cards -->
+    <div id="verseCards"></div>
+
+    <!-- Dictation -->
+    <div class="dictation-section" id="dictationSection" style="display:none;">
+      <div class="label" id="quizLabel">Verse <span id="quizVerseNum"></span> — recite below:</div>
+      <textarea id="recitationBox" placeholder="Paste your recitation here..."></textarea>
+      <div class="dictation-btns">
+        <button class="btn green" id="submitBtn" onclick="submitAnswer()">Submit</button>
+        <button class="btn outline" onclick="skipVerse()">Skip</button>
+        <button class="btn primary" onclick="listenCurrentVerse()">Hear This Verse</button>
+        <button class="btn outline" onclick="clearRecitation()">Clear</button>
+      </div>
+    </div>
+
+    <!-- Results -->
+    <div class="results-section" id="resultsSection">
+      <div class="overall-score" id="overallScore"></div>
+      <div id="resultsCards"></div>
+      <div style="text-align:center; margin-top:12px;">
+        <button class="btn primary" onclick="startQuiz()">Try Again</button>
+        <button class="btn outline" onclick="resetAll()">New Scripture</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+var verses = {};       // { num: text }
+var verseNums = [];    // sorted
+var ttsRate = 1;
+var versesVisible = true;
+
+// Quiz state
+var quizActive = false;
+var quizIndex = 0;
+var quizResults = [];  // [{ num, pct, missed, attempt }]
+
+// ── SETUP ──
+
+function toggleSetup() {
+  var sec = document.getElementById('setupSection');
+  sec.classList.toggle('collapsed');
+  document.getElementById('setupArrow').textContent = sec.classList.contains('collapsed') ? '▶' : '▼';
+}
+
+async function pasteFromClipboard() {
+  try {
+    var text = await navigator.clipboard.readText();
+    document.getElementById('scriptureInput').value = text;
+  } catch(e) {
+    alert('Could not read clipboard. Paste manually.');
+  }
+}
+
+function parseVerses(text) {
+  // Try format A: number on its own line
+  var parts = text.trim().split(/^(\d+)\s*$/m);
+  var result = {};
+  if (parts.length > 2) {
+    for (var i = 1; i < parts.length - 1; i += 2) {
+      var num = parseInt(parts[i]);
+      var vtext = parts[i + 1].trim();
+      if (vtext) result[num] = vtext;
+    }
+    if (Object.keys(result).length > 0) return result;
+  }
+
+  // Format B: number at start of line, e.g. "1 My son..." or "1. My son..." or "5Trust..."
+  // Also handles biblegateway format where verse 1 has no number
+  var lines = text.trim().split('\n');
+  var currentNum = null;
+  var currentLines = [];
+  var firstLine = true;
+  for (var i = 0; i < lines.length; i++) {
+    var trimmed = lines[i].trim();
+    if (!trimmed) continue;
+    var match = trimmed.match(/^(\d+)[.\s]?\s*(.*)/);
+    if (match) {
+      if (currentNum !== null && currentLines.length > 0) {
+        result[currentNum] = currentLines.join(' ').trim();
+      }
+      currentNum = parseInt(match[1]);
+      currentLines = match[2] ? [match[2]] : [];
+      firstLine = false;
+    } else if (firstLine) {
+      // No number on first text line — treat as verse 1
+      currentNum = 1;
+      currentLines = [trimmed];
+      firstLine = false;
+    } else if (currentNum !== null) {
+      currentLines.push(trimmed);
+    }
+  }
+  if (currentNum !== null && currentLines.length > 0) {
+    result[currentNum] = currentLines.join(' ').trim();
+  }
+  return result;
+}
+
+function loadFromPaste() {
+  var text = document.getElementById('scriptureInput').value.trim();
+  if (!text) { alert('Paste scripture first.'); return; }
+
+  verses = parseVerses(text);
+  verseNums = Object.keys(verses).map(Number).sort(function(a,b){ return a-b; });
+
+  if (verseNums.length === 0) {
+    alert('No numbered verses found. Put each verse number on its own line.');
+    return;
+  }
+
+  // Collapse setup, show drill
+  document.getElementById('setupSection').classList.add('collapsed');
+  document.getElementById('setupArrow').textContent = '▶';
+  document.getElementById('drillArea').classList.add('active');
+  document.getElementById('verseCount').textContent = verseNums.length + ' VERSES LOADED';
+
+  renderVerseCards();
+  resetQuiz();
+}
+
+function renderVerseCards() {
+  var html = '';
+  for (var i = 0; i < verseNums.length; i++) {
+    var num = verseNums[i];
+    html += '<div class="verse-card" id="card-' + num + '">'
+      + '<div class="num">VERSE ' + num + '</div>'
+      + '<div class="verse-text" id="text-' + num + '">' + escHtml(verses[num]) + '</div>'
+      + '</div>';
+  }
+  document.getElementById('verseCards').innerHTML = html;
+}
+
+function escHtml(s) {
+  var d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+function clearInput() {
+  document.getElementById('scriptureInput').value = '';
+}
+
+// ── LISTEN ──
+
+function onRateChange() {
+  ttsRate = parseFloat(document.getElementById('speechRate').value);
+}
+
+function speakText(text, onEnd) {
+  speechSynthesis.cancel();
+  var u = new SpeechSynthesisUtterance(text);
+  u.rate = ttsRate;
+  u.lang = 'en-US';
+  if (onEnd) u.onend = onEnd;
+
+  // Highlight card
+  u.onstart = function() {
+    // unhighlight all
+    document.querySelectorAll('.verse-card').forEach(function(c){ c.classList.remove('speaking'); });
+  };
+
+  speechSynthesis.speak(u);
+}
+
+function listenToVerse() {
+  var val = document.getElementById('listenInput').value.trim();
+  var num = parseInt(val);
+  if (!num || !verses[num]) {
+    alert('Verse ' + val + ' not loaded. Available: ' + verseNums.join(', '));
+    return;
+  }
+  var card = document.getElementById('card-' + num);
+  if (card) card.classList.add('speaking');
+  speakText(verses[num], function() {
+    if (card) card.classList.remove('speaking');
+  });
+}
+
+function listenCurrentVerse() {
+  if (!quizActive || quizIndex >= verseNums.length) return;
+  var num = verseNums[quizIndex];
+  var card = document.getElementById('card-' + num);
+  if (card) card.classList.add('speaking');
+  speakText(verses[num], function() {
+    if (card) card.classList.remove('speaking');
+  });
+  document.getElementById('recitationBox').focus();
+}
+
+function listenAll() {
+  var i = 0;
+  function next() {
+    if (i >= verseNums.length) return;
+    var num = verseNums[i];
+    var card = document.getElementById('card-' + num);
+    if (card) card.classList.add('speaking');
+    speakText('Verse ' + num + '. ' + verses[num], function() {
+      if (card) card.classList.remove('speaking');
+      i++;
+      next();
+    });
+  }
+  next();
+}
+
+function stopSpeech() {
+  speechSynthesis.cancel();
+  document.querySelectorAll('.verse-card').forEach(function(c){ c.classList.remove('speaking'); });
+}
+
+// ── SHOW/HIDE ──
+
+function toggleVerses() {
+  versesVisible = !versesVisible;
+  for (var i = 0; i < verseNums.length; i++) {
+    var el = document.getElementById('text-' + verseNums[i]);
+    if (el) {
+      if (versesVisible) el.classList.remove('hidden-text');
+      else el.classList.add('hidden-text');
+    }
+  }
+}
+
+// ── QUIZ ──
+
+function resetQuiz() {
+  quizActive = false;
+  quizIndex = 0;
+  quizResults = [];
+  document.getElementById('dictationSection').style.display = 'none';
+  document.getElementById('resultsSection').classList.remove('active');
+}
+
+function startQuiz() {
+  resetQuiz();
+  quizActive = true;
+  quizIndex = 0;
+  quizResults = [];
+
+  // Hide verses
+  versesVisible = false;
+  for (var i = 0; i < verseNums.length; i++) {
+    var el = document.getElementById('text-' + verseNums[i]);
+    if (el) el.classList.add('hidden-text');
+  }
+
+  document.getElementById('dictationSection').style.display = 'block';
+  document.getElementById('resultsSection').classList.remove('active');
+  showCurrentVerse();
+}
+
+function showCurrentVerse() {
+  if (quizIndex >= verseNums.length) {
+    finishQuiz();
+    return;
+  }
+  var num = verseNums[quizIndex];
+  document.getElementById('quizVerseNum').textContent = num;
+  document.getElementById('recitationBox').value = '';
+  document.getElementById('recitationBox').focus();
+
+  // Scroll to card
+  var card = document.getElementById('card-' + num);
+  if (card) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function normalize(text) {
+  return text.toLowerCase().replace(/[^\w\s]/g, '').split(/\s+/).filter(Boolean);
+}
+
+function gradeVerse(original, attempt) {
+  var origWords = normalize(original);
+  var attWords = normalize(attempt);
+
+  if (origWords.length === 0) return { pct: 100, missed: [] };
+
+  var m = origWords.length, n = attWords.length;
+  var dp = [];
+  for (var i = 0; i <= m; i++) {
+    dp[i] = [];
+    for (var j = 0; j <= n; j++) dp[i][j] = 0;
+  }
+  for (var i = 1; i <= m; i++) {
+    for (var j = 1; j <= n; j++) {
+      if (origWords[i-1] === attWords[j-1]) dp[i][j] = dp[i-1][j-1] + 1;
+      else dp[i][j] = Math.max(dp[i-1][j], dp[i][j-1]);
+    }
+  }
+
+  var matched = dp[m][n];
+  var pct = (matched / m) * 100;
+
+  // Find missed words
+  var matchedSet = {};
+  var ii = m, jj = n;
+  while (ii > 0 && jj > 0) {
+    if (origWords[ii-1] === attWords[jj-1]) {
+      matchedSet[ii-1] = true;
+      ii--; jj--;
+    } else if (dp[ii-1][jj] > dp[ii][jj-1]) {
+      ii--;
+    } else {
+      jj--;
+    }
+  }
+  var missed = [];
+  for (var k = 0; k < m; k++) {
+    if (!matchedSet[k]) missed.push(origWords[k]);
+  }
+
+  return { pct: pct, missed: missed };
+}
+
+function submitAnswer() {
+  var attempt = document.getElementById('recitationBox').value.trim();
+  var num = verseNums[quizIndex];
+
+  if (!attempt) {
+    skipVerse();
+    return;
+  }
+
+  var result = gradeVerse(verses[num], attempt);
+  quizResults.push({ num: num, pct: result.pct, missed: result.missed, attempt: attempt });
+
+  quizIndex++;
+  showCurrentVerse();
+}
+
+function skipVerse() {
+  var num = verseNums[quizIndex];
+  quizResults.push({ num: num, pct: 0, missed: [], attempt: '(skipped)' });
+  quizIndex++;
+  showCurrentVerse();
+}
+
+function clearRecitation() {
+  document.getElementById('recitationBox').value = '';
+  document.getElementById('recitationBox').focus();
+}
+
+function finishQuiz() {
+  quizActive = false;
+  document.getElementById('dictationSection').style.display = 'none';
+
+  // Show verses again
+  versesVisible = true;
+  for (var i = 0; i < verseNums.length; i++) {
+    var el = document.getElementById('text-' + verseNums[i]);
+    if (el) el.classList.remove('hidden-text');
+  }
+
+  // Calculate overall
+  var total = 0;
+  for (var i = 0; i < quizResults.length; i++) total += quizResults[i].pct;
+  var avg = quizResults.length > 0 ? total / quizResults.length : 0;
+
+  var scoreClass = avg >= 100 ? 'perfect' : avg >= 80 ? 'great' : avg >= 60 ? 'ok' : 'low';
+  document.getElementById('overallScore').innerHTML = '<span class="score ' + scoreClass + '">' + Math.round(avg) + '%</span>';
+
+  var html = '';
+  for (var i = 0; i < quizResults.length; i++) {
+    var r = quizResults[i];
+    var sc = r.pct >= 100 ? 'perfect' : r.pct >= 80 ? 'great' : r.pct >= 60 ? 'ok' : 'low';
+    var label = r.pct >= 100 ? 'Perfect!' : r.pct >= 80 ? 'Great!' : r.pct >= 60 ? 'Good effort' : r.pct > 0 ? 'Keep practicing' : 'Skipped';
+
+    html += '<div class="results-card">';
+    html += '<div class="result-header">';
+    html += '<span class="verse-label">Verse ' + r.num + '</span>';
+    html += '<span class="score ' + sc + '">' + Math.round(r.pct) + '% — ' + label + '</span>';
+    html += '</div>';
+
+    if (r.missed.length > 0) {
+      html += '<div class="missed">Missed: ' + escHtml(r.missed.join(', ')) + '</div>';
+    }
+
+    if (r.pct < 100) {
+      html += '<div class="correct-text">' + escHtml(verses[r.num]) + '</div>';
+    }
+    html += '</div>';
+  }
+
+  document.getElementById('resultsCards').innerHTML = html;
+  document.getElementById('resultsSection').classList.add('active');
+  document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth' });
+}
+
+// ── RESET ──
+
+function resetAll() {
+  verses = {};
+  verseNums = [];
+  resetQuiz();
+  document.getElementById('drillArea').classList.remove('active');
+  document.getElementById('verseCards').innerHTML = '';
+  document.getElementById('setupSection').classList.remove('collapsed');
+  document.getElementById('setupArrow').textContent = '▼';
+  stopSpeech();
+}
+
+// ── KEYBOARD: Enter in recitation box submits ──
+document.addEventListener('keydown', function(e) {
+  if (quizActive && e.key === 'Enter' && document.activeElement === document.getElementById('recitationBox') && !e.shiftKey) {
+    e.preventDefault();
+    submitAnswer();
+  }
+});
+</script>
+</body>
+</html>
