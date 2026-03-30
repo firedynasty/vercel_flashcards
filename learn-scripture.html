@@ -394,13 +394,9 @@ function listenToVerse() {
 }
 
 function listenCurrentVerse() {
-  if (!quizActive || quizIndex >= verseNums.length) return;
-  var num = verseNums[quizIndex];
-  var card = document.getElementById('card-' + num);
-  if (card) card.classList.add('speaking');
-  speakText(verses[num], function() {
-    if (card) card.classList.remove('speaking');
-  });
+  var inputText = document.getElementById('recitationBox').value.trim();
+  if (!inputText) return;
+  speakText(inputText, null);
   document.getElementById('recitationBox').focus();
 }
 

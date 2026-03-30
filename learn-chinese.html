@@ -135,7 +135,16 @@
     border: 1px dashed #93b4f5; border-radius: 8px;
     font-size: 13px; color: #1e40af; line-height: 1.5;
   }
-  .vocab-card .my-answer.empty { color: #93b4f5; font-style: italic; }
+  .vocab-card .my-answer.empty { display: none; }
+  .vocab-card .card-top {
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .vocab-card .edit-pill {
+    padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600;
+    background: #e0e7ff; color: #4338ca; border: none; cursor: pointer;
+    transition: background 0.15s; white-space: nowrap;
+  }
+  .vocab-card .edit-pill:hover { background: #c7d2fe; }
 
   /* ── CONTROLS ── */
   .controls-bar {
@@ -644,10 +653,18 @@ function renderDrill() {
     card.className = 'vocab-card';
     card.onclick = (function(idx) { return function() { speakCard(idx); }; })(i);
 
+    var topRow = document.createElement('div');
+    topRow.className = 'card-top';
     var num = document.createElement('div');
     num.className = 'num';
     num.textContent = '#' + (row.num || (i + 1));
-    card.appendChild(num);
+    topRow.appendChild(num);
+    var pill = document.createElement('button');
+    pill.className = 'edit-pill';
+    pill.textContent = '+ answer';
+    pill.onclick = (function(idx) { return function(e) { e.stopPropagation(); openDictateForCard(idx); }; })(i);
+    topRow.appendChild(pill);
+    card.appendChild(topRow);
 
     if (showChinese) {
       var ch = document.createElement('div');
@@ -675,6 +692,11 @@ function renderDrill() {
     if (row.english) parts.push('<span class="tip-english">' + escHtml(row.english) + '</span>');
     tip.innerHTML = parts.join(' &nbsp;·&nbsp; ');
     card.appendChild(tip);
+
+    var ans = document.createElement('div');
+    ans.className = 'my-answer empty';
+    ans.id = 'answer-' + i;
+    card.appendChild(ans);
 
     container.appendChild(card);
   });
@@ -966,7 +988,23 @@ function clearSpeakingHighlight() {
 }
 
 // ── DICTATION MODAL ──
+var modalTargetCard = -1; // -1 means no card targeted, append to dictationBox
+
 function openDictateModal() {
+  modalTargetCard = -1;
+  document.querySelector('.modal-box h3').textContent = 'Dictate Answer';
+  document.querySelector('.modal-hint').textContent = 'Speak or type here, then submit to append to your answers';
+  document.getElementById('dictateModalOverlay').classList.add('active');
+  var input = document.getElementById('dictateModalInput');
+  updateModalOpacity();
+  setTimeout(function() { input.focus(); }, 100);
+}
+
+function openDictateForCard(idx) {
+  modalTargetCard = idx;
+  var cardNum = filteredRows[idx] ? (filteredRows[idx].num || (idx + 1)) : (idx + 1);
+  document.querySelector('.modal-box h3').textContent = 'Answer for #' + cardNum;
+  document.querySelector('.modal-hint').textContent = 'Type your answer, then submit to add it to this card';
   document.getElementById('dictateModalOverlay').classList.add('active');
   var input = document.getElementById('dictateModalInput');
   updateModalOpacity();
@@ -987,7 +1025,13 @@ document.getElementById('dictateModalInput').addEventListener('input', updateMod
 
 function closeDictateModal(e) {
   if (e && e.target !== document.getElementById('dictateModalOverlay')) return;
-  appendAndCloseModal();
+  discardAndCloseModal();
+}
+
+function discardAndCloseModal() {
+  document.getElementById('dictateModalInput').value = '';
+  document.getElementById('dictateModalOverlay').classList.remove('active');
+  modalTargetCard = -1;
 }
 
 function clearDictateModal() {
@@ -995,23 +1039,34 @@ function clearDictateModal() {
   document.getElementById('dictateModalInput').focus();
 }
 
-function appendAndCloseModal() {
+function submitDictateModal() {
   var modalInput = document.getElementById('dictateModalInput');
   var text = modalInput.value.trim();
   if (text) {
-    var box = document.getElementById('dictationBox');
-    if (box.value.trim()) {
-      box.value += ' ' + text;
+    if (modalTargetCard >= 0) {
+      // Append to card's my-answer span
+      var ansEl = document.getElementById('answer-' + modalTargetCard);
+      if (ansEl) {
+        if (ansEl.classList.contains('empty')) {
+          ansEl.textContent = text;
+          ansEl.classList.remove('empty');
+        } else {
+          ansEl.textContent += ' ' + text;
+        }
+      }
     } else {
-      box.value = text;
+      // No card targeted — append to dictationBox
+      var box = document.getElementById('dictationBox');
+      if (box.value.trim()) {
+        box.value += ' ' + text;
+      } else {
+        box.value = text;
+      }
     }
   }
   modalInput.value = '';
   document.getElementById('dictateModalOverlay').classList.remove('active');
-}
-
-function submitDictateModal() {
-  appendAndCloseModal();
+  modalTargetCard = -1;
 }
 
 // ── GLOBAL KEYBOARD SHORTCUT ──
@@ -1019,8 +1074,8 @@ document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') {
     var overlay = document.getElementById('dictateModalOverlay');
     if (overlay.classList.contains('active')) {
-      // Close if open — auto-append
-      appendAndCloseModal();
+      // Close if open — discard without appending
+      discardAndCloseModal();
     } else {
       // Open if closed (and not typing in dictation textarea)
       if (document.activeElement !== document.getElementById('dictationBox')) {
