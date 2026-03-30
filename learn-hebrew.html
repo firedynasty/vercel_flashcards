@@ -81,7 +81,9 @@
     background: white; border: 1px solid #e8e8e8; border-radius: 12px;
     padding: 16px 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.06);
   }
-  .verse-card + .verse-card { margin-top: 14px; }
+  .card-row { display: flex; gap: 8px; align-items: flex-start; }
+  .card-row + .card-row { margin-top: 14px; }
+  .card-row .verse-card { flex: 1; min-width: 0; }
   .verse-card .verse-ref {
     font-size: 12px; font-weight: 700; color: #2563eb; margin-bottom: 8px;
     letter-spacing: 0.5px;
@@ -134,6 +136,20 @@
     background: #f3e8ff; padding: 2px 6px; border-radius: 4px;
     white-space: nowrap;
   }
+
+  .verse-card .my-answer {
+    margin-top: 8px; padding: 8px 12px; background: #f0f4ff;
+    border: 1px dashed #93b4f5; border-radius: 8px;
+    font-size: 13px; color: #1e40af; line-height: 1.5;
+  }
+  .verse-card .my-answer.empty { display: none; }
+  .edit-pill {
+    padding: 0; border-radius: 12px; font-size: 20px; font-weight: 700;
+    background: #e0e7ff; color: #4338ca; border: none; cursor: pointer;
+    transition: background 0.15s; white-space: nowrap; align-self: stretch;
+    min-width: 44px; display: flex; align-items: center; justify-content: center;
+  }
+  .edit-pill:hover { background: #c7d2fe; }
 
   /* ── CONTROLS ── */
   .controls-bar {
@@ -722,7 +738,21 @@ function renderDrill() {
       card.appendChild(glossSection);
     }
 
-    container.appendChild(card);
+    var ans = document.createElement('div');
+    ans.className = 'my-answer empty';
+    ans.id = 'answer-' + vi;
+    card.appendChild(ans);
+
+    var row = document.createElement('div');
+    row.className = 'card-row';
+    row.appendChild(card);
+    var pill = document.createElement('button');
+    pill.className = 'edit-pill';
+    pill.textContent = '+';
+    pill.title = 'Add answer';
+    pill.onclick = (function(idx) { return function(e) { e.stopPropagation(); openDictateForCard(idx); }; })(vi);
+    row.appendChild(pill);
+    container.appendChild(row);
   });
 }
 
@@ -987,7 +1017,24 @@ function clearSpeakingHighlight() {
 }
 
 // ── DICTATION MODAL ──
+var modalTargetCard = -1;
+
 function openDictateModal() {
+  modalTargetCard = -1;
+  document.querySelector('.modal-box h3').textContent = 'Dictate Answer';
+  document.querySelector('.modal-hint').textContent = 'Speak or type here, then submit to append to your answers';
+  document.getElementById('dictateModalOverlay').classList.add('active');
+  var input = document.getElementById('dictateModalInput');
+  updateModalOpacity();
+  setTimeout(function() { input.focus(); }, 100);
+}
+
+function openDictateForCard(idx) {
+  modalTargetCard = idx;
+  var verse = filteredVerses[idx];
+  var cardLabel = verse ? verse.ref : ('Card ' + (idx + 1));
+  document.querySelector('.modal-box h3').textContent = 'Answer for ' + cardLabel;
+  document.querySelector('.modal-hint').textContent = 'Type your answer, then submit to add it to this card';
   document.getElementById('dictateModalOverlay').classList.add('active');
   var input = document.getElementById('dictateModalInput');
   updateModalOpacity();
@@ -1008,7 +1055,13 @@ document.getElementById('dictateModalInput').addEventListener('input', updateMod
 
 function closeDictateModal(e) {
   if (e && e.target !== document.getElementById('dictateModalOverlay')) return;
-  appendAndCloseModal();
+  discardAndCloseModal();
+}
+
+function discardAndCloseModal() {
+  document.getElementById('dictateModalInput').value = '';
+  document.getElementById('dictateModalOverlay').classList.remove('active');
+  modalTargetCard = -1;
 }
 
 function clearDictateModal() {
@@ -1016,23 +1069,32 @@ function clearDictateModal() {
   document.getElementById('dictateModalInput').focus();
 }
 
-function appendAndCloseModal() {
+function submitDictateModal() {
   var modalInput = document.getElementById('dictateModalInput');
   var text = modalInput.value.trim();
   if (text) {
-    var box = document.getElementById('dictationBox');
-    if (box.value.trim()) {
-      box.value += ' ' + text;
+    if (modalTargetCard >= 0) {
+      var ansEl = document.getElementById('answer-' + modalTargetCard);
+      if (ansEl) {
+        if (ansEl.classList.contains('empty')) {
+          ansEl.textContent = text;
+          ansEl.classList.remove('empty');
+        } else {
+          ansEl.textContent += ' ' + text;
+        }
+      }
     } else {
-      box.value = text;
+      var box = document.getElementById('dictationBox');
+      if (box.value.trim()) {
+        box.value += ' ' + text;
+      } else {
+        box.value = text;
+      }
     }
   }
   modalInput.value = '';
   document.getElementById('dictateModalOverlay').classList.remove('active');
-}
-
-function submitDictateModal() {
-  appendAndCloseModal();
+  modalTargetCard = -1;
 }
 
 // ── GLOBAL KEYBOARD SHORTCUT ──
@@ -1040,7 +1102,7 @@ document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') {
     var overlay = document.getElementById('dictateModalOverlay');
     if (overlay.classList.contains('active')) {
-      appendAndCloseModal();
+      discardAndCloseModal();
     } else {
       if (document.activeElement !== document.getElementById('dictationBox')) {
         e.preventDefault();
