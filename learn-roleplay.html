@@ -22,6 +22,7 @@
   h1 { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
   .subtitle { font-size: 12px; color: #888; margin-bottom: 16px; }
 
+  /* -- SETUP SECTION -- */
   .setup-section {
     margin-bottom: 20px;
     border: 1px solid #e0e0e0;
@@ -60,6 +61,7 @@
   .status { font-size: 12px; color: #888; min-height: 18px; margin-top: 6px; }
   .hint { font-size: 11px; color: #aaa; margin-top: 4px; line-height: 1.4; }
 
+  /* -- DRILL AREA -- */
   .drill-area { display: none; }
   .drill-area.active { display: block; }
 
@@ -73,12 +75,112 @@
   }
   .drill-info .count { font-size: 12px; color: #888; }
 
+  .vocab-card {
+    background: white; border: 1px solid #e8e8e8; border-radius: 12px;
+    padding: 16px 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    cursor: pointer; transition: background-color 0.15s;
+  }
+  .vocab-card:hover { background-color: #e8e8e8; }
+  .vocab-card.speaking { background-color: #dbeafe; border-color: #93c5fd; }
+  .card-row { display: flex; gap: 8px; align-items: flex-start; }
+  .card-row + .card-row { margin-top: 10px; }
+  .card-row .vocab-card { flex: 1; min-width: 0; }
+  .vocab-card .num { font-size: 11px; font-weight: 700; color: #888; margin-bottom: 4px; }
+  .vocab-card .question {
+    font-size: 20px; font-weight: 500; margin-bottom: 8px; line-height: 1.5; color: #1a1a1a;
+  }
+  .vocab-card .answer {
+    font-size: 18px; color: #15803d; background: #f0fdf4;
+    border: 1px solid #bbf7d0; border-radius: 6px; padding: 8px 12px;
+    line-height: 1.5;
+  }
+  .vocab-card .answer.hidden {
+    visibility: hidden; height: 0; padding: 0; border: none; margin: 0; overflow: hidden;
+  }
+  /* -- TOOLTIP -- */
+  .vocab-card { position: relative; }
+  .vocab-card .tooltip {
+    display: none;
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1a1a1a;
+    color: #fff;
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    max-width: 400px;
+    z-index: 100;
+    pointer-events: none;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+  }
+  .vocab-card .tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-top-color: #1a1a1a;
+  }
+  .vocab-card:hover .tooltip { display: block; }
+  .tooltip .tip-answer { color: #86efac; }
+  .tooltip .tip-question { color: #fde68a; }
+
+  .vocab-card .my-answer {
+    margin-top: 8px; padding: 8px 12px; background: #f0f4ff;
+    border: 1px dashed #93b4f5; border-radius: 8px;
+    font-size: 13px; color: #1e40af; line-height: 1.5;
+  }
+  .vocab-card .my-answer.empty { display: none; }
+  .edit-pill {
+    padding: 0; border-radius: 12px; font-size: 20px; font-weight: 700;
+    background: #e0e7ff; color: #4338ca; border: none; cursor: pointer;
+    transition: background 0.15s; white-space: nowrap; align-self: stretch;
+    min-width: 44px; display: flex; align-items: center; justify-content: center;
+  }
+  .edit-pill:hover { background: #c7d2fe; }
+
+  /* -- CONTROLS -- */
   .controls-bar {
     display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
     margin-bottom: 16px;
   }
 
-  /* ── FIXED CONTROL BAR (merged TTS + auto-advance) ── */
+  /* -- DICTATION -- */
+  .dictation-section {
+    margin-bottom: 16px; padding: 14px 16px;
+    background: white; border: 1px solid #e0e0e0; border-radius: 10px;
+  }
+  .dictation-section .label { font-size: 13px; font-weight: 600; color: #555; margin-bottom: 8px; }
+  .dictation-section textarea {
+    width: 100%; min-height: 80px; border: 1px solid #ddd; border-radius: 8px;
+    padding: 10px 12px; font-family: inherit; font-size: 13px;
+    line-height: 1.5; resize: vertical; color: #333;
+  }
+  .dictation-section textarea::placeholder { color: #aaa; }
+  .dictation-btns { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; align-items: center; }
+  .mic-active { animation: pulse 1s infinite; }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.4); }
+    50% { box-shadow: 0 0 0 8px rgba(239,68,68,0); }
+  }
+
+  /* -- REVEAL TOGGLE -- */
+  .toggle-row {
+    display: flex; gap: 12px; align-items: center; margin-bottom: 14px; flex-wrap: wrap;
+  }
+  .toggle-chip {
+    padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 600;
+    cursor: pointer; border: 1px solid #ddd; background: white; color: #555;
+    user-select: none; transition: all 0.15s;
+  }
+  .toggle-chip.on { background: #2563eb; color: white; border-color: #2563eb; }
+
+  /* -- FIXED CONTROL BAR (TTS + auto-advance) -- */
   .sticky-bar {
     position: fixed; top: 0; left: 0; right: 0; z-index: 150;
     display: flex; align-items: center; justify-content: center;
@@ -89,6 +191,7 @@
   }
   .sticky-bar.on { background: #e6ffe6; }
   .sticky-bar.off { background: #f0f0f0; }
+  .drill-area.active { padding-top: 50px; }
   .sticky-bar select {
     font-size: 12px; font-family: inherit;
     padding: 3px 6px; border: 1px solid #ccc; border-radius: 5px;
@@ -96,7 +199,6 @@
   .sticky-bar .sep {
     width: 1px; height: 18px; background: #ccc; margin: 0 2px;
   }
-  .drill-area.active { padding-top: 50px; }
   .auto-advance-label {
     font-weight: 700; font-size: 12px; color: #666;
     cursor: pointer; padding: 4px 8px; border-radius: 4px;
@@ -118,108 +220,24 @@
   }
   .switch-knob.on { left: 29px; }
 
-  .dictation-section {
-    margin-bottom: 16px; padding: 14px 16px;
-    background: white; border: 1px solid #e0e0e0; border-radius: 10px;
+  /* -- DICTATION MODAL -- */
+  .dictate-fab {
+    position: fixed; bottom: 24px; right: 24px; z-index: 200;
+    width: 56px; height: 56px; border-radius: 50%;
+    background: #ef4444; color: white; border: none;
+    font-size: 24px; cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+    display: flex; align-items: center; justify-content: center;
+    transition: transform 0.15s;
   }
-  .dictation-section .label { font-size: 13px; font-weight: 600; color: #555; margin-bottom: 8px; }
-  .dictation-section textarea {
-    width: 100%; min-height: 80px; border: 1px solid #ddd; border-radius: 8px;
-    padding: 10px 12px; font-family: inherit; font-size: 13px;
-    line-height: 1.5; resize: vertical; color: #333;
-  }
-  .dictation-section textarea::placeholder { color: #aaa; }
-  .dictation-btns { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; align-items: center; }
-  .mic-active { animation: pulse 1s infinite; }
-  @keyframes pulse {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.4); }
-    50% { box-shadow: 0 0 0 8px rgba(239,68,68,0); }
-  }
+  .dictate-fab:hover { transform: scale(1.1); }
+  .dictate-fab:active { transform: scale(0.95); }
 
-  .toggle-row {
-    display: flex; gap: 12px; align-items: center; margin-bottom: 14px; flex-wrap: wrap;
-  }
-  .toggle-chip {
-    padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 600;
-    cursor: pointer; border: 1px solid #ddd; background: white; color: #555;
-    user-select: none; transition: all 0.15s;
-  }
-  .toggle-chip.on { background: #2563eb; color: white; border-color: #2563eb; }
-
-  /* ── STICKY SLIDER ── */
-  .sticky-bar {
-    position: sticky; top: 0; z-index: 100;
-    padding: 10px 16px;
-    background: white; border: 1px solid #e0e0e0; border-radius: 10px;
-    margin-bottom: 14px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-    display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
-  }
-  .sticky-bar label { font-size: 12px; font-weight: 600; color: #555; white-space: nowrap; }
-  .sticky-bar input[type="range"] { flex: 1; min-width: 100px; }
-  .sticky-bar .slider-value { font-size: 12px; color: #888; min-width: 90px; white-space: nowrap; }
-  .sticky-bar select { padding: 4px 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 12px; }
-
-  /* ── CHAT BUBBLES ── */
-  .chat-container {
-    display: flex; flex-direction: column; gap: 0;
-  }
-  .chat-bubble {
-    max-width: 85%;
-    padding: 10px 14px;
-    border-radius: 12px;
-    margin-bottom: 8px;
-    font-size: 14px;
-    line-height: 1.5;
-    cursor: pointer;
-    transition: background-color 0.15s;
-  }
-  .chat-bubble.speaking { outline: 2px solid #93c5fd; }
-  .chat-bubble.you {
-    background: #dbeafe;
-    margin-left: auto;
-    border-bottom-right-radius: 4px;
-  }
-  .chat-bubble.prospect {
-    background: #f3f4f6;
-    margin-right: auto;
-    border-bottom-left-radius: 4px;
-  }
-  .chat-bubble:hover { opacity: 0.85; }
-  .chat-speaker {
-    font-size: 11px;
-    font-weight: 700;
-    margin-bottom: 2px;
-    color: #888;
-  }
-  .chat-bubble.you .chat-speaker { color: #2563eb; text-align: right; }
-
-  /* Blank bubble in test mode */
-  .chat-bubble.blank {
-    background: #fef3c7;
-    border: 2px dashed #f59e0b;
-    min-height: 48px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-  }
-  .chat-bubble.blank .chat-line-text {
-    color: #b45309;
-    font-style: italic;
-    font-size: 13px;
-  }
-  .chat-bubble.answered {
-    background: #d1fae5;
-    border: 2px solid #10b981;
-  }
-  .chat-bubble.answered .chat-speaker { color: #047857; }
-
-  /* ── ANSWER MODAL ── */
   .modal-overlay {
     display: none;
     position: fixed; inset: 0;
     background: rgba(0,0,0,0.5);
-    z-index: 1000;
+    z-index: 300;
     align-items: center;
     justify-content: center;
   }
@@ -231,6 +249,11 @@
     width: 90%;
     max-width: 500px;
     box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    opacity: 0.1;
+    transition: opacity 0.2s;
+  }
+  .modal-box.has-text {
+    opacity: 1;
   }
   .modal-box h3 {
     font-size: 16px; font-weight: 700; margin-bottom: 4px; color: #1a1a1a;
@@ -239,7 +262,7 @@
     font-size: 12px; color: #888; margin-bottom: 12px;
   }
   .modal-box textarea {
-    width: 100%; min-height: 100px; border: 2px solid #ddd; border-radius: 8px;
+    width: 100%; min-height: 120px; border: 2px solid #ddd; border-radius: 8px;
     padding: 12px; font-family: inherit; font-size: 15px;
     line-height: 1.5; resize: vertical; color: #333;
   }
@@ -253,8 +276,9 @@
 
 <div class="container">
   <h1>Learn Roleplay</h1>
-  <div class="subtitle">Practice sales scripts loaded from Google Sheets</div>
+  <div class="subtitle">Q&A flashcard drills loaded from Google Sheets</div>
 
+  <!-- Setup Section -->
   <div class="setup-section" id="setupSection">
     <div class="setup-header" onclick="toggleSetup()">
       <span>Google Sheets Setup</span>
@@ -272,47 +296,41 @@
           <option value="">Sign in first</option>
         </select>
       </div>
-      <div class="setup-row">
-        <label>Section</label>
-        <select id="sectionSelect" disabled onchange="onSectionSelect()">
+      <div class="setup-row" id="lessonRow" style="display:none">
+        <label>Lesson</label>
+        <select id="lessonSelect" disabled onchange="onLessonSelect()">
           <option value="">Select sheet first</option>
         </select>
       </div>
       <div class="status" id="status"></div>
-      <div class="hint">Sheet format: Section | Speaker | Line (3 columns, first row = header)</div>
+      <div class="hint">Sheet format: Paste Q&amp;A text into column A. Use "Q:" and "A:" prefixes, separated by blank lines.</div>
     </div>
   </div>
 
+  <!-- Drill Area -->
   <div class="drill-area" id="drillArea">
     <div class="drill-info">
-      <span class="lesson-tag" id="sectionTag"></span>
+      <span class="lesson-tag" id="lessonTag"></span>
       <span class="count" id="countLabel"></span>
     </div>
 
-    <!-- Practice-as selector (hidden — always the second/responding speaker) -->
-    <select id="practiceAsSelect" onchange="onPracticeAsChange()" style="display:none">
-      <option value="">-- select speaker --</option>
-    </select>
-
-    <!-- Sticky slider -->
-    <div class="sticky-bar" id="stickyBar">
-      <label>Lines</label>
-      <input type="range" id="lineSlider" min="0" max="0" value="0" oninput="onSliderChange()">
-      <span class="slider-value" id="sliderLabel">Showing 0 of 0 lines</span>
-      <span class="toggle-chip" id="toggleTestMode" onclick="toggleTestMode()">Test Mode</span>
+    <!-- Toggle chips -->
+    <div class="toggle-row">
+      <span class="toggle-chip on" id="toggleQuestion" onclick="toggleQuestion()">Question</span>
+      <span class="toggle-chip" id="toggleAnswer" onclick="toggleAnswer()">Answer</span>
     </div>
 
-    <!-- Sticky control bar (TTS + auto-advance merged) -->
+    <!-- Sticky control bar (TTS + auto-advance) -->
     <div class="sticky-bar off" id="autoAdvanceBar">
       <select id="languageSelect" onchange="onLanguageChange()" title="Language">
         <option value="en-US" selected>EN</option>
         <option value="es-ES">ES</option>
         <option value="es-MX">MX</option>
         <option value="fr-FR">FR</option>
-        <option value="ko-KR">한</option>
-        <option value="zh-CN">中</option>
-        <option value="zh-HK">粵</option>
-        <option value="he-IL">עב</option>
+        <option value="ko-KR">&#54620;</option>
+        <option value="zh-CN">&#20013;</option>
+        <option value="zh-HK">&#31925;</option>
+        <option value="he-IL">&#1506;&#1489;</option>
       </select>
       <select id="speechRateSelect" onchange="onRateChange()" title="Speed">
         <option value="0.5">0.5x</option>
@@ -333,26 +351,17 @@
       <span class="auto-advance-label" id="autoLabel" onmouseenter="setAutoAdvance(true)" style="color: #666; background: transparent;">Auto</span>
     </div>
 
-    <!-- Instructions -->
-    <div style="margin-bottom: 14px; padding: 12px 16px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; font-size: 12px; color: #64748b; line-height: 1.6;">
-      <strong style="color: #334155;">How it works:</strong>
-      The <strong>second speaker</strong> (the responder) is who you're being tested on.
-      Use the <strong>slider</strong> to reveal lines one at a time.
-      Turn on <strong>Test Mode</strong> to hide the responder's lines &mdash; click the yellow bubbles to type your answer.
-      Press <strong>Enter</strong> to submit, or click a green answered bubble to edit.
-      <strong>Export for Grading</strong> copies your answers + the expected script to paste into AI for feedback.
-      <span id="practiceAsLabel" style="display: none; font-weight: 600; color: #2563eb;"></span>
-    </div>
-
+    <!-- Controls -->
     <div class="controls-bar">
       <button class="btn primary" onclick="startDrill()">Start Drill</button>
       <button class="btn green" onclick="revealAll()">Reveal All</button>
       <button class="btn orange" onclick="exportForGrading()">Export for Grading</button>
     </div>
 
+    <!-- Dictation -->
     <div class="dictation-section">
-      <div class="label">Practice your responses below</div>
-      <textarea id="dictationBox" placeholder="Type or dictate your practice responses here..."></textarea>
+      <div class="label" id="dictationLabel">Dictate your answers (type or speak your response for each question)</div>
+      <textarea id="dictationBox" placeholder="Your spoken answers appear here..."></textarea>
       <div class="dictation-btns">
         <button class="btn" id="micBtn" onclick="toggleMic()" style="background:#ef4444;color:white;">&#127908; Start Dictation</button>
         <button class="btn outline" onclick="pasteFromClipboard()">Paste from Clipboard</button>
@@ -360,24 +369,30 @@
       </div>
     </div>
 
-    <div class="chat-container" id="chatContainer"></div>
+    <!-- Cards -->
+    <div id="cardsContainer"></div>
   </div>
 </div>
 
-<!-- Answer Modal -->
-<div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+<!-- Dictation FAB -->
+<button class="dictate-fab" id="dictateFab" onclick="openDictateModal()" title="Dictate (Esc)">&#127908;</button>
+
+<!-- Dictation Modal -->
+<div class="modal-overlay" id="dictateModalOverlay" onclick="closeDictateModal(event)">
   <div class="modal-box" onclick="event.stopPropagation()">
-    <h3 id="modalSpeaker">Your response</h3>
-    <div class="modal-hint" id="modalHint">Type your answer and press Enter to submit</div>
-    <textarea id="modalInput" placeholder="Type your response..." onkeydown="onModalKey(event)"></textarea>
+    <h3>Dictate Answer</h3>
+    <div class="modal-hint">Speak or type here, then submit to append to your answers</div>
+    <textarea id="dictateModalInput" placeholder="Dictate or type here..."></textarea>
     <div class="modal-btns">
-      <button class="btn outline" onclick="closeModal()">Cancel</button>
-      <button class="btn primary" onclick="submitModal()">Submit</button>
+      <button class="btn outline" onclick="closeDictateModal()">Cancel</button>
+      <button class="btn outline" onclick="clearDictateModal()">Clear</button>
+      <button class="btn primary" onclick="submitDictateModal()">Append</button>
     </div>
   </div>
 </div>
 
 <script>
+// -- STATE --
 var GDRIVE_CLIENT_ID = '1095683227908-7ro25k16mprkf408i3lf583gti8v759b.apps.googleusercontent.com';
 var GDRIVE_SCOPES = 'https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/spreadsheets.readonly';
 
@@ -388,19 +403,24 @@ var gdriveFileId = null;
 
 var allRows = [];
 var filteredRows = [];
-var speakers = [];
-var practiceAs = '';      // speaker name the user is practicing as
-var testMode = false;
-var userAnswers = {};     // { filteredIndex: "user's answer text" }
+var userAnswers = {};
+var showQuestion = true;
+var showAnswer = false;
 var recognition = null;
 var isListening = false;
 var ttsLang = 'en-US';
 var ttsRate = 1;
 var autoAdvance = false;
 var currentSpeakingIndex = -1;
-var revealCount = 0;
-var modalTargetIndex = -1;
 
+// -- HELPERS --
+function escHtml(s) {
+  var d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+// -- GOOGLE SHEETS --
 function setStatus(msg) { document.getElementById('status').textContent = msg; }
 
 function gdriveInitClient() {
@@ -436,8 +456,7 @@ function gdriveSignIn() {
     document.getElementById('searchBtn').disabled = true;
     document.getElementById('sheetSelect').innerHTML = '<option value="">Sign in first</option>';
     document.getElementById('sheetSelect').disabled = true;
-    document.getElementById('sectionSelect').innerHTML = '<option value="">Select sheet first</option>';
-    document.getElementById('sectionSelect').disabled = true;
+    document.getElementById('lessonRow').style.display = 'none';
     document.getElementById('drillArea').classList.remove('active');
     allRows = [];
     filteredRows = [];
@@ -547,124 +566,71 @@ function onSheetSelect() {
   var csv = XLSX.utils.sheet_to_csv(sheet);
   var rows = parseCsv(csv);
 
-  if (rows.length < 2) {
-    setStatus('Sheet is empty or has only headers');
+  if (rows.length < 1) {
+    setStatus('Sheet is empty');
     return;
   }
 
-  allRows = [];
-  speakers = [];
-  var speakerSet = {};
-  for (var i = 1; i < rows.length; i++) {
-    var r = rows[i];
-    var section = (r[0] || '').trim();
-    var speaker = (r[1] || '').trim();
-    var line = (r[2] || '').trim();
-    if (!speaker && !line) continue;
-    allRows.push({ section: section, speaker: speaker, line: line });
-    if (speaker && !speakerSet[speaker]) {
-      speakerSet[speaker] = true;
-      speakers.push(speaker);
+  // Collect all text from column A (skip header if it looks like one)
+  var rawLines = [];
+  var startIdx = 0;
+  // Skip header if first cell looks like a header
+  if (rows.length > 1) {
+    var firstCell = (rows[0][0] || '').trim().toLowerCase();
+    if (firstCell === 'text' || firstCell === 'content' || firstCell === 'q&a' || firstCell === 'qa') {
+      startIdx = 1;
     }
   }
+  for (var i = startIdx; i < rows.length; i++) {
+    var cellText = (rows[i][0] || '').trim();
+    if (cellText) rawLines.push(cellText);
+  }
 
-  // Populate section dropdown
-  var sections = [];
-  var seen = {};
-  allRows.forEach(function(row) {
-    if (row.section && !seen[row.section]) {
-      seen[row.section] = true;
-      sections.push(row.section);
+  // Join all cell text and parse Q:/A: pairs
+  var fullText = rawLines.join('\n');
+  allRows = parseQAPairs(fullText);
+
+  if (allRows.length === 0) {
+    setStatus('No Q:/A: pairs found. Make sure text uses "Q:" and "A:" prefixes.');
+    return;
+  }
+
+  // Use sheet name as lesson name
+  document.getElementById('lessonRow').style.display = 'none';
+  setStatus('Loaded ' + allRows.length + ' Q&A items from "' + sheetName + '"');
+  filteredRows = allRows.slice();
+  userAnswers = {};
+  renderDrill();
+}
+
+function parseQAPairs(text) {
+  var pairs = [];
+  // Split on Q: markers (case insensitive)
+  var chunks = text.split(/(?:^|\n)\s*Q:\s*/i);
+  for (var i = 0; i < chunks.length; i++) {
+    var chunk = chunks[i].trim();
+    if (!chunk) continue;
+    // Split this chunk on A: to get question and answer
+    var aParts = chunk.split(/\nA:\s*/i);
+    if (aParts.length >= 2) {
+      var question = aParts[0].trim();
+      var answer = aParts.slice(1).join('\nA: ').trim();
+      if (question || answer) {
+        pairs.push({ lesson: '', question: question, answer: answer });
+      }
     }
-  });
-
-  var sectionSel = document.getElementById('sectionSelect');
-  sectionSel.innerHTML = '<option value="">-- all sections --</option>';
-  sections.forEach(function(s) {
-    var opt = document.createElement('option');
-    opt.value = s;
-    opt.textContent = s + ' (' + allRows.filter(function(r) { return r.section === s; }).length + ')';
-    sectionSel.appendChild(opt);
-  });
-  sectionSel.disabled = false;
-
-  // Populate practice-as dropdown — default to second speaker (the responder)
-  var paSel = document.getElementById('practiceAsSelect');
-  paSel.innerHTML = '<option value="">-- none (read mode) --</option>';
-  speakers.forEach(function(sp) {
-    var opt = document.createElement('option');
-    opt.value = sp;
-    opt.textContent = sp;
-    paSel.appendChild(opt);
-  });
-  // Auto-select second speaker as the one you practice as
-  if (speakers.length >= 2) {
-    practiceAs = speakers[1];
-    paSel.value = speakers[1];
-  } else {
-    practiceAs = '';
   }
-  testMode = false;
-  document.getElementById('toggleTestMode').className = 'toggle-chip';
-
-  // Show who you're practicing as
-  var paLabel = document.getElementById('practiceAsLabel');
-  if (practiceAs) {
-    paLabel.textContent = 'You are practicing as: ' + practiceAs;
-    paLabel.style.display = 'inline';
-  } else {
-    paLabel.style.display = 'none';
-  }
-
-  setStatus('Loaded ' + allRows.length + ' lines, ' + sections.length + ' section(s), speakers: ' + speakers.join(', '));
-  onSectionSelect();
+  return pairs;
 }
 
-function onSectionSelect() {
-  var section = document.getElementById('sectionSelect').value;
-  if (section) {
-    filteredRows = allRows.filter(function(r) { return r.section === section; });
-  } else {
-    filteredRows = allRows.slice();
-  }
+function onLessonSelect() {
+  filteredRows = allRows.slice();
   userAnswers = {};
-  revealCount = 0;
-  var slider = document.getElementById('lineSlider');
-  slider.max = filteredRows.length;
-  slider.value = 0;
-  updateSliderLabel();
-  renderChat();
+  renderDrill();
 }
 
-function onSliderChange() {
-  revealCount = parseInt(document.getElementById('lineSlider').value, 10);
-  updateSliderLabel();
-  renderChat();
-}
-
-function updateSliderLabel() {
-  document.getElementById('sliderLabel').textContent = 'Showing ' + revealCount + ' of ' + filteredRows.length + ' lines';
-}
-
-function onPracticeAsChange() {
-  practiceAs = document.getElementById('practiceAsSelect').value;
-  userAnswers = {};
-  renderChat();
-}
-
-function toggleTestMode() {
-  testMode = !testMode;
-  document.getElementById('toggleTestMode').className = 'toggle-chip' + (testMode ? ' on' : '');
-  userAnswers = {};
-  renderChat();
-}
-
-function getSpeakerClass(speaker) {
-  if (speakers.length >= 2 && speaker === speakers[1]) return 'you';
-  return 'prospect';
-}
-
-function renderChat() {
+// -- DRILL RENDERING --
+function renderDrill() {
   var area = document.getElementById('drillArea');
   if (filteredRows.length === 0) {
     area.classList.remove('active');
@@ -672,221 +638,96 @@ function renderChat() {
   }
   area.classList.add('active');
 
-  var section = document.getElementById('sectionSelect').value || 'All Sections';
-  document.getElementById('sectionTag').textContent = section;
-  document.getElementById('countLabel').textContent = filteredRows.length + ' lines';
+  var sheetName = document.getElementById('sheetSelect').value || 'Q&A';
+  document.getElementById('lessonTag').textContent = sheetName;
+  document.getElementById('countLabel').textContent = filteredRows.length + ' items';
 
-  var container = document.getElementById('chatContainer');
+  document.getElementById('toggleQuestion').className = 'toggle-chip' + (showQuestion ? ' on' : '');
+  document.getElementById('toggleAnswer').className = 'toggle-chip' + (showAnswer ? ' on' : '');
+
+  var container = document.getElementById('cardsContainer');
   container.innerHTML = '';
 
-  for (var i = 0; i < revealCount; i++) {
-    var row = filteredRows[i];
-    var cls = getSpeakerClass(row.speaker);
-    var isMyLine = testMode && practiceAs && row.speaker === practiceAs;
-    var hasAnswer = userAnswers[i] !== undefined;
+  filteredRows.forEach(function(row, i) {
+    var card = document.createElement('div');
+    card.className = 'vocab-card';
+    card.onclick = (function(idx) { return function() { speakCard(idx); }; })(i);
 
-    var bubble = document.createElement('div');
+    var num = document.createElement('div');
+    num.className = 'num';
+    num.textContent = '#' + (i + 1);
+    card.appendChild(num);
 
-    if (isMyLine && !hasAnswer) {
-      // Blank bubble — click to answer
-      bubble.className = 'chat-bubble ' + cls + ' blank';
-      bubble.onclick = (function(idx) { return function() { openModal(idx); }; })(i);
-
-      var speakerLabel = document.createElement('div');
-      speakerLabel.className = 'chat-speaker';
-      speakerLabel.textContent = row.speaker + ' (you)';
-      bubble.appendChild(speakerLabel);
-
-      var placeholder = document.createElement('div');
-      placeholder.className = 'chat-line-text';
-      placeholder.textContent = 'Click to type your response...';
-      bubble.appendChild(placeholder);
-    } else if (isMyLine && hasAnswer) {
-      // Answered bubble
-      bubble.className = 'chat-bubble ' + cls + ' answered';
-      bubble.onclick = (function(idx) { return function() { openModal(idx); }; })(i);
-
-      var speakerLabel = document.createElement('div');
-      speakerLabel.className = 'chat-speaker';
-      speakerLabel.textContent = row.speaker + ' (you)';
-      bubble.appendChild(speakerLabel);
-
-      var answerText = document.createElement('div');
-      answerText.textContent = userAnswers[i];
-      bubble.appendChild(answerText);
-    } else {
-      // Normal bubble (other speaker or no test mode)
-      bubble.className = 'chat-bubble ' + cls;
-      bubble.onclick = (function(idx) { return function() { speakBubble(idx); }; })(i);
-
-      var speakerLabel = document.createElement('div');
-      speakerLabel.className = 'chat-speaker';
-      speakerLabel.textContent = row.speaker;
-      bubble.appendChild(speakerLabel);
-
-      var lineText = document.createElement('div');
-      lineText.textContent = row.line;
-      bubble.appendChild(lineText);
+    if (showQuestion) {
+      var q = document.createElement('div');
+      q.className = 'question';
+      q.textContent = row.question;
+      card.appendChild(q);
     }
 
-    container.appendChild(bubble);
-  }
+    var a = document.createElement('div');
+    a.className = 'answer' + (showAnswer ? '' : ' hidden');
+    a.textContent = row.answer;
+    card.appendChild(a);
 
-  if (revealCount > 0) {
-    var lastBubble = container.lastElementChild;
-    if (lastBubble) lastBubble.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  }
+    // Tooltip on hover
+    var tip = document.createElement('div');
+    tip.className = 'tooltip';
+    var parts = [];
+    if (row.question) parts.push('<span class="tip-question">' + escHtml(row.question) + '</span>');
+    if (row.answer) parts.push('<span class="tip-answer">' + escHtml(row.answer) + '</span>');
+    tip.innerHTML = parts.join('<br>');
+    card.appendChild(tip);
+
+    var ans = document.createElement('div');
+    ans.className = 'my-answer empty';
+    ans.id = 'answer-' + i;
+    card.appendChild(ans);
+
+    var cardRow = document.createElement('div');
+    cardRow.className = 'card-row';
+    cardRow.appendChild(card);
+    var pill = document.createElement('button');
+    pill.className = 'edit-pill';
+    pill.textContent = '+';
+    pill.title = 'Add answer';
+    pill.onclick = (function(idx) { return function(e) { e.stopPropagation(); openDictateForCard(idx); }; })(i);
+    cardRow.appendChild(pill);
+    container.appendChild(cardRow);
+  });
 }
 
-// ── MODAL ──
-function openModal(index) {
-  modalTargetIndex = index;
-  var row = filteredRows[index];
-  document.getElementById('modalSpeaker').textContent = row.speaker + ' \u2014 your response';
-  document.getElementById('modalHint').textContent = 'Type your answer and press Enter to submit';
-  var input = document.getElementById('modalInput');
-  input.value = userAnswers[index] || '';
-  document.getElementById('modalOverlay').classList.add('active');
-  setTimeout(function() { input.focus(); }, 100);
-}
-
-function closeModal(e) {
-  if (e && e.target !== document.getElementById('modalOverlay')) return;
-  document.getElementById('modalOverlay').classList.remove('active');
-  modalTargetIndex = -1;
-}
-
-function submitModal() {
-  if (modalTargetIndex < 0) return;
-  var input = document.getElementById('modalInput');
-  var answer = input.value.trim();
-  if (answer) {
-    userAnswers[modalTargetIndex] = answer;
-  }
-  document.getElementById('modalOverlay').classList.remove('active');
-  modalTargetIndex = -1;
-  renderChat();
-}
-
-function onModalKey(e) {
-  if (e.key === 'Enter' && !e.shiftKey) {
-    e.preventDefault();
-    submitModal();
-  }
-}
-
-// ── GLOBAL KEYBOARD SHORTCUT FOR DICTATION ──
-document.addEventListener('keydown', function(e) {
-  if (e.key === 'Escape') {
-    // Find the last visible blank "you" bubble and click it to open modal
-    var blanks = document.querySelectorAll('.chat-bubble.blank');
-    if (blanks.length > 0) {
-      e.preventDefault();
-      blanks[blanks.length - 1].click();
-    }
-  }
-
-  if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
-    var slider = document.getElementById('lineSlider');
-    if (document.activeElement !== slider) {
-      e.preventDefault();
-      slider.focus();
-    }
-  }
-});
-
-// ── DRILL CONTROLS ──
 function startDrill() {
-  revealCount = 0;
+  showQuestion = true;
+  showAnswer = false;
   userAnswers = {};
-  var slider = document.getElementById('lineSlider');
-  slider.value = 0;
   document.getElementById('dictationBox').value = '';
-  updateSliderLabel();
-  renderChat();
+  renderDrill();
 }
 
 function revealAll() {
-  revealCount = filteredRows.length;
-  var slider = document.getElementById('lineSlider');
-  slider.value = filteredRows.length;
-  updateSliderLabel();
-  renderChat();
+  showQuestion = true;
+  showAnswer = true;
+  renderDrill();
 }
 
-// ── TTS ──
-function speakBubble(index) {
-  speechSynthesis.cancel();
-  if (index < 0 || index >= filteredRows.length) {
-    clearSpeakingHighlight();
-    currentSpeakingIndex = -1;
-    return;
-  }
+function toggleQuestion() { showQuestion = !showQuestion; renderDrill(); }
+function toggleAnswer() { showAnswer = !showAnswer; renderDrill(); }
 
-  var row = filteredRows[index];
-  currentSpeakingIndex = index;
-  highlightBubble(index);
-
-  var utterance = new SpeechSynthesisUtterance(row.line);
-  utterance.lang = ttsLang;
-  utterance.rate = ttsRate;
-
-  utterance.onend = function() {
-    if (autoAdvance && currentSpeakingIndex === index) {
-      var next = index + 1;
-      if (next < revealCount) {
-        speakBubble(next);
+async function pasteFromClipboard() {
+  try {
+    var text = await navigator.clipboard.readText();
+    if (text && text.trim()) {
+      var box = document.getElementById('dictationBox');
+      if (box.value.trim()) {
+        box.value += ' ' + text.trim();
       } else {
-        clearSpeakingHighlight();
-        currentSpeakingIndex = -1;
+        box.value = text.trim();
       }
-    } else {
-      clearSpeakingHighlight();
-      currentSpeakingIndex = -1;
     }
-  };
-
-  speechSynthesis.speak(utterance);
-}
-
-function highlightBubble(index) {
-  clearSpeakingHighlight();
-  var bubbles = document.getElementById('chatContainer').children;
-  if (bubbles[index]) {
-    bubbles[index].classList.add('speaking');
-    bubbles[index].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  } catch(e) {
+    alert('Could not access clipboard. Check permissions.');
   }
-}
-
-function clearSpeakingHighlight() {
-  var bubbles = document.getElementById('chatContainer').querySelectorAll('.chat-bubble.speaking');
-  bubbles.forEach(function(b) { b.classList.remove('speaking'); });
-}
-
-function onLanguageChange() {
-  ttsLang = document.getElementById('languageSelect').value;
-}
-
-function onRateChange() {
-  ttsRate = parseFloat(document.getElementById('speechRateSelect').value);
-}
-
-function setAutoAdvance(val) {
-  autoAdvance = val;
-  document.getElementById('autoAdvanceCheckbox').checked = val;
-  var bar = document.getElementById('autoAdvanceBar');
-  var track = document.getElementById('switchTrack');
-  var knob = document.getElementById('switchKnob');
-  var stopLabel = document.getElementById('stopLabel');
-  var autoLabel = document.getElementById('autoLabel');
-
-  bar.className = 'sticky-bar ' + (val ? 'on' : 'off');
-  track.className = 'switch-track' + (val ? ' on' : '');
-  knob.className = 'switch-knob' + (val ? ' on' : '');
-
-  stopLabel.style.backgroundColor = !val ? '#ffcdd2' : 'transparent';
-  autoLabel.style.color = val ? '#4CAF50' : '#666';
-  autoLabel.style.backgroundColor = val ? '#c8e6c9' : 'transparent';
 }
 
 function toggleSetup() {
@@ -896,7 +737,7 @@ function toggleSetup() {
   arrow.textContent = section.classList.contains('collapsed') ? '\u25ba' : '\u25bc';
 }
 
-// ── DICTATION ──
+// -- DICTATION (Speech-to-Text) --
 function toggleMic() {
   if (isListening) { stopMic(); } else { startMic(); }
 }
@@ -956,75 +797,70 @@ function stopMic() {
   btn.classList.remove('mic-active');
 }
 
-async function pasteFromClipboard() {
-  try {
-    var text = await navigator.clipboard.readText();
-    if (text && text.trim()) {
-      var box = document.getElementById('dictationBox');
-      if (box.value.trim()) {
-        box.value += ' ' + text.trim();
-      } else {
-        box.value = text.trim();
-      }
-    }
-  } catch(e) {
-    alert('Could not access clipboard. Check permissions.');
-  }
-}
-
 function clearDictation() {
   document.getElementById('dictationBox').value = '';
+  userAnswers = {};
+  renderDrill();
 }
 
-// ── EXPORT ──
+// -- EXPORT FOR AI GRADING --
 async function exportForGrading() {
-  var transcript = document.getElementById('dictationBox').value.trim();
+  var sheetName = document.getElementById('sheetSelect').value || 'Q&A';
   var lines = [];
+  var transcript = document.getElementById('dictationBox').value.trim();
 
-  lines.push('Grade my sales roleplay practice. I was practicing as: ' + (practiceAs || 'not specified'));
-  lines.push('For each section, compare my answers against the expected script lines.');
-  lines.push('Grade on: key points hit, tone/approach, sales technique.');
-  lines.push('Be LENIENT \u2014 accept paraphrases that capture the same meaning and intent.');
+  lines.push('Grade my Q&A knowledge test. I was tested on: Answers to questions');
+  lines.push('I typed my answers per card. Compare each answer to the expected answer. Be LENIENT:');
+  lines.push('- Accept informal/casual answers that capture the meaning');
+  lines.push('- Accept synonyms and close paraphrases');
+  lines.push('- Ignore speech-to-text errors, punctuation, capitalization');
+  lines.push('- "I don\'t know" or "not sure" = Skipped, not Wrong');
+  lines.push('- Grade on whether the student understands the MEANING, not exact wording');
+  lines.push('');
+  lines.push('Format your response as:');
+  lines.push('');
+  lines.push('#N: [question shown]');
+  lines.push('Correct: [correct answer]');
+  lines.push('My Answer: [what the student answered]');
+  lines.push('Rating: \u2705 Correct / \u26a0\ufe0f Partial / \u274c Wrong / \u23ed\ufe0f Skipped');
+  lines.push('Note: [brief feedback if partial/wrong]');
+  lines.push('');
+  lines.push('Then give an Overall Score (X/' + filteredRows.length + ') and summary.');
+  lines.push('');
+  lines.push('---');
+  lines.push('Lesson: ' + sheetName);
+  lines.push('Testing: Answers to questions');
   lines.push('');
 
-  var sectionGroups = {};
-  var sectionOrder = [];
-  var rowsToExport = filteredRows.length > 0 ? filteredRows : allRows;
-
-  rowsToExport.forEach(function(row, idx) {
-    var sec = row.section || 'General';
-    if (!sectionGroups[sec]) {
-      sectionGroups[sec] = [];
-      sectionOrder.push(sec);
-    }
-    sectionGroups[sec].push({ row: row, idx: idx });
+  // Collect per-card answers
+  var perCardAnswers = [];
+  filteredRows.forEach(function(row, i) {
+    var ansEl = document.getElementById('answer-' + i);
+    var ans = ansEl ? ansEl.textContent.trim() : '';
+    if (ans) perCardAnswers.push('#' + (i + 1) + ': ' + ans);
   });
 
-  sectionOrder.forEach(function(sec) {
-    lines.push('--- SECTION: ' + sec + ' ---');
-    sectionGroups[sec].forEach(function(item) {
-      var row = item.row;
-      var idx = item.idx;
-      if (practiceAs && row.speaker === practiceAs) {
-        // My line — show my answer first, then the expected
-        if (userAnswers[idx]) {
-          lines.push('My answer: ' + userAnswers[idx]);
-        } else {
-          lines.push('My answer: [no answer provided]');
-        }
-        lines.push('Expected (' + row.speaker + '): ' + row.line);
-      } else {
-        // Other speaker (prospect) — just show their line
-        lines.push('[' + row.speaker + ']: ' + row.line);
-      }
-    });
+  if (perCardAnswers.length > 0) {
+    lines.push('MY ANSWERS (per card):');
+    perCardAnswers.forEach(function(a) { lines.push(a); });
+  } else if (transcript) {
+    lines.push('MY ANSWERS (raw transcript):');
+    lines.push(transcript);
+  } else {
+    lines.push('MY ANSWERS (raw transcript):');
+    lines.push('(no answers recorded)');
+  }
+  lines.push('');
+  lines.push('---');
+  lines.push('Q&A LIST:');
+  lines.push('');
+
+  filteredRows.forEach(function(row, i) {
+    var num = i + 1;
+    lines.push('#' + num + ' Question: ' + row.question);
+    lines.push('Correct Answer: ' + row.answer);
     lines.push('');
   });
-
-  if (transcript) {
-    lines.push('ADDITIONAL NOTES (raw transcript):');
-    lines.push(transcript);
-  }
 
   var output = lines.join('\n');
   try {
@@ -1035,6 +871,175 @@ async function exportForGrading() {
     alert('Could not copy to clipboard. The export text is in the dictation box \u2014 select all and copy manually.');
   }
 }
+
+// -- TTS --
+function onLanguageChange() {
+  ttsLang = document.getElementById('languageSelect').value;
+}
+
+function onRateChange() {
+  ttsRate = parseFloat(document.getElementById('speechRateSelect').value);
+}
+
+function setAutoAdvance(val) {
+  autoAdvance = val;
+  document.getElementById('autoAdvanceCheckbox').checked = val;
+  var bar = document.getElementById('autoAdvanceBar');
+  var track = document.getElementById('switchTrack');
+  var knob = document.getElementById('switchKnob');
+  var stopLabel = document.getElementById('stopLabel');
+  var autoLabel = document.getElementById('autoLabel');
+
+  bar.className = 'sticky-bar ' + (val ? 'on' : 'off');
+  track.className = 'switch-track' + (val ? ' on' : '');
+  knob.className = 'switch-knob' + (val ? ' on' : '');
+
+  stopLabel.style.backgroundColor = !val ? '#ffcdd2' : 'transparent';
+  autoLabel.style.color = val ? '#4CAF50' : '#666';
+  autoLabel.style.backgroundColor = val ? '#c8e6c9' : 'transparent';
+}
+
+function speakCard(index) {
+  speechSynthesis.cancel();
+  if (index < 0 || index >= filteredRows.length) {
+    clearSpeakingHighlight();
+    currentSpeakingIndex = -1;
+    return;
+  }
+
+  var row = filteredRows[index];
+  var text = row.question;
+  currentSpeakingIndex = index;
+  highlightCard(index);
+
+  var utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = ttsLang;
+  utterance.rate = ttsRate;
+
+  utterance.onend = function() {
+    if (autoAdvance && currentSpeakingIndex === index) {
+      speakCard(index + 1);
+    } else {
+      clearSpeakingHighlight();
+      currentSpeakingIndex = -1;
+    }
+  };
+
+  speechSynthesis.speak(utterance);
+}
+
+function highlightCard(index) {
+  clearSpeakingHighlight();
+  var cards = document.getElementById('cardsContainer').children;
+  if (cards[index]) {
+    cards[index].classList.add('speaking');
+    cards[index].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+}
+
+function clearSpeakingHighlight() {
+  var cards = document.getElementById('cardsContainer').querySelectorAll('.vocab-card.speaking');
+  cards.forEach(function(c) { c.classList.remove('speaking'); });
+}
+
+// -- DICTATION MODAL --
+var modalTargetCard = -1;
+
+function openDictateModal() {
+  modalTargetCard = -1;
+  document.querySelector('.modal-box h3').textContent = 'Dictate Answer';
+  document.querySelector('.modal-hint').textContent = 'Speak or type here, then submit to append to your answers';
+  document.getElementById('dictateModalOverlay').classList.add('active');
+  var input = document.getElementById('dictateModalInput');
+  updateModalOpacity();
+  setTimeout(function() { input.focus(); }, 100);
+}
+
+function openDictateForCard(idx) {
+  modalTargetCard = idx;
+  var cardNum = idx + 1;
+  document.querySelector('.modal-box h3').textContent = 'Answer for #' + cardNum;
+  document.querySelector('.modal-hint').textContent = 'Type your answer, then submit to add it to this card';
+  document.getElementById('dictateModalOverlay').classList.add('active');
+  var input = document.getElementById('dictateModalInput');
+  updateModalOpacity();
+  setTimeout(function() { input.focus(); }, 100);
+}
+
+function updateModalOpacity() {
+  var box = document.querySelector('.modal-box');
+  var input = document.getElementById('dictateModalInput');
+  if (input.value.trim()) {
+    box.classList.add('has-text');
+  } else {
+    box.classList.remove('has-text');
+  }
+}
+
+document.getElementById('dictateModalInput').addEventListener('input', updateModalOpacity);
+
+function closeDictateModal(e) {
+  if (e && e.target !== document.getElementById('dictateModalOverlay')) return;
+  discardAndCloseModal();
+}
+
+function discardAndCloseModal() {
+  document.getElementById('dictateModalInput').value = '';
+  document.getElementById('dictateModalOverlay').classList.remove('active');
+  modalTargetCard = -1;
+}
+
+function clearDictateModal() {
+  document.getElementById('dictateModalInput').value = '';
+  document.getElementById('dictateModalInput').focus();
+}
+
+function submitDictateModal() {
+  var modalInput = document.getElementById('dictateModalInput');
+  var text = modalInput.value.trim();
+  if (text) {
+    if (modalTargetCard >= 0) {
+      var ansEl = document.getElementById('answer-' + modalTargetCard);
+      if (ansEl) {
+        if (ansEl.classList.contains('empty')) {
+          ansEl.textContent = text;
+          ansEl.classList.remove('empty');
+        } else {
+          ansEl.textContent += ' ' + text;
+        }
+      }
+    } else {
+      var box = document.getElementById('dictationBox');
+      if (box.value.trim()) {
+        box.value += ' ' + text;
+      } else {
+        box.value = text;
+      }
+    }
+  }
+  modalInput.value = '';
+  document.getElementById('dictateModalOverlay').classList.remove('active');
+  modalTargetCard = -1;
+}
+
+// -- GLOBAL KEYBOARD SHORTCUT --
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    var overlay = document.getElementById('dictateModalOverlay');
+    if (overlay.classList.contains('active')) {
+      discardAndCloseModal();
+    } else {
+      if (document.activeElement !== document.getElementById('dictationBox')) {
+        e.preventDefault();
+        openDictateModal();
+      }
+    }
+  }
+  if (e.key === 'Enter' && !e.shiftKey && document.activeElement === document.getElementById('dictateModalInput')) {
+    e.preventDefault();
+    submitDictateModal();
+  }
+});
 </script>
 </body>
 </html>
