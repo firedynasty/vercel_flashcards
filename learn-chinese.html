@@ -877,8 +877,24 @@ async function exportForGrading() {
   lines.push('Lesson: ' + lesson);
   lines.push('Testing: ' + testingWhat);
   lines.push('');
-  lines.push('MY ANSWERS (raw transcript):');
-  lines.push(transcript || '(no answers recorded)');
+  // Collect per-card answers
+  var perCardAnswers = [];
+  filteredRows.forEach(function(row, i) {
+    var ansEl = document.getElementById('answer-' + i);
+    var ans = ansEl ? ansEl.textContent.trim() : '';
+    if (ans) perCardAnswers.push('#' + (i + 1) + ': ' + ans);
+  });
+
+  if (perCardAnswers.length > 0) {
+    lines.push('MY ANSWERS (per card):');
+    perCardAnswers.forEach(function(a) { lines.push(a); });
+  } else if (transcript) {
+    lines.push('MY ANSWERS (raw transcript):');
+    lines.push(transcript);
+  } else {
+    lines.push('MY ANSWERS (raw transcript):');
+    lines.push('(no answers recorded)');
+  }
   lines.push('');
   lines.push('---');
   lines.push('VOCABULARY LIST:');
