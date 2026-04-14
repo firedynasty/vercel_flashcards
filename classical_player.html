@@ -1,0 +1,1153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Fun Classical Music Player</title>
+  <style>
+@import url("https://fonts.googleapis.com/css?family=Yanone+Kaffeesatz:300,400");
+
+html, body {
+  -webkit-font-smoothing: antialiased;
+  background-color: #111;
+  color: #C8C7C8;
+  font: 20px/24px "Yanone Kaffeesatz", HelveticaNeue, "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-weight: 300;
+  margin: 0;
+  padding: 10px 0;
+}
+
+* { box-sizing: border-box; }
+
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+h1 {
+  text-align: center;
+  color: #667eea;
+  font-size: 2rem;
+  margin: 20px 0 10px;
+  font-weight: 400;
+}
+
+.subtitle {
+  text-align: center;
+  color: #888;
+  font-size: 1rem;
+  margin-bottom: 20px;
+}
+
+/* Audio Player */
+#audioWrap {
+  background: #1a1a1a;
+  border-radius: 12px;
+  padding: 15px;
+  margin-bottom: 15px;
+}
+
+#audioWrap audio {
+  width: 100%;
+}
+
+.now-playing {
+  text-align: center;
+  padding: 10px;
+  color: #CE93D8;
+  font-size: 1.1rem;
+}
+
+/* Skip Controls */
+.skip-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  background: linear-gradient(135deg, rgba(33, 150, 243, 0.12), rgba(3, 169, 244, 0.12));
+  border: 1px solid rgba(33, 150, 243, 0.35);
+  border-radius: 12px;
+  padding: 12px 20px;
+  margin: 1rem 0 0;
+}
+
+.skip-btn {
+  background: linear-gradient(45deg, #1976D2, #1565C0);
+  color: white;
+  border: none;
+  border-radius: 20px;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  min-width: 55px;
+}
+
+.skip-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(25, 118, 210, 0.4);
+}
+
+.skip-btn:active {
+  transform: translateY(0);
+}
+
+.skip-btn.skip-back {
+  background: linear-gradient(45deg, #5C6BC0, #3F51B5);
+}
+
+.skip-btn.skip-back:hover {
+  box-shadow: 0 4px 12px rgba(63, 81, 181, 0.4);
+}
+
+.skip-label {
+  color: #64B5F6;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+/* Current Time Display & Loop Timer Controls */
+.current-time-display {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  background: linear-gradient(135deg, rgba(156, 39, 176, 0.15), rgba(103, 58, 183, 0.15));
+  border: 2px solid rgba(156, 39, 176, 0.4);
+  border-radius: 12px;
+  padding: 15px 20px;
+  margin: 1rem 0;
+}
+
+.time-label {
+  color: #CE93D8;
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.time-value {
+  font-family: monospace;
+  font-size: 1.4rem;
+  font-weight: bold;
+  color: #E1BEE7;
+  background: rgba(156, 39, 176, 0.3);
+  padding: 5px 12px;
+  border-radius: 8px;
+  min-width: 70px;
+  text-align: center;
+}
+
+.loop-timer-btn {
+  background: linear-gradient(45deg, #00BCD4, #0097A7);
+  color: white;
+  border: none;
+  border-radius: 20px;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  min-width: 60px;
+}
+
+.loop-timer-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 188, 212, 0.4);
+}
+
+.loop-timer-btn.active {
+  background: linear-gradient(45deg, #f44336, #d32f2f);
+  animation: pulse-timer 1.5s infinite;
+}
+
+@keyframes pulse-timer {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.05); }
+}
+
+.loop-timer-btn.btn-60s {
+  background: linear-gradient(45deg, #8BC34A, #689F38);
+}
+
+.loop-timer-btn.btn-60s:hover {
+  box-shadow: 0 4px 12px rgba(139, 195, 74, 0.4);
+}
+
+.loop-timer-btn.btn-3min {
+  background: linear-gradient(45deg, #FF9800, #F57C00);
+}
+
+.loop-timer-btn.btn-3min:hover {
+  box-shadow: 0 4px 12px rgba(255, 152, 0, 0.4);
+}
+
+.repeat-label {
+  color: #9C27B0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-left: 10px;
+}
+
+.repeat-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 8px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: #CE93D8;
+}
+
+.repeat-option input[type="radio"] {
+  cursor: pointer;
+  accent-color: #9C27B0;
+}
+
+.loop-status {
+  width: 100%;
+  text-align: center;
+  margin-top: 8px;
+  font-family: monospace;
+  font-size: 0.9rem;
+  color: #CE93D8;
+  background: rgba(156, 39, 176, 0.2);
+  padding: 8px;
+  border-radius: 8px;
+  display: none;
+}
+
+.loop-status.active {
+  display: block;
+}
+
+/* Fade Controls */
+.fade-controls {
+  background: linear-gradient(135deg, rgba(255, 193, 7, 0.1), rgba(255, 152, 0, 0.1));
+  border: 1px solid rgba(255, 193, 7, 0.3);
+  border-radius: 10px;
+  padding: 15px;
+  margin: 1rem 0;
+}
+
+.fade-controls h4 {
+  text-align: center;
+  margin: 0 0 15px 0;
+  color: #FFC107;
+  font-size: 1.2rem;
+  font-weight: 400;
+}
+
+.fade-row {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.fade-input-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.fade-input-group label {
+  font-weight: 600;
+  color: #FFC107;
+  font-size: 0.9rem;
+}
+
+.fade-input {
+  background: rgba(255, 255, 255, 0.9);
+  border: 2px solid rgba(255, 193, 7, 0.3);
+  border-radius: 8px;
+  padding: 8px;
+  font-family: monospace;
+  font-size: 1rem;
+  width: 80px;
+  text-align: center;
+  color: #333;
+}
+
+.fade-input:focus {
+  outline: none;
+  border-color: #FFC107;
+  box-shadow: 0 0 10px rgba(255, 193, 7, 0.3);
+}
+
+.fade-toggle-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 5px;
+}
+
+.fade-checkbox {
+  width: 18px;
+  height: 18px;
+  accent-color: #FFC107;
+}
+
+/* Config Panel */
+.config-panel {
+  background: linear-gradient(135deg, rgba(38, 50, 56, 0.8), rgba(55, 71, 79, 0.8));
+  border: 1px solid rgba(144, 164, 174, 0.3);
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin: 1rem 0;
+}
+
+.config-panel h4 {
+  color: #90A4AE;
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0 0 12px;
+  text-align: center;
+  letter-spacing: 0.5px;
+}
+
+.config-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.config-row:last-child { margin-bottom: 0; }
+
+.config-label {
+  color: #90A4AE;
+  font-size: 0.85rem;
+  min-width: 90px;
+}
+
+.config-input {
+  flex: 1;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(144,164,174,0.4);
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: #E0E0E0;
+  font-size: 0.9rem;
+  font-family: monospace;
+  min-width: 0;
+}
+
+.config-input:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.config-btn {
+  background: linear-gradient(45deg, #455A64, #37474F);
+  color: #E0E0E0;
+  border: 1px solid rgba(144,164,174,0.4);
+  border-radius: 8px;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  transition: all 0.2s;
+}
+
+.config-btn:hover {
+  background: linear-gradient(45deg, #546E7A, #455A64);
+  border-color: #667eea;
+}
+
+.config-btn.primary {
+  background: linear-gradient(45deg, #667eea, #764ba2);
+  border-color: transparent;
+  color: white;
+}
+
+.config-btn.primary:hover {
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.config-status {
+  width: 100%;
+  font-family: monospace;
+  font-size: 0.8rem;
+  color: #888;
+  margin-top: 8px;
+  text-align: center;
+}
+
+/* Tracklist Section */
+.tracklist-section {
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.08), rgba(118, 75, 162, 0.08));
+  border: 1px solid rgba(102, 126, 234, 0.3);
+  border-radius: 12px;
+  margin: 1rem 0;
+  overflow: hidden;
+}
+
+.tracklist-header {
+  text-align: center;
+  padding: 15px;
+  color: #667eea;
+  font-size: 1.3rem;
+  font-weight: 400;
+  border-bottom: 1px solid rgba(102, 126, 234, 0.2);
+}
+
+.tracklist-scroll {
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.tracklist-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+
+.tracklist-scroll::-webkit-scrollbar-track {
+  background: #1a1a1a;
+}
+
+.tracklist-scroll::-webkit-scrollbar-thumb {
+  background: #667eea;
+  border-radius: 4px;
+}
+
+.tracklist-scroll::-webkit-scrollbar-thumb:hover {
+  background: #764ba2;
+}
+
+.track-item {
+  display: flex;
+  align-items: flex-start;
+  padding: 10px 15px;
+  cursor: pointer;
+  transition: background 0.2s;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.track-item:hover {
+  background: rgba(102, 126, 234, 0.15);
+}
+
+.track-item.active {
+  background: rgba(102, 126, 234, 0.25);
+  border-left: 3px solid #667eea;
+}
+
+.track-item.subtrack {
+  padding-left: 30px;
+}
+
+.track-time {
+  font-family: monospace;
+  color: #667eea;
+  min-width: 75px;
+  font-size: 0.95rem;
+  padding-top: 2px;
+  flex-shrink: 0;
+}
+
+.track-title {
+  color: #C8C7C8;
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+.track-artist {
+  color: #888;
+  font-size: 0.8rem;
+  font-style: italic;
+  margin-top: 2px;
+}
+
+.track-group-header {
+  color: #CE93D8;
+  font-weight: 600;
+  padding: 8px 15px 4px;
+  font-size: 0.85rem;
+}
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>🎶 Fun Classical Music</h1>
+  <p class="subtitle">Downloaded from YouTube for better playback quality on Mac</p>
+
+  <!-- Audio Player -->
+  <div id="audioWrap">
+    <div class="now-playing" id="nowPlaying">Loading audio file...</div>
+    <audio id="audio1" controls preload="auto">
+      Your browser does not support HTML5 Audio!
+    </audio>
+    <div id="audioStatus" style="font-family: monospace; font-size: 0.8rem; color: #888; text-align: center; margin-top: 6px;">Loading...</div>
+  </div>
+
+  <!-- Skip Controls -->
+  <div class="skip-controls">
+    <span class="skip-label">⏩ Skip:</span>
+    <button class="skip-btn skip-back" onclick="audio.currentTime = Math.max(0, audio.currentTime - 30)">-30s</button>
+    <button class="skip-btn skip-back" onclick="audio.currentTime = Math.max(0, audio.currentTime - 15)">-15s</button>
+    <button class="skip-btn" onclick="audio.currentTime += 15">+15s</button>
+    <button class="skip-btn" onclick="audio.currentTime += 30">+30s</button>
+  </div>
+
+  <!-- Current Time Display & Loop Timer Controls -->
+  <div class="current-time-display" id="currentTimeDisplay">
+    <span class="time-label">⏱️ Current:</span>
+    <span class="time-value" id="currentTimeValue">0:00</span>
+    <button id="timer15sBtn" class="loop-timer-btn">🔄 15s</button>
+    <button id="timer30sBtn" class="loop-timer-btn">🔄 30s</button>
+    <button id="timer60sBtn" class="loop-timer-btn btn-60s">🔄 1m</button>
+    <button id="timer3minBtn" class="loop-timer-btn btn-3min">🔄 3m</button>
+    <span class="repeat-label">🔁 Repeat:</span>
+    <label class="repeat-option">
+      <input type="radio" name="loopRepeat" value="1"> 1x
+    </label>
+    <label class="repeat-option">
+      <input type="radio" name="loopRepeat" value="8"> 8x
+    </label>
+    <label class="repeat-option">
+      <input type="radio" name="loopRepeat" value="50" checked> 50x
+    </label>
+    <div class="loop-status" id="loopStatus">Loop: 0:00 → 0:30 | Repeat: 1/1</div>
+  </div>
+
+  <!-- Fade Controls -->
+  <div class="fade-controls">
+    <h4>🎚️ Fade Controls</h4>
+    <div class="fade-row">
+      <div class="fade-input-group">
+        <label>Fade Out (ms)</label>
+        <input type="number" id="fadeOutDuration" class="fade-input" min="0" max="2000" value="200" />
+      </div>
+      <div class="fade-input-group">
+        <label>Fade In (ms)</label>
+        <input type="number" id="fadeInDuration" class="fade-input" min="0" max="2000" value="200" />
+      </div>
+      <div class="fade-input-group">
+        <label>Enable Fade</label>
+        <div class="fade-toggle-group">
+          <input type="checkbox" id="fadeToggle" class="fade-checkbox" checked>
+          <span style="font-size: 0.9rem; color: #FFC107;">ON</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Config Panel -->
+  <div class="config-panel">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+      <h4 style="margin:0;">📂 Load Playlist</h4>
+      <button class="config-btn" id="toggleConfigBtn" style="padding:4px 10px; font-size:0.8rem;">▲ Hide</button>
+    </div>
+    <div id="configBody">
+      <!-- Google Sheets -->
+      <div class="config-row">
+        <span class="config-label">Google Sheets</span>
+        <input type="text" id="sheetsUrlInput" class="config-input" placeholder="Paste published Google Sheets CSV URL..." />
+        <button class="config-btn primary" id="loadSheetsBtn">Load</button>
+      </div>
+      <!-- CSV File (collapsed by default) -->
+      <div style="text-align:center; margin: 4px 0;">
+        <button class="config-btn" id="toggleCsvBtn" style="font-size:0.75rem; padding:4px 12px;">▼ or load local CSV file</button>
+      </div>
+      <div id="csvRow" style="display:none;">
+        <div class="config-row">
+          <span class="config-label">CSV File</span>
+          <input type="file" id="csvFileInput" accept=".csv,.tsv,.txt" style="display:none" />
+          <button class="config-btn" onclick="document.getElementById('csvFileInput').click()">Choose file</button>
+          <span id="csvFileName" style="font-size:0.8rem; color:#888; font-family:monospace;">No file selected</span>
+          <button class="config-btn primary" id="loadCsvBtn">Load</button>
+        </div>
+      </div>
+      <div class="config-row" style="justify-content:flex-end;">
+        <button class="config-btn" id="resetBtn">Reset to Default</button>
+      </div>
+      <div class="config-status" id="configStatus">
+        Google Sheets: publish sheet as CSV (File → Share → Publish to web → CSV) and paste the URL above
+      </div>
+    </div>
+  </div>
+
+  <!-- Tracklist -->
+  <div class="tracklist-section">
+    <div class="tracklist-header">📋 Tracklist — Click a time to jump</div>
+    <div class="tracklist-scroll" id="tracklistScroll"></div>
+  </div>
+</div>
+
+<script>
+  const audio = document.getElementById('audio1');
+  const nowPlaying = document.getElementById('nowPlaying');
+
+  audio.src = 'https://www.dropbox.com/scl/fi/kcxpempcm5wipn5hd4ppp/Fun-Classical-Music-AW5OcEOy9NU.mp3?rlkey=4iwk5t9osbdyopppbgks03xfu&st=mcdcjm3e&raw=1';
+
+  const audioStatus = document.getElementById('audioStatus');
+
+  audio.addEventListener('loadedmetadata', () => {
+    const mins = Math.floor(audio.duration / 60);
+    const secs = Math.floor(audio.duration % 60);
+    const seekable = audio.seekable.length > 0 ? 'seekable' : 'not seekable';
+    audioStatus.textContent = `Loaded — Duration: ${mins}m ${secs}s (${Math.round(audio.duration)}s) | ${seekable}`;
+    audioStatus.style.color = '#8BC34A';
+    console.log('Audio loaded. Duration:', audio.duration, 'Seekable ranges:', audio.seekable.length);
+  });
+
+  audio.addEventListener('error', (e) => {
+    audioStatus.textContent = 'Error loading audio file — check file path';
+    audioStatus.style.color = '#f44336';
+    console.error('Audio error:', e, audio.error);
+  });
+
+  // Tracklist data: [timeString, totalSeconds, title, artist]
+  const tracklist = [
+    ["00:00:00", 0, "Respighi - 5 Pieces for Violin and Piano: No. 2, Aubade", "A. Clerici, E. Brunello"],
+    ["00:02:45", 165, "Anderson - Fiddle Faddle", ""],
+    ["00:06:07", 367, "Britten - Simple Symphony, Op. 4: II. Playful Pizzicato", "MSO, P. Lyubomudrov"],
+    ["00:09:30", 570, "Strauss II - Champagner-Polka, Op. 211", "Strauss Festival Orchester Wien, P. Guth"],
+    ["00:11:45", 705, "Mozart - Oboe Concerto in C major, K. 314: III. Rondo. Allegretto", "ORA, R. Casero, M. Esteban"],
+    ["00:17:11", 1031, "Debussy - Petite Suite for Piano Four Hands, L. 65: IV. Ballet", ""],
+    ["00:20:06", 1206, "Fauré - Dolly, Op. 56: No. 2 in F major, Mi-a-ou", "C. Balzaretti, K. Kumagai"],
+    ["00:21:55", 1315, "Fauré - Dolly, Op. 56: No. 6 in F major, Pas Espagnol", "C. Balzaretti, K. Kumagai"],
+    ["00:24:06", 1446, "De Falla - Siete Canciones Populares Españolas: No. 6, Canción", "F. Mancini, B. Engeli"],
+    ["00:25:27", 1527, "De Falla - Siete Canciones Populares Españolas: No. 4, Jota", "F. Mancini, B. Engeli"],
+    ["00:28:19", 1699, "Tchaikovsky - Valse-Scherzo in C major, Op. 34", "MSO, P. Lyubomudrov, A. Baranov"],
+    ["00:34:03", 2043, "Tchaikovsky - The Nutcracker: II c. Danse russe Trépak", "The Russian Philharmonia, A. Vedernikov"],
+    ["00:35:16", 2116, "Tchaikovsky - Swan Lake: III. Danse des Cygnes", "The Russian Philharmonia, A. Vedernikov"],
+    ["00:36:42", 2202, "Beethoven - Symphony No. 3 Eroica, Op. 55: III. Scherzo", ""],
+    ["00:42:35", 2555, "Beethoven - Symphony No. 2, Op. 36: IV. Allegro molto", "OPV, P. Maag"],
+    ["00:49:07", 2947, "Anderson - Plink, Plank, Plunk!", "MSO, P. Lyubomudrov"],
+    ["00:51:50", 3110, "Dvořák - String Quartet No. 12, Op. 96: IV. Finale", "SSQ"],
+    ["00:57:07", 3427, "Bartók - Romanian Folk Dances, Sz.68: No. 5-7", "NEE"],
+    ["00:58:33", 3513, "Brahms - String Sextet No. 1, Op. 18: III. Scherzo", "EIF, N. Risier, J. Estourmet"],
+    ["01:01:35", 3695, "Haydn - Cello Concerto No. 1: III. Allegro molto (Live)", "A. Persichilli, VTS"],
+    ["01:07:50", 4070, "Mendelssohn - Violin Concerto, Op. 64: III. Allegro molto vivace (Live)", "OCF, G. Lanzetta, C. Verdini"],
+    ["01:14:38", 4478, "Paganini - 24 Caprices, Op. 1: No. 1 \"L'Arpeggio\"", "P. Berman"],
+    ["01:16:23", 4583, "Liszt - Grandes études de Paganini: No. 2, Andante", "R. Tutti"],
+    ["01:21:50", 4910, "Liszt - Grandes études de Paganini: No. 3 \"La campanella\"", "R. Tutti"],
+    ["01:26:47", 5207, "Schubert - Der Teufel als Hydraulicus, D 4", "OdT, D. Renzetti"],
+    ["01:30:20", 5420, "Beethoven - Symphony No. 8, Op. 93: II. Allegretto scherzando", "OCF, G. Lanzetta"],
+    ["01:34:20", 5660, "Beethoven - Symphony No. 8, Op. 93: IV. Allegro vivace", "G. Lanzetta, OCF"],
+    ["01:42:00", 6120, "Scriabin - Scherzo for String Orchestra", "MSO, P. Lyubomudrov"],
+    ["01:43:19", 6199, "Dvarionas - Little Suite for Piano: V. Little Rhapsody", ""],
+    ["01:45:54", 6354, "Tchaikovsky - The Seasons, Op. 37a: No. 2, February", "V. Chaimovich"],
+    ["01:48:49", 6529, "Grieg - Lyric Pieces, Op. 12: No. 4, Fairy Dance", "A. Martino"],
+    ["01:49:48", 6588, "Grieg - Lyric Pieces, Op. 54: No. 3, March of the Dwarfs", "A. Martino"],
+    ["01:53:12", 6792, "Grieg - Lyric Pieces, Op. 71: No. 3, Puck", "A. Martino"],
+    ["01:55:15", 6915, "Tchaikovsky - The Nutcracker: I. Ouverture miniature", "The Russian Philharmonia, A. Vedernikov"],
+    ["01:58:26", 7106, "Tchaikovsky - The Nutcracker: II f. Danse des mirlitons", "The Russian Philharmonia, A. Vedernikov"],
+    ["02:01:05", 7265, "Tchaikovsky - The Nutcracker: II e. Danse chinoise", "The Russian Philharmonia, A. Vedernikov"],
+    ["02:02:17", 7337, "Beethoven - Symphony No. 7, Op. 92: III. Presto (Live)", "ORA, R. Casero"],
+    ["02:12:09", 7929, "Mozart - Piano Sonata No. 11, K. 331: III. Alla Turca", "P. Porqueddu"],
+    ["02:15:18", 8118, "Schumann - Kinderszenen, Op. 15: No. 3, Hasche-Mann (Live)", "C. Balzaretti"],
+    ["02:15:48", 8148, "Schumann - Kinderszenen, Op. 15: No. 5, Glückes genug (Live)", "C. Balzaretti"],
+    ["02:17:00", 8220, "Schumann - Kinderszenen, Op. 15: No. 8, Am Kamin (Live)", "C. Balzaretti"],
+    ["02:17:53", 8273, "Schumann - Kinderszenen, Op. 15: No. 9, Ritter vom Steckenpferd (Live)", "C. Balzaretti"],
+    ["02:18:30", 8310, "Chopin - Preludes, Op. 28: No. 3 in G major, Vivace", "A. Nones"],
+    ["02:19:30", 8370, "Chopin - Waltzes, Op. 64: No. 1 \"Minute Waltz\"", "A. Nones"],
+    ["02:21:20", 8480, "Strauss II - Tritsch-Tratsch-Polka, Op. 214 (Live)", "ORA, D. M. Urzanqui"],
+    ["02:24:07", 8647, "Strauss II - Unter Donner und Blitz, Op. 324 (Live)", "ORA, D. M. Urzanqui"],
+    ["02:27:21", 8841, "Strauss II - Polka, Op. 439: Majorchs Telephon", "Strauss Festival Orchester Wien, P. Guth"],
+    ["02:29:22", 8962, "Strauss - Radetzky March, Op. 228 (Live)", ""]
+  ];
+
+  // ============ TRACKLIST BUILD / CSV ============
+
+  const tracklistScroll = document.getElementById('tracklistScroll');
+  let currentTracklist = tracklist; // points to active tracklist
+  let lastHighlightedIndex = -1;
+
+  // Parse HH:MM:SS or MM:SS into total seconds
+  function parseTimestamp(ts) {
+    const parts = ts.trim().split(':').map(Number);
+    if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+    if (parts.length === 2) return parts[0] * 60 + parts[1];
+    return parseInt(ts) || 0;
+  }
+
+  // Parse raw CSV text — returns { audioUrl, tracks }
+  // Optional first row: audio_url,https://...
+  function parseCSV(text) {
+    const lines = text.split('\n').map(l => l.trim()).filter(l => l);
+    let audioUrl = null;
+    const tracks = [];
+
+    for (const line of lines) {
+      // Basic CSV parse — handles quoted fields
+      const fields = [];
+      let cur = '', inQuote = false;
+      for (let ci = 0; ci < line.length; ci++) {
+        const ch = line[ci];
+        if (ch === '"') { inQuote = !inQuote; }
+        else if (ch === ',' && !inQuote) { fields.push(cur.trim()); cur = ''; }
+        else cur += ch;
+      }
+      fields.push(cur.trim());
+
+      const first = fields[0] || '';
+
+      // Detect audio_url row
+      if (first.toLowerCase() === 'audio_url') {
+        audioUrl = fields[1] || null;
+        continue;
+      }
+
+      // Skip header rows (first col not a timestamp digit)
+      if (!/^\d/.test(first)) continue;
+
+      const seconds = parseTimestamp(first);
+      const title = fields[1] || '';
+      const artist = fields.slice(2).filter(f => f).join(', ');
+      if (title) tracks.push([first, seconds, title, artist]);
+    }
+    return { audioUrl, tracks };
+  }
+
+  // Build tracklist DOM from data array
+  function buildTracklist(data) {
+    currentTracklist = data;
+    lastHighlightedIndex = -1;
+    tracklistScroll.innerHTML = '';
+
+    data.forEach((track, i) => {
+      const div = document.createElement('div');
+      div.className = 'track-item';
+      div.dataset.seconds = track[1];
+      div.dataset.index = i;
+
+      const timeSpan = document.createElement('span');
+      timeSpan.className = 'track-time';
+      const secs = track[1];
+      const h = Math.floor(secs / 3600);
+      const m = Math.floor((secs % 3600) / 60);
+      const s = secs % 60;
+      timeSpan.textContent = h > 0
+        ? `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`
+        : `${m}:${String(s).padStart(2,'0')}`;
+
+      const infoDiv = document.createElement('div');
+      const titleDiv = document.createElement('div');
+      titleDiv.className = 'track-title';
+      titleDiv.textContent = track[2];
+      infoDiv.appendChild(titleDiv);
+
+      if (track[3]) {
+        const artistDiv = document.createElement('div');
+        artistDiv.className = 'track-artist';
+        artistDiv.textContent = track[3];
+        infoDiv.appendChild(artistDiv);
+      }
+
+      div.appendChild(timeSpan);
+      div.appendChild(infoDiv);
+
+      div.addEventListener('click', () => {
+        const targetTime = track[1];
+        const seekAndPlay = () => {
+          audio.currentTime = targetTime;
+          audio.play().catch(e => console.warn('Play error:', e));
+          highlightTrack(i);
+        };
+        if (audio.readyState >= 1) {
+          seekAndPlay();
+        } else {
+          const handler = () => { audio.removeEventListener('loadedmetadata', handler); seekAndPlay(); };
+          audio.addEventListener('loadedmetadata', handler);
+        }
+      });
+
+      tracklistScroll.appendChild(div);
+    });
+  }
+
+  // Build default tracklist on load
+  buildTracklist(tracklist);
+
+  // Highlight the currently playing track
+  function highlightTrack(activeIndex) {
+    document.querySelectorAll('.track-item').forEach((el, i) => {
+      el.classList.toggle('active', i === activeIndex);
+    });
+    if (currentTracklist[activeIndex]) {
+      nowPlaying.textContent = 'Now Playing: ' + currentTracklist[activeIndex][2];
+    }
+  }
+
+  // ============ CSV / SHEETS IMPORT CONTROLS ============
+
+  const csvFileInput = document.getElementById('csvFileInput');
+  const configStatus = document.getElementById('configStatus');
+
+  // Toggle whole config panel
+  document.getElementById('toggleConfigBtn').addEventListener('click', function() {
+    const body = document.getElementById('configBody');
+    const hidden = body.style.display === 'none';
+    body.style.display = hidden ? '' : 'none';
+    this.textContent = hidden ? '▲ Hide' : '▼ Show';
+  });
+
+  // Toggle local CSV row
+  document.getElementById('toggleCsvBtn').addEventListener('click', function() {
+    const row = document.getElementById('csvRow');
+    const hidden = row.style.display === 'none';
+    row.style.display = hidden ? '' : 'none';
+    this.textContent = hidden ? '▲ hide local CSV' : '▼ or load local CSV file';
+  });
+
+  csvFileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) document.getElementById('csvFileName').textContent = file.name;
+  });
+
+  // Shared: process parsed CSV result
+  function applyParsedCSV(csvAudioUrl, tracks, sourceName) {
+    const resolvedUrl = csvAudioUrl || document.getElementById('audioUrlInput') && document.getElementById('audioUrlInput').value.trim();
+    if (resolvedUrl) {
+      audio.src = resolvedUrl;
+      audioStatus.textContent = 'Loading audio...';
+      audioStatus.style.color = '#888';
+    }
+    if (tracks.length === 0) {
+      configStatus.textContent = `No valid tracks found in ${sourceName}. Format: audio_url,URL on first row, then Timestamp,Title,Artist`;
+      configStatus.style.color = '#f44336';
+      return;
+    }
+    buildTracklist(tracks);
+    const audioNote = csvAudioUrl ? ' + audio URL' : '';
+    configStatus.textContent = `Loaded ${tracks.length} tracks${audioNote} from ${sourceName}`;
+    configStatus.style.color = '#8BC34A';
+  }
+
+  // Google Sheets loader
+  document.getElementById('loadSheetsBtn').addEventListener('click', async () => {
+    let url = document.getElementById('sheetsUrlInput').value.trim();
+    if (!url) {
+      configStatus.textContent = 'Paste a Google Sheets published CSV URL first.';
+      configStatus.style.color = '#f44336';
+      return;
+    }
+    // Force output=csv in case user pasted the sheet URL instead of publish URL
+    if (url.includes('spreadsheets/d/') && !url.includes('/pub')) {
+      configStatus.textContent = 'Use File → Share → Publish to web → CSV to get the right URL.';
+      configStatus.style.color = '#f44336';
+      return;
+    }
+    configStatus.textContent = 'Fetching from Google Sheets...';
+    configStatus.style.color = '#888';
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const text = await res.text();
+      const { audioUrl: csvAudioUrl, tracks } = parseCSV(text);
+      applyParsedCSV(csvAudioUrl, tracks, 'Google Sheets');
+    } catch (err) {
+      configStatus.textContent = `Failed to fetch: ${err.message}`;
+      configStatus.style.color = '#f44336';
+      console.error(err);
+    }
+  });
+
+  document.getElementById('loadCsvBtn').addEventListener('click', () => {
+    const file = csvFileInput.files[0];
+    if (!file) {
+      configStatus.textContent = 'No CSV file selected.';
+      configStatus.style.color = '#f44336';
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const { audioUrl: csvAudioUrl, tracks } = parseCSV(e.target.result);
+      applyParsedCSV(csvAudioUrl, tracks, file.name);
+    };
+    reader.readAsText(file);
+  });
+
+  document.getElementById('resetBtn').addEventListener('click', () => {
+    buildTracklist(tracklist);
+    document.getElementById('audioUrlInput').value = '';
+    document.getElementById('csvFileName').textContent = 'No file selected';
+    csvFileInput.value = '';
+    configStatus.textContent = 'Reset to default tracklist.';
+    configStatus.style.color = '#90A4AE';
+  });
+
+  // Auto-highlight based on current time
+  function getCurrentTrackIndex() {
+    const t = audio.currentTime;
+    let idx = 0;
+    for (let i = tracklist.length - 1; i >= 0; i--) {
+      if (t >= tracklist[i][1]) {
+        idx = i;
+        break;
+      }
+    }
+    return idx;
+  }
+
+  // Format seconds to display time
+  function formatTime(seconds) {
+    if (isNaN(seconds) || seconds < 0) return '0:00';
+    const hrs = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    const secs = Math.floor(seconds % 60);
+    if (hrs > 0) {
+      return `${hrs}:${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
+    }
+    return `${mins}:${String(secs).padStart(2,'0')}`;
+  }
+
+  // ============ LOOP TIMER ============
+  let loopTimerActive = false;
+  let loopTimerTimeout = null;
+  let loopStartTime = 0;
+  let loopDurationMs = 30000;
+  let loopTotalRepeats = 1;
+  let loopCurrentRepeat = 0;
+  let loopActiveButton = null;
+  let isProgrammaticSeek = false;
+
+  function getRepeatCount() {
+    const selected = document.querySelector('input[name="loopRepeat"]:checked');
+    return selected ? parseInt(selected.value) : 1;
+  }
+
+  function handleLoopTimerClick(buttonElement, durationMs) {
+    if (loopTimerActive && loopActiveButton === buttonElement) {
+      cancelLoopTimer();
+      return;
+    }
+    if (loopTimerActive) cancelLoopTimer();
+    startLoopTimer(buttonElement, durationMs);
+  }
+
+  function startLoopTimer(buttonElement, durationMs) {
+    loopStartTime = audio.currentTime || 0;
+    loopDurationMs = durationMs;
+    loopTotalRepeats = getRepeatCount();
+    loopCurrentRepeat = 0;
+    loopActiveButton = buttonElement;
+    loopTimerActive = true;
+
+    buttonElement.classList.add('active');
+    buttonElement.textContent = '⏹️ Stop';
+
+    if (audio.paused) audio.play();
+    updateLoopStatus();
+    runLoopCycle();
+  }
+
+  function runLoopCycle() {
+    if (!loopTimerActive) return;
+    loopCurrentRepeat++;
+    updateLoopStatus();
+
+    loopTimerTimeout = setTimeout(() => {
+      if (!loopTimerActive) return;
+      if (loopCurrentRepeat < loopTotalRepeats) {
+        isProgrammaticSeek = true;
+        audio.currentTime = loopStartTime;
+        runLoopCycle();
+      } else {
+        isProgrammaticSeek = true;
+        audio.currentTime = loopStartTime;
+        audio.pause();
+        cancelLoopTimer();
+      }
+    }, loopDurationMs);
+  }
+
+  function updateLoopStatus() {
+    const statusDiv = document.getElementById('loopStatus');
+    if (loopTimerActive) {
+      const endTime = loopStartTime + (loopDurationMs / 1000);
+      statusDiv.textContent = `Loop: ${formatTime(loopStartTime)} → ${formatTime(endTime)} | Repeat: ${loopCurrentRepeat}/${loopTotalRepeats}`;
+      statusDiv.classList.add('active');
+    } else {
+      statusDiv.classList.remove('active');
+    }
+  }
+
+  function cancelLoopTimer() {
+    if (loopTimerTimeout) {
+      clearTimeout(loopTimerTimeout);
+      loopTimerTimeout = null;
+    }
+    if (loopActiveButton) {
+      loopActiveButton.classList.remove('active');
+      if (loopActiveButton.id === 'timer15sBtn') loopActiveButton.textContent = '🔄 15s';
+      else if (loopActiveButton.id === 'timer30sBtn') loopActiveButton.textContent = '🔄 30s';
+      else if (loopActiveButton.id === 'timer60sBtn') loopActiveButton.textContent = '🔄 1m';
+      else if (loopActiveButton.id === 'timer3minBtn') loopActiveButton.textContent = '🔄 3m';
+      loopActiveButton = null;
+    }
+    loopTimerActive = false;
+    loopCurrentRepeat = 0;
+    updateLoopStatus();
+  }
+
+  // Manual seek updates loop start
+  audio.addEventListener('seeked', () => {
+    if (loopTimerActive && !isProgrammaticSeek) {
+      loopStartTime = audio.currentTime;
+      if (loopTimerTimeout) clearTimeout(loopTimerTimeout);
+      loopCurrentRepeat--;
+      runLoopCycle();
+      updateLoopStatus();
+    }
+    isProgrammaticSeek = false;
+  });
+
+  // Loop timer button listeners
+  document.getElementById('timer15sBtn').addEventListener('click', function() {
+    handleLoopTimerClick(this, 15000);
+  });
+  document.getElementById('timer30sBtn').addEventListener('click', function() {
+    handleLoopTimerClick(this, 30000);
+  });
+  document.getElementById('timer60sBtn').addEventListener('click', function() {
+    handleLoopTimerClick(this, 60000);
+  });
+  document.getElementById('timer3minBtn').addEventListener('click', function() {
+    handleLoopTimerClick(this, 180000);
+  });
+
+  // ============ FADE CONTROLS ============
+  let fadeInProgress = false;
+  let fadeOutProgress = false;
+  let originalVolume = 0.4;
+  let fadeCheckInterval = null;
+  let fadeOutInterval = null;
+  let fadeInInterval = null;
+
+  audio.volume = 0.4;
+
+  audio.addEventListener('play', () => {
+    if (fadeCheckInterval) clearInterval(fadeCheckInterval);
+    fadeCheckInterval = setInterval(checkFadeOnLoop, 100);
+  });
+
+  audio.addEventListener('pause', () => {
+    if (fadeCheckInterval) {
+      clearInterval(fadeCheckInterval);
+      fadeCheckInterval = null;
+    }
+  });
+
+  audio.addEventListener('volumechange', () => {
+    if (!fadeInProgress && !fadeOutProgress && audio.volume > 0.1) {
+      originalVolume = audio.volume;
+    }
+  });
+
+  function startFadeOut(durationMs) {
+    if (fadeOutProgress) return;
+    fadeOutProgress = true;
+    const startVolume = audio.volume;
+    const steps = 20;
+    const stepDuration = durationMs / steps;
+    const volumeStep = startVolume / steps;
+    let currentStep = 0;
+
+    fadeOutInterval = setInterval(() => {
+      if (!fadeOutProgress) { clearInterval(fadeOutInterval); return; }
+      currentStep++;
+      audio.volume = Math.max(0, startVolume - (volumeStep * currentStep));
+      if (currentStep >= steps) {
+        clearInterval(fadeOutInterval);
+        fadeOutInterval = null;
+        fadeOutProgress = false;
+      }
+    }, stepDuration);
+  }
+
+  function startFadeIn(durationMs) {
+    if (fadeInProgress) return;
+    fadeInProgress = true;
+    audio.volume = 0;
+    const targetVolume = originalVolume;
+    const steps = 20;
+    const stepDuration = durationMs / steps;
+    const volumeStep = targetVolume / steps;
+    let currentStep = 0;
+
+    fadeInInterval = setInterval(() => {
+      if (!fadeInProgress) { clearInterval(fadeInInterval); return; }
+      currentStep++;
+      audio.volume = Math.min(targetVolume, volumeStep * currentStep);
+      if (currentStep >= steps) {
+        audio.volume = targetVolume;
+        clearInterval(fadeInInterval);
+        fadeInInterval = null;
+        fadeInProgress = false;
+      }
+    }, stepDuration);
+  }
+
+  function cancelFades() {
+    if (fadeOutInterval) { clearInterval(fadeOutInterval); fadeOutInterval = null; }
+    if (fadeInInterval) { clearInterval(fadeInInterval); fadeInInterval = null; }
+    fadeOutProgress = false;
+    fadeInProgress = false;
+    audio.volume = originalVolume;
+  }
+
+  function checkFadeOnLoop() {
+    const fadeEnabled = document.getElementById('fadeToggle').checked;
+    const fadeOutMs = parseInt(document.getElementById('fadeOutDuration').value) || 200;
+    if (fadeEnabled && audio.duration) {
+      const fadeOutStartTime = audio.duration - (fadeOutMs / 1000);
+      if (audio.currentTime >= fadeOutStartTime && !fadeOutProgress) {
+        if (audio.volume > 0.1) originalVolume = audio.volume;
+        else if (originalVolume <= 0.1) originalVolume = 0.4;
+        startFadeOut(fadeOutMs);
+      }
+    }
+  }
+
+  // Track ended - handle loop or stop
+  audio.addEventListener('ended', () => {
+    if (loopTimerActive) {
+      isProgrammaticSeek = true;
+      audio.currentTime = 0;
+      cancelFades();
+      audio.play();
+      return;
+    }
+    nowPlaying.textContent = 'Playback ended';
+  });
+
+  // ============ TIME DISPLAY UPDATE ============
+  setInterval(() => {
+    if (audio.currentTime !== undefined) {
+      document.getElementById('currentTimeValue').textContent = formatTime(audio.currentTime);
+
+      // Auto-highlight current track
+      const idx = getCurrentTrackIndex();
+      if (idx !== lastHighlightedIndex) {
+        lastHighlightedIndex = idx;
+        highlightTrack(idx);
+
+        // Scroll track into view
+        const activeEl = document.querySelector('.track-item.active');
+        if (activeEl) {
+          activeEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+      }
+    }
+  }, 200);
+
+  // Keyboard: tilde to toggle, space to toggle
+  document.addEventListener('keydown', (e) => {
+    if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return;
+    if (e.code === 'Backquote' || e.code === 'Space') {
+      e.preventDefault();
+      if (audio.paused) audio.play();
+      else audio.pause();
+    }
+  });
+</script>
+</body>
+</html>
