@@ -3,6 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <title>Fun Classical Music Player</title>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <style>
 @import url("https://fonts.googleapis.com/css?family=Yanone+Kaffeesatz:300,400");
 
@@ -540,35 +542,36 @@ h1 {
   <!-- Config Panel -->
   <div class="config-panel">
     <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
-      <h4 style="margin:0;">📂 Load Playlist</h4>
+      <h4 style="margin:0;">📂 Load Tracklist from Google Sheets</h4>
       <button class="config-btn" id="toggleConfigBtn" style="padding:4px 10px; font-size:0.8rem;">▲ Hide</button>
     </div>
     <div id="configBody">
-      <!-- Google Sheets -->
+      <!-- Auth + Search -->
       <div class="config-row">
-        <span class="config-label">Google Sheets</span>
-        <input type="text" id="sheetsUrlInput" class="config-input" placeholder="Paste published Google Sheets CSV URL..." />
-        <button class="config-btn primary" id="loadSheetsBtn">Load</button>
+        <button class="config-btn primary" id="authBtn" onclick="gdriveSignIn()">Sign In</button>
+        <input type="text" id="searchInput" class="config-input" placeholder="Spreadsheet name..." value="musiclists" />
+        <button class="config-btn" id="searchBtn" onclick="gdriveSearch()" disabled>Search</button>
       </div>
-      <!-- CSV File (collapsed by default) -->
+      <!-- Sheet tab selector -->
+      <div class="config-row">
+        <select id="sheetSelect" class="config-input" disabled onchange="onSheetSelect()" style="cursor:pointer;">
+          <option value="">Sign in first</option>
+        </select>
+        <button class="config-btn" id="resetBtn">Reset to Default</button>
+      </div>
+      <!-- Local CSV fallback -->
       <div style="text-align:center; margin: 4px 0;">
         <button class="config-btn" id="toggleCsvBtn" style="font-size:0.75rem; padding:4px 12px;">▼ or load local CSV file</button>
       </div>
       <div id="csvRow" style="display:none;">
         <div class="config-row">
-          <span class="config-label">CSV File</span>
           <input type="file" id="csvFileInput" accept=".csv,.tsv,.txt" style="display:none" />
           <button class="config-btn" onclick="document.getElementById('csvFileInput').click()">Choose file</button>
           <span id="csvFileName" style="font-size:0.8rem; color:#888; font-family:monospace;">No file selected</span>
           <button class="config-btn primary" id="loadCsvBtn">Load</button>
         </div>
       </div>
-      <div class="config-row" style="justify-content:flex-end;">
-        <button class="config-btn" id="resetBtn">Reset to Default</button>
-      </div>
-      <div class="config-status" id="configStatus">
-        Google Sheets: publish sheet as CSV (File → Share → Publish to web → CSV) and paste the URL above
-      </div>
+      <div class="config-status" id="configStatus">Sign in to load tracklist from Google Sheets</div>
     </div>
   </div>
 
@@ -821,34 +824,113 @@ h1 {
     configStatus.style.color = '#8BC34A';
   }
 
-  // Google Sheets loader
-  document.getElementById('loadSheetsBtn').addEventListener('click', async () => {
-    let url = document.getElementById('sheetsUrlInput').value.trim();
-    if (!url) {
-      configStatus.textContent = 'Paste a Google Sheets published CSV URL first.';
-      configStatus.style.color = '#f44336';
+  // ============ GOOGLE SHEETS AUTH ============
+
+  const GDRIVE_CLIENT_ID = '1095683227908-7ro25k16mprkf408i3lf583gti8v759b.apps.googleusercontent.com';
+  const GDRIVE_SCOPES = 'https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/spreadsheets.readonly';
+  let gdriveAccessToken = null;
+  let gdriveTokenClient = null;
+  let gdriveWorkbook = null;
+
+  function gdriveInitClient() {
+    if (window.google && window.google.accounts) {
+      gdriveTokenClient = window.google.accounts.oauth2.initTokenClient({
+        client_id: GDRIVE_CLIENT_ID,
+        scope: GDRIVE_SCOPES,
+        callback: function(response) {
+          if (response.access_token) {
+            gdriveAccessToken = response.access_token;
+            document.getElementById('authBtn').textContent = 'Sign Out';
+            document.getElementById('searchBtn').disabled = false;
+            configStatus.textContent = 'Signed in. Search for your spreadsheet.';
+          }
+        }
+      });
+    }
+  }
+
+  const checkGoogle = setInterval(function() {
+    if (window.google && window.google.accounts) {
+      clearInterval(checkGoogle);
+      gdriveInitClient();
+    }
+  }, 200);
+
+  function gdriveSignIn() {
+    if (gdriveAccessToken) {
+      gdriveAccessToken = null;
+      gdriveWorkbook = null;
+      document.getElementById('authBtn').textContent = 'Sign In';
+      document.getElementById('searchBtn').disabled = true;
+      document.getElementById('sheetSelect').innerHTML = '<option value="">Sign in first</option>';
+      document.getElementById('sheetSelect').disabled = true;
+      configStatus.textContent = 'Signed out.';
       return;
     }
-    // Force output=csv in case user pasted the sheet URL instead of publish URL
-    if (url.includes('spreadsheets/d/') && !url.includes('/pub')) {
-      configStatus.textContent = 'Use File → Share → Publish to web → CSV to get the right URL.';
-      configStatus.style.color = '#f44336';
-      return;
-    }
-    configStatus.textContent = 'Fetching from Google Sheets...';
-    configStatus.style.color = '#888';
+    if (gdriveTokenClient) gdriveTokenClient.requestAccessToken();
+    else configStatus.textContent = 'Google API not loaded yet. Try again.';
+  }
+
+  async function gdriveSearch() {
+    const searchTerm = document.getElementById('searchInput').value.trim();
+    if (!searchTerm) { configStatus.textContent = 'Enter a spreadsheet name.'; return; }
     try {
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const text = await res.text();
-      const { audioUrl: csvAudioUrl, tracks } = parseCSV(text);
-      applyParsedCSV(csvAudioUrl, tracks, 'Google Sheets');
+      configStatus.textContent = 'Searching for "' + searchTerm + '"...';
+      const query = encodeURIComponent("name contains '" + searchTerm + "' and trashed=false and mimeType='application/vnd.google-apps.spreadsheet'");
+      const resp = await fetch('https://www.googleapis.com/drive/v3/files?q=' + query + '&fields=files(id,name)&orderBy=name', {
+        headers: { Authorization: 'Bearer ' + gdriveAccessToken }
+      });
+      if (!resp.ok) throw new Error('Search failed: ' + resp.status);
+      const data = await resp.json();
+      if (!data.files || data.files.length === 0) {
+        configStatus.textContent = 'No spreadsheet matching "' + searchTerm + '" found.';
+        return;
+      }
+      const file = data.files[0];
+      configStatus.textContent = 'Loading "' + file.name + '"...';
+      await loadSpreadsheet(file.id, file.name);
     } catch (err) {
-      configStatus.textContent = `Failed to fetch: ${err.message}`;
-      configStatus.style.color = '#f44336';
-      console.error(err);
+      configStatus.textContent = 'Error: ' + err.message;
     }
-  });
+  }
+
+  async function loadSpreadsheet(fileId, fileName) {
+    try {
+      const exportMime = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+      const resp = await fetch('https://www.googleapis.com/drive/v3/files/' + fileId + '/export?mimeType=' + encodeURIComponent(exportMime), {
+        headers: { Authorization: 'Bearer ' + gdriveAccessToken }
+      });
+      if (!resp.ok) throw new Error('Export failed: ' + resp.status);
+      const arrayBuffer = await resp.arrayBuffer();
+      gdriveWorkbook = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array' });
+
+      const sel = document.getElementById('sheetSelect');
+      sel.innerHTML = '<option value="">-- select a sheet tab --</option>';
+      gdriveWorkbook.SheetNames.forEach(function(name) {
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        sel.appendChild(opt);
+      });
+      sel.disabled = false;
+      if (gdriveWorkbook.SheetNames.length === 1) {
+        sel.value = gdriveWorkbook.SheetNames[0];
+        onSheetSelect();
+      }
+      configStatus.textContent = 'Loaded "' + fileName + '" — ' + gdriveWorkbook.SheetNames.length + ' sheet(s). Select a tab.';
+    } catch (err) {
+      configStatus.textContent = 'Error: ' + err.message;
+    }
+  }
+
+  function onSheetSelect() {
+    const sheetName = document.getElementById('sheetSelect').value;
+    if (!sheetName || !gdriveWorkbook) return;
+    const sheet = gdriveWorkbook.Sheets[sheetName];
+    const csv = XLSX.utils.sheet_to_csv(sheet);
+    const { audioUrl: csvAudioUrl, tracks } = parseCSV(csv);
+    applyParsedCSV(csvAudioUrl, tracks, 'Google Sheets: ' + sheetName);
+  }
 
   document.getElementById('loadCsvBtn').addEventListener('click', () => {
     const file = csvFileInput.files[0];

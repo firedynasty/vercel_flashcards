@@ -1,0 +1,2352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Music Player - Internet Playlist</title>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+/*
+Skeleton v1.2
+Copyright: Dave Gamache
+www.getskeleton.com
+Free to use under the MIT license.
+https://www.opensource.org/licenses/mit-license.php
+Modifications by Mark Hillard
+*/
+
+/* Font Family
+================================================== */
+@import url("https://fonts.googleapis.com/css?family=Yanone+Kaffeesatz:300,400");
+
+/* Desktop (960px)
+================================================== */
+.container { position:relative; width:960px; margin:0 auto; padding:0; }
+.container .columns { float:left; display:inline; margin-left:10px; margin-right:10px; }
+.container .twelve.columns { width:700px; }
+.container .offset-by-two { padding-left:120px; }
+
+/* Tablet (Portrait)
+================================================== */
+/* Note: Design for a width of 768px */
+
+@media only screen and (min-width: 768px) and (max-width: 959px) {
+.container { width:768px; }
+.container .columns { margin-left:10px; margin-right:10px; }
+.container .twelve.columns { width:556px; }
+.container .offset-by-two { padding-left:96px; }
+}
+
+/* Mobile (Portrait)
+================================================== */
+/* Note: Design for a width of 320px */
+
+@media only screen and (max-width: 767px) {
+.container { width:300px; }
+.container .columns { margin:0; }
+.container .twelve.columns { width:300px; }
+.container .offset-by-two { padding-left:0; }
+}
+
+/* Mobile (Landscape)
+================================================== */
+/* Note: Design for a width of 480px */
+
+@media only screen and (min-width: 480px) and (max-width: 767px) {
+.container { width:420px; }
+.container .columns { margin:0; }
+.container .twelve.columns { width:420px; }
+}
+
+/* Self Clearing Goodness
+================================================== */
+.container:after {
+clear:both;
+content:"\0020";
+display:block;
+height:0;
+visibility:hidden;
+}
+
+/* CSS Reset
+================================================== */
+html,body,div,span,h1,h6,p,a,ul,li,audio {
+border:0;
+font:inherit;
+font-size:100%;
+margin:0;
+padding:0;
+vertical-align:baseline;
+}
+
+body { line-height:1; }
+ul { list-style:none; }
+
+/* Basic Styles
+================================================== */
+html,body {
+-webkit-font-smoothing:antialiased;
+-webkit-text-size-adjust:100%;
+background-color:#111;
+color:#C8C7C8;
+font:20px/24px "Yanone Kaffeesatz", HelveticaNeue, "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-weight:300;
+padding:5px 0;
+}
+
+/* Typography
+================================================== */
+h1,h6,p { color:#808080; font-weight:400; }
+h1 { font-size:42px; line-height:44px; margin:20px 0 0; }
+h6 { font-size:18px; line-height:20px; margin:4px 0 20px; }
+p { font-size:18px; line-height:20px; margin:0 0 2px; }
+
+/* Links
+================================================== */
+a,a:visited { color:#ddd; outline:0; text-decoration:underline; }
+a:hover,a:focus { color:#bbb; }
+p a,p a:visited { line-height:inherit; }
+
+/* Misc.
+================================================== */
+.add-bottom { margin-bottom:20px !important; }
+.left { float:left; }
+.right { float:right; }
+.center { text-align:center; }
+
+/* Custom Styles
+================================================== */
+
+/* CSS Transitions */
+* {
+-moz-transition:all 100ms ease;
+-o-transition:all 100ms ease;
+-webkit-transition:all 100ms ease;
+transition:all 100ms ease;
+}
+
+/* Highlight Styles */
+::selection { background-color:#262223; color:#444; }
+::-moz-selection { background-color:#262223; color:#444; }
+
+/* Audio Player Styles
+================================================== */
+
+/* Default - Firefox */
+audio { margin:0 15px 0 14px; width:670px; }
+#mainwrap { /* add box-shadow or other styles here */ }
+#audiowrap { background-color:#231F20; margin:0 auto; }
+#plwrap { margin:0 auto; }
+#tracks { min-height:65px; position:relative; text-align:center; text-decoration:none; top:13px; }
+#nowPlay { display:inline; }
+#npTitle { margin:0; padding:21px; text-align:right; }
+#npAction { padding:21px; position:absolute; }
+#plList { margin:0; }
+#plList li { background-color:#231F20; cursor:pointer; margin:0; padding:21px 0; }
+#plList li:hover { background-color:#262223; }
+.plItem { position:relative; }
+.plTitle { left:50px; overflow:hidden; position:absolute; right:65px; text-overflow:ellipsis; top:0; white-space:nowrap; }
+.plNum { padding-left:21px; width:25px; }
+.plLength { padding-left:21px; position:absolute; right:21px; top:0; }
+.plSel,.plSel:hover { background-color:#262223!important; cursor:default!important; }
+a[id^="btn"] { background-color:#231F20; color:#C8C7C8; cursor:pointer; font-size:50px; margin:0; padding:0 27px 11px; text-decoration:none; }
+a[id^="btn"]:last-child { margin-left:-4px; }
+a[id^="btn"]:hover,a[id^=btn]:active { background-color:#262223; }
+a[id^="btn"]::-moz-focus-inner { border:0; padding:0; }
+
+/* Chrome */
+html[data-useragent*="Chrome"] audio { margin-left:6px; width:687px; }
+html[data-useragent*="Chrome"] #tracks { min-height:64px; top:12px; }
+html[data-useragent*="Chrome"] #audiowrap { background-color:#131313; }
+html[data-useragent*="Chrome"] a[id^="btn"] { background-color:#131313; }
+html[data-useragent*="Chrome"] a[id^="btn"]:hover { background-color:#161616; }
+html[data-useragent*="Chrome"] #plList li { background-color:#131313; }
+html[data-useragent*="Chrome"] #plList li:hover { background-color:#161616; }
+html[data-useragent*="Chrome"] .plSel,
+html[data-useragent*="Chrome"] .plSel:hover { background-color:#161616!important; }
+
+/* Drag Drop Zone Styles */
+.drag-drop-zone {
+    border: 2px dashed #667eea;
+    border-radius: 12px;
+    padding: 2rem;
+    text-align: center;
+    margin: 1rem 0;
+    transition: all 0.3s ease;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+    cursor: pointer;
+}
+
+.drag-drop-zone.drag-over {
+    border-color: #764ba2;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.2), rgba(118, 75, 162, 0.2));
+    transform: scale(1.02);
+}
+
+.drag-drop-zone p {
+    margin: 0 0 1rem 0;
+    color: #C8C7C8;
+    font-size: 1.1rem;
+}
+
+.drag-drop-button {
+    background: linear-gradient(45deg, #667eea, #764ba2);
+    color: white;
+    border: none;
+    border-radius: 25px;
+    padding: 15px 30px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: all 0.3s ease;
+}
+
+.drag-drop-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+}
+
+/* Current Time Display & Loop Timer Controls */
+.current-time-display {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    background: linear-gradient(135deg, rgba(156, 39, 176, 0.15), rgba(103, 58, 183, 0.15));
+    border: 2px solid rgba(156, 39, 176, 0.4);
+    border-radius: 12px;
+    padding: 15px 20px;
+    margin: 1rem 0;
+}
+
+.time-label {
+    color: #CE93D8;
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+.time-value {
+    font-family: monospace;
+    font-size: 1.4rem;
+    font-weight: bold;
+    color: #E1BEE7;
+    background: rgba(156, 39, 176, 0.3);
+    padding: 5px 12px;
+    border-radius: 8px;
+    min-width: 70px;
+    text-align: center;
+}
+
+.loop-timer-btn {
+    background: linear-gradient(45deg, #00BCD4, #0097A7);
+    color: white;
+    border: none;
+    border-radius: 20px;
+    padding: 8px 16px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    min-width: 60px;
+}
+
+.loop-timer-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 188, 212, 0.4);
+}
+
+.loop-timer-btn.active {
+    background: linear-gradient(45deg, #f44336, #d32f2f);
+    animation: pulse-timer 1.5s infinite;
+}
+
+@keyframes pulse-timer {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.8; transform: scale(1.05); }
+}
+
+.loop-timer-btn.btn-60s {
+    background: linear-gradient(45deg, #8BC34A, #689F38);
+}
+
+.loop-timer-btn.btn-60s:hover {
+    box-shadow: 0 4px 12px rgba(139, 195, 74, 0.4);
+}
+
+.loop-timer-btn.btn-3min {
+    background: linear-gradient(45deg, #FF9800, #F57C00);
+}
+
+.loop-timer-btn.btn-3min:hover {
+    box-shadow: 0 4px 12px rgba(255, 152, 0, 0.4);
+}
+
+.repeat-label {
+    color: #9C27B0;
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-left: 10px;
+}
+
+.repeat-option {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: 8px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    color: #CE93D8;
+}
+
+.repeat-option input[type="radio"] {
+    cursor: pointer;
+    accent-color: #9C27B0;
+}
+
+.loop-status {
+    width: 100%;
+    text-align: center;
+    margin-top: 8px;
+    font-family: monospace;
+    font-size: 0.9rem;
+    color: #CE93D8;
+    background: rgba(156, 39, 176, 0.2);
+    padding: 8px;
+    border-radius: 8px;
+    display: none;
+}
+
+.loop-status.active {
+    display: block;
+}
+
+/* Keycode display */
+.keycode-display {
+    font-family: monospace;
+    font-size: 0.9rem;
+    color: #C8C7C8;
+    background: rgba(35, 31, 32, 0.8);
+    padding: 10px;
+    border-radius: 8px;
+    margin: 1rem 0;
+    text-align: center;
+    border: 1px solid #444;
+}
+
+/* Fade Controls */
+.fade-controls {
+    background: linear-gradient(135deg, rgba(255, 193, 7, 0.1), rgba(255, 152, 0, 0.1));
+    border: 1px solid rgba(255, 193, 7, 0.3);
+    border-radius: 10px;
+    padding: 15px;
+    margin: 1rem 0;
+}
+
+.fade-controls h4 {
+    text-align: center;
+    margin: 0 0 15px 0;
+    color: #FFC107;
+    font-size: 1.2rem;
+    font-weight: 400;
+}
+
+.fade-input-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    margin: 0 10px;
+}
+
+.fade-input-group label {
+    font-weight: 600;
+    color: #FFC107;
+    font-size: 0.9rem;
+    text-align: center;
+}
+
+.fade-input {
+    background: rgba(255, 255, 255, 0.9);
+    border: 2px solid rgba(255, 193, 7, 0.3);
+    border-radius: 8px;
+    padding: 8px;
+    font-family: monospace;
+    font-size: 1rem;
+    width: 80px;
+    text-align: center;
+    transition: border-color 0.3s ease;
+    color: #333;
+}
+
+.fade-input:focus {
+    outline: none;
+    border-color: #FFC107;
+    box-shadow: 0 0 10px rgba(255, 193, 7, 0.3);
+}
+
+.fade-toggle-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 5px;
+}
+
+.fade-checkbox {
+    width: 18px;
+    height: 18px;
+    accent-color: #FFC107;
+}
+
+/* Sheets Config Panel */
+.sheets-panel {
+    background: linear-gradient(135deg, rgba(38,50,56,0.8), rgba(55,71,79,0.8));
+    border: 1px solid rgba(144,164,174,0.3);
+    border-radius: 12px;
+    padding: 14px 18px;
+    margin: 1rem 0;
+}
+.sheets-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+.sheets-panel-header h4 {
+    color: #90A4AE;
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0;
+}
+.sheets-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+}
+.sheets-row:last-child { margin-bottom: 0; }
+.sheets-input {
+    flex: 1;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(144,164,174,0.4);
+    border-radius: 8px;
+    padding: 7px 11px;
+    color: #E0E0E0;
+    font-size: 0.88rem;
+    font-family: monospace;
+    min-width: 0;
+}
+.sheets-input:focus { outline: none; border-color: #667eea; }
+.sheets-btn {
+    background: linear-gradient(45deg, #455A64, #37474F);
+    color: #E0E0E0;
+    border: 1px solid rgba(144,164,174,0.4);
+    border-radius: 8px;
+    padding: 7px 14px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    white-space: nowrap;
+    transition: all 0.2s;
+}
+.sheets-btn:hover { border-color: #667eea; }
+.sheets-btn.primary {
+    background: linear-gradient(45deg, #667eea, #764ba2);
+    border-color: transparent;
+    color: white;
+}
+.sheets-btn.primary:hover { box-shadow: 0 3px 10px rgba(102,126,234,0.4); }
+.sheets-status {
+    font-family: monospace;
+    font-size: 0.78rem;
+    color: #888;
+    margin-top: 6px;
+    text-align: center;
+}
+
+/* Playlist info */
+.playlist-info {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.15), rgba(118, 75, 162, 0.15));
+    border: 1px solid rgba(102, 126, 234, 0.3);
+    border-radius: 10px;
+    padding: 15px;
+    margin: 1rem 0;
+    text-align: center;
+}
+
+.playlist-info h3 {
+    color: #667eea;
+    margin: 0 0 10px 0;
+    font-size: 1.4rem;
+    font-weight: 400;
+}
+
+.playlist-info p {
+    color: #C8C7C8;
+    margin: 5px 0;
+    font-size: 0.95rem;
+}
+
+/* Lyrics Viewer Section Styles */
+.lyrics-viewer-section {
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    padding: 40px;
+    margin: 30px 0;
+}
+
+.lyrics-viewer-section .lv-header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.lyrics-viewer-section .lv-header h2 {
+    color: #667eea;
+    font-size: 2em;
+    margin-bottom: 10px;
+}
+
+.lyrics-viewer-section .lv-controls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 30px;
+    flex-wrap: wrap;
+}
+
+.lyrics-viewer-section .lv-select {
+    padding: 12px 20px;
+    font-size: 16px;
+    border: 2px solid #667eea;
+    border-radius: 8px;
+    background: white;
+    cursor: pointer;
+    min-width: 250px;
+    transition: all 0.3s;
+    color: #333;
+}
+
+.lyrics-viewer-section .lv-select:hover {
+    border-color: #764ba2;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+}
+
+.lyrics-viewer-section .lv-nav-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.lyrics-viewer-section .lv-btn {
+    padding: 12px 24px;
+    font-size: 16px;
+    border: none;
+    border-radius: 8px;
+    background: #667eea;
+    color: white;
+    cursor: pointer;
+    transition: all 0.3s;
+    font-weight: bold;
+}
+
+.lyrics-viewer-section .lv-btn:hover {
+    background: #764ba2;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.lyrics-viewer-section .lv-btn:active {
+    transform: translateY(0);
+}
+
+.lyrics-viewer-section .lv-btn:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.lyrics-viewer-section .lv-lyrics-container {
+    background: #f8f9fa;
+    border-radius: 12px;
+    padding: 30px;
+    min-height: 400px;
+    max-height: 600px;
+    overflow-y: auto;
+    line-height: 1.8;
+    font-size: 32px;
+}
+
+.lyrics-viewer-section .lv-song-title {
+    font-size: 1.8em;
+    color: #667eea;
+    margin-bottom: 20px;
+    text-align: center;
+    font-weight: bold;
+}
+
+.lyrics-viewer-section .lv-lyrics-content {
+    color: #333;
+    white-space: pre-line;
+}
+
+.lyrics-viewer-section .lv-verse-label {
+    font-weight: bold;
+    color: #764ba2;
+    margin-top: 20px;
+    margin-bottom: 5px;
+    text-transform: capitalize;
+}
+
+.lyrics-viewer-section .lv-keyboard-hint {
+    text-align: center;
+    color: #888;
+    font-size: 14px;
+    margin-top: 20px;
+    font-style: italic;
+}
+
+/* Custom scrollbar for lyrics */
+.lyrics-viewer-section .lv-lyrics-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+.lyrics-viewer-section .lv-lyrics-container::-webkit-scrollbar-track {
+    background: #e0e0e0;
+    border-radius: 4px;
+}
+
+.lyrics-viewer-section .lv-lyrics-container::-webkit-scrollbar-thumb {
+    background: #667eea;
+    border-radius: 4px;
+}
+
+.lyrics-viewer-section .lv-lyrics-container::-webkit-scrollbar-thumb:hover {
+    background: #764ba2;
+}
+  </style>
+</head>
+<body>
+<!--begin main layout-->
+<div class="container">
+  <div class="twelve columns offset-by-two">
+    <h6 class="center">🎵 Music Player - Internet Playlist</h6>
+
+    <!-- Playlist Information -->
+    <div class="playlist-info">
+      <h3>📻 Pre-loaded Internet Songs</h3>
+      <p>Songs are loaded from internet URLs. Use drag & drop to add more files.</p>
+      <p>Playlist plays through all tracks then stops at the end.</p>
+    </div>
+
+    <!-- Sheets / CSV Loader -->
+    <div class="sheets-panel">
+      <div class="sheets-panel-header">
+        <h4>📋 Load Playlist from Google Sheets</h4>
+        <button class="sheets-btn" id="toggleSheetsBtn">▲ Hide</button>
+      </div>
+      <div id="sheetsPanelBody">
+        <!-- Auth + Search -->
+        <div class="sheets-row">
+          <button class="sheets-btn primary" id="authBtn" onclick="gdriveSignIn()">Sign In</button>
+          <input type="text" id="searchInput" class="sheets-input" placeholder="Spreadsheet name..." value="musiclists" />
+          <button class="sheets-btn" id="searchBtn" onclick="gdriveSearch()" disabled>Search</button>
+        </div>
+        <!-- Sheet tab selector -->
+        <div class="sheets-row">
+          <select id="sheetSelect" class="sheets-input" disabled onchange="onSheetSelect()" style="cursor:pointer;">
+            <option value="">Sign in first</option>
+          </select>
+        </div>
+        <!-- Local CSV fallback (collapsed) -->
+        <div style="text-align:center; margin:4px 0;">
+          <button class="sheets-btn" id="toggleLocalCsvBtn" style="font-size:0.75rem; padding:4px 12px;">▼ or load local CSV file</button>
+        </div>
+        <div id="localCsvRow" style="display:none;">
+          <div class="sheets-row">
+            <input type="file" id="playlistCsvInput" accept=".csv,.txt" style="display:none" />
+            <button class="sheets-btn" onclick="document.getElementById('playlistCsvInput').click()">Choose file</button>
+            <span id="playlistCsvName" style="font-size:0.8rem;color:#888;font-family:monospace;">No file selected</span>
+            <button class="sheets-btn primary" id="loadLocalCsvBtn">Load</button>
+          </div>
+        </div>
+        <div class="sheets-status" id="sheetsStatus">Sign in to load from Google Sheets</div>
+      </div>
+    </div>
+
+    <!-- Player Controls -->
+    <div id="tracks">
+      <button id="btnPrev">&laquo;</button>
+      <button id="btnNext">&raquo;</button>
+    </div>
+
+    <!-- Drag and Drop Zone -->
+    <div class="drag-drop-zone" id="dragDropZone">
+      <p>🎵 Drag and drop .mp3 files here or click to select</p>
+      <input type="file" id="audio_file" accept="audio/*" multiple style="display: none;" />
+      <button class="drag-drop-button" onclick="document.getElementById('audio_file').click()">Select Audio Files</button>
+    </div>
+
+    <!-- Current Time Display & Loop Timer Controls -->
+    <div class="current-time-display" id="currentTimeDisplay">
+      <span class="time-label">⏱️ Current:</span>
+      <span class="time-value" id="currentTimeValue">0:00</span>
+      <button id="timer30sBtn" class="loop-timer-btn">🔄 30s</button>
+      <button id="timer60sBtn" class="loop-timer-btn btn-60s">🔄 1m</button>
+      <button id="timer3minBtn" class="loop-timer-btn btn-3min">🔄 3m</button>
+      <span class="repeat-label">🔁 Repeat:</span>
+      <label class="repeat-option">
+        <input type="radio" name="loopRepeat" value="1"> 1x
+      </label>
+      <label class="repeat-option">
+        <input type="radio" name="loopRepeat" value="8"> 8x
+      </label>
+      <label class="repeat-option">
+        <input type="radio" name="loopRepeat" value="50" checked> 50x
+      </label>
+      <div class="loop-status" id="loopStatus">
+        Loop: 0:00 → 0:30 | Repeat: 1/1
+      </div>
+    </div>
+
+    <!-- Fade Controls -->
+    <div class="fade-controls">
+      <h4>🎚️ Fade Controls</h4>
+      <div style="display: flex; gap: 20px; justify-content: center; align-items: center; flex-wrap: wrap;">
+        <div class="fade-input-group">
+          <label>Fade Out (ms)</label>
+          <input type="number" id="fadeOutDuration" class="fade-input" placeholder="200" min="0" max="2000" value="200" />
+        </div>
+        <div class="fade-input-group">
+          <label>Fade In (ms)</label>
+          <input type="number" id="fadeInDuration" class="fade-input" placeholder="200" min="0" max="2000" value="200" />
+        </div>
+        <div class="fade-input-group">
+          <label>Enable Fade</label>
+          <div class="fade-toggle-group">
+            <input type="checkbox" id="fadeToggle" class="fade-checkbox" checked>
+            <span style="font-size: 0.9rem; color: #FFC107;">ON</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <div class="keycode-display" id="keyCodeDisplay">
+      Press keys to navigate: Time jumps (1-7, QWERTY, ASDF, ZXCV), Shift+key = -5s, Controls (~, arrows, 0, space)
+    </div>
+  </div>
+
+  <div class="twelve columns offset-by-two add-bottom">
+    <div id="mainwrap">
+      <div id="nowPlay">
+        <span class="left" id="npAction">Loading songs... - Tilde to Toggle</span>
+        <span class="right" id="npTitle"></span>
+      </div>
+      <div id="audiowrap">
+        <div id="audio0">
+          <audio preload id="audio1" controls="controls">Your browser does not support HTML5 Audio!</audio>
+        </div>
+      </div>
+      <div id="plwrap">
+        <!-- Time Offset Control -->
+        <div style="background: linear-gradient(135deg, rgba(255, 193, 7, 0.1), rgba(255, 152, 0, 0.1)); border: 1px solid rgba(255, 193, 7, 0.3); border-radius: 10px; padding: 15px; margin: 0 0 15px 0; text-align: center;">
+          <h4 style="color: #FFC107; margin: 0 0 10px 0; font-size: 1.1rem;">⏰ Time Offset Control</h4>
+          <div style="display: flex; align-items: center; justify-content: center; gap: 15px; flex-wrap: wrap;">
+            <label for="minuteOffset" style="color: #FFC107; font-weight: 600;">Add Minutes to All Keys:</label>
+            <select id="minuteOffset" style="padding: 8px 12px; background: #131313; color: white; border: 2px solid rgba(255, 193, 7, 0.5); border-radius: 8px; font-size: 1rem;">
+              <option value="0">+0 min (Default)</option>
+              <option value="1">+1 min</option>
+              <option value="2">+2 min</option>
+              <option value="3">+3 min</option>
+              <option value="4">+4 min</option>
+              <option value="5">+5 min</option>
+              <option value="10">+10 min</option>
+              <option value="15">+15 min</option>
+              <option value="20">+20 min</option>
+              <option value="30">+30 min</option>
+            </select>
+            <span style="color: #C8C7C8; font-size: 0.9rem; font-style: italic;">Example: Key "1" = 0:00 → with +1min = 1:00</span>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 10px; text-align: center;">
+          <label for="collectionSelect" style="color: white; margin-right: 10px;">Playlist:</label>
+          <select id="collectionSelect" style="padding: 5px; background: #131313; color: white; border: 1px solid #333;">
+            <!-- Options will be populated dynamically -->
+          </select>
+          <button id="cycleCollectionBtn" style="margin-left: 10px; padding: 5px 10px; background: #262223; color: white; border: 1px solid #333; cursor: pointer;">Cycle</button>
+        </div>
+        <ul id="plList"></ul>
+      </div>
+    </div>
+
+    <!-- Lyrics Viewer Section -->
+    <div class="lyrics-viewer-section">
+      <div class="lv-header">
+        <h2>🎵 Lyrics Viewer</h2>
+      </div>
+
+      <div class="lv-controls">
+        <select id="lvSongSelect" class="lv-select">
+          <option value="">Select a song...</option>
+        </select>
+        <div class="lv-nav-buttons">
+          <button id="lvPrevBtn" class="lv-btn" title="Previous song">◀ Prev</button>
+          <button id="lvNextBtn" class="lv-btn" title="Next song">Next ▶</button>
+        </div>
+      </div>
+
+      <div class="lv-lyrics-container" id="lvLyricsDisplay">
+        <div style="text-align: center; color: #888; padding: 40px;">
+          Select a song from the dropdown above to view lyrics
+        </div>
+      </div>
+
+      <div class="lv-keyboard-hint">
+        💡 Use the dropdown or buttons to navigate between songs
+      </div>
+    </div>
+
+  </div>
+</div>
+<!--end main layout-->
+
+<script src='https://api.html5media.info/1.1.6/html5media.min.js'></script>
+<script src='https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js'></script>
+<script>
+  var b = document.documentElement;
+  b.setAttribute('data-useragent', navigator.userAgent);
+  b.setAttribute('data-platform', navigator.platform);
+
+  // MULTIPLE SONG COLLECTIONS - Add different playlists here
+  var songCollections = {
+    "calm_repeat": [
+      ["1", "Queen of Tears - clip", "https://www.dropbox.com/scl/fi/stuo7jx0c7vzl6ex2hkvt/queen_of_tears_clip.mp3?rlkey=60pi97ufym3yybd70vcwqnrch&st=lvqzhxqm&raw=1"],
+    ["2", "Great is Thy Faithfulness", "https://www.dropbox.com/scl/fi/hkxdxv0xjg2kx7vj2k531/great_is_thy_faithfulness_hkbu.mp3?rlkey=135183pnzytdbi3drbt2dquae&st=d3nfupzy&raw=1"],
+    ["3", "Calm Piano", "https://www.dropbox.com/scl/fi/6bajeyg5ekho3rpynu5rf/calm_piano.mp3?rlkey=9twt8i5tropdry7bysfc693jy&st=gh499xq6&raw=1"],
+    ["4", "Mozart Effect 432 Hz", "https://www.dropbox.com/scl/fi/h48lsyzsiu2bquuig2byz/mozart_effect_432hz.mp3?rlkey=vwg8uox1i9m9l5f0u1hiszqm3&st=rh1svyhx&raw=1"],
+    ["5", "Mozart 1 hr", "https://www.dropbox.com/scl/fi/0h9qrqbhv9hnpx87s52sh/mozart_effect_one_hour_55_no_50.mp3?rlkey=r2hd0p73jngxryt1or5ka7tom&st=k3tzpwb1&raw=1"],
+      ["6","one_afternoon_summer", "https://www.dropbox.com/scl/fi/zsabsbfwyixipqmeu0p7a/one_afternoon_summer.mp3?rlkey=l9mi7u6qc0zjjzfcoijiuldew&st=z16ayvoe&raw=1"],
+    ["7","erik_satie_gymnopedie", "https://www.dropbox.com/scl/fi/shoujt1vd07snpti2t3lb/erik_satie_gymnopedie.mp3?rlkey=s7yn7rwjw7aw7za4osubvmrrj&st=4z3ewdnp&raw=1"],
+    ["8","schubert-serenade", "https://www.dropbox.com/scl/fi/j9r3smdjuv050r89fluhm/schubert-serenade.mp3?rlkey=vdqxh54ysllarx7e39x4lzduh&st=840f3pwj&raw=1"],
+    ["9","shostakovich-waltz", "https://www.dropbox.com/scl/fi/a4j63cnj0g5kt08lrmca5/shostakovich-waltz.mp3?rlkey=sf8afk4z1t4cjh98696qxh0ub&st=xutpe8y0&raw=1"],
+    ["10","tchaikovsky-valse", "https://www.dropbox.com/scl/fi/dy0srgq43zgkw581l536z/tchaikovsky-valse.mp3?rlkey=5agu18gbzk1a2r1s74j1aszso&st=e3bqrfo1&raw=1"],
+    ["11","rumenapp-touching", "https://www.dropbox.com/scl/fi/s218uzh1tmcx4pswvlxxh/rumenapp-touching.mp3?rlkey=7v39s55xrdv7kp01rk6nydlcb&st=rxewmt5g&raw=1"],
+    ["12","saudade-gabriel", "https://www.dropbox.com/scl/fi/yaum44svm8s6njplnqy0p/saudade-gabriel.mp3?rlkey=e5mhf8ypy5x96j27dzus0w7bz&st=7l10u0r6&raw=1"]
+    ],
+    "psalms": [
+      ["1", "psalm7", "https://www.dropbox.com/scl/fi/achwvz3bjcozkvrpt9jhc/psalm7.mp3?rlkey=lovokf90p930uv1hloqptttfq&st=aimmq9fe&raw=1"],
+      ["2", "psalm23", "https://www.dropbox.com/scl/fi/gpoacpikr0oflzhnc4rwm/psalm23.mp3?rlkey=bunnckn9937nzx8bsidvs0zq4&st=oav6g430&raw=1"],
+      ["3", "psalm78", "https://www.dropbox.com/scl/fi/jax5yekgjktook88cgrt1/psalm78.mp3?rlkey=guj6xih1mrbo9nst2clrwtjnn&st=nw9lhw1g&raw=1"],
+      ["4", "psalm105", "https://www.dropbox.com/scl/fi/dicgk3n4jlx553pxuukrk/psalm105.mp3?rlkey=1aacs42sj3fvr0qgyfuz7i7um&st=wzconuxy&raw=1"],
+      ["5", "psalm106", "https://www.dropbox.com/scl/fi/xrqo3vkrxxs3kbpcwi6hy/psalm106.mp3?rlkey=rinjbx8ugsb0p1jsyayzehl8w&st=93bkbcmq&raw=1"],
+      ["6", "psalm107", "https://www.dropbox.com/scl/fi/qhbbd7ebr1oys5a374km5/psalm107.mp3?rlkey=gg6px0i61bk8cwiqju1ax6mel&st=8w7fdrxg&raw=1"],
+      ["7", "psalm124", "https://www.dropbox.com/scl/fi/e149xkhaa6y4e2dbfnbwl/psalm124.mp3?rlkey=v3wydpcwy8j04xs556ed8fdhn&st=uog2jre5&raw=1"],
+      ["8", "psalm126", "https://www.dropbox.com/scl/fi/qto130crx47fizkoj542b/psalm126.mp3?rlkey=pfodi8smsuw7m4oh4yk9p8dlv&st=kxtuwx7o&raw=1"],
+      ["9", "psalm137", "https://www.dropbox.com/scl/fi/g5ow0uywleqabojrvsfus/psalm137.mp3?rlkey=tin0pdlkgzhhci4whv586193h&st=ok1ouuc1&raw=1"]
+    ], 
+     "worship" : [
+        ["1", "Ever Be", "https://www.dropbox.com/scl/fi/vdv82cdqgsr65vewekqef/02-Ever-Be.mp3?rlkey=ijx61kv2412ynhw5ot1dv95g2&st=lebx8oac&raw=1"],
+        ["2", "Wont Start Now", "https://www.dropbox.com/scl/fi/zd89n1niu354h7pgj1uly/03-Won-t-Start-Now.mp3?rlkey=q313cmywhz8sgttblkl8ueo43&st=x030h8t6&raw=1"],
+        ["3", "I Thank God", "https://www.dropbox.com/scl/fi/3locf5bo2vg33r730zdr5/I-Thank-God-Maverick-City-Music-x-UPPERROOM-Lyrics.mp3?rlkey=r390kt9xlkr5fatgr10xaa57e&st=f12r00bx&raw=1"],
+        ["4", "Jesus At the Center", "https://www.dropbox.com/scl/fi/k56al7nxuhpmwkvh26ed4/Jesus-At-The-Center-Decade-Version-Israel-Houghton-New-Breed-with-lyrics-HD.mp3?rlkey=oeudk1blw1z5jq6thm1fyly8z&st=uxuuadfv&raw=1"]
+     ]
+    // Add more collections here:
+    // "jazz": [["1", "Song Name", "URL"], ...],
+    // "pop": [["1", "Song Name", "URL"], ...]
+  };
+
+  // Current collection and songs
+  var currentCollection = localStorage.getItem('selectedCollection') || Object.keys(songCollections)[0];
+  var internetSongs = songCollections[currentCollection] || songCollections[Object.keys(songCollections)[0]];
+
+  // State for row number input with timeout
+  var trackNumberInput = '';
+  var trackInputTimeoutRef = null;
+
+  // Loop Timer variables
+  var loopTimerActive = false;
+  var loopTimerTimeout = null;
+  var loopStartTime = 0;
+  var loopDurationMs = 30000;
+  var loopTotalRepeats = 1;
+  var loopCurrentRepeat = 0;
+  var loopActiveButton = null;
+  var currentTimeUpdateInterval = null;
+  var isProgrammaticSeek = false; // Flag to distinguish manual vs programmatic seeks
+
+  // Fade functionality variables
+  var fadeInProgress = false;
+  var fadeOutProgress = false;
+  var originalVolume = 0.4;
+  var fadeCheckInterval = null;
+  var fadeOutInterval = null;
+  var fadeInInterval = null;
+
+  var supportsAudio = !!document.createElement('audio').canPlayType;
+  if (supportsAudio) {
+    var index = 0,
+        playing = false,
+        extension = '',
+        tracks = [],
+        npAction = $('#npAction'),
+        npTitle = $('#npTitle'),
+        audio = $('#audio1').bind('play', function () {
+          playing = true;
+          npAction.text('Now Playing... - Tilde to Toggle');
+
+          // Start fade checking when playing
+          if (fadeCheckInterval) {
+            clearInterval(fadeCheckInterval);
+          }
+          fadeCheckInterval = setInterval(checkFadeOnLoop, 100);
+        }).bind('pause', function () {
+          playing = false;
+          npAction.text('Paused... - Tilde to Toggle');
+
+          // Stop fade checking when paused
+          if (fadeCheckInterval) {
+            clearInterval(fadeCheckInterval);
+            fadeCheckInterval = null;
+          }
+        }).bind('ended', function () {
+          npAction.text('Paused... - Tilde to Toggle');
+
+          // If loop timer is active, restart track from beginning instead of going to next track
+          if (loopTimerActive) {
+            console.log(`Track ended during loop - restarting track from 0:00`);
+            isProgrammaticSeek = true;
+            audio.currentTime = 0;
+            // Cancel any fades and restore volume
+            cancelFades();
+            audio.play();
+            return; // Don't go to next track
+          }
+
+          const fadeEnabled = document.getElementById('fadeToggle').checked;
+          const fadeInMs = parseInt(document.getElementById('fadeInDuration').value) || 200;
+
+          if ((index + 1) < tracks.length) {
+            // Go to next track
+            index++;
+            console.log(`Playing next track ${index + 1}: ${tracks[index].name}`);
+
+            loadTrack(index);
+
+            if (fadeEnabled) {
+              startFadeIn(fadeInMs);
+            } else {
+              audio.volume = originalVolume;
+            }
+
+            audio.play();
+          } else {
+            // End of playlist - stop and reset to first track
+            console.log('End of playlist reached - stopping');
+            npAction.text('Playlist ended - Tilde to restart');
+            index = 0;
+            loadTrack(index);
+            // Don't auto-play, just load the first track
+          }
+        }).get(0),
+        btnPrev = $('#btnPrev').click(function () {
+          if ((index - 1) > -1) {
+            index--;
+            loadTrack(index);
+            if (playing) {
+              audio.play();
+            }
+          } else {
+            audio.pause();
+            index = 0;
+            loadTrack(index);
+          }
+        }),
+        btnNext = $('#btnNext').click(function () {
+          if ((index + 1) < tracks.length) {
+            index++;
+            loadTrack(index);
+            if (playing) {
+              audio.play();
+            }
+          } else {
+            audio.pause();
+            index = 0;
+            loadTrack(index);
+          }
+        }),
+        li = $('#plList').on('click', 'li', function () {
+          var id = parseInt($(this).index());
+          if (id !== index) {
+            playTrack(id);
+          }
+        }),
+        loadTrack = function (id) {
+          $('.plSel').removeClass('plSel');
+          $('#plList li:eq(' + id + ')').addClass('plSel');
+          npTitle.text(tracks[id].name);
+          index = id;
+          audio.src = tracks[id].website;
+        },
+        playTrack = function (id) {
+          loadTrack(id);
+          audio.play();
+        };
+
+    extension = audio.canPlayType('audio/mpeg') ? '.mp3' : audio.canPlayType('audio/ogg') ? '.ogg' : '';
+
+    // Load internet songs on page load
+    loadInternetSongs();
+
+    // Initialize collection selector
+    initializeCollectionSelector();
+
+    // Initialize drag and drop functionality
+    initializeDragDrop();
+
+    // Initialize loop timer controls
+    initializeLoopTimerControls();
+
+    // Start updating current time display
+    startCurrentTimeUpdate();
+  }
+
+  // Load predefined internet songs
+  function loadInternetSongs() {
+    console.log('Loading internet songs...');
+
+    // Clear existing tracks
+    tracks = [];
+    $('#plList').empty();
+
+    // Process internet songs
+    internetSongs.forEach((song, index) => {
+      const [trackNum, songName, songUrl] = song;
+
+      tracks.push({
+        "track": trackNum,
+        "name": songName,
+        "website": songUrl
+      });
+
+      $('#plList').append(`
+        <li>
+          <div class="plItem">
+            <div class="plNum">${trackNum}.</div>
+            <div class="plTitle">${songName}</div>
+            <div class="plLength">♪</div>
+          </div>
+        </li>
+      `);
+    });
+
+    // Load the first track
+    if (tracks.length > 0) {
+      index = 0;
+      loadTrack(index);
+      npAction.text('Ready to play - click controls or press tilde');
+      console.log(`Loaded ${tracks.length} internet songs`);
+    } else {
+      npTitle.text('No songs in playlist - add some URLs to songCollections');
+      npAction.text('Waiting for songs...');
+    }
+  }
+
+  // Initialize collection selector dropdown
+  function initializeCollectionSelector() {
+    const selector = $('#collectionSelect');
+
+    // Clear and populate options dynamically
+    selector.empty();
+    Object.keys(songCollections).forEach(key => {
+      const displayName = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+      selector.append(`<option value="${key}">${displayName}</option>`);
+    });
+
+    // Set current selection
+    selector.val(currentCollection);
+
+    // Handle collection change
+    selector.on('change', function() {
+      switchCollection($(this).val());
+    });
+
+    // Handle cycle button
+    $('#cycleCollectionBtn').on('click', function() {
+      const collections = Object.keys(songCollections);
+      const currentIndex = collections.indexOf(currentCollection);
+      const nextIndex = (currentIndex + 1) % collections.length;
+      const nextCollection = collections[nextIndex];
+
+      selector.val(nextCollection);
+      switchCollection(nextCollection);
+    });
+  }
+
+  // Switch to a different collection
+  function switchCollection(selectedCollection) {
+    if (songCollections[selectedCollection]) {
+      // Stop current audio if playing
+      audio.pause();
+
+      // Update current collection
+      currentCollection = selectedCollection;
+      internetSongs = songCollections[selectedCollection];
+
+      // Save selection to localStorage
+      localStorage.setItem('selectedCollection', selectedCollection);
+
+      // Reload the playlist
+      loadInternetSongs();
+
+      console.log(`Switched to collection: ${selectedCollection}`);
+    }
+  }
+
+  var increment_ = 0;
+
+  $(document).on("keydown", function (e) {
+    // Update keycode display
+    const keyCodeDisplay = document.getElementById('keyCodeDisplay');
+    if (keyCodeDisplay) {
+      const keyName = getKeyDisplayName(e);
+      keyCodeDisplay.textContent = `Last Key: ${keyName} | Time: 1-7,QWERTY,ASDF,ZXCV | Controls: ~,arrows,0,space`;
+    }
+
+    // Handle arrow keys for track navigation
+    if (e.keyCode == 37) { // Left arrow key
+      $("#btnPrev").click();
+      return;
+    } else if (e.keyCode == 39) { // Right arrow key
+      $("#btnNext").click();
+      return;
+    } else if (e.keyCode == 38) { // Up arrow key
+      if (audio.duration) {
+        let thirty_seconds_array = Array.from({ length: Math.ceil(audio.duration / 30) }, (_, i) => i * 30);
+        increment_ = (increment_ + 1) % parseInt(audio.duration / 30);
+        audio.currentTime = thirty_seconds_array[increment_];
+      }
+      return;
+    } else if (e.keyCode == 40) { // Down arrow key
+      if (audio.duration) {
+        let thirty_seconds_array = Array.from({ length: Math.ceil(audio.duration / 30) }, (_, i) => i * 30);
+        if (increment_ < 0) {
+          increment_ = increment_ + 1;
+        } else {
+          increment_ = (increment_ - 1);
+        }
+        audio.currentTime = thirty_seconds_array[increment_];
+      }
+      return;
+    } else if (e.keyCode == 192) { // Tilde key (~)
+      if (playing) {
+        audio.pause();
+      } else {
+        audio.play();
+      }
+      return;
+    }
+
+    // Prevent default for form inputs
+    if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) {
+      return;
+    }
+
+    // Enhanced time jump functionality with shift modifier and minute offset
+    const timeJumpKeys = {
+      // 1-7: First minute base times (0:00, 0:10, 0:20, 0:30, 0:40, 0:50, 1:00)
+      'Digit1': 0, 'Digit2': 10, 'Digit3': 20, 'Digit4': 30, 'Digit5': 40, 'Digit6': 50, 'Digit7': 60,
+      // Q,W,E,R,T,Y,U: Second minute base times (1:00, 1:10, 1:20, 1:30, 1:40, 1:50, 2:00)
+      'KeyQ': 60, 'KeyW': 70, 'KeyE': 80, 'KeyR': 90, 'KeyT': 100, 'KeyY': 110, 'KeyU': 120,
+      // A,S,D,F,G,H,J: Third minute base times (2:00, 2:10, 2:20, 2:30, 2:40, 2:50, 3:00)
+      'KeyA': 120, 'KeyS': 130, 'KeyD': 140, 'KeyF': 150, 'KeyG': 160, 'KeyH': 170, 'KeyJ': 180,
+      // Z,X,C,V,B,N,M: Fourth minute base times (3:00, 3:10, 3:20, 3:30, 3:40, 3:50, 4:00)
+      'KeyZ': 180, 'KeyX': 190, 'KeyC': 200, 'KeyV': 210, 'KeyB': 220, 'KeyN': 230, 'KeyM': 240
+    };
+
+    if (timeJumpKeys[e.code] !== undefined) {
+      e.preventDefault();
+
+      let targetTime = timeJumpKeys[e.code];
+
+      // Add minute offset from dropdown
+      const minuteOffset = parseInt(document.getElementById('minuteOffset').value) || 0;
+      targetTime += (minuteOffset * 60);
+
+      // Apply -5s offset with shift, but skip keys that would be negative after offset calculation
+      if (e.shiftKey) {
+        const potentialTime = targetTime - 5;
+        if (potentialTime >= 0) {
+          targetTime = potentialTime;
+        }
+      }
+
+      jumpToTime(targetTime, e.shiftKey, minuteOffset);
+      return;
+    }
+
+    // Handle play/pause for 0 key and spacebar
+    if (e.code === 'Digit0' || e.code === 'Space') {
+      e.preventDefault();
+      if (playing) {
+        audio.pause();
+      } else {
+        audio.play();
+      }
+      return;
+    }
+  });
+
+  // Reset keycode display on page load
+  $(document).ready(function() {
+    const keyCodeDisplay = document.getElementById('keyCodeDisplay');
+    if (keyCodeDisplay) {
+      keyCodeDisplay.textContent = 'Press 0-9 to play track number, arrows to navigate, tilde (~) to toggle play/pause';
+    }
+  });
+
+  var element1 = document.getElementById("mainwrap");
+  element1.onclick = function () {
+    audio.volume = 0.4;
+  }
+
+  var audio1 = document.querySelector('audio');
+  audio1.addEventListener('play', function () {
+    audio.volume = 0.4;
+  });
+
+  // Volume change tracking for fade functionality
+  audio1.addEventListener('volumechange', function () {
+    // Only capture if it's not a fade operation and volume > 0.1
+    if (!fadeInProgress && !fadeOutProgress && audio1.volume > 0.1) {
+      const oldVolume = originalVolume;
+      originalVolume = audio1.volume;
+      console.log(`🎚️ Volume slider changed - Updated originalVolume from ${oldVolume.toFixed(2)} to ${originalVolume.toFixed(2)}`);
+    }
+  });
+
+  // Detect manual seeks to update loop start point
+  audio1.addEventListener('seeked', function () {
+    // Only update loop if it's a manual seek (not our programmatic rewind)
+    if (loopTimerActive && !isProgrammaticSeek) {
+      const newStartTime = audio1.currentTime;
+      console.log(`🎯 Manual seek detected during loop - updating start point from ${formatTime(loopStartTime)} to ${formatTime(newStartTime)}`);
+
+      // Update the loop start time
+      loopStartTime = newStartTime;
+
+      // Cancel current timeout and restart the loop cycle from new position
+      if (loopTimerTimeout) {
+        clearTimeout(loopTimerTimeout);
+        loopTimerTimeout = null;
+      }
+
+      // Restart loop cycle (keep current repeat count)
+      loopCurrentRepeat--; // Decrement because runLoopCycle will increment
+      runLoopCycle();
+
+      // Update status display
+      updateLoopStatus();
+    }
+    // Reset the flag
+    isProgrammaticSeek = false;
+  });
+
+  function initializeDragDrop() {
+    const dragDropZone = document.getElementById('dragDropZone');
+    const fileInput = document.getElementById('audio_file');
+
+    // Click to select files
+    dragDropZone.addEventListener('click', (e) => {
+      if (e.target !== dragDropZone.querySelector('button')) {
+        fileInput.click();
+      }
+    });
+
+    // File input change - handle multiple files
+    fileInput.addEventListener('change', (e) => {
+      const files = e.target.files;
+      if (files.length > 0) {
+        handleMultipleAudioFiles(files);
+      }
+    });
+
+    // Drag and drop events
+    dragDropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dragDropZone.classList.add('drag-over');
+    });
+
+    dragDropZone.addEventListener('dragleave', (e) => {
+      e.preventDefault();
+      dragDropZone.classList.remove('drag-over');
+    });
+
+    dragDropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dragDropZone.classList.remove('drag-over');
+
+      const files = e.dataTransfer.files;
+      if (files.length > 0) {
+        handleMultipleAudioFiles(files);
+      }
+    });
+  }
+
+  function handleMultipleAudioFiles(files) {
+    const audioFiles = Array.from(files).filter(file =>
+      file.type.includes('audio') || file.name.toLowerCase().endsWith('.mp3')
+    );
+
+    if (audioFiles.length === 0) {
+      alert('Please select audio files only (.mp3, .wav, .ogg, etc.)');
+      return;
+    }
+
+    // Add to existing tracks (don't clear internet songs)
+    const startIndex = tracks.length;
+
+    // Process each audio file
+    audioFiles.forEach((file, index) => {
+      const fileName = file.name.replace(/\.[^/.]+$/, ''); // Remove extension
+      const fileUrl = URL.createObjectURL(file);
+      const trackNumber = startIndex + index + 1;
+
+      tracks.push({
+        "track": trackNumber.toString(),
+        "name": fileName,
+        "website": fileUrl,
+        "file": file
+      });
+
+      $('#plList').append(`
+        <li>
+          <div class="plItem">
+            <div class="plNum">${trackNumber}.</div>
+            <div class="plTitle">${fileName}</div>
+            <div class="plLength">📁</div>
+          </div>
+        </li>
+      `);
+    });
+
+    console.log(`Added ${audioFiles.length} local audio files (total tracks: ${tracks.length})`);
+  }
+
+  // Function to handle track number selection
+  function handleTrackNumberInput(digit) {
+    // Clear existing timeout first
+    if (trackInputTimeoutRef) {
+      clearTimeout(trackInputTimeoutRef);
+    }
+
+    // Update the input string
+    trackNumberInput += digit;
+    console.log(`Track input: "${trackNumberInput}" (added digit: ${digit})`);
+
+    // Update keycode display to show current input
+    const keyCodeDisplay = document.getElementById('keyCodeDisplay');
+    if (keyCodeDisplay) {
+      keyCodeDisplay.textContent = `Entering track number: ${trackNumberInput} (will play in 1.5s)`;
+    }
+
+    // Set new timeout for 1.5 seconds
+    trackInputTimeoutRef = setTimeout(() => {
+      const trackNumber = parseInt(trackNumberInput);
+      if (trackNumber > 0 && trackNumber <= tracks.length) {
+        const trackIndex = trackNumber - 1; // Convert to 0-based index
+        console.log(`Playing track ${trackNumber}: ${tracks[trackIndex].name}`);
+        playTrack(trackIndex);
+
+        // Update keycode display
+        if (keyCodeDisplay) {
+          keyCodeDisplay.textContent = `Playing track ${trackNumber}: ${tracks[trackIndex].name}`;
+        }
+      } else {
+        console.warn(`Invalid track number: ${trackNumber}. Valid range: 1-${tracks.length}`);
+        if (keyCodeDisplay) {
+          keyCodeDisplay.textContent = `Invalid track number: ${trackNumber}. Valid range: 1-${tracks.length}`;
+        }
+      }
+      // Reset the input after processing
+      trackNumberInput = '';
+
+      // Reset display after 3 seconds
+      setTimeout(() => {
+        if (keyCodeDisplay) {
+          keyCodeDisplay.textContent = 'Press 0-9 to play track number, arrows to navigate, tilde (~) to toggle play/pause';
+        }
+      }, 3000);
+    }, 1500);
+  }
+
+  // Fade functionality functions
+  function startFadeOut(durationMs) {
+    if (fadeOutProgress) return;
+
+    fadeOutProgress = true;
+    const startVolume = audio.volume;
+    const steps = 20; // Number of fade steps
+    const stepDuration = durationMs / steps;
+    const volumeStep = startVolume / steps;
+
+    console.log(`📉 Fade out started - From volume: ${startVolume} to 0, over ${durationMs}ms, ${steps} steps`);
+
+    let currentStep = 0;
+    fadeOutInterval = setInterval(() => {
+      // Check if fade was cancelled
+      if (!fadeOutProgress) {
+        clearInterval(fadeOutInterval);
+        fadeOutInterval = null;
+        return;
+      }
+
+      currentStep++;
+      const newVolume = Math.max(0, startVolume - (volumeStep * currentStep));
+      audio.volume = newVolume;
+
+      if (currentStep % 5 === 0) { // Log every 5th step to avoid spam
+        console.log(`📉 Fade out step ${currentStep}/${steps}: volume = ${newVolume.toFixed(3)}`);
+      }
+
+      if (currentStep >= steps || newVolume <= 0) {
+        console.log(`📉 Fade out complete - Final volume: ${audio.volume}`);
+        clearInterval(fadeOutInterval);
+        fadeOutInterval = null;
+        fadeOutProgress = false;
+      }
+    }, stepDuration);
+  }
+
+  function startFadeIn(durationMs) {
+    if (fadeInProgress) return;
+
+    fadeInProgress = true;
+    audio.volume = 0; // Start silent
+    const targetVolume = originalVolume;
+    const steps = 20; // Number of fade steps
+    const stepDuration = durationMs / steps;
+    const volumeStep = targetVolume / steps;
+
+    console.log(`📈 Fade in started - From 0 to target volume: ${targetVolume}, over ${durationMs}ms, ${steps} steps`);
+
+    let currentStep = 0;
+    fadeInInterval = setInterval(() => {
+      // Check if fade was cancelled
+      if (!fadeInProgress) {
+        clearInterval(fadeInInterval);
+        fadeInInterval = null;
+        return;
+      }
+
+      currentStep++;
+      const newVolume = Math.min(targetVolume, volumeStep * currentStep);
+      audio.volume = newVolume;
+
+      if (currentStep % 5 === 0) { // Log every 5th step to avoid spam
+        console.log(`📈 Fade in step ${currentStep}/${steps}: volume = ${newVolume.toFixed(3)}`);
+      }
+
+      if (currentStep >= steps || newVolume >= targetVolume) {
+        audio.volume = targetVolume;
+        console.log(`📈 Fade in complete - Final volume set to: ${audio.volume}`);
+        clearInterval(fadeInInterval);
+        fadeInInterval = null;
+        fadeInProgress = false;
+      }
+    }, stepDuration);
+  }
+
+  // Cancel any ongoing fades and restore volume
+  function cancelFades() {
+    if (fadeOutInterval) {
+      clearInterval(fadeOutInterval);
+      fadeOutInterval = null;
+    }
+    if (fadeInInterval) {
+      clearInterval(fadeInInterval);
+      fadeInInterval = null;
+    }
+    fadeOutProgress = false;
+    fadeInProgress = false;
+    audio.volume = originalVolume;
+    console.log(`🎚️ Fades cancelled, volume restored to ${originalVolume}`);
+  }
+
+  function checkFadeOnLoop() {
+    if (!audio) return;
+
+    const fadeEnabled = document.getElementById('fadeToggle').checked;
+    const fadeOutMs = parseInt(document.getElementById('fadeOutDuration').value) || 200;
+    const fadeInMs = parseInt(document.getElementById('fadeInDuration').value) || 200;
+
+    if (fadeEnabled && audio.duration) {
+      const currentTime = audio.currentTime;
+      const fadeOutStartTime = audio.duration - (fadeOutMs / 1000);
+
+      // Start fade out near end of track
+      if (currentTime >= fadeOutStartTime && currentTime < audio.duration && !fadeOutProgress) {
+        // Capture current volume before fading
+        if (audio.volume > 0.1) {
+          originalVolume = audio.volume;
+        } else if (originalVolume <= 0.1) {
+          originalVolume = 0.4; // Fallback
+        }
+        console.log(`🎚️ Starting fade out - Current volume: ${audio.volume}, Using originalVolume: ${originalVolume}`);
+        startFadeOut(fadeOutMs);
+      }
+    }
+  }
+
+  // ============ LOOP TIMER FUNCTIONS ============
+
+  // Format seconds to MM:SS or H:MM:SS
+  function formatTime(seconds) {
+    if (isNaN(seconds) || seconds < 0) return '0:00';
+    const hrs = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    const secs = Math.floor(seconds % 60);
+    if (hrs > 0) {
+      return `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  }
+
+  // Start updating the current time display
+  function startCurrentTimeUpdate() {
+    // Clear any existing interval
+    if (currentTimeUpdateInterval) {
+      clearInterval(currentTimeUpdateInterval);
+    }
+
+    // Update every 100ms for smooth display
+    currentTimeUpdateInterval = setInterval(() => {
+      if (audio && audio.currentTime !== undefined) {
+        const timeDisplay = document.getElementById('currentTimeValue');
+        if (timeDisplay) {
+          timeDisplay.textContent = formatTime(audio.currentTime);
+        }
+      }
+    }, 100);
+  }
+
+  // Get selected repeat count
+  function getRepeatCount() {
+    const selected = document.querySelector('input[name="loopRepeat"]:checked');
+    return selected ? parseInt(selected.value) : 1;
+  }
+
+  // Initialize loop timer button controls
+  function initializeLoopTimerControls() {
+    const btn30s = document.getElementById('timer30sBtn');
+    const btn60s = document.getElementById('timer60sBtn');
+    const btn3min = document.getElementById('timer3minBtn');
+
+    btn30s.addEventListener('click', function() {
+      handleLoopTimerClick(this, 30000, '🔄 30s');
+    });
+
+    btn60s.addEventListener('click', function() {
+      handleLoopTimerClick(this, 60000, '🔄 1m');
+    });
+
+    btn3min.addEventListener('click', function() {
+      handleLoopTimerClick(this, 180000, '🔄 3m');
+    });
+
+    console.log('Loop timer controls initialized');
+  }
+
+  // Handle loop timer button click
+  function handleLoopTimerClick(buttonElement, durationMs, label) {
+    // If this button is already active, cancel the loop
+    if (loopTimerActive && loopActiveButton === buttonElement) {
+      cancelLoopTimer();
+      console.log('Loop timer cancelled by clicking same button');
+      return;
+    }
+
+    // If another timer is running, cancel it first
+    if (loopTimerActive) {
+      cancelLoopTimer();
+    }
+
+    // Start new loop timer
+    startLoopTimer(buttonElement, durationMs, label);
+  }
+
+  // Start the loop timer
+  function startLoopTimer(buttonElement, durationMs, label) {
+    // Capture current time as start point
+    loopStartTime = audio ? audio.currentTime : 0;
+    loopDurationMs = durationMs;
+    loopTotalRepeats = getRepeatCount();
+    loopCurrentRepeat = 0;
+    loopActiveButton = buttonElement;
+    loopTimerActive = true;
+
+    // Mark button as active
+    buttonElement.classList.add('active');
+    buttonElement.textContent = `⏹️ Stop`;
+
+    // Start playback if not already playing
+    if (audio && !playing) {
+      audio.play();
+    }
+
+    // Update status display
+    updateLoopStatus();
+
+    // Start the loop cycle
+    runLoopCycle();
+
+    console.log(`Loop timer started: ${formatTime(loopStartTime)} for ${durationMs/1000}s, ${loopTotalRepeats} repeats`);
+  }
+
+  // Run one cycle of the loop
+  function runLoopCycle() {
+    if (!loopTimerActive) return;
+
+    loopCurrentRepeat++;
+    updateLoopStatus();
+
+    // Set timeout for end of this cycle
+    loopTimerTimeout = setTimeout(() => {
+      if (!loopTimerActive) return;
+
+      // Check if we have more repeats
+      if (loopCurrentRepeat < loopTotalRepeats) {
+        // Rewind to start point and continue
+        if (audio) {
+          isProgrammaticSeek = true; // Flag so seeked event knows this is not manual
+          audio.currentTime = loopStartTime;
+        }
+        console.log(`Loop ${loopCurrentRepeat}/${loopTotalRepeats} complete, rewinding to ${formatTime(loopStartTime)}`);
+        runLoopCycle();
+      } else {
+        // All repeats done - rewind and stop
+        if (audio) {
+          isProgrammaticSeek = true; // Flag so seeked event knows this is not manual
+          audio.currentTime = loopStartTime;
+          audio.pause();
+        }
+        console.log(`All ${loopTotalRepeats} loops complete! Rewound to ${formatTime(loopStartTime)}`);
+        cancelLoopTimer();
+      }
+    }, loopDurationMs);
+  }
+
+  // Update the loop status display
+  function updateLoopStatus() {
+    const statusDiv = document.getElementById('loopStatus');
+    if (!statusDiv) return;
+
+    if (loopTimerActive) {
+      const endTime = loopStartTime + (loopDurationMs / 1000);
+      statusDiv.textContent = `Loop: ${formatTime(loopStartTime)} → ${formatTime(endTime)} | Repeat: ${loopCurrentRepeat}/${loopTotalRepeats}`;
+      statusDiv.classList.add('active');
+    } else {
+      statusDiv.classList.remove('active');
+    }
+  }
+
+
+ // Your lyrics data
+        const lyricsData = `#Jesus at the Center
+Jesus at the center of it all
+Jesus at the center of it all
+||
+From beginning to the end
+It will always be, it's always been You, Jesus
+||
+[Verse 1]
+Jesus at the center of it all
+Jesus at the center of it all
+||
+From beginning to the end
+It will always be, it's always been You, Jesus
+||
+[Chorus 1]
+Nothing else matters, nothing in this world will do
+Jesus, You're the center, and everything revolves around You
+||
+Jesus, You, the center of it all
+The center of it all
+||
+[Verse 2]
+Jesus be the center of my life
+Jesus be the center of my life
+||
+From beginning to the end
+It will always be, it's always been You, Jesus
+||
+[Chorus 2]
+Nothing else matters, nothing in this world will do
+Jesus, You're the center, and everything revolves around You
+||
+Nothing else matters, nothing in this world will do
+Jesus, You're the center, and everything revolves around You
+||
+[Bridge]
+From my heart to the heavens
+Jesus be the center
+||
+It's all about You
+Yes, it's all about You
+||
+From my heart to the heavens
+Jesus be the center
+||
+It's all about You
+Yes, it's all about You
+||
+From my heart to the heavens
+Jesus be the center
+||
+It's all about You
+Yes, it's all about You
+||
+From my heart to the heavens
+Jesus be the center
+||
+It's all about You
+Yes, it's all about You
+||
+[Verse 3]
+Jesus be the center of Your Church
+Jesus be the center of Your Church
+||
+And every knee will bow
+And every tongue shall confess You...
+||
+Jesus, Jesus
+Jesus, Jesus
+
+
+#Ever Be
+[Verse 1]
+Your love is devoted
+Like a ring of solid gold
+||
+Like a vow that is tested
+Like a covenant of old
+||
+And Your love is enduring
+Through the winter rain
+||
+And beyond the horizon
+With mercy for today
+||
+[Pre-Chorus]
+Faithful You have been
+||
+And faithful You will be
+You pledge yourself to me
+||
+And it's why I sing
+[Chorus]
+||
+Your praise will ever be on my lips
+Ever be on my lips
+||
+Your praise will ever be on my lips
+Ever be on my lips
+||
+Your praise will ever be on my lips
+Ever be on my lips
+||
+Your praise will ever be on my lips
+Ever be on my lips
+||
+[Verse 2]
+You Father the orphan
+Your kindness makes us whole
+||
+And You shoulder our weakness
+And Your strength becomes our own
+||
+Now You're making me like You
+Clothing me in white
+||
+Bringing beauty from ashes
+For You will have Your bride
+||
+Free of all the guilt
+And rid of all the shame
+||
+And known by her true name
+And it's why I sing
+||
+[Chorus]
+Your praise will ever be on my lips
+||
+Ever be on my lips
+Your praise will ever be on my lips
+||
+Ever be on my lips
+Your praise will ever be on my lips
+||
+Ever be on my lips
+Your praise will ever be on my lips
+||
+[Bridge]
+You will be praised
+||
+You will be praised
+With angels and saints we sing worthy are You
+||
+Lord You will be praised
+You will be praised
+||
+With angels and saints we sing worthy are You
+Lord You will be praised
+||
+You will be praised
+With angels and saints we sing worthy are You
+||
+Lord You will be praised
+You will be praised
+||
+With angels and saints we sing worthy are You
+Lord
+
+
+#Won't start now
+verse
+I′ve never seen a morning the sun forgot to rise
+||
+In every single detail You're faithful every time
+I′ve never lived a moment that You weren't by my side
+||
+'Cause You′ve never made a promise
+Turned around and changed Your mind
+||
+pre-chorus
+You′ve never left me in the cold
+||
+Never hurt me or let me go
+You never have before
+||
+chorus
+And You won't start now
+||
+You won′t start now
+I know I won't be on my own
+||
+Whatever comes
+You′ve never let me walk alone
+||
+Not even once
+And You won't start now
+||
+verse
+I′ll never be abandoned in the dead of night
+||
+I'll never have to worry if I'll be alright
+I′ll never have to wonder if I′m on Your mind
+||
+I'll never see a breakthrough come that isn′t right on time
+pre-chorus
+||
+You've never left me in the cold
+Never hurt me or let me go
+||
+You never have before
+chorus
+||
+And You won′t start now
+You won't start now
+||
+I know I won′t be on my own
+Whatever comes
+||
+You've never let me walk alone
+Not even once and You won't start now
+||
+hook
+(You won′t start now), no (won′t start now)
+||
+verse
+You're gonna be there for me every night and day
+||
+You′ll be my shelter, you will be my hiding place
+And I know you′re never gonna let me down, down, down
+
+#I thank God Maverick City
+verse 1
+Wandering into the night
+||
+Wanting a place to hide
+This weary soul, this bag of bones
+||
+I tried with all my might
+But I just can't win the fight
+||
+I'm slowly drifting
+Oh, vagabond and just when I ran out of road
+||
+I met a man I didn't know
+And he told me that I was not alone (no)
+||
+chorus
+He picked me up (hey)
+||
+He turned me around (hey)
+And placed my feet on solid ground
+||
+I thank the Master
+I thank the Savior
+||
+Because He healed my heart
+And changed my name
+||
+Forever free, I am not the same
+I thank the Master
+||
+I thank the Savior
+I thank God
+||
+verse 2
+I cannot deny what I've see (oh, no, no)
+Got no choice but to believe
+||
+My doubts are burning
+Ohh, like ashes in the wind
+||
+So, so long to my old friends
+Burden and bitterness
+||
+verse 3
+You can just keep them moving
+||
+For you ain't welcome here (you ain't welcome here)
+From now 'til I walk the streets of gold
+||
+I'll sing of how You saved my soul
+This wayward son has found his way back home
+||
+chorus
+He picked me up (hey)
+||
+He turned me around
+He placed my feet on solid ground
+||
+I thank the Master
+I thank the Savior
+||
+Because He healed my heart
+And changed my name
+||
+Forever free, I'm not the same
+I thank the Master
+||
+I thank the Savior
+Oh, I thank God
+||
+bridge
+Hell lost another one, I am free (I am free)
+||
+Oh, I am free (oh, I am free), oh, I am free
+Hell lost another one, I am free (oh, I am free)
+||
+I am free (I am free), oh, I am free
+Hell lost another one, I am free (oh, I am free)
+||
+Oh, I am free (yes), I am free
+Hell lost another one, I am free (oh, I am free)`;
+
+  // ============ LYRICS VIEWER FUNCTIONS ============
+
+  // Parse songs from the lyrics data
+  function parseLyricsSongs(data) {
+    const songs = [];
+    const songSections = data.split('#').filter(s => s.trim());
+
+    songSections.forEach(section => {
+      const lines = section.trim().split('\n');
+      const title = lines[0].trim();
+      const content = lines.slice(1).join('\n').trim();
+      songs.push({ title, content });
+    });
+
+    return songs;
+  }
+
+  // Format lyrics content with verse labels
+  function formatLyricsContent(content) {
+    let formatted = '';
+    const lines = content.split('\n');
+
+    lines.forEach(line => {
+      line = line.trim();
+      if (!line) {
+        formatted += '\n';
+      } else if (line === '||') {
+        formatted += '\n';
+      } else if (line.match(/^\[.*\]$/)) {
+        // Section labels like [Verse 1], [Chorus], etc.
+        formatted += `<div class="lv-verse-label">${line}</div>\n`;
+      } else if (line.toLowerCase().startsWith('verse') ||
+                 line.toLowerCase().startsWith('chorus') ||
+                 line.toLowerCase().startsWith('bridge') ||
+                 line.toLowerCase().startsWith('pre-chorus') ||
+                 line.toLowerCase().startsWith('hook')) {
+        formatted += `<div class="lv-verse-label">[${line}]</div>\n`;
+      } else {
+        formatted += line + '\n';
+      }
+    });
+
+    return formatted;
+  }
+
+  // Initialize Lyrics Viewer
+  const lvSongs = parseLyricsSongs(lyricsData);
+  let lvCurrentSongIndex = 0;
+
+  // Populate dropdown
+  const lvSongSelect = document.getElementById('lvSongSelect');
+  lvSongs.forEach((song, index) => {
+    const option = document.createElement('option');
+    option.value = index;
+    option.textContent = song.title;
+    lvSongSelect.appendChild(option);
+  });
+
+  // Display song function
+  function lvDisplaySong(index) {
+    if (index < 0 || index >= lvSongs.length) return;
+
+    lvCurrentSongIndex = index;
+    const song = lvSongs[index];
+    const lyricsDisplay = document.getElementById('lvLyricsDisplay');
+
+    const formattedLyrics = formatLyricsContent(song.content);
+    lyricsDisplay.innerHTML = `
+      <div class="lv-song-title">${song.title}</div>
+      <div class="lv-lyrics-content">${formattedLyrics}</div>
+    `;
+
+    lvSongSelect.value = index;
+    lvUpdateButtons();
+    lyricsDisplay.scrollTop = 0;
+  }
+
+  // Update button states
+  function lvUpdateButtons() {
+    document.getElementById('lvPrevBtn').disabled = lvCurrentSongIndex === 0;
+    document.getElementById('lvNextBtn').disabled = lvCurrentSongIndex === lvSongs.length - 1;
+  }
+
+  // Navigation functions
+  function lvNextSong() {
+    if (lvCurrentSongIndex < lvSongs.length - 1) {
+      lvDisplaySong(lvCurrentSongIndex + 1);
+    }
+  }
+
+  function lvPrevSong() {
+    if (lvCurrentSongIndex > 0) {
+      lvDisplaySong(lvCurrentSongIndex - 1);
+    }
+  }
+
+  // Event listeners for lyrics viewer
+  lvSongSelect.addEventListener('change', (e) => {
+    const index = parseInt(e.target.value);
+    if (!isNaN(index)) {
+      lvDisplaySong(index);
+    }
+  });
+
+  document.getElementById('lvNextBtn').addEventListener('click', lvNextSong);
+  document.getElementById('lvPrevBtn').addEventListener('click', lvPrevSong);
+
+  // Display first song by default
+  if (lvSongs.length > 0) {
+    lvDisplaySong(0);
+  }
+
+
+  // Cancel the loop timer
+  function cancelLoopTimer() {
+    // Clear timeout
+    if (loopTimerTimeout) {
+      clearTimeout(loopTimerTimeout);
+      loopTimerTimeout = null;
+    }
+
+    // Reset button state
+    if (loopActiveButton) {
+      loopActiveButton.classList.remove('active');
+      // Restore original label based on button ID
+      if (loopActiveButton.id === 'timer30sBtn') {
+        loopActiveButton.textContent = '🔄 30s';
+      } else if (loopActiveButton.id === 'timer60sBtn') {
+        loopActiveButton.textContent = '🔄 1m';
+      } else if (loopActiveButton.id === 'timer3minBtn') {
+        loopActiveButton.textContent = '🔄 3m';
+      }
+      loopActiveButton = null;
+    }
+
+    // Reset state
+    loopTimerActive = false;
+    loopCurrentRepeat = 0;
+
+    // Hide status
+    updateLoopStatus();
+
+    console.log('Loop timer cancelled');
+  }
+
+  // ============ GOOGLE SHEETS AUTH (same pattern as learn-chinese.html) ============
+
+  const GDRIVE_CLIENT_ID = '1095683227908-7ro25k16mprkf408i3lf583gti8v759b.apps.googleusercontent.com';
+  const GDRIVE_SCOPES = 'https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/spreadsheets.readonly';
+
+  let gdriveAccessToken = null;
+  let gdriveTokenClient = null;
+  let gdriveWorkbook = null;
+
+  function setSheetsStatus(msg) {
+    const el = document.getElementById('sheetsStatus');
+    if (el) el.textContent = msg;
+  }
+
+  function gdriveInitClient() {
+    if (window.google && window.google.accounts) {
+      gdriveTokenClient = window.google.accounts.oauth2.initTokenClient({
+        client_id: GDRIVE_CLIENT_ID,
+        scope: GDRIVE_SCOPES,
+        callback: function(response) {
+          if (response.access_token) {
+            gdriveAccessToken = response.access_token;
+            document.getElementById('authBtn').textContent = 'Sign Out';
+            document.getElementById('searchBtn').disabled = false;
+            setSheetsStatus('Signed in. Search for your spreadsheet.');
+          }
+        }
+      });
+    }
+  }
+
+  const checkGoogle = setInterval(function() {
+    if (window.google && window.google.accounts) {
+      clearInterval(checkGoogle);
+      gdriveInitClient();
+    }
+  }, 200);
+
+  function gdriveSignIn() {
+    if (gdriveAccessToken) {
+      gdriveAccessToken = null;
+      gdriveWorkbook = null;
+      document.getElementById('authBtn').textContent = 'Sign In';
+      document.getElementById('searchBtn').disabled = true;
+      document.getElementById('sheetSelect').innerHTML = '<option value="">Sign in first</option>';
+      document.getElementById('sheetSelect').disabled = true;
+      setSheetsStatus('Signed out.');
+      return;
+    }
+    if (gdriveTokenClient) {
+      gdriveTokenClient.requestAccessToken();
+    } else {
+      setSheetsStatus('Google API not loaded yet. Try again.');
+    }
+  }
+
+  async function gdriveSearch() {
+    const searchTerm = document.getElementById('searchInput').value.trim();
+    if (!searchTerm) { setSheetsStatus('Enter a spreadsheet name.'); return; }
+    try {
+      setSheetsStatus('Searching for "' + searchTerm + '"...');
+      const query = encodeURIComponent("name contains '" + searchTerm + "' and trashed=false and mimeType='application/vnd.google-apps.spreadsheet'");
+      const resp = await fetch('https://www.googleapis.com/drive/v3/files?q=' + query + '&fields=files(id,name)&orderBy=name', {
+        headers: { Authorization: 'Bearer ' + gdriveAccessToken }
+      });
+      if (!resp.ok) throw new Error('Search failed: ' + resp.status);
+      const data = await resp.json();
+      if (!data.files || data.files.length === 0) {
+        setSheetsStatus('No spreadsheet matching "' + searchTerm + '" found.');
+        return;
+      }
+      const file = data.files[0];
+      setSheetsStatus('Loading "' + file.name + '"...');
+      await loadSpreadsheet(file.id, file.name);
+    } catch (err) {
+      setSheetsStatus('Error: ' + err.message);
+    }
+  }
+
+  async function loadSpreadsheet(fileId, fileName) {
+    try {
+      const exportMime = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+      const resp = await fetch('https://www.googleapis.com/drive/v3/files/' + fileId + '/export?mimeType=' + encodeURIComponent(exportMime), {
+        headers: { Authorization: 'Bearer ' + gdriveAccessToken }
+      });
+      if (!resp.ok) throw new Error('Export failed: ' + resp.status);
+      const arrayBuffer = await resp.arrayBuffer();
+      gdriveWorkbook = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array' });
+
+      const sel = document.getElementById('sheetSelect');
+      sel.innerHTML = '<option value="">-- select a sheet tab --</option>';
+      gdriveWorkbook.SheetNames.forEach(function(name) {
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        sel.appendChild(opt);
+      });
+      sel.disabled = false;
+      if (gdriveWorkbook.SheetNames.length === 1) {
+        sel.value = gdriveWorkbook.SheetNames[0];
+        onSheetSelect();
+      }
+      setSheetsStatus('Loaded "' + fileName + '" — ' + gdriveWorkbook.SheetNames.length + ' sheet(s). Select a tab.');
+    } catch (err) {
+      setSheetsStatus('Error: ' + err.message);
+    }
+  }
+
+  function onSheetSelect() {
+    const sheetName = document.getElementById('sheetSelect').value;
+    if (!sheetName || !gdriveWorkbook) return;
+
+    const sheet = gdriveWorkbook.Sheets[sheetName];
+    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+
+    // Use sheet tab name as the collection name
+    const { collectionName, songs } = parseRowsAsPlaylist(rows, sheetName);
+    applyPlaylistCSV(collectionName, songs, 'Google Sheets: ' + sheetName);
+  }
+
+  // Parse 2D array rows [[col1, col2], ...] into playlist songs
+  function parseRowsAsPlaylist(rows, defaultName) {
+    let collectionName = defaultName || 'imported';
+    const songs = [];
+
+    for (const row of rows) {
+      const first = String(row[0] || '').trim();
+      const second = String(row[1] || '').trim();
+
+      if (!first) continue;
+
+      // Optional playlist_name row
+      if (first.toLowerCase() === 'playlist_name') {
+        collectionName = second || collectionName;
+        continue;
+      }
+      // Skip header rows
+      if (/^(name|title|song|track|url|link)$/i.test(first)) continue;
+
+      const firstIsUrl = first.startsWith('http');
+      const url = firstIsUrl ? first : second;
+      const rawName = firstIsUrl ? second : first;
+      const name = rawName || (url ? nameFromUrl(url) : 'Track ' + (songs.length + 1));
+
+      if (url) songs.push([(songs.length + 1).toString(), name, url]);
+    }
+    return { collectionName, songs };
+  }
+
+  // ============ PLAYLIST CSV / SHEETS LOADER ============
+
+  // Extract a readable name from a URL
+  function nameFromUrl(url) {
+    try {
+      const pathname = new URL(url).pathname;
+      const filename = decodeURIComponent(pathname.split('/').pop());
+      return filename
+        .replace(/\.[^/.]+$/, '')   // remove extension
+        .replace(/[_-]+/g, ' ')     // underscores/hyphens to spaces
+        .replace(/\[.*?\]/g, '')    // remove [bracketed] IDs
+        .replace(/\s+/g, ' ')       // collapse spaces
+        .trim();
+    } catch {
+      return url;
+    }
+  }
+
+  // Parse CSV text → rows → playlist using shared parseRowsAsPlaylist
+  function parsePlaylistCSV(text) {
+    const lines = text.split('\n').map(l => l.trim()).filter(l => l);
+    const rows = lines.map(line => {
+      const fields = [];
+      let cur = '', inQuote = false;
+      for (let ci = 0; ci < line.length; ci++) {
+        const ch = line[ci];
+        if (ch === '"') { inQuote = !inQuote; }
+        else if (ch === ',' && !inQuote) { fields.push(cur.trim()); cur = ''; }
+        else cur += ch;
+      }
+      fields.push(cur.trim());
+      return fields;
+    });
+    return parseRowsAsPlaylist(rows, 'imported');
+  }
+
+  function applyPlaylistCSV(collectionName, songs, sourceName) {
+    const sheetsStatus = document.getElementById('sheetsStatus');
+    if (songs.length === 0) {
+      sheetsStatus.textContent = `No valid songs found in ${sourceName}. Format: name,url or just url per row.`;
+      sheetsStatus.style.color = '#f44336';
+      return;
+    }
+
+    // Add or replace the collection
+    songCollections[collectionName] = songs;
+
+    // Refresh collection selector and switch to new collection
+    initializeCollectionSelector();
+    switchCollection(collectionName);
+
+    sheetsStatus.textContent = `Loaded ${songs.length} songs as "${collectionName}" from ${sourceName}`;
+    sheetsStatus.style.color = '#8BC34A';
+  }
+
+  // Toggle whole panel
+  document.getElementById('toggleSheetsBtn').addEventListener('click', function() {
+    const body = document.getElementById('sheetsPanelBody');
+    const hidden = body.style.display === 'none';
+    body.style.display = hidden ? '' : 'none';
+    this.textContent = hidden ? '▲ Hide' : '▼ Show';
+  });
+
+  // Toggle local CSV row
+  document.getElementById('toggleLocalCsvBtn').addEventListener('click', function() {
+    const row = document.getElementById('localCsvRow');
+    const hidden = row.style.display === 'none';
+    row.style.display = hidden ? '' : 'none';
+    this.textContent = hidden ? '▲ hide local file' : '▼ or load local CSV file';
+  });
+
+  // Local CSV file load
+  const playlistCsvInput = document.getElementById('playlistCsvInput');
+  playlistCsvInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) document.getElementById('playlistCsvName').textContent = file.name;
+  });
+
+  document.getElementById('loadLocalCsvBtn').addEventListener('click', () => {
+    const sheetsStatus = document.getElementById('sheetsStatus');
+    const file = playlistCsvInput.files[0];
+    if (!file) {
+      sheetsStatus.textContent = 'No file selected.';
+      sheetsStatus.style.color = '#f44336';
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const baseName = file.name.replace(/\.[^/.]+$/, '');
+      const { collectionName, songs } = parsePlaylistCSV(e.target.result);
+      // Use filename as collection name if CSV didn't specify one
+      applyPlaylistCSV(collectionName === 'imported' ? baseName : collectionName, songs, file.name);
+    };
+    reader.readAsText(file);
+  });
+</script>
+</body>
+</html>
