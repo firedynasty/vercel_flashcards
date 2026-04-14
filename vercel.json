@@ -3,7 +3,9 @@
     { "source": "/api/:path*", "destination": "/api/:path*" },
     { "source": "/role-playing.html", "destination": "/role-playing.html" },
     { "source": "/learn-chinese.html", "destination": "/learn-chinese.html" },
-    { "source": "/music.html", "destination": "/music.html" },
+    { "source": "/learn-chinese-tts.html", "destination": "/learn-chinese-tts.html" },
+    { "source": "/musicindex.html", "destination": "/musicindex.html" },
+    { "source": "/classical_player.html", "destination": "/classical_player.html" },
     { "source": "/(.*)", "destination": "/flashcards.html" }
   ]
 }
