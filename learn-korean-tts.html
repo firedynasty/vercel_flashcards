@@ -68,8 +68,7 @@
     font-size: 13px; font-family: monospace;
   }
   .api-key-status {
-    font-size: 11px; padding: 4px 10px; border-radius: 12px;
-    font-weight: 600;
+    font-size: 11px; padding: 4px 10px; border-radius: 12px; font-weight: 600;
   }
   .api-key-status.saved { background: #dcfce7; color: #16a34a; }
   .api-key-status.missing { background: #fef3c7; color: #d97706; }
@@ -109,7 +108,11 @@
   .vocab-card:hover { background-color: #f0f4ff; }
   .vocab-card.speaking { background-color: #dbeafe; border-color: #93c5fd; }
   .vocab-card .num { font-size: 11px; font-weight: 700; color: #aaa; margin-bottom: 4px; }
-  .vocab-card .korean { font-size: 24px; font-weight: 600; margin-bottom: 6px; }
+  .vocab-card .korean {
+    font-size: 24px; font-weight: 600; margin-bottom: 6px;
+    cursor: pointer; display: inline-block;
+  }
+  .vocab-card .korean:hover { color: #2563eb; }
   .vocab-card .romanization {
     font-size: 14px; color: #888; font-style: italic; margin-bottom: 6px;
   }
@@ -128,6 +131,95 @@
     border-bottom: 2px solid #dbeafe;
     margin-bottom: 8px;
   }
+
+  /* ── CONTEXT / SENTENCE LINES ── */
+  .context-line {
+    background: #fefce8; border: 1px solid #fde68a; border-radius: 10px;
+    padding: 10px 16px; margin-bottom: 8px;
+    font-size: 15px; line-height: 1.6; color: #92400e;
+    cursor: pointer;
+  }
+  .context-line:hover { background: #fef9c3; }
+  .context-line.speaking { background: #fde68a; border-color: #f59e0b; }
+  .context-line .ctx-korean {
+    font-size: 20px; font-weight: 600; color: #78350f;
+  }
+  .context-line .ctx-english {
+    font-size: 13px; color: #a16207; margin-top: 2px;
+  }
+
+  /* ── HOVER TOOLTIP (reveal-on-hover mode) ── */
+  .vocab-card { position: relative; z-index: 1; }
+  .vocab-card:hover { z-index: 10; }
+  .def-tip {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: -1px; right: -1px;
+    background: #1e293b;
+    color: #e2e8f0;
+    padding: 12px 16px 14px;
+    font-size: 14px;
+    line-height: 1.65;
+    border-radius: 0 0 12px 12px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+    pointer-events: none;
+    z-index: 20;
+  }
+  .tooltip-on .vocab-card:hover .def-tip { display: block; }
+
+  /* ── HOVER-REVEAL SLIDER ── */
+  .tip-toggle {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 11px; font-weight: 700; color: #555;
+    cursor: pointer; user-select: none; white-space: nowrap;
+  }
+  .tip-switch {
+    position: relative; width: 38px; height: 20px; flex-shrink: 0;
+  }
+  .tip-track {
+    position: absolute; inset: 0;
+    background: #d0d0d0; border-radius: 20px; transition: background 0.25s;
+  }
+  .tip-track.on { background: #2563eb; }
+  .tip-knob {
+    position: absolute; width: 14px; height: 14px;
+    background: white; border-radius: 50%;
+    top: 3px; left: 3px; transition: left 0.25s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  }
+  .tip-knob.on { left: 21px; }
+
+  /* ── ANSWER AREA (inline on vocab cards) ── */
+  .answer-area {
+    display: none;
+    padding: 8px 0 0;
+    border-top: 1px dashed #e5e7eb;
+    margin-top: 8px;
+  }
+  .answer-area.open { display: block; }
+  .answer-area textarea {
+    width: 100%; min-height: 50px;
+    border: 1px solid #ddd; border-radius: 8px;
+    padding: 8px 12px; font-family: inherit; font-size: 13px;
+    line-height: 1.55; resize: vertical; color: #333;
+  }
+  .answer-area textarea:focus { outline: none; border-color: #2563eb; }
+  .answer-area textarea::placeholder { color: #c0c0c0; }
+  .answer-hint {
+    margin-top: 4px; font-size: 11px; color: #b0b0b0;
+    display: flex; justify-content: space-between;
+  }
+  .char-count { font-weight: 600; color: #16a34a; }
+  .try-btn {
+    font-size: 11px; padding: 3px 10px; border-radius: 10px;
+    border: 1px solid #d0d0d0; background: #f5f5f3; color: #555;
+    cursor: pointer; font-weight: 600; font-family: inherit;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+    white-space: nowrap; margin-left: auto;
+  }
+  .try-btn:hover { background: #e0e7ff; border-color: #a5b4fc; color: #4338ca; }
+  .try-btn.open  { background: #dbeafe; border-color: #93c5fd; color: #1d4ed8; }
 
   /* ── STICKY BAR ── */
   .sticky-bar {
@@ -169,12 +261,9 @@
   .switch-knob.on { left: 29px; }
 
   /* ── TOGGLE CHIPS ── */
-  .toggle-row {
-    display: flex; gap: 8px; align-items: center; margin-bottom: 14px; flex-wrap: wrap;
-  }
   .toggle-chip {
-    padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 600;
-    cursor: pointer; border: 1px solid #ddd; background: white; color: #555;
+    padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 700;
+    cursor: pointer; border: 1px solid #ccc; background: white; color: #555;
     user-select: none; transition: all 0.15s;
   }
   .toggle-chip.on { background: #2563eb; color: white; border-color: #2563eb; }
@@ -197,7 +286,7 @@
 
 <div class="container">
   <h1>Korean Lyrics Reader</h1>
-  <div class="subtitle">Hover words for meaning, click to hear pronunciation via ElevenLabs</div>
+  <div class="subtitle">Click to hear pronunciation — Korean via ElevenLabs, OpenAI, or Browser TTS</div>
 
   <!-- Setup Section -->
   <div class="setup-section" id="setupSection">
@@ -207,32 +296,46 @@
     </div>
     <div class="setup-body">
 
-      <!-- ElevenLabs API Key -->
-      <div style="font-size:12px;font-weight:600;color:#555;margin-bottom:6px;">ElevenLabs API Key</div>
-      <div class="api-key-row">
-        <input type="password" id="apiKeyInput" placeholder="Paste your ElevenLabs API key..."
-               onchange="saveApiKey()" onkeyup="saveApiKey()">
-        <span class="api-key-status missing" id="apiKeyStatus">not set</span>
-      </div>
-
       <!-- TTS Engine Toggle -->
       <div style="font-size:12px;font-weight:600;color:#555;margin-bottom:6px;">Voice Engine</div>
       <div class="tts-toggle">
         <button id="ttsToggleBrowser" class="active" onclick="setTtsEngine('browser')">Browser TTS (free)</button>
+        <button id="ttsToggleOpenai" onclick="setTtsEngine('openai')">OpenAI (natural)</button>
         <button id="ttsToggleEleven" onclick="setTtsEngine('elevenlabs')">ElevenLabs (natural)</button>
       </div>
 
-      <!-- ElevenLabs Voice Picker -->
-      <div class="setup-row" id="elevenVoiceRow" style="display:none;">
+      <!-- OpenAI Voice Picker -->
+      <div class="setup-row" id="openaiVoiceRow" style="display:none;">
         <label>Voice</label>
-        <select id="elevenVoiceSelect">
-          <option value="pNInz6obpgDQGcFmaJgB">Adam (deep, warm)</option>
-          <option value="ErXwobaYiN019PkySvjV">Antoni (calm)</option>
-          <option value="VR6AewLTigWG4xSOukaG">Arnold (strong)</option>
-          <option value="EXAVITQu4vr4xnSDxMaL">Bella (warm female)</option>
-          <option value="jBpfuIE2acCO8z3wKNLl">Gigi (youthful female)</option>
-          <option value="onwK4e9ZLuTAKqWW03F9">Daniel (British male)</option>
+        <select id="openaiVoiceSelect">
+          <option value="alloy">Alloy</option>
+          <option value="echo">Echo</option>
+          <option value="fable">Fable</option>
+          <option value="onyx">Onyx</option>
+          <option value="nova">Nova</option>
+          <option value="shimmer">Shimmer</option>
         </select>
+      </div>
+
+      <!-- ElevenLabs API Key + Voice Picker -->
+      <div id="elevenSection" style="display:none;">
+        <div style="font-size:12px;font-weight:600;color:#555;margin-bottom:6px;">ElevenLabs API Key</div>
+        <div class="api-key-row">
+          <input type="password" id="apiKeyInput" placeholder="Paste your ElevenLabs API key..."
+                 onchange="saveApiKey()" onkeyup="saveApiKey()">
+          <span class="api-key-status missing" id="apiKeyStatus">not set</span>
+        </div>
+        <div class="setup-row" id="elevenVoiceRow">
+          <label>Voice</label>
+          <select id="elevenVoiceSelect">
+            <option value="pNInz6obpgDQGcFmaJgB">Adam (deep, warm)</option>
+            <option value="ErXwobaYiN019PkySvjV">Antoni (calm)</option>
+            <option value="VR6AewLTigWG4xSOukaG">Arnold (strong)</option>
+            <option value="EXAVITQu4vr4xnSDxMaL">Bella (warm female)</option>
+            <option value="jBpfuIE2acCO8z3wKNLl">Gigi (youthful female)</option>
+            <option value="onwK4e9ZLuTAKqWW03F9">Daniel (British male)</option>
+          </select>
+        </div>
       </div>
 
       <hr style="border:none;border-top:1px solid #eee;margin:12px 0;">
@@ -257,7 +360,7 @@
         </select>
       </div>
       <div class="status" id="status"></div>
-      <div class="hint">Sheet format: Korean | Romanization | English (3 columns, header row). Section headers (e.g. "Verse 1") in column A with B+C empty.</div>
+      <div class="hint">Sheet format: Korean | Romanization | English (3 columns, header row). Section headers (e.g. "Scene 1") in column A with B+C empty.</div>
     </div>
   </div>
 
@@ -266,13 +369,6 @@
     <div class="lyrics-info">
       <span class="lesson-tag" id="lessonTag"></span>
       <span class="count" id="countLabel"></span>
-    </div>
-
-    <!-- Toggle chips -->
-    <div class="toggle-row">
-      <span class="toggle-chip on" id="toggleKorean" onclick="toggleSetting('korean')">Korean</span>
-      <span class="toggle-chip on" id="toggleRomanization" onclick="toggleSetting('romanization')">Romanization</span>
-      <span class="toggle-chip on" id="toggleMeaning" onclick="toggleSetting('meanings')">English</span>
     </div>
 
     <!-- Sticky control bar -->
@@ -291,6 +387,21 @@
         <span class="switch-track" id="switchTrack"><span class="switch-knob" id="switchKnob"></span></span>
       </label>
       <span class="auto-label" id="autoLabel" onmouseenter="setAutoAdvance(true)">Auto</span>
+      <div class="sep"></div>
+      <span class="toggle-chip on" id="toggleKorean" onclick="toggleSetting('korean')">Kor</span>
+      <span class="toggle-chip on" id="toggleRomanization" onclick="toggleSetting('romanization')">Rom</span>
+      <span class="toggle-chip on" id="toggleMeaning" onclick="toggleSetting('meanings')">Eng</span>
+      <span class="toggle-chip on" id="toggleSentences" onclick="toggleSetting('sentences')">Sent</span>
+      <div class="sep"></div>
+      <div class="tip-toggle" onclick="setTooltipMode(!tooltipOn)" title="Hover any card to reveal its English meaning">
+        <span>Reveal on hover</span>
+        <div class="tip-switch">
+          <div class="tip-track" id="tipTrack"></div>
+          <div class="tip-knob" id="tipKnob"></div>
+        </div>
+      </div>
+      <div class="sep"></div>
+      <button class="btn outline" style="font-size:11px;padding:4px 10px;" onclick="exportAll()">&#128203; Export All</button>
     </div>
 
     <!-- Lines container -->
@@ -309,17 +420,26 @@ let gdriveWorkbook = null;
 
 let allRows = [];
 let filteredRows = [];
-let ttsEngine = 'browser'; // 'browser' or 'elevenlabs'
+let ttsEngine = 'browser'; // 'browser', 'openai', or 'elevenlabs'
 let ttsRate = 1;
 let autoAdvance = false;
 let currentSpeakingIndex = -1;
-let currentAudio = null; // for ElevenLabs playback
+let currentAudio = null; // for OpenAI playback
 
 let showMeanings = true;
 let showKorean = true;
 let showRomanization = true;
+let showSentences = true;
+let tooltipOn = false;
+let userAnswers = {};  // index -> string
+let expanded = {};     // index -> bool
 
-// ── API KEY (localStorage) ──
+// ── OPENAI API KEY (localStorage) ──
+function getApiKey() {
+  return localStorage.getItem('OPENAI_API_KEY') || '';
+}
+
+// ── ELEVENLABS API KEY (localStorage) ──
 function saveApiKey() {
   var key = document.getElementById('apiKeyInput').value.trim();
   if (key) {
@@ -342,7 +462,7 @@ function loadApiKey() {
   }
 }
 
-function getApiKey() {
+function getElevenLabsKey() {
   return localStorage.getItem('elevenlabs_api_key') || '';
 }
 
@@ -350,10 +470,15 @@ function getApiKey() {
 function setTtsEngine(engine) {
   ttsEngine = engine;
   document.getElementById('ttsToggleBrowser').className = engine === 'browser' ? 'active' : '';
+  document.getElementById('ttsToggleOpenai').className = engine === 'openai' ? 'active' : '';
   document.getElementById('ttsToggleEleven').className = engine === 'elevenlabs' ? 'active' : '';
-  document.getElementById('elevenVoiceRow').style.display = engine === 'elevenlabs' ? 'flex' : 'none';
+  document.getElementById('openaiVoiceRow').style.display = engine === 'openai' ? 'flex' : 'none';
+  document.getElementById('elevenSection').style.display = engine === 'elevenlabs' ? 'block' : 'none';
 
-  if (engine === 'elevenlabs' && !getApiKey()) {
+  if (engine === 'openai' && !getApiKey()) {
+    setStatus('OPENAI_API_KEY not found in localStorage');
+  }
+  if (engine === 'elevenlabs' && !getElevenLabsKey()) {
     setStatus('Enter your ElevenLabs API key above');
   }
 }
@@ -364,6 +489,8 @@ function speakText(text, onEnd) {
 
   if (ttsEngine === 'elevenlabs') {
     speakElevenLabs(text, onEnd);
+  } else if (ttsEngine === 'openai') {
+    speakOpenAI(text, onEnd);
   } else {
     speakBrowser(text, onEnd);
   }
@@ -377,8 +504,56 @@ function speakBrowser(text, onEnd) {
   speechSynthesis.speak(utterance);
 }
 
-async function speakElevenLabs(text, onEnd) {
+async function speakOpenAI(text, onEnd) {
   var apiKey = getApiKey();
+  if (!apiKey) {
+    setStatus('OPENAI_API_KEY not found in localStorage — using browser TTS');
+    speakBrowser(text, onEnd);
+    return;
+  }
+
+  var voice = document.getElementById('openaiVoiceSelect').value;
+  try {
+    var resp = await fetch('https://api.openai.com/v1/audio/speech', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + apiKey
+      },
+      body: JSON.stringify({
+        model: 'tts-1',
+        input: text,
+        voice: voice,
+        speed: ttsRate
+      })
+    });
+
+    if (!resp.ok) {
+      var errText = await resp.text();
+      console.error('OpenAI TTS error:', resp.status, errText);
+      setStatus('OpenAI error ' + resp.status + ' — falling back to browser TTS');
+      speakBrowser(text, onEnd);
+      return;
+    }
+
+    var blob = await resp.blob();
+    var url = URL.createObjectURL(blob);
+    currentAudio = new Audio(url);
+    currentAudio.onended = function() {
+      URL.revokeObjectURL(url);
+      currentAudio = null;
+      if (onEnd) onEnd();
+    };
+    currentAudio.play();
+  } catch (err) {
+    console.error('OpenAI TTS fetch error:', err);
+    setStatus('Network error — falling back to browser TTS');
+    speakBrowser(text, onEnd);
+  }
+}
+
+async function speakElevenLabs(text, onEnd) {
+  var apiKey = getElevenLabsKey();
   if (!apiKey) {
     setStatus('ElevenLabs API key not set — using browser TTS');
     speakBrowser(text, onEnd);
@@ -396,11 +571,7 @@ async function speakElevenLabs(text, onEnd) {
       body: JSON.stringify({
         text: text,
         model_id: 'eleven_multilingual_v2',
-        voice_settings: {
-          stability: 0.5,
-          similarity_boost: 0.75,
-          style: 0.4
-        }
+        voice_settings: { stability: 0.5, similarity_boost: 0.75, style: 0.4 }
       })
     });
 
@@ -437,6 +608,24 @@ function stopSpeaking() {
   }
 }
 
+// ── EXPAND / COLLAPSE ANSWER ──
+function toggleExpand(i) {
+  expanded[i] = !expanded[i];
+  var area = document.getElementById('area-' + i);
+  if (!area) return;
+
+  var tryBtn = document.getElementById('trybtn-' + i);
+  if (expanded[i]) {
+    area.classList.add('open');
+    if (tryBtn) { tryBtn.classList.add('open'); tryBtn.textContent = '\u25b2 Hide'; }
+    var ta = document.getElementById('ta-' + i);
+    if (ta) setTimeout(function() { ta.focus(); }, 40);
+  } else {
+    area.classList.remove('open');
+    if (tryBtn) { tryBtn.classList.remove('open'); tryBtn.textContent = '\u270e Answer'; }
+  }
+}
+
 // ── SPEAK LINE (click on line) ──
 function speakLine(index) {
   stopSpeaking();
@@ -446,11 +635,19 @@ function speakLine(index) {
     return;
   }
 
+  var row = filteredRows[index];
+  // For context lines, speak the text
+  var textToSpeak = row.korean || row.contextLine || '';
+  if (!textToSpeak) {
+    // Skip non-speakable rows (section headers) during auto-advance
+    if (autoAdvance) { speakLine(index + 1); return; }
+    return;
+  }
+
   currentSpeakingIndex = index;
   highlightLine(index);
 
-  var row = filteredRows[index];
-  speakText(row.korean, function() {
+  speakText(textToSpeak, function() {
     if (autoAdvance && currentSpeakingIndex === index) {
       speakLine(index + 1);
     } else {
@@ -485,7 +682,7 @@ function highlightLine(index) {
 }
 
 function clearHighlight() {
-  document.querySelectorAll('.vocab-card.speaking').forEach(function(el) {
+  document.querySelectorAll('.vocab-card.speaking, .context-line.speaking').forEach(function(el) {
     el.classList.remove('speaking');
   });
 }
@@ -495,6 +692,7 @@ function toggleSetting(key) {
   if (key === 'meanings') showMeanings = !showMeanings;
   if (key === 'korean') showKorean = !showKorean;
   if (key === 'romanization') showRomanization = !showRomanization;
+  if (key === 'sentences') showSentences = !showSentences;
   renderLyrics();
 }
 
@@ -544,9 +742,11 @@ function renderLyrics() {
   document.getElementById('toggleMeaning').className = 'toggle-chip' + (showMeanings ? ' on' : '');
   document.getElementById('toggleKorean').className = 'toggle-chip' + (showKorean ? ' on' : '');
   document.getElementById('toggleRomanization').className = 'toggle-chip' + (showRomanization ? ' on' : '');
+  document.getElementById('toggleSentences').className = 'toggle-chip' + (showSentences ? ' on' : '');
 
   var container = document.getElementById('linesContainer');
   container.innerHTML = '';
+  container.classList.toggle('tooltip-on', tooltipOn);
 
   var wordNum = 0;
   filteredRows.forEach(function(row, i) {
@@ -559,22 +759,76 @@ function renderLyrics() {
       return;
     }
 
+    // Context/sentence line
+    if (row.contextLine) {
+      if (!showSentences) return; // hidden by toggle
+      var ctx = document.createElement('div');
+      ctx.className = 'context-line';
+      ctx.id = 'card-' + i;
+      // Detect if it contains Hangul characters (Korean sentence) vs English
+      var hasHangul = /[\uac00-\ud7af\u1100-\u11ff]/.test(row.contextLine);
+      if (hasHangul) {
+        var ctxKr = document.createElement('div');
+        ctxKr.className = 'ctx-korean';
+        ctxKr.textContent = row.contextLine;
+        ctx.appendChild(ctxKr);
+      } else {
+        var ctxEn = document.createElement('div');
+        ctxEn.className = 'ctx-english';
+        ctxEn.textContent = row.contextLine;
+        ctx.appendChild(ctxEn);
+      }
+      ctx.onclick = function() { speakLine(i); };
+      container.appendChild(ctx);
+      return;
+    }
+
     wordNum++;
     var card = document.createElement('div');
     card.className = 'vocab-card';
     card.id = 'card-' + i;
-    card.onclick = function() { speakLine(i); };
+
+    // Click the card area to toggle answer (except on chinese text or textarea)
+    card.onclick = (function(capturedI) {
+      return function(e) {
+        if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'BUTTON') return;
+        if (e.target.classList.contains('korean')) return; // handled separately
+        toggleExpand(capturedI);
+      };
+    })(i);
+
+    // Top row: num + answer button
+    var topRow = document.createElement('div');
+    topRow.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;';
 
     var num = document.createElement('div');
     num.className = 'num';
+    num.style.marginBottom = '0';
     num.textContent = '#' + wordNum;
-    card.appendChild(num);
+    topRow.appendChild(num);
+
+    var tryBtn = document.createElement('button');
+    tryBtn.className = 'try-btn' + (expanded[i] ? ' open' : '');
+    tryBtn.id = 'trybtn-' + i;
+    tryBtn.textContent = expanded[i] ? '\u25b2 Hide' : '\u270e Answer';
+    tryBtn.addEventListener('click', (function(capturedI) {
+      return function(e) { e.stopPropagation(); toggleExpand(capturedI); };
+    })(i));
+    topRow.appendChild(tryBtn);
+    card.appendChild(topRow);
 
     if (showKorean) {
-      var kr = document.createElement('div');
-      kr.className = 'korean';
-      kr.textContent = row.korean;
-      card.appendChild(kr);
+      var cn = document.createElement('div');
+      cn.className = 'korean';
+      cn.textContent = row.korean;
+      // Click on Korean text speaks it
+      cn.addEventListener('click', (function(capturedI) {
+        return function(e) {
+          e.stopPropagation();
+          speakLine(capturedI);
+        };
+      })(i));
+      card.appendChild(cn);
     }
 
     if (row.romanization) {
@@ -591,11 +845,54 @@ function renderLyrics() {
       card.appendChild(en);
     }
 
+    // Answer area
+    var area = document.createElement('div');
+    area.className = 'answer-area' + (expanded[i] ? ' open' : '');
+    area.id = 'area-' + i;
+
+    var ta = document.createElement('textarea');
+    ta.id = 'ta-' + i;
+    ta.placeholder = 'Type your answer\u2026';
+    ta.value = userAnswers[i] || '';
+    ta.addEventListener('input', (function(capturedI) {
+      return function() {
+        userAnswers[capturedI] = this.value;
+        var cc = document.getElementById('chars-' + capturedI);
+        if (cc) cc.textContent = this.value.length ? this.value.length + ' chars' : '';
+      };
+    })(i));
+    ta.addEventListener('click', function(e) { e.stopPropagation(); });
+
+    var hint = document.createElement('div');
+    hint.className = 'answer-hint';
+    var hintLeft = document.createElement('span');
+    hintLeft.textContent = 'Type your translation or notes';
+    var hintRight = document.createElement('span');
+    hintRight.className = 'char-count';
+    hintRight.id = 'chars-' + i;
+    if (userAnswers[i]) hintRight.textContent = userAnswers[i].length + ' chars';
+    hint.appendChild(hintLeft);
+    hint.appendChild(hintRight);
+
+    area.appendChild(ta);
+    area.appendChild(hint);
+    card.appendChild(area);
+
+    // Hover-reveal tooltip
+    var tip = document.createElement('div');
+    tip.className = 'def-tip';
+    var tipParts = [];
+    if (row.korean)       tipParts.push('<span style="font-size:20px;font-weight:600;color:#fde68a;">' + escHtml(row.korean) + '</span>');
+    if (row.romanization) tipParts.push('<span style="color:#93c5fd;font-style:italic;">' + escHtml(row.romanization) + '</span>');
+    if (row.english)      tipParts.push('<span style="color:#86efac;">' + escHtml(row.english) + '</span>');
+    tip.innerHTML = tipParts.join('<br>');
+    card.appendChild(tip);
+
     container.appendChild(card);
   });
 }
 
-// ── GOOGLE SHEETS (same pattern as learn-korean.html) ──
+// ── GOOGLE SHEETS ──
 function setStatus(msg) { document.getElementById('status').textContent = msg; }
 
 function toggleSetup() {
@@ -739,7 +1036,9 @@ function onSheetSelect() {
   if (rows.length < 2) { setStatus('Sheet is empty'); return; }
 
   // Sheet format: Korean (A) | Romanization (B) | English (C)
-  // Section headers (e.g. "Verse 1") appear in column A with B+C empty
+  // Rows with only column A and B+C empty:
+  //   - "Scene X — ..." = section header
+  //   - Everything else = context/sentence line
   allRows = [];
   var currentLesson = '';
   for (var i = 1; i < rows.length; i++) {
@@ -751,16 +1050,30 @@ function onSheetSelect() {
     // Skip fully empty rows
     if (!colA && !colB && !colC) continue;
 
-    // Row with only column A = section header
+    // Row with only column A
     if (colA && !colB && !colC) {
-      currentLesson = colA;
-      allRows.push({
-        lesson: currentLesson,
-        korean: '',
-        romanization: '',
-        english: '',
-        sectionHeader: colA,
-      });
+      // Check if it looks like a scene/section header
+      if (/^(Scene|Chapter|Part|Section|Lesson|Unit)\s/i.test(colA)) {
+        currentLesson = colA;
+        allRows.push({
+          lesson: currentLesson,
+          korean: '',
+          romanization: '',
+          english: '',
+          sectionHeader: colA,
+          contextLine: '',
+        });
+      } else {
+        // Context/sentence line
+        allRows.push({
+          lesson: currentLesson,
+          korean: '',
+          romanization: '',
+          english: '',
+          sectionHeader: '',
+          contextLine: colA,
+        });
+      }
     } else {
       allRows.push({
         lesson: currentLesson,
@@ -768,6 +1081,7 @@ function onSheetSelect() {
         romanization: colB,
         english: colC,
         sectionHeader: '',
+        contextLine: '',
       });
     }
   }
@@ -795,6 +1109,77 @@ function onLessonSelect() {
   filteredRows = lesson ? allRows.filter(function(r) { return r.lesson === lesson; }) : allRows.slice();
   renderLyrics();
 }
+
+// ── HELPERS ──
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── HOVER-REVEAL TOGGLE ──
+function setTooltipMode(on) {
+  tooltipOn = on;
+  document.getElementById('linesContainer').classList.toggle('tooltip-on', on);
+  document.getElementById('tipTrack').classList.toggle('on', on);
+  document.getElementById('tipKnob').classList.toggle('on', on);
+}
+
+// ── EXPORT ALL FOR AI GRADING ──
+async function exportAll() {
+  var answered = [];
+  filteredRows.forEach(function(row, i) {
+    if (row.sectionHeader || row.contextLine) return;
+    if (userAnswers[i] && userAnswers[i].trim()) {
+      answered.push({ row: row, answer: userAnswers[i].trim(), idx: i });
+    }
+  });
+
+  if (answered.length === 0) {
+    alert('No answered cards yet. Click on a card (not the character) to open the answer area and type your translation.');
+    return;
+  }
+
+  var lines = [
+    'Grade my Korean vocabulary translations. Be lenient \u2014 grade on whether I understand the meaning, not exact wording.',
+    '',
+    'For each item, rate as:',
+    '\u2705 Correct \u2014 captures the key meaning',
+    '\u26a0\ufe0f Partial \u2014 partially correct, misses some points',
+    '\u274c Wrong \u2014 misses the point',
+    '',
+    'Format your response as:',
+    '#N: [Korean] \u2192 \u2705/\u26a0\ufe0f/\u274c \u2014 [one-line note]',
+    '',
+    'Then give an Overall Score (X/' + answered.length + ') and a brief summary.',
+    '',
+    '---',
+    'VOCABULARY TEST (' + answered.length + ' items):',
+    ''
+  ];
+
+  answered.forEach(function(item, n) {
+    lines.push('#' + (n + 1) + ' Korean: ' + item.row.korean + (item.row.romanization ? ' (' + item.row.romanization + ')' : ''));
+    lines.push('My Answer: ' + item.answer);
+    lines.push('Correct: ' + item.row.english);
+    lines.push('');
+  });
+
+  var text = lines.join('\n');
+  try {
+    await navigator.clipboard.writeText(text);
+    alert('Copied ' + answered.length + ' items! Paste into Claude or ChatGPT for grading.');
+  } catch(e) {
+    prompt('Copy this grading prompt:', text);
+  }
+}
+
+// ── SPACEBAR TO CLICK HOVERED CARD ──
+document.addEventListener('keydown', function(e) {
+  if (e.code === 'Space' && !e.target.matches('input, textarea, select')) {
+    e.preventDefault();
+    var hovered = document.querySelector('.vocab-card:hover');
+    if (hovered) hovered.click();
+  }
+});
 
 // ── INIT ──
 loadApiKey();

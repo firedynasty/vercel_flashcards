@@ -1,0 +1,1127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vocabulary Drill</title>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, 'Inter', sans-serif;
+    background: #f9f9f7;
+    min-height: 100vh;
+    color: #1a1a1a;
+  }
+  .container { max-width: 780px; margin: 0 auto; padding: 24px 20px; }
+  h1 { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+  .subtitle { font-size: 12px; color: #888; margin-bottom: 20px; }
+
+  /* ── BUTTONS ── */
+  .btn {
+    border: none; border-radius: 6px; padding: 7px 14px;
+    font-weight: 600; font-size: 12px; cursor: pointer;
+    transition: opacity 0.15s; font-family: inherit;
+  }
+  .btn:hover { opacity: 0.85; }
+  .btn.primary { background: #2563eb; color: white; }
+  .btn.outline { background: none; border: 1px solid #ccc; color: #555; }
+  .btn.success { background: #16a34a; color: white; }
+  .btn.warn    { background: #d97706; color: white; }
+  .btn.danger  { background: #dc2626; color: white; }
+  .btn.sm      { padding: 4px 10px; font-size: 11px; }
+
+  /* ── UPLOAD ── */
+  .upload-zone {
+    border: 2px dashed #d0d0d0; border-radius: 14px;
+    padding: 36px 24px; text-align: center; cursor: pointer;
+    background: white; transition: border-color 0.2s, background 0.2s;
+    margin-bottom: 0;
+  }
+  .upload-zone:hover, .upload-zone.drag-over {
+    border-color: #2563eb; background: #eff6ff;
+  }
+  .upload-zone .upload-icon { font-size: 32px; margin-bottom: 8px; }
+  .upload-zone .upload-label { font-size: 15px; font-weight: 600; color: #333; margin-bottom: 4px; }
+  .upload-zone .upload-hint  { font-size: 12px; color: #aaa; line-height: 1.5; }
+  #fileInput { display: none; }
+  .upload-status { font-size: 12px; color: #888; margin-top: 10px; min-height: 18px; text-align: center; }
+
+  /* ── STICKY CONTROL BAR ── */
+  .control-bar {
+    display: none;
+    position: sticky; top: 0; z-index: 50;
+    background: #f0f0ee;
+    border-bottom: 1px solid #e0e0db;
+    padding: 8px 0;
+  }
+  .control-bar.active { display: block; }
+  .ctrl-inner {
+    max-width: 780px; margin: 0 auto; padding: 0 20px;
+    display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+  }
+  .ctrl-inner input[type="text"] {
+    flex: 1; min-width: 130px;
+    padding: 5px 10px; border: 1px solid #ccc; border-radius: 6px;
+    font-size: 12px; font-family: inherit;
+  }
+  .ctrl-inner input[type="text"]:focus { outline: none; border-color: #2563eb; }
+  .ctrl-inner select {
+    padding: 5px 8px; border: 1px solid #ccc; border-radius: 6px;
+    font-size: 12px; font-family: inherit; background: white;
+  }
+  .score-pill {
+    font-size: 11px; font-weight: 700; padding: 3px 10px;
+    border-radius: 10px; white-space: nowrap;
+  }
+  .pill-correct { background: #dcfce7; color: #16a34a; }
+  .pill-partial  { background: #fef3c7; color: #d97706; }
+  .pill-wrong    { background: #fee2e2; color: #dc2626; }
+
+  /* ── CARDS AREA ── */
+  .cards-area {
+    display: none;
+    max-width: 780px; margin: 0 auto; padding: 16px 20px 40px;
+  }
+  .cards-area.active { display: block; }
+
+  /* ── SECTION HEADER ── */
+  .section-divider {
+    font-size: 12px; font-weight: 700; letter-spacing: 2px;
+    text-transform: uppercase; color: #2563eb;
+    padding: 18px 0 6px 2px;
+    border-bottom: 2px solid #dbeafe;
+    margin-bottom: 10px;
+  }
+
+  /* ── VOCAB CARD ── */
+  .vocab-card {
+    background: white; border: 1px solid #e8e8e8; border-radius: 12px;
+    margin-bottom: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    transition: border-color 0.15s, box-shadow 0.15s;
+    border-left: 4px solid transparent;
+  }
+  .vocab-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.09); }
+  .vocab-card.scored-correct { border-left-color: #16a34a; }
+  .vocab-card.scored-partial { border-left-color: #d97706; }
+  .vocab-card.scored-wrong   { border-left-color: #dc2626; }
+
+  .card-header {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 14px 16px 14px 12px;
+    cursor: default;
+  }
+  .card-cb {
+    margin-top: 2px; flex-shrink: 0;
+    width: 16px; height: 16px; cursor: pointer;
+    accent-color: #2563eb;
+  }
+  .card-term {
+    flex: 1; font-size: 15px; font-weight: 600; line-height: 1.45;
+    color: #111; cursor: pointer; padding-top: 0;
+  }
+  .card-term:hover { color: #2563eb; }
+  .card-actions {
+    display: flex; gap: 6px; align-items: center; flex-shrink: 0;
+  }
+  .score-badge { font-size: 17px; line-height: 1; }
+  .try-btn {
+    font-size: 11px; padding: 3px 10px; border-radius: 10px;
+    border: 1px solid #d0d0d0; background: #f5f5f3; color: #555;
+    cursor: pointer; font-weight: 600; font-family: inherit;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+    white-space: nowrap;
+  }
+  .try-btn:hover { background: #e0e7ff; border-color: #a5b4fc; color: #4338ca; }
+  .try-btn.open  { background: #dbeafe; border-color: #93c5fd; color: #1d4ed8; }
+
+  /* ── ANSWER AREA (inline) ── */
+  .answer-area {
+    display: none;
+    padding: 0 16px 14px 38px;
+    border-top: 1px dashed #ebebeb;
+  }
+  .answer-area.open { display: block; padding-top: 12px; }
+  .answer-area textarea {
+    width: 100%; min-height: 70px;
+    border: 1px solid #ddd; border-radius: 8px;
+    padding: 8px 12px; font-family: inherit; font-size: 13px;
+    line-height: 1.55; resize: vertical; color: #333;
+  }
+  .answer-area textarea:focus { outline: none; border-color: #2563eb; }
+  .answer-area textarea::placeholder { color: #c0c0c0; }
+  .answer-hint {
+    margin-top: 5px; font-size: 11px; color: #b0b0b0;
+    display: flex; justify-content: space-between;
+  }
+  .char-count { font-weight: 600; color: #16a34a; }
+
+  /* ── HOVER TOOLTIP (reveal-on-hover mode) ── */
+  .vocab-card { position: relative; z-index: 1; }
+  .vocab-card:hover { z-index: 10; }
+  .def-tip {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: -1px; right: -1px;
+    background: #1e293b;
+    color: #e2e8f0;
+    padding: 12px 16px 14px;
+    font-size: 14px;
+    line-height: 1.65;
+    border-radius: 0 0 12px 12px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+    pointer-events: none;
+    z-index: 20;
+  }
+  .tooltip-on .vocab-card:hover .def-tip { display: block; }
+
+  /* ── HOVER-REVEAL SLIDER ── */
+  .tip-toggle {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 11px; font-weight: 700; color: #555;
+    cursor: pointer; user-select: none; white-space: nowrap;
+  }
+  .tip-switch {
+    position: relative; width: 38px; height: 20px; flex-shrink: 0;
+  }
+  .tip-track {
+    position: absolute; inset: 0;
+    background: #d0d0d0; border-radius: 20px; transition: background 0.25s;
+  }
+  .tip-track.on { background: #2563eb; }
+  .tip-knob {
+    position: absolute; width: 14px; height: 14px;
+    background: white; border-radius: 50%;
+    top: 3px; left: 3px; transition: left 0.25s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  }
+  .tip-knob.on { left: 21px; }
+
+  /* ── GOOGLE SHEETS SETUP ── */
+  .setup-section {
+    margin-top: 16px;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    background: white;
+    overflow: hidden;
+  }
+  .setup-section.collapsed .setup-body { display: none; }
+  .setup-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 16px; background: #f5f5f5; cursor: pointer; user-select: none;
+  }
+  .setup-header span { font-size: 13px; font-weight: 600; color: #555; }
+  .setup-header .toggle-arrow { font-size: 12px; color: #999; }
+  .setup-body { padding: 12px 16px; }
+  .setup-row { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; align-items: center; }
+  .setup-row label { font-size: 13px; font-weight: 600; color: #555; min-width: 50px; }
+  .setup-row select, .setup-row input[type="text"] {
+    flex: 1; padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px;
+    font-size: 13px; font-family: inherit; min-width: 120px;
+  }
+  .setup-row select:disabled { opacity: 0.5; }
+  .btn.google { background: #4285f4; color: white; }
+  .g-status { font-size: 12px; color: #888; min-height: 18px; margin-top: 6px; }
+  .g-hint { font-size: 11px; color: #aaa; margin-top: 4px; line-height: 1.4; }
+  .or-divider {
+    text-align: center; font-size: 12px; color: #aaa; font-weight: 600;
+    margin: 12px 0; letter-spacing: 1px;
+  }
+
+  /* ── EMPTY STATE ── */
+  .empty-msg {
+    text-align: center; padding: 48px 20px;
+    font-size: 14px; color: #aaa;
+  }
+
+  /* ── MODAL ── */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.42); z-index: 200;
+    align-items: center; justify-content: center; padding: 20px;
+  }
+  .modal-overlay.active { display: flex; }
+  .modal-box {
+    background: white; border-radius: 16px; padding: 26px 28px;
+    max-width: 560px; width: 100%;
+    box-shadow: 0 10px 48px rgba(0,0,0,0.22);
+    max-height: 90vh; overflow-y: auto;
+  }
+  .modal-eyebrow {
+    font-size: 11px; font-weight: 700; letter-spacing: 1.5px;
+    text-transform: uppercase; color: #999; margin-bottom: 12px;
+  }
+  .modal-term {
+    font-size: 19px; font-weight: 700; line-height: 1.35;
+    color: #111; margin-bottom: 22px;
+  }
+  .compare-row {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+    margin-bottom: 20px;
+  }
+  @media (max-width: 500px) { .compare-row { grid-template-columns: 1fr; } }
+  .compare-block { }
+  .compare-label {
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 1px; margin-bottom: 6px;
+  }
+  .compare-label.yours   { color: #2563eb; }
+  .compare-label.correct { color: #16a34a; }
+  .compare-body {
+    border-radius: 8px; padding: 10px 13px;
+    font-size: 13px; line-height: 1.6; min-height: 60px;
+    color: #333;
+  }
+  .compare-body.yours   { background: #eff6ff; border: 1px solid #bfdbfe; }
+  .compare-body.correct { background: #f0fdf4; border: 1px solid #bbf7d0; }
+  .compare-body.no-answer { color: #aaa; font-style: italic; }
+  .modal-divider { border: none; border-top: 1px solid #f0f0f0; margin: 0 0 18px; }
+  .grade-row {
+    display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;
+  }
+  .grade-row .btn { flex: 1; text-align: center; }
+  .modal-footer {
+    display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap;
+  }
+</style>
+</head>
+<body>
+
+<!-- ── PAGE HEADER ── -->
+<div class="container">
+  <h1>Vocabulary Drill</h1>
+  <div class="subtitle">Load a CSV · type your definitions · check &#9744; a card to compare and grade</div>
+
+  <!-- Upload zone -->
+  <div class="upload-zone" id="uploadZone"
+       ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)"
+       onclick="document.getElementById('fileInput').click()">
+    <div class="upload-icon">&#128196;</div>
+    <div class="upload-label">Drop your CSV here, or click to browse</div>
+    <div class="upload-hint">
+      Format: <strong>Term: Definition</strong> (one per line)<br>
+      Works with Google Takeout / Quizlet exports — single-letter lines become section headers
+    </div>
+    <div class="upload-status" id="uploadStatus"></div>
+    <input type="file" id="fileInput" accept=".csv,.txt" onchange="onFileInput(event)">
+  </div>
+
+  <div class="or-divider" id="orDivider">— OR —</div>
+
+  <!-- Google Sheets Setup -->
+  <div class="setup-section" id="setupSection">
+    <div class="setup-header" onclick="toggleSetup()">
+      <span>Load from Google Sheets</span>
+      <span class="toggle-arrow" id="setupArrow">&#9660;</span>
+    </div>
+    <div class="setup-body">
+      <div class="setup-row">
+        <button class="btn google" id="authBtn" onclick="gdriveSignIn()">Sign In</button>
+        <input type="text" id="gSearchInput" placeholder="Spreadsheet name..." value="">
+        <button class="btn primary" id="gSearchBtn" onclick="gdriveSearch()" disabled>Load</button>
+      </div>
+      <div class="setup-row">
+        <label>Sheet</label>
+        <select id="gSheetSelect" disabled onchange="onGSheetSelect()">
+          <option value="">Sign in first</option>
+        </select>
+      </div>
+      <div class="setup-row">
+        <label>Section</label>
+        <select id="gSectionSelect" disabled onchange="onGSectionSelect()">
+          <option value="">Select sheet first</option>
+        </select>
+      </div>
+      <div class="g-status" id="gStatus"></div>
+      <div class="g-hint">Sheet format: <strong>Term: Definition</strong> (one per cell/line). Single-letter lines become section headers — same as local CSV format.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── STICKY CONTROL BAR ── -->
+<div class="control-bar" id="controlBar">
+  <div class="ctrl-inner">
+    <input type="text" id="searchInput" placeholder="&#128269; Search terms or definitions…" oninput="filterAndRender()">
+    <select id="sectionSel" onchange="filterAndRender()">
+      <option value="">All sections</option>
+    </select>
+    <select id="filterSel" onchange="filterAndRender()">
+      <option value="all">All cards</option>
+      <option value="unanswered">Unanswered</option>
+      <option value="answered">Has answer</option>
+      <option value="correct">&#10003; Correct</option>
+      <option value="partial">&#9651; Partial</option>
+      <option value="wrong">&#10007; Wrong</option>
+    </select>
+    <span class="score-pill pill-correct" id="pillCorrect" style="display:none">&#9989; 0</span>
+    <span class="score-pill pill-partial"  id="pillPartial"  style="display:none">&#9651; 0</span>
+    <span class="score-pill pill-wrong"    id="pillWrong"    style="display:none">&#10060; 0</span>
+    <div class="tip-toggle" onclick="setTooltipMode(!tooltipOn)" title="Hover any card to reveal its definition">
+      <span>Reveal on hover</span>
+      <div class="tip-switch">
+        <div class="tip-track" id="tipTrack"></div>
+        <div class="tip-knob" id="tipKnob"></div>
+      </div>
+    </div>
+    <button class="btn outline sm" id="exportAllBtn" style="display:none" onclick="exportAll()">&#128203; Export All</button>
+  </div>
+</div>
+
+<!-- ── CARDS ── -->
+<div class="cards-area" id="cardsArea">
+  <div id="cardsContainer"></div>
+</div>
+
+<!-- ── COMPARISON MODAL ── -->
+<div class="modal-overlay" id="modalOverlay" onclick="onOverlayClick(event)">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <div class="modal-eyebrow">Compare &amp; Grade</div>
+    <div class="modal-term" id="modalTerm"></div>
+
+    <div class="compare-row">
+      <div class="compare-block">
+        <div class="compare-label yours">Your Answer</div>
+        <div class="compare-body yours" id="modalYours"></div>
+      </div>
+      <div class="compare-block">
+        <div class="compare-label correct">Correct Definition</div>
+        <div class="compare-body correct" id="modalCorrect"></div>
+      </div>
+    </div>
+
+    <hr class="modal-divider">
+
+    <div class="grade-row">
+      <button class="btn success" onclick="scoreAndClose('correct')">&#9989; Correct</button>
+      <button class="btn warn"    onclick="scoreAndClose('partial')">&#9651; Partial</button>
+      <button class="btn danger"  onclick="scoreAndClose('wrong')">&#10060; Wrong</button>
+    </div>
+    <div class="modal-footer">
+      <button class="btn outline" onclick="copyOneForGrading()">&#128203; Copy for AI Grading</button>
+      <button class="btn outline" onclick="closeModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── STATE ──
+var allVocab     = [];   // [{term, definition, section, idx}]
+var filteredVocab = [];  // current view
+var userAnswers  = {};   // idx -> string
+var scores       = {};   // idx -> 'correct'|'partial'|'wrong'
+var expanded     = {};   // idx -> bool
+var sections     = [];   // ordered list of section keys
+var modalFI      = -1;   // current filteredVocab index in modal
+var modalCB      = null; // the checkbox element that opened the modal
+var tooltipOn    = false;
+
+// ── CSV PARSING ──
+function parseVocabCsv(text) {
+  var lines = text.split('\n');
+  var vocab = [];
+  var sec = '';
+  var secs = [];
+
+  lines.forEach(function(line) {
+    line = line.trim();
+    if (!line) return;
+
+    // Unescape CSV-quoted field
+    if (line.charAt(0) === '"' && line.charAt(line.length - 1) === '"') {
+      line = line.slice(1, -1).replace(/""/g, '"');
+    }
+
+    // Find first ': ' separator
+    var sep = line.indexOf(': ');
+    if (sep < 0) {
+      // No separator — treat as section header if short / single symbol
+      if (line.length <= 3) {
+        sec = line;
+        if (secs.indexOf(sec) < 0) secs.push(sec);
+      }
+      return;
+    }
+
+    var term = line.slice(0, sep).trim();
+    var def  = line.slice(sep + 2).trim();
+    if (term && def) {
+      vocab.push({ term: term, definition: def, section: sec, idx: vocab.length });
+    }
+  });
+
+  sections = secs;
+  return vocab;
+}
+
+// ── FILTER ──
+function filterAndRender() {
+  var q   = document.getElementById('searchInput').value.trim().toLowerCase();
+  var sec = document.getElementById('sectionSel').value;
+  var f   = document.getElementById('filterSel').value;
+
+  filteredVocab = allVocab.filter(function(v) {
+    if (sec && v.section !== sec) return false;
+    if (q && v.term.toLowerCase().indexOf(q) < 0 &&
+             v.definition.toLowerCase().indexOf(q) < 0) return false;
+    var s = scores[v.idx];
+    var a = userAnswers[v.idx];
+    if (f === 'unanswered') return !s && !a;
+    if (f === 'answered')   return !!(a || s);
+    if (f === 'correct')    return s === 'correct';
+    if (f === 'partial')    return s === 'partial';
+    if (f === 'wrong')      return s === 'wrong';
+    return true;
+  });
+
+  renderCards();
+}
+
+// ── RENDER ──
+function renderCards() {
+  var container = document.getElementById('cardsContainer');
+  container.innerHTML = '';
+
+  if (filteredVocab.length === 0) {
+    var msg = document.createElement('div');
+    msg.className = 'empty-msg';
+    msg.textContent = 'No cards match the current filter.';
+    container.appendChild(msg);
+    updateScorePills();
+    return;
+  }
+
+  var lastSec = null;
+
+  filteredVocab.forEach(function(row, fi) {
+    // Section divider
+    if (row.section !== lastSec) {
+      if (row.section) {
+        var hdr = document.createElement('div');
+        hdr.className = 'section-divider';
+        hdr.textContent = 'Section ' + row.section;
+        container.appendChild(hdr);
+      }
+      lastSec = row.section;
+    }
+
+    container.appendChild(buildCard(row, fi));
+  });
+
+  updateScorePills();
+}
+
+function buildCard(row, fi) {
+  var idx = row.idx;
+  var score = scores[idx];
+  var ans   = userAnswers[idx] || '';
+  var isOpen = expanded[idx];
+
+  // ── Card wrapper ──
+  var card = document.createElement('div');
+  card.id = 'card-' + idx;
+  card.className = 'vocab-card' + (score ? ' scored-' + score : '');
+
+  // ── Header row ──
+  var header = document.createElement('div');
+  header.className = 'card-header';
+
+  // Checkbox
+  var cb = document.createElement('input');
+  cb.type = 'checkbox';
+  cb.className = 'card-cb';
+  cb.id = 'cb-' + idx;
+  cb.title = 'Open comparison for this card';
+  cb.addEventListener('change', (function(capturedFI, capturedCB) {
+    return function() {
+      if (capturedCB.checked) {
+        modalCB = capturedCB;
+        openModal(capturedFI);
+      }
+    };
+  })(fi, cb));
+
+  // Term
+  var termEl = document.createElement('div');
+  termEl.className = 'card-term';
+  termEl.textContent = row.term;
+  termEl.title = 'Click to open answer area';
+  termEl.addEventListener('click', (function(capturedFI) {
+    return function() { toggleExpand(capturedFI); };
+  })(fi));
+
+  // Actions
+  var actions = document.createElement('div');
+  actions.className = 'card-actions';
+
+  if (score) {
+    var badge = document.createElement('span');
+    badge.className = 'score-badge';
+    badge.id = 'badge-' + idx;
+    badge.textContent = score === 'correct' ? '\u2705' : score === 'partial' ? '\u26a0\ufe0f' : '\u274c';
+    actions.appendChild(badge);
+  }
+
+  var tryBtn = document.createElement('button');
+  tryBtn.className = 'try-btn' + (isOpen ? ' open' : '');
+  tryBtn.id = 'trybtn-' + idx;
+  tryBtn.textContent = isOpen ? '\u25b2 Hide' : '\u25bc Try';
+  tryBtn.addEventListener('click', (function(capturedFI) {
+    return function(e) { e.stopPropagation(); toggleExpand(capturedFI); };
+  })(fi));
+  actions.appendChild(tryBtn);
+
+  header.appendChild(cb);
+  header.appendChild(termEl);
+  header.appendChild(actions);
+  card.appendChild(header);
+
+  // ── Answer area ──
+  var area = document.createElement('div');
+  area.className = 'answer-area' + (isOpen ? ' open' : '');
+  area.id = 'area-' + idx;
+
+  var ta = document.createElement('textarea');
+  ta.id = 'ta-' + idx;
+  ta.placeholder = 'Type your definition here\u2026';
+  ta.value = ans;
+  ta.addEventListener('input', (function(capturedIdx) {
+    return function() { saveAnswer(capturedIdx, this.value); };
+  })(idx));
+
+  var hint = document.createElement('div');
+  hint.className = 'answer-hint';
+
+  var hintLeft = document.createElement('span');
+  hintLeft.textContent = 'Check \u2610 to compare with the correct definition';
+
+  var hintRight = document.createElement('span');
+  hintRight.className = 'char-count';
+  hintRight.id = 'chars-' + idx;
+  if (ans) hintRight.textContent = ans.length + ' chars';
+
+  hint.appendChild(hintLeft);
+  hint.appendChild(hintRight);
+  area.appendChild(ta);
+  area.appendChild(hint);
+  card.appendChild(area);
+
+  // Hover-reveal tooltip (shown when tooltip mode is on)
+  var tip = document.createElement('div');
+  tip.className = 'def-tip';
+  tip.textContent = row.definition;
+  card.appendChild(tip);
+
+  return card;
+}
+
+// ── EXPAND / COLLAPSE ──
+function toggleExpand(fi) {
+  var row = filteredVocab[fi];
+  var idx = row.idx;
+  expanded[idx] = !expanded[idx];
+
+  var area   = document.getElementById('area-' + idx);
+  var tryBtn = document.getElementById('trybtn-' + idx);
+  if (!area || !tryBtn) return;
+
+  if (expanded[idx]) {
+    area.classList.add('open');
+    tryBtn.classList.add('open');
+    tryBtn.textContent = '\u25b2 Hide';
+    var ta = document.getElementById('ta-' + idx);
+    if (ta) setTimeout(function() { ta.focus(); }, 40);
+  } else {
+    area.classList.remove('open');
+    tryBtn.classList.remove('open');
+    tryBtn.textContent = '\u25bc Try';
+  }
+}
+
+// ── SAVE ANSWER ──
+function saveAnswer(idx, val) {
+  userAnswers[idx] = val;
+  var cc = document.getElementById('chars-' + idx);
+  if (cc) cc.textContent = val.length ? val.length + ' chars' : '';
+}
+
+// ── MODAL ──
+function openModal(fi) {
+  modalFI = fi;
+  var row = filteredVocab[fi];
+  var idx = row.idx;
+  var ans = userAnswers[idx] || '';
+
+  document.getElementById('modalTerm').textContent = row.term;
+
+  var yoursEl = document.getElementById('modalYours');
+  if (ans.trim()) {
+    yoursEl.textContent = ans;
+    yoursEl.classList.remove('no-answer');
+  } else {
+    yoursEl.textContent = '(no answer typed — click \u25bc Try on the card to add one)';
+    yoursEl.classList.add('no-answer');
+  }
+
+  document.getElementById('modalCorrect').textContent = row.definition;
+  document.getElementById('modalOverlay').classList.add('active');
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('active');
+  if (modalCB) { modalCB.checked = false; modalCB = null; }
+  modalFI = -1;
+}
+
+function onOverlayClick(e) {
+  if (e.target === document.getElementById('modalOverlay')) closeModal();
+}
+
+// ── GRADING ──
+function scoreAndClose(result) {
+  if (modalFI < 0) return;
+  var idx = filteredVocab[modalFI].idx;
+  scores[idx] = result;
+  applyScoreToCard(idx, result);
+  updateScorePills();
+  closeModal();
+}
+
+function applyScoreToCard(idx, result) {
+  var card = document.getElementById('card-' + idx);
+  if (!card) return;
+
+  card.className = 'vocab-card scored-' + result;
+
+  var emoji = result === 'correct' ? '\u2705' : result === 'partial' ? '\u26a0\ufe0f' : '\u274c';
+  var badgeEl = document.getElementById('badge-' + idx);
+  if (badgeEl) {
+    badgeEl.textContent = emoji;
+  } else {
+    var actions = card.querySelector('.card-actions');
+    if (actions) {
+      var sp = document.createElement('span');
+      sp.className = 'score-badge';
+      sp.id = 'badge-' + idx;
+      sp.textContent = emoji;
+      actions.insertBefore(sp, actions.firstChild);
+    }
+  }
+}
+
+// ── SCORE PILLS ──
+function updateScorePills() {
+  var correct = 0, partial = 0, wrong = 0;
+  allVocab.forEach(function(v) {
+    var s = scores[v.idx];
+    if (s === 'correct') correct++;
+    else if (s === 'partial') partial++;
+    else if (s === 'wrong') wrong++;
+  });
+
+  var total = correct + partial + wrong;
+  var show = total > 0 ? '' : 'none';
+
+  var pc = document.getElementById('pillCorrect');
+  var pp = document.getElementById('pillPartial');
+  var pw = document.getElementById('pillWrong');
+  var eb = document.getElementById('exportAllBtn');
+
+  pc.textContent = '\u2705 ' + correct;
+  pp.textContent = '\u26a0\ufe0f ' + partial;
+  pw.textContent = '\u274c ' + wrong;
+
+  pc.style.display = total > 0 ? '' : 'none';
+  pp.style.display = total > 0 ? '' : 'none';
+  pw.style.display = total > 0 ? '' : 'none';
+}
+
+// ── COPY SINGLE CARD FOR AI GRADING ──
+async function copyOneForGrading() {
+  if (modalFI < 0) return;
+  var row = filteredVocab[modalFI];
+  var ans = userAnswers[row.idx] || '(no answer provided)';
+
+  var text = [
+    'Grade my definition for this vocabulary term.',
+    'Be lenient — grade on whether I understand the core concept, not exact wording.',
+    '',
+    'Term: ' + row.term,
+    'My Answer: ' + ans,
+    'Correct Definition: ' + row.definition,
+    '',
+    'Rate as one of:',
+    '\u2705 Correct \u2014 captures the key meaning',
+    '\u26a0\ufe0f Partial \u2014 somewhat correct but misses important points',
+    '\u274c Wrong \u2014 misses the point',
+    '',
+    'Give one brief sentence of feedback explaining your rating.'
+  ].join('\n');
+
+  try {
+    await navigator.clipboard.writeText(text);
+    alert('Copied! Paste into Claude or ChatGPT for grading.');
+  } catch(e) {
+    prompt('Copy this grading prompt:', text);
+  }
+}
+
+// ── EXPORT ALL FOR GRADING ──
+async function exportAll() {
+  var toExport = allVocab.filter(function(v) {
+    return scores[v.idx] || (userAnswers[v.idx] && userAnswers[v.idx].trim());
+  });
+
+  if (toExport.length === 0) {
+    alert('No answered cards yet. Use \u25bc Try to open the answer area on a card and type your definition.');
+    return;
+  }
+
+  var lines = [
+    'Grade my vocabulary definitions. Be lenient \u2014 grade on whether I understand the concept, not exact wording.',
+    '',
+    'For each item, rate as:',
+    '\u2705 Correct \u2014 captures the key meaning',
+    '\u26a0\ufe0f Partial \u2014 partially correct, misses some points',
+    '\u274c Wrong \u2014 misses the point',
+    '\u23ed\ufe0f Skipped \u2014 no answer provided',
+    '',
+    'Format your response as:',
+    '#N: [Term] \u2192 \u2705/\u26a0\ufe0f/\u274c/\u23ed\ufe0f \u2014 [one-line note]',
+    '',
+    'Then give an Overall Score (X/' + toExport.length + ') and a brief summary.',
+    '',
+    '---',
+    'VOCABULARY TEST (' + toExport.length + ' items):',
+    ''
+  ];
+
+  toExport.forEach(function(v, i) {
+    var ans = (userAnswers[v.idx] || '').trim() || '(no answer)';
+    lines.push('#' + (i + 1) + ' Term: ' + v.term);
+    lines.push('My Answer: ' + ans);
+    lines.push('Correct: ' + v.definition);
+    lines.push('');
+  });
+
+  var text = lines.join('\n');
+  try {
+    await navigator.clipboard.writeText(text);
+    alert('Copied ' + toExport.length + ' items! Paste into Claude or ChatGPT for grading.');
+  } catch(e) {
+    prompt('Copy this grading prompt:', text);
+  }
+}
+
+// ── FILE LOADING ──
+function onFileInput(e) {
+  var file = e.target.files[0];
+  if (file) readFile(file);
+}
+
+function onDragOver(e) {
+  e.preventDefault();
+  document.getElementById('uploadZone').classList.add('drag-over');
+}
+
+function onDragLeave() {
+  document.getElementById('uploadZone').classList.remove('drag-over');
+}
+
+function onDrop(e) {
+  e.preventDefault();
+  document.getElementById('uploadZone').classList.remove('drag-over');
+  var file = e.dataTransfer.files[0];
+  if (file) readFile(file);
+}
+
+function readFile(file) {
+  setUploadStatus('Loading ' + file.name + '\u2026');
+  var reader = new FileReader();
+  reader.onerror = function() { setUploadStatus('Error reading file.'); };
+  reader.onload = function(e) {
+    try {
+      allVocab = parseVocabCsv(e.target.result);
+      userAnswers = {};
+      scores = {};
+      expanded = {};
+
+      if (allVocab.length === 0) {
+        setUploadStatus('\u26a0\ufe0f No vocabulary entries found \u2014 check file format (needs "Term: Definition" lines).');
+        return;
+      }
+
+      // Populate section dropdown
+      var sel = document.getElementById('sectionSel');
+      sel.innerHTML = '<option value="">All sections (' + allVocab.length + ' terms)</option>';
+      sections.forEach(function(s) {
+        var count = allVocab.filter(function(v) { return v.section === s; }).length;
+        var opt = document.createElement('option');
+        opt.value = s;
+        opt.textContent = 'Section ' + s + ' (' + count + ')';
+        sel.appendChild(opt);
+      });
+
+      setUploadStatus('\u2705 Loaded ' + allVocab.length + ' terms from ' + file.name);
+
+      // Show control bar, cards area, and export button
+      document.getElementById('controlBar').classList.add('active');
+      document.getElementById('cardsArea').classList.add('active');
+      document.getElementById('exportAllBtn').style.display = '';
+
+      // Collapse upload zone
+      document.getElementById('uploadZone').style.display = 'none';
+
+      filterAndRender();
+    } catch(err) {
+      setUploadStatus('Parse error: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+}
+
+function setUploadStatus(msg) {
+  document.getElementById('uploadStatus').textContent = msg;
+}
+
+// ── HOVER-REVEAL TOGGLE ──
+function setTooltipMode(on) {
+  tooltipOn = on;
+  document.getElementById('cardsArea').classList.toggle('tooltip-on', on);
+  document.getElementById('tipTrack').classList.toggle('on', on);
+  document.getElementById('tipKnob').classList.toggle('on', on);
+}
+
+// ── GOOGLE SHEETS ──
+var GDRIVE_CLIENT_ID = '1095683227908-7ro25k16mprkf408i3lf583gti8v759b.apps.googleusercontent.com';
+var GDRIVE_SCOPES = 'https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/spreadsheets.readonly';
+
+var gdriveAccessToken = null;
+var gdriveTokenClient = null;
+var gdriveWorkbook = null;
+var gdriveAllRows = []; // [{term, definition, section}]
+var gdriveSections = [];
+
+function setGStatus(msg) { document.getElementById('gStatus').textContent = msg; }
+
+function toggleSetup() {
+  var section = document.getElementById('setupSection');
+  var arrow = document.getElementById('setupArrow');
+  section.classList.toggle('collapsed');
+  arrow.textContent = section.classList.contains('collapsed') ? '\u25ba' : '\u25bc';
+}
+
+function gdriveInitClient() {
+  if (window.google && window.google.accounts) {
+    gdriveTokenClient = window.google.accounts.oauth2.initTokenClient({
+      client_id: GDRIVE_CLIENT_ID,
+      scope: GDRIVE_SCOPES,
+      callback: function(response) {
+        if (response.access_token) {
+          gdriveAccessToken = response.access_token;
+          document.getElementById('authBtn').textContent = 'Sign Out';
+          document.getElementById('gSearchBtn').disabled = false;
+          setGStatus('Signed in. Enter a spreadsheet name and click Load.');
+        }
+      },
+    });
+  }
+}
+
+var checkGoogle = setInterval(function() {
+  if (window.google && window.google.accounts) {
+    clearInterval(checkGoogle);
+    gdriveInitClient();
+  }
+}, 200);
+
+function gdriveSignIn() {
+  if (gdriveAccessToken) {
+    gdriveAccessToken = null;
+    gdriveWorkbook = null;
+    document.getElementById('authBtn').textContent = 'Sign In';
+    document.getElementById('gSearchBtn').disabled = true;
+    document.getElementById('gSheetSelect').innerHTML = '<option value="">Sign in first</option>';
+    document.getElementById('gSheetSelect').disabled = true;
+    document.getElementById('gSectionSelect').innerHTML = '<option value="">Select sheet first</option>';
+    document.getElementById('gSectionSelect').disabled = true;
+    gdriveAllRows = [];
+    gdriveSections = [];
+    setGStatus('Signed out');
+    return;
+  }
+  if (gdriveTokenClient) {
+    gdriveTokenClient.requestAccessToken();
+  } else {
+    setGStatus('Google API not loaded yet. Try again.');
+  }
+}
+
+async function gdriveSearch() {
+  var searchTerm = document.getElementById('gSearchInput').value.trim();
+  if (!searchTerm) { setGStatus('Enter a spreadsheet name'); return; }
+  try {
+    setGStatus('Searching...');
+    var query = encodeURIComponent("name contains '" + searchTerm + "' and trashed=false and mimeType='application/vnd.google-apps.spreadsheet'");
+    var resp = await fetch('https://www.googleapis.com/drive/v3/files?q=' + query + '&fields=files(id,name)&orderBy=name', {
+      headers: { Authorization: 'Bearer ' + gdriveAccessToken }
+    });
+    if (!resp.ok) throw new Error('Search failed');
+    var data = await resp.json();
+    if (!data.files || data.files.length === 0) {
+      setGStatus('No spreadsheet matching "' + searchTerm + '"');
+      return;
+    }
+    var file = data.files[0];
+    setGStatus('Loading "' + file.name + '"...');
+    await gdriveLoadSpreadsheet(file.id, file.name);
+  } catch (err) {
+    setGStatus('Error: ' + err.message);
+  }
+}
+
+async function gdriveLoadSpreadsheet(fileId, fileName) {
+  try {
+    var exportMime = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+    var resp = await fetch('https://www.googleapis.com/drive/v3/files/' + fileId + '/export?mimeType=' + encodeURIComponent(exportMime), {
+      headers: { Authorization: 'Bearer ' + gdriveAccessToken }
+    });
+    if (!resp.ok) throw new Error('Export failed');
+    var arrayBuffer = await resp.arrayBuffer();
+    gdriveWorkbook = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array' });
+
+    var sel = document.getElementById('gSheetSelect');
+    sel.innerHTML = '<option value="">-- select sheet --</option>';
+    gdriveWorkbook.SheetNames.forEach(function(name) {
+      var opt = document.createElement('option');
+      opt.value = name; opt.textContent = name;
+      sel.appendChild(opt);
+    });
+    sel.disabled = false;
+    if (gdriveWorkbook.SheetNames.length === 1) {
+      sel.value = gdriveWorkbook.SheetNames[0];
+      onGSheetSelect();
+    }
+    setGStatus('Loaded "' + fileName + '" \u2014 ' + gdriveWorkbook.SheetNames.length + ' sheet(s)');
+  } catch (err) {
+    setGStatus('Error: ' + err.message);
+  }
+}
+
+function gdriveParseCsv(text) {
+  var result = [];
+  var current = '', cells = [], inQuotes = false;
+  for (var i = 0; i < text.length; i++) {
+    var ch = text[i];
+    if (inQuotes) {
+      if (ch === '"' && text[i+1] === '"') { current += '"'; i++; }
+      else if (ch === '"') { inQuotes = false; }
+      else { current += ch; }
+    } else {
+      if (ch === '"') { inQuotes = true; }
+      else if (ch === ',') { cells.push(current); current = ''; }
+      else if (ch === '\n' || (ch === '\r' && text[i+1] === '\n')) {
+        cells.push(current); result.push(cells);
+        cells = []; current = '';
+        if (ch === '\r') i++;
+      } else { current += ch; }
+    }
+  }
+  cells.push(current);
+  if (cells.length > 0) result.push(cells);
+  return result;
+}
+
+function onGSheetSelect() {
+  var sheetName = document.getElementById('gSheetSelect').value;
+  if (!sheetName || !gdriveWorkbook) return;
+
+  var sheet = gdriveWorkbook.Sheets[sheetName];
+  // Export as single-column CSV text and feed through the existing parser
+  var csvText = XLSX.utils.sheet_to_csv(sheet);
+
+  // The CSV has each row as a single cell with "Term: Definition" format,
+  // same as the local CSV files. Pass directly to parseVocabCsv.
+  var vocab = parseVocabCsv(csvText);
+
+  if (vocab.length === 0) {
+    setGStatus('No vocabulary entries found — check sheet format (needs "Term: Definition" lines).');
+    return;
+  }
+
+  // Populate section dropdown in the Google setup area
+  var secSel = document.getElementById('gSectionSelect');
+  secSel.innerHTML = '<option value="">All sections (' + vocab.length + ' terms)</option>';
+  sections.forEach(function(s) {
+    var count = vocab.filter(function(v) { return v.section === s; }).length;
+    var opt = document.createElement('option');
+    opt.value = s;
+    opt.textContent = 'Section ' + s + ' (' + count + ')';
+    secSel.appendChild(opt);
+  });
+  secSel.disabled = false;
+
+  // Store parsed vocab for section filtering
+  gdriveAllRows = vocab;
+  gdriveSections = sections.slice();
+
+  setGStatus(vocab.length + ' terms loaded from sheet "' + sheetName + '"');
+
+  // Auto-load all
+  onGSectionSelect();
+}
+
+function onGSectionSelect() {
+  var sec = document.getElementById('gSectionSelect').value;
+  var vocabToLoad = sec
+    ? gdriveAllRows.filter(function(r) { return r.section === sec; })
+    : gdriveAllRows.slice();
+
+  if (vocabToLoad.length === 0) {
+    setGStatus('No terms found in this section');
+    return;
+  }
+
+  // Re-index and load into the drill
+  allVocab = vocabToLoad.map(function(v, i) {
+    return { term: v.term, definition: v.definition, section: v.section, idx: i };
+  });
+  userAnswers = {};
+  scores = {};
+  expanded = {};
+  sections = gdriveSections;
+
+  // Populate the main section dropdown
+  var sel = document.getElementById('sectionSel');
+  sel.innerHTML = '<option value="">All sections (' + allVocab.length + ' terms)</option>';
+  sections.forEach(function(s) {
+    var count = allVocab.filter(function(v) { return v.section === s; }).length;
+    var opt = document.createElement('option');
+    opt.value = s;
+    opt.textContent = 'Section ' + s + ' (' + count + ')';
+    sel.appendChild(opt);
+  });
+
+  // Show control bar and cards
+  document.getElementById('controlBar').classList.add('active');
+  document.getElementById('cardsArea').classList.add('active');
+  document.getElementById('exportAllBtn').style.display = '';
+
+  // Hide upload zone
+  document.getElementById('uploadZone').style.display = 'none';
+  document.getElementById('orDivider').style.display = 'none';
+  document.getElementById('setupSection').style.display = 'none';
+
+  setUploadStatus('\u2705 Loaded ' + allVocab.length + ' terms from Google Sheets');
+  filterAndRender();
+}
+
+// ── KEYBOARD: Escape closes modal ──
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeModal();
+});
+</script>
+</body>
+</html>
