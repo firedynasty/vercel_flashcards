@@ -263,6 +263,10 @@
         </div>
       </div>
       <div class="sep"></div>
+      <button class="btn outline" style="font-size:11px;padding:3px 8px;" onclick="changeFontSize(-1)">&#8722;</button>
+      <span id="fontSizeLabel" style="font-size:11px;font-weight:700;color:#555;min-width:28px;text-align:center;">14</span>
+      <button class="btn outline" style="font-size:11px;padding:3px 8px;" onclick="changeFontSize(1)">+</button>
+      <div class="sep"></div>
       <button class="btn outline" style="font-size:11px;padding:4px 10px;" onclick="exportAll()">&#128203; Export All</button>
     </div>
 
@@ -288,6 +292,7 @@ var showYou = true;
 var showOther = true;
 var showTips = true;
 var tooltipOn = false;
+var fontSize = 14;
 var userAnswers = {};
 var expanded = {};
 
@@ -368,15 +373,12 @@ function toggleExpand(i) {
   expanded[i] = !expanded[i];
   var area = document.getElementById('area-' + i);
   if (!area) return;
-  var tryBtn = document.getElementById('trybtn-' + i);
   if (expanded[i]) {
     area.classList.add('open');
-    if (tryBtn) { tryBtn.classList.add('open'); tryBtn.textContent = '\u25b2 Hide'; }
     var ta = document.getElementById('ta-' + i);
     if (ta) setTimeout(function() { ta.focus(); }, 40);
   } else {
     area.classList.remove('open');
-    if (tryBtn) { tryBtn.classList.remove('open'); tryBtn.textContent = '\u270e Answer'; }
   }
 }
 
@@ -474,14 +476,29 @@ function renderCards() {
     lbl2.textContent = 'YOU';
     topRow.appendChild(lbl2);
 
-    var tryBtn = document.createElement('button');
-    tryBtn.className = 'try-btn' + (expanded[i] ? ' open' : '');
-    tryBtn.id = 'trybtn-' + i;
-    tryBtn.textContent = expanded[i] ? '\u25b2 Hide' : '\u270e Answer';
-    tryBtn.addEventListener('click', (function(ci) {
-      return function(e) { e.stopPropagation(); toggleExpand(ci); };
+    var pasteBtn = document.createElement('button');
+    pasteBtn.className = 'try-btn';
+    pasteBtn.textContent = '\ud83d\udccb Paste';
+    pasteBtn.addEventListener('click', (function(ci) {
+      return function(e) {
+        e.stopPropagation();
+        // Open answer area if not already open
+        if (!expanded[ci]) toggleExpand(ci);
+        // Paste from clipboard
+        navigator.clipboard.readText().then(function(text) {
+          if (text && text.trim()) {
+            var ta = document.getElementById('ta-' + ci);
+            if (ta) {
+              ta.value = text.trim();
+              userAnswers[ci] = text.trim();
+              var cc = document.getElementById('chars-' + ci);
+              if (cc) cc.textContent = text.trim().length + ' chars';
+            }
+          }
+        }).catch(function() {});
+      };
     })(i));
-    topRow.appendChild(tryBtn);
+    topRow.appendChild(pasteBtn);
     card.appendChild(topRow);
 
     // Expected text (hideable via You toggle)
@@ -698,6 +715,14 @@ function onSceneSelect() {
 // -- HELPERS --
 function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// -- FONT SIZE --
+function changeFontSize(delta) {
+  fontSize = Math.max(10, Math.min(24, fontSize + delta));
+  document.getElementById('fontSizeLabel').textContent = fontSize;
+  var container = document.getElementById('linesContainer');
+  container.style.fontSize = fontSize + 'px';
 }
 
 // -- HOVER-REVEAL TOGGLE --
