@@ -6,6 +6,12 @@
     { "source": "/learn-chinese-tts.html", "destination": "/learn-chinese-tts.html" },
     { "source": "/musicindex.html", "destination": "/musicindex.html" },
     { "source": "/classical_player.html", "destination": "/classical_player.html" },
+    { "source": "/learn-role-play.html", "destination": "/learn-role-play.html" },
+    { "source": "/learn-role-play", "destination": "/learn-role-play.html" },
+    { "source": "/learn-korean-tts.html", "destination": "/learn-korean-tts.html" },
+    { "source": "/learn-korean-tts", "destination": "/learn-korean-tts.html" },
+    { "source": "/learn-google.html", "destination": "/learn-google.html" },
+    { "source": "/learn-google", "destination": "/learn-google.html" },
     { "source": "/(.*)", "destination": "/flashcards.html" }
   ]
 }

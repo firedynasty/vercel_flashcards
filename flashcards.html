@@ -965,9 +965,9 @@
 
         <input type="file" id="folderFlatInput" accept=".txt,.md" multiple style="display:none">
         <button class="paste-btn" id="folderFlatBtn" title="Load .txt or .md files" style="border: 2px dotted;">Load .txt File</button>
-        <button class="paste-btn" id="roleplayBtn" title="Open Role-playing trainer" style="border: 2px solid #2563eb; color: #2563eb;">Role-playing</button>
-        <button class="paste-btn" id="learnChineseBtn" title="Open Learn Chinese" style="border: 2px solid #ea580c; color: #ea580c;">Learn Chinese</button>
-        <button class="paste-btn" id="learnKoreanBtn" title="Open Learn Korean" style="border: 2px solid #7c3aed; color: #7c3aed;">Learn Korean</button>
+        <button class="paste-btn" id="learnRolePlayBtn" title="Open Role Play Drill" style="border: 2px solid #059669; color: #059669;">Role Play</button>
+        <button class="paste-btn" id="learnChineseTtsBtn" title="Open Chinese Lyrics Reader" style="border: 2px solid #e11d48; color: #e11d48;">Chinese TTS</button>
+        <button class="paste-btn" id="learnGoogleBtn" title="Open Learn Google" style="border: 2px solid #4285f4; color: #4285f4;">Learn-Google</button>
         <button class="paste-btn" id="learnKoreanTtsBtn" title="Open Korean Lyrics Reader" style="border: 2px solid #ec4899; color: #ec4899;">Korean TTS</button>
         <button class="paste-btn" id="learnHebrewBtn" title="Open Learn Hebrew" style="border: 2px solid #0891b2; color: #0891b2;">Learn Hebrew</button>
         <button class="paste-btn" id="learnSpanishBtn" title="Open Learn Spanish" style="border: 2px solid #dc2626; color: #dc2626;">Learn Spanish</button>
@@ -2424,17 +2424,6 @@ God loves the world
                 document.getElementById('folderFlatInput').click();
             });
 
-            document.getElementById('roleplayBtn').addEventListener('click', () => {
-                window.open('role-playing.html', '_blank');
-            });
-
-            document.getElementById('learnChineseBtn').addEventListener('click', () => {
-                window.open('learn-chinese.html', '_blank');
-            });
-
-            document.getElementById('learnKoreanBtn').addEventListener('click', () => {
-                window.open('learn-korean.html', '_blank');
-            });
 
             document.getElementById('learnKoreanTtsBtn').addEventListener('click', () => {
                 window.open('learn-korean-tts.html', '_blank');
@@ -2454,6 +2443,18 @@ God loves the world
 
             document.getElementById('learnScriptureBtn').addEventListener('click', () => {
                 window.open('learn-scripture.html', '_blank');
+            });
+
+            document.getElementById('learnRolePlayBtn').addEventListener('click', () => {
+                window.open('learn-role-play.html', '_blank');
+            });
+
+            document.getElementById('learnChineseTtsBtn').addEventListener('click', () => {
+                window.open('learn-chinese-tts.html', '_blank');
+            });
+
+            document.getElementById('learnGoogleBtn').addEventListener('click', () => {
+                window.open('learn-google.html', '_blank');
             });
 
             document.getElementById('musicBtn').addEventListener('click', () => {
