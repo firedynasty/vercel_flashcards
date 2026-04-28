@@ -268,6 +268,39 @@
   }
   .toggle-chip.on { background: #2563eb; color: white; border-color: #2563eb; }
 
+  /* ── VIDEO SECTION ── */
+  .video-item { flex: 1 1 calc(50% - 6px); min-width: 260px; position: relative; }
+  .video-item video { width: 100%; border-radius: 8px; background: #000; display: block; cursor: pointer; }
+  .video-item .video-label {
+    font-size: 11px; color: #888; margin-top: 4px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .video-controls-row {
+    display: flex; gap: 4px; margin-top: 4px;
+  }
+  .vid-ctrl-btn {
+    border: none; border-radius: 6px; padding: 5px 12px;
+    font-size: 11px; font-weight: 600; cursor: pointer;
+    background: #e5e7eb; color: #333; transition: background 0.15s;
+  }
+  .vid-ctrl-btn:hover { background: #d1d5db; }
+  .vid-ctrl-btn.active { background: #2563eb; color: white; }
+  .vol-slider {
+    -webkit-appearance: none; appearance: none;
+    width: 70px; height: 4px; border-radius: 2px;
+    background: #d1d5db; outline: none; cursor: pointer;
+    align-self: center;
+  }
+  .vol-slider::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 14px; height: 14px; border-radius: 50%;
+    background: #2563eb; cursor: pointer;
+  }
+  .vol-slider::-moz-range-thumb {
+    width: 14px; height: 14px; border-radius: 50%;
+    background: #2563eb; border: none; cursor: pointer;
+  }
+
   /* ── LOADING SPINNER ── */
   .loading-dot {
     display: inline-block; width: 8px; height: 8px; border-radius: 50%;
@@ -347,6 +380,17 @@
 
       <hr style="border:none;border-top:1px solid #eee;margin:12px 0;">
 
+      <!-- Drop Folder -->
+      <div style="font-size:12px;font-weight:600;color:#555;margin-bottom:6px;">Drop Folder</div>
+      <div class="setup-row">
+        <input type="file" id="folderInput" webkitdirectory style="display:none">
+        <button class="btn primary" onclick="document.getElementById('folderInput').click()">Drop Folder</button>
+        <span id="folderName" style="font-size:12px;color:#888;font-family:monospace;">No folder selected</span>
+      </div>
+      <div class="hint">Picks the first .csv and all .mp4 files from the top level of the folder.</div>
+
+      <hr style="border:none;border-top:1px solid #eee;margin:12px 0;">
+
       <!-- Google Sheets -->
       <div style="font-size:12px;font-weight:600;color:#555;margin-bottom:6px;">Google Sheets</div>
       <div class="setup-row">
@@ -368,6 +412,16 @@
       </div>
       <div class="status" id="status"></div>
       <div class="hint">Sheet format: Chinese | Pinyin | English (3 columns, header row). Section headers (e.g. "Verse 1") in column A with B+C empty.</div>
+    </div>
+  </div>
+
+  <!-- Video Section (from folder drop) -->
+  <div id="videoSection" style="display:none;margin-bottom:16px;">
+    <div class="setup-header" onclick="toggleVideos()" style="border-radius:10px 10px 0 0;border:1px solid #e0e0e0;border-bottom:none;">
+      <span id="videoHeaderLabel">Videos (0)</span>
+      <span class="toggle-arrow" id="videoArrow">&#9660;</span>
+    </div>
+    <div id="videoBody" style="border:1px solid #e0e0e0;border-radius:0 0 10px 10px;background:white;padding:12px;display:flex;flex-wrap:wrap;gap:12px;">
     </div>
   </div>
 
@@ -1199,6 +1253,189 @@ document.addEventListener('keydown', function(e) {
     e.preventDefault();
     var hovered = document.querySelector('.vocab-card:hover');
     if (hovered) hovered.click();
+  }
+});
+
+// ── DROP FOLDER ──
+let videosHidden = false;
+
+function toggleVideos() {
+  videosHidden = !videosHidden;
+  document.getElementById('videoBody').style.display = videosHidden ? 'none' : 'flex';
+  document.getElementById('videoArrow').textContent = videosHidden ? '\u25ba' : '\u25bc';
+}
+
+function loadCsvText(text, fileName) {
+  var rows = parseCsv(text);
+  if (rows.length < 2) { setStatus('CSV is empty'); return; }
+
+  allRows = [];
+  var currentLesson = '';
+  for (var i = 1; i < rows.length; i++) {
+    var r = rows[i];
+    var colA = (r[0] || '').trim();
+    var colB = (r[1] || '').trim();
+    var colC = (r[2] || '').trim();
+
+    if (!colA && !colB && !colC) continue;
+
+    if (colA && !colB && !colC) {
+      if (/^(Scene|Chapter|Part|Section|Lesson|Unit)\s/i.test(colA)) {
+        currentLesson = colA;
+        allRows.push({ lesson: currentLesson, chinese: '', romanization: '', english: '', sectionHeader: colA, contextLine: '' });
+      } else {
+        allRows.push({ lesson: currentLesson, chinese: '', romanization: '', english: '', sectionHeader: '', contextLine: colA });
+      }
+    } else {
+      allRows.push({ lesson: currentLesson, chinese: colA, romanization: colB, english: colC, sectionHeader: '', contextLine: '' });
+    }
+  }
+
+  var lessons = [], seen = {};
+  allRows.forEach(function(row) {
+    if (row.lesson && !seen[row.lesson]) { seen[row.lesson] = true; lessons.push(row.lesson); }
+  });
+  var lessonSel = document.getElementById('lessonSelect');
+  lessonSel.innerHTML = '<option value="">-- all lessons --</option>';
+  lessons.forEach(function(l) {
+    var opt = document.createElement('option');
+    opt.value = l;
+    opt.textContent = l + ' (' + allRows.filter(function(r) { return r.lesson === l; }).length + ')';
+    lessonSel.appendChild(opt);
+  });
+  lessonSel.disabled = false;
+
+  userAnswers = {};
+  expanded = {};
+  setStatus('Loaded ' + allRows.length + ' lines from ' + fileName);
+  onLessonSelect();
+}
+
+function loadVideos(videoFiles) {
+  var section = document.getElementById('videoSection');
+  var body = document.getElementById('videoBody');
+  body.innerHTML = '';
+
+  if (videoFiles.length === 0) {
+    section.style.display = 'none';
+    return;
+  }
+
+  document.getElementById('videoHeaderLabel').textContent = 'Videos (' + videoFiles.length + ')';
+  videoFiles.forEach(function(f) {
+    var url = URL.createObjectURL(f);
+    var item = document.createElement('div');
+    item.className = 'video-item';
+
+    var vid = document.createElement('video');
+    vid.src = url;
+    vid.preload = 'metadata';
+    vid.muted = true;
+    vid.onclick = function() { if (vid.paused) vid.play(); else vid.pause(); };
+
+    var label = document.createElement('div');
+    label.className = 'video-label';
+    label.textContent = f.name;
+
+    var controls = document.createElement('div');
+    controls.className = 'video-controls-row';
+
+    var playBtn = document.createElement('button');
+    playBtn.className = 'vid-ctrl-btn';
+    playBtn.textContent = '\u25b6 Play';
+    playBtn.onclick = function() {
+      if (vid.paused) { vid.play(); playBtn.textContent = '\u23f8 Pause'; playBtn.classList.add('active'); }
+      else { vid.pause(); playBtn.textContent = '\u25b6 Play'; playBtn.classList.remove('active'); }
+    };
+    vid.addEventListener('play', function() { playBtn.textContent = '\u23f8 Pause'; playBtn.classList.add('active'); });
+    vid.addEventListener('pause', function() { playBtn.textContent = '\u25b6 Play'; playBtn.classList.remove('active'); });
+    vid.addEventListener('ended', function() { playBtn.textContent = '\u25b6 Play'; playBtn.classList.remove('active'); });
+
+    var muteBtn = document.createElement('button');
+    muteBtn.className = 'vid-ctrl-btn active';
+    muteBtn.textContent = '\ud83d\udd07 Sound Off';
+    muteBtn.onclick = function() {
+      vid.muted = !vid.muted;
+      muteBtn.textContent = vid.muted ? '\ud83d\udd07 Sound Off' : '\ud83d\udd0a Sound On';
+      muteBtn.classList.toggle('active', !vid.muted);
+      if (!vid.muted && vid.volume === 0) { vid.volume = 0.5; volSlider.value = '0.5'; }
+      if (vid.muted) volSlider.value = '0'; else volSlider.value = String(vid.volume);
+    };
+
+    var volSlider = document.createElement('input');
+    volSlider.type = 'range';
+    volSlider.className = 'vol-slider';
+    volSlider.min = '0';
+    volSlider.max = '1';
+    volSlider.step = '0.05';
+    volSlider.value = '0';
+    volSlider.title = 'Volume';
+    volSlider.oninput = function() {
+      vid.volume = parseFloat(volSlider.value);
+      if (parseFloat(volSlider.value) > 0 && vid.muted) {
+        vid.muted = false;
+        muteBtn.textContent = '\ud83d\udd0a Sound On';
+        muteBtn.classList.add('active');
+      } else if (parseFloat(volSlider.value) === 0 && !vid.muted) {
+        vid.muted = true;
+        muteBtn.textContent = '\ud83d\udd07 Sound Off';
+        muteBtn.classList.remove('active');
+      }
+    };
+
+    controls.appendChild(playBtn);
+    controls.appendChild(muteBtn);
+    controls.appendChild(volSlider);
+    item.appendChild(vid);
+    item.appendChild(label);
+    item.appendChild(controls);
+    body.appendChild(item);
+  });
+
+  section.style.display = 'block';
+  videosHidden = false;
+  document.getElementById('videoBody').style.display = 'flex';
+  document.getElementById('videoArrow').textContent = '\u25bc';
+}
+
+document.getElementById('folderInput').addEventListener('change', function() {
+  var files = Array.from(this.files);
+  if (!files.length) return;
+
+  // Non-recursive: only top-level files (no subfolder separators beyond the root folder)
+  var folderName = files[0].webkitRelativePath.split('/')[0];
+  var topLevel = files.filter(function(f) {
+    var parts = f.webkitRelativePath.split('/');
+    return parts.length === 2; // folder/file only
+  });
+
+  document.getElementById('folderName').textContent = folderName;
+
+  // Find first .csv
+  var csvFile = topLevel.find(function(f) { return /\.csv$/i.test(f.name); });
+  // Find all .mp4
+  var mp4Files = topLevel.filter(function(f) { return /\.mp4$/i.test(f.name); });
+  mp4Files.sort(function(a, b) { return a.name.localeCompare(b.name); });
+
+  var parts = [];
+  if (csvFile) parts.push('CSV: ' + csvFile.name);
+  if (mp4Files.length) parts.push(mp4Files.length + ' video(s)');
+  if (!csvFile && !mp4Files.length) { setStatus('No .csv or .mp4 found in folder'); return; }
+
+  // Load videos
+  loadVideos(mp4Files);
+
+  // Load CSV
+  if (csvFile) {
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      loadCsvText(e.target.result, csvFile.name);
+      toggleSetup();
+    };
+    reader.readAsText(csvFile);
+  } else {
+    setStatus('No .csv found — loaded ' + mp4Files.length + ' video(s) only');
+    toggleSetup();
   }
 });
 
