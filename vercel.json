@@ -14,6 +14,8 @@
     { "source": "/learn-google", "destination": "/learn-google.html" },
     { "source": "/learn-french-tts.html", "destination": "/learn-french-tts.html" },
     { "source": "/learn-french-tts", "destination": "/learn-french-tts.html" },
+    { "source": "/learn-spanish-tts.html", "destination": "/learn-spanish-tts.html" },
+    { "source": "/learn-spanish-tts", "destination": "/learn-spanish-tts.html" },
     { "source": "/(.*)", "destination": "/flashcards.html" }
   ]
 }

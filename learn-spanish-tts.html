@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Chinese Lyrics Reader</title>
+<title>Spanish Vocab Reader</title>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -108,11 +108,11 @@
   .vocab-card:hover { background-color: #f0f4ff; }
   .vocab-card.speaking { background-color: #dbeafe; border-color: #93c5fd; }
   .vocab-card .num { font-size: 11px; font-weight: 700; color: #aaa; margin-bottom: 4px; }
-  .vocab-card .chinese {
+  .vocab-card .spanish {
     font-size: 24px; font-weight: 600; margin-bottom: 6px;
     cursor: pointer; display: inline-block;
   }
-  .vocab-card .chinese:hover { color: #2563eb; }
+  .vocab-card .spanish:hover { color: #2563eb; }
   .vocab-card .romanization {
     font-size: 14px; color: #888; font-style: italic; margin-bottom: 6px;
   }
@@ -141,7 +141,7 @@
   }
   .context-line:hover { background: #fef9c3; }
   .context-line.speaking { background: #fde68a; border-color: #f59e0b; }
-  .context-line .ctx-chinese {
+  .context-line .ctx-spanish {
     font-size: 20px; font-weight: 600; color: #78350f;
   }
   .context-line .ctx-english {
@@ -318,8 +318,8 @@
 <body>
 
 <div class="container">
-  <h1>Chinese Lyrics Reader</h1>
-  <div class="subtitle">Click to hear pronunciation — Mandarin or Cantonese via OpenAI or Browser TTS</div>
+  <h1>Spanish Vocab Reader</h1>
+  <div class="subtitle">Click to hear pronunciation — Spanish via OpenAI, ElevenLabs, or Browser TTS</div>
 
   <!-- Setup Section -->
   <div class="setup-section" id="setupSection">
@@ -328,13 +328,6 @@
       <span class="toggle-arrow" id="setupArrow">&#9660;</span>
     </div>
     <div class="setup-body">
-
-      <!-- Dialect Toggle -->
-      <div style="font-size:12px;font-weight:600;color:#555;margin-bottom:6px;">Dialect</div>
-      <div class="tts-toggle">
-        <button id="dialectMandarin" class="active" onclick="setDialect('mandarin')">Mandarin</button>
-        <button id="dialectCantonese" onclick="setDialect('cantonese')">Cantonese</button>
-      </div>
 
       <!-- TTS Engine Toggle -->
       <div style="font-size:12px;font-weight:600;color:#555;margin-bottom:6px;">Voice Engine</div>
@@ -395,7 +388,7 @@
       <div style="font-size:12px;font-weight:600;color:#555;margin-bottom:6px;">Google Sheets</div>
       <div class="setup-row">
         <button class="btn google" id="authBtn" onclick="gdriveSignIn()">Sign In</button>
-        <input type="text" id="searchInput" placeholder="Spreadsheet name..." value="chinese">
+        <input type="text" id="searchInput" placeholder="Spreadsheet name..." value="spanish">
         <button class="btn primary" id="searchBtn" onclick="gdriveSearch()" disabled>Load</button>
       </div>
       <div class="setup-row">
@@ -411,7 +404,7 @@
         </select>
       </div>
       <div class="status" id="status"></div>
-      <div class="hint">Sheet format: Chinese | Pinyin | English (3 columns, header row). Section headers (e.g. "Verse 1") in column A with B+C empty.</div>
+      <div class="hint">Sheet format: Spanish | Pronunciation | English (3 columns, header row). Section headers (e.g. "Lesson 1") in column A with B+C empty.</div>
     </div>
   </div>
 
@@ -449,13 +442,10 @@
       </label>
       <span class="auto-label" id="autoLabel" onmouseenter="setAutoAdvance(true)">Auto</span>
       <div class="sep"></div>
-      <span class="toggle-chip on" id="toggleChinese" onclick="toggleSetting('chinese')">Chin</span>
-      <span class="toggle-chip on" id="toggleRomanization" onclick="toggleSetting('romanization')">Pin</span>
+      <span class="toggle-chip on" id="toggleSpanish" onclick="toggleSetting('spanish')">Es</span>
+      <span class="toggle-chip on" id="toggleRomanization" onclick="toggleSetting('romanization')">Pron</span>
       <span class="toggle-chip on" id="toggleMeaning" onclick="toggleSetting('meanings')">Eng</span>
       <span class="toggle-chip on" id="toggleSentences" onclick="toggleSetting('sentences')">Sent</span>
-      <div class="sep"></div>
-      <label style="font-size:12px;font-weight:600;cursor:pointer;"><input type="radio" name="dialectBar" value="mandarin" checked onchange="setDialect('mandarin')"> Mandarin</label>
-      <label style="font-size:12px;font-weight:600;cursor:pointer;"><input type="radio" name="dialectBar" value="cantonese" onchange="setDialect('cantonese')"> Cantonese</label>
       <div class="sep"></div>
       <div class="tip-toggle" onclick="setTooltipMode(!tooltipOn)" title="Hover any card to reveal its English meaning">
         <span>Reveal on hover</span>
@@ -484,20 +474,19 @@ let gdriveWorkbook = null;
 
 let allRows = [];
 let filteredRows = [];
-let ttsEngine = 'browser'; // 'browser' or 'openai'
-let dialect = 'mandarin'; // 'mandarin' or 'cantonese'
+let ttsEngine = 'browser';
 let ttsRate = 1;
 let autoAdvance = false;
 let currentSpeakingIndex = -1;
-let currentAudio = null; // for OpenAI playback
+let currentAudio = null;
 
 let showMeanings = true;
-let showChinese = true;
+let showSpanish = true;
 let showRomanization = true;
 let showSentences = true;
 let tooltipOn = false;
-let userAnswers = {};  // index -> string
-let expanded = {};     // index -> bool
+let userAnswers = {};
+let expanded = {};
 
 // ── OPENAI API KEY (localStorage) ──
 function getApiKey() {
@@ -529,16 +518,6 @@ function loadApiKey() {
 
 function getElevenLabsKey() {
   return localStorage.getItem('elevenlabs_api_key') || '';
-}
-
-// ── DIALECT ──
-function setDialect(d) {
-  dialect = d;
-  document.getElementById('dialectMandarin').className = d === 'mandarin' ? 'active' : '';
-  document.getElementById('dialectCantonese').className = d === 'cantonese' ? 'active' : '';
-  // Sync sticky bar radio buttons
-  var radios = document.querySelectorAll('input[name="dialectBar"]');
-  radios.forEach(function(r) { r.checked = r.value === d; });
 }
 
 // ── TTS ENGINE ──
@@ -573,7 +552,7 @@ function speakText(text, onEnd) {
 
 function speakBrowser(text, onEnd) {
   var utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = dialect === 'cantonese' ? 'zh-HK' : 'zh-CN';
+  utterance.lang = 'es-ES';
   utterance.rate = ttsRate;
   utterance.onend = function() { if (onEnd) onEnd(); };
   speechSynthesis.speak(utterance);
@@ -711,10 +690,8 @@ function speakLine(index) {
   }
 
   var row = filteredRows[index];
-  // For context lines, speak the text
-  var textToSpeak = row.chinese || row.contextLine || '';
+  var textToSpeak = row.spanish || row.contextLine || '';
   if (!textToSpeak) {
-    // Skip non-speakable rows (section headers) during auto-advance
     if (autoAdvance) { speakLine(index + 1); return; }
     return;
   }
@@ -734,9 +711,8 @@ function speakLine(index) {
 
 // ── SPEAK SINGLE WORD (click on word token) ──
 function speakWord(text, tokenEl, event) {
-  event.stopPropagation(); // don't trigger line click
+  event.stopPropagation();
 
-  // Remove previous playing state
   document.querySelectorAll('.word-token.playing').forEach(function(el) {
     el.classList.remove('playing');
   });
@@ -765,7 +741,7 @@ function clearHighlight() {
 // ── TOGGLE SETTINGS ──
 function toggleSetting(key) {
   if (key === 'meanings') showMeanings = !showMeanings;
-  if (key === 'chinese') showChinese = !showChinese;
+  if (key === 'spanish') showSpanish = !showSpanish;
   if (key === 'romanization') showRomanization = !showRomanization;
   if (key === 'sentences') showSentences = !showSentences;
   renderLyrics();
@@ -815,7 +791,7 @@ function renderLyrics() {
 
   // Update toggle chips
   document.getElementById('toggleMeaning').className = 'toggle-chip' + (showMeanings ? ' on' : '');
-  document.getElementById('toggleChinese').className = 'toggle-chip' + (showChinese ? ' on' : '');
+  document.getElementById('toggleSpanish').className = 'toggle-chip' + (showSpanish ? ' on' : '');
   document.getElementById('toggleRomanization').className = 'toggle-chip' + (showRomanization ? ' on' : '');
   document.getElementById('toggleSentences').className = 'toggle-chip' + (showSentences ? ' on' : '');
 
@@ -836,17 +812,17 @@ function renderLyrics() {
 
     // Context/sentence line
     if (row.contextLine) {
-      if (!showSentences) return; // hidden by toggle
+      if (!showSentences) return;
       var ctx = document.createElement('div');
       ctx.className = 'context-line';
       ctx.id = 'card-' + i;
-      // Detect if it contains CJK characters (Chinese sentence) vs English
-      var hasCJK = /[\u4e00-\u9fff\u3400-\u4dbf]/.test(row.contextLine);
-      if (hasCJK) {
-        var ctxCn = document.createElement('div');
-        ctxCn.className = 'ctx-chinese';
-        ctxCn.textContent = row.contextLine;
-        ctx.appendChild(ctxCn);
+      // Detect Spanish accented characters vs plain English
+      var hasSpanish = /[áéíóúüñÁÉÍÓÚÜÑ¿¡]/.test(row.contextLine);
+      if (hasSpanish) {
+        var ctxEs = document.createElement('div');
+        ctxEs.className = 'ctx-spanish';
+        ctxEs.textContent = row.contextLine;
+        ctx.appendChild(ctxEs);
       } else {
         var ctxEn = document.createElement('div');
         ctxEn.className = 'ctx-english';
@@ -863,11 +839,10 @@ function renderLyrics() {
     card.className = 'vocab-card';
     card.id = 'card-' + i;
 
-    // Click the card area to toggle answer (except on chinese text or textarea)
     card.onclick = (function(capturedI) {
       return function(e) {
         if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'BUTTON') return;
-        if (e.target.classList.contains('chinese')) return; // handled separately
+        if (e.target.classList.contains('spanish')) return;
         toggleExpand(capturedI);
       };
     })(i);
@@ -892,18 +867,17 @@ function renderLyrics() {
     topRow.appendChild(tryBtn);
     card.appendChild(topRow);
 
-    if (showChinese) {
-      var cn = document.createElement('div');
-      cn.className = 'chinese';
-      cn.textContent = row.chinese;
-      // Click on Chinese character speaks it
-      cn.addEventListener('click', (function(capturedI) {
+    if (showSpanish) {
+      var es = document.createElement('div');
+      es.className = 'spanish';
+      es.textContent = row.spanish;
+      es.addEventListener('click', (function(capturedI) {
         return function(e) {
           e.stopPropagation();
           speakLine(capturedI);
         };
       })(i));
-      card.appendChild(cn);
+      card.appendChild(es);
     }
 
     if (row.romanization) {
@@ -957,7 +931,7 @@ function renderLyrics() {
     var tip = document.createElement('div');
     tip.className = 'def-tip';
     var tipParts = [];
-    if (row.chinese)      tipParts.push('<span style="font-size:20px;font-weight:600;color:#fde68a;">' + escHtml(row.chinese) + '</span>');
+    if (row.spanish)       tipParts.push('<span style="font-size:20px;font-weight:600;color:#fde68a;">' + escHtml(row.spanish) + '</span>');
     if (row.romanization) tipParts.push('<span style="color:#93c5fd;font-style:italic;">' + escHtml(row.romanization) + '</span>');
     if (row.english)      tipParts.push('<span style="color:#86efac;">' + escHtml(row.english) + '</span>');
     tip.innerHTML = tipParts.join('<br>');
@@ -1100,6 +1074,48 @@ function parseCsv(text) {
   return result;
 }
 
+function parseSheetRows(rows) {
+  // Sheet format: Spanish (A) | Pronunciation (B) | English (C)
+  allRows = [];
+  var currentLesson = '';
+  for (var i = 1; i < rows.length; i++) {
+    var r = rows[i];
+    var colA = (r[0] || '').trim();
+    var colB = (r[1] || '').trim();
+    var colC = (r[2] || '').trim();
+
+    if (!colA && !colB && !colC) continue;
+
+    if (colA && !colB && !colC) {
+      if (/^(Scene|Chapter|Part|Section|Lesson|Unit)\s/i.test(colA)) {
+        currentLesson = colA;
+        allRows.push({ lesson: currentLesson, spanish: '', romanization: '', english: '', sectionHeader: colA, contextLine: '' });
+      } else {
+        allRows.push({ lesson: currentLesson, spanish: '', romanization: '', english: '', sectionHeader: '', contextLine: colA });
+      }
+    } else {
+      allRows.push({ lesson: currentLesson, spanish: colA, romanization: colB, english: colC, sectionHeader: '', contextLine: '' });
+    }
+  }
+}
+
+function populateLessons() {
+  var lessons = [], seen = {};
+  allRows.forEach(function(row) {
+    if (row.lesson && !seen[row.lesson]) { seen[row.lesson] = true; lessons.push(row.lesson); }
+  });
+  var lessonSel = document.getElementById('lessonSelect');
+  lessonSel.innerHTML = '<option value="">-- all lessons --</option>';
+  lessons.forEach(function(l) {
+    var opt = document.createElement('option');
+    opt.value = l;
+    opt.textContent = l + ' (' + allRows.filter(function(r) { return r.lesson === l; }).length + ')';
+    lessonSel.appendChild(opt);
+  });
+  lessonSel.disabled = false;
+  return lessons;
+}
+
 function onSheetSelect() {
   var sheetName = document.getElementById('sheetSelect').value;
   if (!sheetName || !gdriveWorkbook) return;
@@ -1110,71 +1126,8 @@ function onSheetSelect() {
 
   if (rows.length < 2) { setStatus('Sheet is empty'); return; }
 
-  // Sheet format: Chinese (A) | Pinyin (B) | English (C)
-  // Rows with only column A and B+C empty:
-  //   - "Scene X — ..." = section header
-  //   - Everything else = context/sentence line
-  allRows = [];
-  var currentLesson = '';
-  for (var i = 1; i < rows.length; i++) {
-    var r = rows[i];
-    var colA = (r[0] || '').trim();
-    var colB = (r[1] || '').trim();
-    var colC = (r[2] || '').trim();
-
-    // Skip fully empty rows
-    if (!colA && !colB && !colC) continue;
-
-    // Row with only column A
-    if (colA && !colB && !colC) {
-      // Check if it looks like a scene/section header
-      if (/^(Scene|Chapter|Part|Section|Lesson|Unit)\s/i.test(colA)) {
-        currentLesson = colA;
-        allRows.push({
-          lesson: currentLesson,
-          chinese: '',
-          romanization: '',
-          english: '',
-          sectionHeader: colA,
-          contextLine: '',
-        });
-      } else {
-        // Context/sentence line
-        allRows.push({
-          lesson: currentLesson,
-          chinese: '',
-          romanization: '',
-          english: '',
-          sectionHeader: '',
-          contextLine: colA,
-        });
-      }
-    } else {
-      allRows.push({
-        lesson: currentLesson,
-        chinese: colA,
-        romanization: colB,
-        english: colC,
-        sectionHeader: '',
-        contextLine: '',
-      });
-    }
-  }
-
-  var lessons = [], seen = {};
-  allRows.forEach(function(row) {
-    if (row.lesson && !seen[row.lesson]) { seen[row.lesson] = true; lessons.push(row.lesson); }
-  });
-
-  var lessonSel = document.getElementById('lessonSelect');
-  lessonSel.innerHTML = '<option value="">-- all lessons --</option>';
-  lessons.forEach(function(l) {
-    var opt = document.createElement('option');
-    opt.value = l;
-    opt.textContent = l + ' (' + allRows.filter(function(r) { return r.lesson === l; }).length + ')';
-    lessonSel.appendChild(opt);
-  });
-  lessonSel.disabled = false;
+  parseSheetRows(rows);
+  var lessons = populateLessons();
   setStatus(allRows.length + ' lines, ' + lessons.length + ' lesson(s)');
   onLessonSelect();
 }
@@ -1209,12 +1162,12 @@ async function exportAll() {
   });
 
   if (answered.length === 0) {
-    alert('No answered cards yet. Click on a card (not the character) to open the answer area and type your translation.');
+    alert('No answered cards yet. Click on a card (not the Spanish text) to open the answer area and type your translation.');
     return;
   }
 
   var lines = [
-    'Grade my Chinese vocabulary translations. Be lenient \u2014 grade on whether I understand the meaning, not exact wording.',
+    'Grade my Spanish vocabulary translations. Be lenient \u2014 grade on whether I understand the meaning, not exact wording.',
     '',
     'For each item, rate as:',
     '\u2705 Correct \u2014 captures the key meaning',
@@ -1222,7 +1175,7 @@ async function exportAll() {
     '\u274c Wrong \u2014 misses the point',
     '',
     'Format your response as:',
-    '#N: [Chinese] \u2192 \u2705/\u26a0\ufe0f/\u274c \u2014 [one-line note]',
+    '#N: [Spanish] \u2192 \u2705/\u26a0\ufe0f/\u274c \u2014 [one-line note]',
     '',
     'Then give an Overall Score (X/' + answered.length + ') and a brief summary.',
     '',
@@ -1232,7 +1185,7 @@ async function exportAll() {
   ];
 
   answered.forEach(function(item, n) {
-    lines.push('#' + (n + 1) + ' Chinese: ' + item.row.chinese + (item.row.romanization ? ' (' + item.row.romanization + ')' : ''));
+    lines.push('#' + (n + 1) + ' Spanish: ' + item.row.spanish + (item.row.romanization ? ' (' + item.row.romanization + ')' : ''));
     lines.push('My Answer: ' + item.answer);
     lines.push('Correct: ' + item.row.english);
     lines.push('');
@@ -1269,41 +1222,8 @@ function loadCsvText(text, fileName) {
   var rows = parseCsv(text);
   if (rows.length < 2) { setStatus('CSV is empty'); return; }
 
-  allRows = [];
-  var currentLesson = '';
-  for (var i = 1; i < rows.length; i++) {
-    var r = rows[i];
-    var colA = (r[0] || '').trim();
-    var colB = (r[1] || '').trim();
-    var colC = (r[2] || '').trim();
-
-    if (!colA && !colB && !colC) continue;
-
-    if (colA && !colB && !colC) {
-      if (/^(Scene|Chapter|Part|Section|Lesson|Unit)\s/i.test(colA)) {
-        currentLesson = colA;
-        allRows.push({ lesson: currentLesson, chinese: '', romanization: '', english: '', sectionHeader: colA, contextLine: '' });
-      } else {
-        allRows.push({ lesson: currentLesson, chinese: '', romanization: '', english: '', sectionHeader: '', contextLine: colA });
-      }
-    } else {
-      allRows.push({ lesson: currentLesson, chinese: colA, romanization: colB, english: colC, sectionHeader: '', contextLine: '' });
-    }
-  }
-
-  var lessons = [], seen = {};
-  allRows.forEach(function(row) {
-    if (row.lesson && !seen[row.lesson]) { seen[row.lesson] = true; lessons.push(row.lesson); }
-  });
-  var lessonSel = document.getElementById('lessonSelect');
-  lessonSel.innerHTML = '<option value="">-- all lessons --</option>';
-  lessons.forEach(function(l) {
-    var opt = document.createElement('option');
-    opt.value = l;
-    opt.textContent = l + ' (' + allRows.filter(function(r) { return r.lesson === l; }).length + ')';
-    lessonSel.appendChild(opt);
-  });
-  lessonSel.disabled = false;
+  parseSheetRows(rows);
+  populateLessons();
 
   userAnswers = {};
   expanded = {};
@@ -1398,30 +1318,22 @@ document.getElementById('folderInput').addEventListener('change', function() {
   var files = Array.from(this.files);
   if (!files.length) return;
 
-  // Non-recursive: only top-level files (no subfolder separators beyond the root folder)
   var folderName = files[0].webkitRelativePath.split('/')[0];
   var topLevel = files.filter(function(f) {
     var parts = f.webkitRelativePath.split('/');
-    return parts.length === 2; // folder/file only
+    return parts.length === 2;
   });
 
   document.getElementById('folderName').textContent = folderName;
 
-  // Find first .csv
   var csvFile = topLevel.find(function(f) { return /\.csv$/i.test(f.name); });
-  // Find all .mp4
   var mp4Files = topLevel.filter(function(f) { return /\.mp4$/i.test(f.name); });
   mp4Files.sort(function(a, b) { return a.name.localeCompare(b.name); });
 
-  var parts = [];
-  if (csvFile) parts.push('CSV: ' + csvFile.name);
-  if (mp4Files.length) parts.push(mp4Files.length + ' video(s)');
   if (!csvFile && !mp4Files.length) { setStatus('No .csv or .mp4 found in folder'); return; }
 
-  // Load videos
   loadVideos(mp4Files);
 
-  // Load CSV
   if (csvFile) {
     var reader = new FileReader();
     reader.onload = function(e) {

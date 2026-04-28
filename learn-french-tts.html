@@ -1278,34 +1278,30 @@ function loadVideos(videoFiles) {
       vid.muted = !vid.muted;
       muteBtn.textContent = vid.muted ? '\ud83d\udd07 Sound Off' : '\ud83d\udd0a Sound On';
       muteBtn.classList.toggle('active', !vid.muted);
-      if (!vid.muted && vid.volume === 0) { vid.volume = 0.5; volSlider.value = '0.5'; }
-      if (vid.muted) volSlider.value = '0'; else volSlider.value = String(vid.volume);
+      if (!vid.muted && vid.volume === 0) vid.volume = 1;
     };
 
-    var volSlider = document.createElement('input');
-    volSlider.type = 'range';
-    volSlider.className = 'vol-slider';
-    volSlider.min = '0';
-    volSlider.max = '1';
-    volSlider.step = '0.05';
-    volSlider.value = '0';
-    volSlider.title = 'Volume';
-    volSlider.oninput = function() {
-      vid.volume = parseFloat(volSlider.value);
-      if (parseFloat(volSlider.value) > 0 && vid.muted) {
-        vid.muted = false;
-        muteBtn.textContent = '\ud83d\udd0a Sound On';
-        muteBtn.classList.add('active');
-      } else if (parseFloat(volSlider.value) === 0 && !vid.muted) {
-        vid.muted = true;
-        muteBtn.textContent = '\ud83d\udd07 Sound Off';
-        muteBtn.classList.remove('active');
-      }
+    var rateSlider = document.createElement('input');
+    rateSlider.type = 'range';
+    rateSlider.className = 'vol-slider';
+    rateSlider.min = '0.5';
+    rateSlider.max = '1';
+    rateSlider.step = '0.05';
+    rateSlider.value = '1';
+    rateSlider.title = 'Playback rate';
+    var rateLabel = document.createElement('span');
+    rateLabel.style.cssText = 'font-size:11px;font-weight:600;color:#555;min-width:30px;';
+    rateLabel.textContent = '1x';
+    rateSlider.oninput = function() {
+      var r = parseFloat(rateSlider.value);
+      vid.playbackRate = r;
+      rateLabel.textContent = r + 'x';
     };
 
     controls.appendChild(playBtn);
     controls.appendChild(muteBtn);
-    controls.appendChild(volSlider);
+    controls.appendChild(rateSlider);
+    controls.appendChild(rateLabel);
     item.appendChild(vid);
     item.appendChild(label);
     item.appendChild(controls);
