@@ -12,6 +12,8 @@
     { "source": "/learn-korean-tts", "destination": "/learn-korean-tts.html" },
     { "source": "/learn-google.html", "destination": "/learn-google.html" },
     { "source": "/learn-google", "destination": "/learn-google.html" },
+    { "source": "/learn-french-tts.html", "destination": "/learn-french-tts.html" },
+    { "source": "/learn-french-tts", "destination": "/learn-french-tts.html" },
     { "source": "/(.*)", "destination": "/flashcards.html" }
   ]
 }

@@ -968,6 +968,7 @@
         <button class="paste-btn" id="learnRolePlayBtn" title="Open Role Play Drill" style="border: 2px solid #059669; color: #059669;">Role Play</button>
         <button class="paste-btn" id="learnChineseTtsBtn" title="Open Chinese Lyrics Reader" style="border: 2px solid #e11d48; color: #e11d48;">Chinese TTS</button>
         <button class="paste-btn" id="learnGoogleBtn" title="Open Learn Google" style="border: 2px solid #4285f4; color: #4285f4;">Learn-Google</button>
+        <button class="paste-btn" id="learnFrenchTtsBtn" title="Open French Vocab Reader" style="border: 2px solid #1d4ed8; color: #1d4ed8;">French TTS</button>
         <button class="paste-btn" id="learnKoreanTtsBtn" title="Open Korean Lyrics Reader" style="border: 2px solid #ec4899; color: #ec4899;">Korean TTS</button>
         <button class="paste-btn" id="learnHebrewBtn" title="Open Learn Hebrew" style="border: 2px solid #0891b2; color: #0891b2;">Learn Hebrew</button>
         <button class="paste-btn" id="learnSpanishBtn" title="Open Learn Spanish" style="border: 2px solid #dc2626; color: #dc2626;">Learn Spanish</button>
@@ -2424,6 +2425,10 @@ God loves the world
                 document.getElementById('folderFlatInput').click();
             });
 
+
+            document.getElementById('learnFrenchTtsBtn').addEventListener('click', () => {
+                window.open('learn-french-tts.html', '_blank');
+            });
 
             document.getElementById('learnKoreanTtsBtn').addEventListener('click', () => {
                 window.open('learn-korean-tts.html', '_blank');
