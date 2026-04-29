@@ -1329,6 +1329,16 @@ function loadVideos(videoFiles) {
     var controls = document.createElement('div');
     controls.className = 'video-controls-row';
 
+    var toStartBtn = document.createElement('button');
+    toStartBtn.className = 'vid-ctrl-btn';
+    toStartBtn.textContent = 'to:0';
+    toStartBtn.onclick = function() { vid.currentTime = 0; };
+
+    var backBtn = document.createElement('button');
+    backBtn.className = 'vid-ctrl-btn';
+    backBtn.textContent = '-5s';
+    backBtn.onclick = function() { vid.currentTime = Math.max(0, vid.currentTime - 5); };
+
     var playBtn = document.createElement('button');
     playBtn.className = 'vid-ctrl-btn';
     playBtn.textContent = '\u25b6 Play';
@@ -1367,6 +1377,8 @@ function loadVideos(videoFiles) {
       rateLabel.textContent = r + 'x';
     };
 
+    controls.appendChild(toStartBtn);
+    controls.appendChild(backBtn);
     controls.appendChild(playBtn);
     controls.appendChild(muteBtn);
     controls.appendChild(rateSlider);
