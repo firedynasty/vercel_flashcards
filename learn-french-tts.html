@@ -529,8 +529,8 @@ function setTtsEngine(engine) {
   document.getElementById('openaiVoiceRow').style.display = engine === 'openai' ? 'flex' : 'none';
   document.getElementById('elevenSection').style.display = engine === 'elevenlabs' ? 'block' : 'none';
 
-  if (engine === 'openai' && !getApiKey()) {
-    setStatus('OPENAI_API_KEY not found in localStorage');
+  if (engine === 'openai') {
+    setStatus('OpenAI TTS via server proxy');
   }
   if (engine === 'elevenlabs' && !getElevenLabsKey()) {
     setStatus('Enter your ElevenLabs API key above');
@@ -559,23 +559,12 @@ function speakBrowser(text, onEnd) {
 }
 
 async function speakOpenAI(text, onEnd) {
-  var apiKey = getApiKey();
-  if (!apiKey) {
-    setStatus('OPENAI_API_KEY not found in localStorage — using browser TTS');
-    speakBrowser(text, onEnd);
-    return;
-  }
-
   var voice = document.getElementById('openaiVoiceSelect').value;
   try {
-    var resp = await fetch('https://api.openai.com/v1/audio/speech', {
+    var resp = await fetch('/api/tts', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + apiKey
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'tts-1',
         input: text,
         voice: voice,
         speed: ttsRate
