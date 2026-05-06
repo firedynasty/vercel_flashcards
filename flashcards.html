@@ -966,6 +966,7 @@
         <input type="file" id="folderFlatInput" accept=".txt,.md" multiple style="display:none">
         <button class="paste-btn" id="folderFlatBtn" title="Load .txt or .md files" style="border: 2px dotted;">Load .txt File</button>
         <button class="paste-btn" id="learnRolePlayBtn" title="Open Role Play Drill" style="border: 2px solid #059669; color: #059669;">Role Play</button>
+        <button class="paste-btn" id="learnMemorizeBtn" title="Open Memorize Verses" style="border: 2px solid #7c3aed; color: #7c3aed;">Memorize</button>
         <button class="paste-btn" id="learnChineseTtsBtn" title="Open Chinese Lyrics Reader" style="border: 2px solid #e11d48; color: #e11d48;">Chinese TTS</button>
         <button class="paste-btn" id="learnGoogleBtn" title="Open Learn Google" style="border: 2px solid #4285f4; color: #4285f4;">Learn-Google</button>
         <button class="paste-btn" id="learnFrenchTtsBtn" title="Open French Vocab Reader" style="border: 2px solid #1d4ed8; color: #1d4ed8;">French TTS</button>
@@ -2457,6 +2458,10 @@ God loves the world
 
             document.getElementById('learnRolePlayBtn').addEventListener('click', () => {
                 window.open('learn-role-play.html', '_blank');
+            });
+
+            document.getElementById('learnMemorizeBtn').addEventListener('click', () => {
+                window.open('learn-memorize-verses.html', '_blank');
             });
 
             document.getElementById('learnChineseTtsBtn').addEventListener('click', () => {

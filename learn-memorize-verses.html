@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Role Play Drill</title>
+<title>Memorize Verses</title>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -62,62 +62,24 @@
   }
   .cards-info .count { font-size: 12px; color: #888; }
 
-  /* -- SECTION HEADERS -- */
-  .section-header {
-    font-size: 13px; font-weight: 700; letter-spacing: 2px;
-    text-transform: uppercase; color: #2563eb;
-    padding: 16px 0 6px 4px;
-    border-bottom: 2px solid #dbeafe;
-    margin-bottom: 8px;
-  }
-
-  /* -- YOU CARD (main card with answer) -- */
-  .you-card {
+  /* -- VERSE CARD -- */
+  .verse-card {
     background: white; border: 1px solid #e8e8e8; border-radius: 12px;
     padding: 16px 20px; margin-bottom: 8px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.06);
     cursor: pointer; transition: background-color 0.15s;
-    border-left: 4px solid #2563eb;
+    border-left: 4px solid #7c3aed;
     position: relative; z-index: 1;
   }
-  .you-card:hover { background-color: #f0f4ff; z-index: 10; }
-  .you-card.active-nav { outline: 3px solid #2563eb; outline-offset: -1px; background: #eff6ff; }
-  .you-card .num { font-size: 11px; font-weight: 700; color: #aaa; margin-bottom: 4px; }
-  .you-card .speaker-label {
-    font-size: 11px; font-weight: 700; color: #2563eb;
-    text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;
-  }
-  .you-card .expected-text {
+  .verse-card:hover { background-color: #f5f3ff; z-index: 10; }
+  .verse-card.active-nav { outline: 3px solid #7c3aed; outline-offset: -1px; background: #f5f3ff; }
+  .verse-card .num { font-size: 11px; font-weight: 700; color: #aaa; margin-bottom: 4px; }
+  .verse-card .verse-text {
     font-size: 15px; line-height: 1.55; color: #333; margin-bottom: 4px;
   }
-  .you-card .expected-text.hidden { display: none; }
-  .you-card .tip-text {
-    font-size: 12px; color: #d97706; background: #fefce8;
-    border: 1px solid #fde68a; border-radius: 6px; padding: 6px 10px;
-    margin-top: 6px;
-  }
-  .you-card .tip-text.hidden { display: none; }
+  .verse-card .verse-text.hidden { display: none; }
 
-  /* -- OTHER SPEAKER CARD -- */
-  .other-card {
-    background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 12px;
-    padding: 12px 16px; margin-bottom: 8px;
-    border-left: 4px solid #6b7280;
-    cursor: pointer;
-  }
-  .other-card:hover { background: #f0f0f0; }
-  .other-card.active-nav { outline: 3px solid #2563eb; outline-offset: -1px; background: #eff6ff; }
-  .other-card.speaking { background: #dbeafe; border-color: #93c5fd; }
-  .other-card.hidden { display: none; }
-  .other-card .speaker-label {
-    font-size: 11px; font-weight: 700; color: #6b7280;
-    text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;
-  }
-  .other-card .line-text {
-    font-size: 14px; line-height: 1.55; color: #555;
-  }
-
-  /* -- HOVER TOOLTIP (reveal-on-hover mode) -- */
+  /* -- HOVER TOOLTIP -- */
   .def-tip {
     display: none;
     position: absolute;
@@ -133,7 +95,7 @@
     pointer-events: none;
     z-index: 20;
   }
-  .tooltip-on .you-card:hover .def-tip { display: block; }
+  .tooltip-on .verse-card:hover .def-tip { display: block; }
 
   /* -- HOVER-REVEAL SLIDER -- */
   .tip-toggle {
@@ -146,7 +108,7 @@
     position: absolute; inset: 0;
     background: #d0d0d0; border-radius: 20px; transition: background 0.25s;
   }
-  .tip-track.on { background: #2563eb; }
+  .tip-track.on { background: #7c3aed; }
   .tip-knob {
     position: absolute; width: 14px; height: 14px;
     background: white; border-radius: 50%;
@@ -167,22 +129,13 @@
     padding: 8px 12px; font-family: inherit; font-size: 13px;
     line-height: 1.55; resize: vertical; color: #333;
   }
-  .answer-area textarea:focus { outline: none; border-color: #2563eb; }
+  .answer-area textarea:focus { outline: none; border-color: #7c3aed; }
   .answer-area textarea::placeholder { color: #c0c0c0; }
   .answer-hint {
     margin-top: 4px; font-size: 11px; color: #b0b0b0;
     display: flex; justify-content: space-between;
   }
   .char-count { font-weight: 600; color: #16a34a; }
-  .try-btn {
-    font-size: 11px; padding: 3px 10px; border-radius: 10px;
-    border: 1px solid #d0d0d0; background: #f5f5f3; color: #555;
-    cursor: pointer; font-weight: 600; font-family: inherit;
-    transition: background 0.15s, border-color 0.15s, color 0.15s;
-    white-space: nowrap; margin-left: auto;
-  }
-  .try-btn:hover { background: #e0e7ff; border-color: #a5b4fc; color: #4338ca; }
-  .try-btn.open  { background: #dbeafe; border-color: #93c5fd; color: #1d4ed8; }
 
   /* -- STICKY BAR -- */
   .sticky-bar {
@@ -200,7 +153,7 @@
     cursor: pointer; border: 1px solid #ccc; background: white; color: #555;
     user-select: none; transition: all 0.15s;
   }
-  .toggle-chip.on { background: #2563eb; color: white; border-color: #2563eb; }
+  .toggle-chip.on { background: #7c3aed; color: white; border-color: #7c3aed; }
 
   /* -- ANSWER MODAL -- */
   .answer-modal-overlay {
@@ -220,10 +173,10 @@
     padding: 10px 14px; font-family: inherit; font-size: 14px; line-height: 1.55;
     resize: vertical; color: #333; box-sizing: border-box;
   }
-  .answer-modal textarea:focus { outline: none; border-color: #2563eb; }
+  .answer-modal textarea:focus { outline: none; border-color: #7c3aed; }
   .answer-modal .modal-actions { display: flex; gap: 8px; margin-top: 12px; justify-content: flex-end; }
   .answer-modal .modal-actions button { padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; }
-  .answer-modal .modal-actions .save-btn { background: #2563eb; color: white; }
+  .answer-modal .modal-actions .save-btn { background: #7c3aed; color: white; }
   .answer-modal .modal-actions .cancel-btn { background: #f0f0f0; color: #555; }
 
   /* -- TTS SETTINGS MODAL -- */
@@ -239,17 +192,17 @@
   }
   .tts-modal h3 { margin: 0 0 16px; font-size: 16px; font-weight: 700; }
   .tts-modal label { display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 6px 0; font-size: 14px; }
-  .tts-modal input[type="radio"] { accent-color: #2563eb; }
+  .tts-modal input[type="radio"] { accent-color: #7c3aed; }
   .tts-modal .key-input { width: 100%; padding: 8px 10px; font-size: 13px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; margin-top: 8px; }
   .tts-modal .key-hint { font-size: 11px; color: #999; margin-top: 4px; }
-  .tts-modal .done-btn { width: 100%; padding: 10px; font-size: 14px; font-weight: 600; background: #2563eb; color: white; border: none; border-radius: 6px; cursor: pointer; margin-top: 16px; }
+  .tts-modal .done-btn { width: 100%; padding: 10px; font-size: 14px; font-weight: 600; background: #7c3aed; color: white; border: none; border-radius: 6px; cursor: pointer; margin-top: 16px; }
 </style>
 </head>
 <body>
 
 <div class="container">
-  <h1>Role Play Drill</h1>
-  <div class="subtitle">Load a script from Google Docs, type your responses, export for AI grading</div>
+  <h1>Memorize Verses</h1>
+  <div class="subtitle">Load a creed, psalm, or passage from Google Docs — each line becomes a card to memorize</div>
 
   <!-- Setup Section -->
   <div class="setup-section" id="setupSection">
@@ -271,17 +224,10 @@
           <option value="">Sign in first</option>
         </select>
       </div>
-      <div class="setup-row">
-        <label>Scene</label>
-        <select id="sceneSelect" disabled onchange="onSceneSelect()">
-          <option value="">Load a file first</option>
-        </select>
-      </div>
       <div class="status" id="status"></div>
       <div class="hint">
-        Format: <strong>You:</strong> your line (coaching tip)<br>
-        <strong>Prospect:</strong> or <strong>Interviewer:</strong> their response<br>
-        Blank lines separate exchanges. Scene headers auto-detected.
+        Each line in the document becomes a card.<br>
+        Blank lines are skipped. Perfect for creeds, psalms, poems, or any text to memorize line-by-line.
       </div>
     </div>
   </div>
@@ -295,11 +241,9 @@
 
     <!-- Sticky control bar -->
     <div class="sticky-bar" id="stickyBar">
-      <span class="toggle-chip on" id="toggleYou" onclick="toggleSetting('you')">You</span>
-      <span class="toggle-chip on" id="toggleOther" onclick="toggleSetting('other')">Other</span>
-      <span class="toggle-chip on" id="toggleTips" onclick="toggleSetting('tips')">Tips</span>
+      <span class="toggle-chip on" id="toggleText" onclick="toggleTextVisibility()">Text</span>
       <div class="sep"></div>
-      <div class="tip-toggle" onclick="setTooltipMode(!tooltipOn)" title="Hover any You card to reveal expected response">
+      <div class="tip-toggle" onclick="setTooltipMode(!tooltipOn)" title="Hover card to reveal text">
         <span>Reveal on hover</span>
         <div class="tip-switch">
           <div class="tip-track" id="tipTrack"></div>
@@ -308,10 +252,8 @@
       </div>
       <div class="sep"></div>
       <button class="btn outline" style="font-size:11px;padding:3px 8px;" onclick="changeFontSize(-1)">&#8722;</button>
-      <span id="fontSizeLabel" style="font-size:11px;font-weight:700;color:#555;min-width:28px;text-align:center;">14</span>
+      <span id="fontSizeLabel" style="font-size:11px;font-weight:700;color:#555;min-width:28px;text-align:center;">15</span>
       <button class="btn outline" style="font-size:11px;padding:3px 8px;" onclick="changeFontSize(1)">+</button>
-      <div class="sep"></div>
-      <button class="btn outline" style="font-size:11px;padding:4px 10px;" onclick="exportAll()">&#128203; Export All</button>
       <div class="sep"></div>
       <button class="btn outline" style="font-size:11px;padding:4px 10px;" onclick="openTtsModal()">🔑 Key</button>
     </div>
@@ -342,12 +284,12 @@
 <!-- Answer Modal -->
 <div class="answer-modal-overlay" id="answerModalOverlay">
   <div class="answer-modal">
-    <h3 id="answerModalTitle">Your Response</h3>
+    <h3 id="answerModalTitle">Recite from memory</h3>
     <div class="modal-context" id="answerModalContext"></div>
-    <textarea id="answerModalTextarea" placeholder="Type your response…"></textarea>
+    <textarea id="answerModalTextarea" placeholder="Type the line from memory…"></textarea>
     <div class="modal-actions">
       <button class="cancel-btn" onclick="closeAnswerModal()">Cancel</button>
-      <button class="save-btn" onclick="saveAnswerModal()">Save (Enter)</button>
+      <button class="save-btn" onclick="saveAnswerModal()">Save</button>
     </div>
   </div>
 </div>
@@ -359,89 +301,24 @@ var GDRIVE_SCOPES = 'https://www.googleapis.com/auth/drive.readonly';
 
 var gdriveAccessToken = null;
 var gdriveTokenClient = null;
-var gdriveFiles = []; // search results
+var gdriveFiles = [];
 
-var allRows = [];       // [{speaker, text, tip, section, sectionHeader}]
-var filteredRows = [];
-var otherSpeaker = 'Prospect'; // auto-detected
-
-var showYou = true;
-var showOther = true;
-var showTips = true;
+var allLines = [];      // array of strings (each line from the doc)
+var showText = true;
 var tooltipOn = false;
-var fontSize = 14;
+var fontSize = 15;
 var userAnswers = {};
 var expanded = {};
 
-// -- PARSE SCRIPT TEXT --
-function parseScript(raw) {
-  var lines = raw.split('\n');
-  var result = [];
-  var currentSection = '';
-  var detectedOther = '';
-
-  for (var i = 0; i < lines.length; i++) {
-    var line = lines[i].trim();
-    if (!line) continue;
-
-    // Check for Speaker: prefix
-    var speakerMatch = line.match(/^([A-Za-z\s]+?):\s+(.+)/);
-    if (speakerMatch) {
-      var speaker = speakerMatch[1].trim();
-      var rest = speakerMatch[2].trim();
-      var isYou = /^you$/i.test(speaker);
-
-      // Collect continuation lines
-      while (i + 1 < lines.length && lines[i + 1].trim() && !lines[i + 1].trim().match(/^[A-Za-z\s]+?:\s+/)) {
-        i++;
-        rest += ' ' + lines[i].trim();
-      }
-
-      var tip = '';
-      if (isYou) {
-        // Extract coaching tip from last parenthetical
-        var tipMatch = rest.match(/\(([^()]+)\)\s*$/);
-        if (tipMatch) {
-          tip = tipMatch[1].trim();
-          rest = rest.slice(0, tipMatch.index).trim();
-        }
-      }
-
-      if (!isYou && !detectedOther) {
-        detectedOther = speaker;
-      }
-
-      result.push({
-        speaker: isYou ? 'you' : 'other',
-        speakerName: isYou ? 'You' : speaker,
-        text: rest,
-        tip: tip,
-        section: currentSection,
-        sectionHeader: '',
-      });
-    } else {
-      // Not a speaker line — treat as section header
-      currentSection = line;
-      result.push({
-        speaker: '',
-        speakerName: '',
-        text: '',
-        tip: '',
-        section: currentSection,
-        sectionHeader: line,
-      });
-    }
-  }
-
-  otherSpeaker = detectedOther || 'Other';
-  return result;
+// -- PARSE: simply split by newlines --
+function parseLines(raw) {
+  return raw.split('\n').map(function(l) { return l.trim(); }).filter(function(l) { return l.length > 0; });
 }
 
-// -- TOGGLE SETTINGS --
-function toggleSetting(key) {
-  if (key === 'you') showYou = !showYou;
-  if (key === 'other') showOther = !showOther;
-  if (key === 'tips') showTips = !showTips;
+// -- TOGGLE TEXT VISIBILITY --
+function toggleTextVisibility() {
+  showText = !showText;
+  document.getElementById('toggleText').className = 'toggle-chip' + (showText ? ' on' : '');
   renderCards();
 }
 
@@ -462,132 +339,40 @@ function toggleExpand(i) {
 // -- RENDER --
 function renderCards() {
   var area = document.getElementById('cardsArea');
-  if (filteredRows.length === 0) { area.classList.remove('active'); return; }
+  if (allLines.length === 0) { area.classList.remove('active'); return; }
   area.classList.add('active');
   document.getElementById('stickyBar').classList.add('active');
 
-  var scene = document.getElementById('sceneSelect').value || 'All Scenes';
-  document.getElementById('sceneTag').textContent = scene;
-  var youCount = filteredRows.filter(function(r) { return r.speaker === 'you'; }).length;
-  document.getElementById('countLabel').textContent = filteredRows.length + ' lines (' + youCount + ' yours)';
-
-  // Update chips
-  document.getElementById('toggleYou').className = 'toggle-chip' + (showYou ? ' on' : '');
-  document.getElementById('toggleOther').className = 'toggle-chip' + (showOther ? ' on' : '');
-  document.getElementById('toggleTips').className = 'toggle-chip' + (showTips ? ' on' : '');
+  document.getElementById('countLabel').textContent = allLines.length + ' lines';
 
   var container = document.getElementById('linesContainer');
   container.innerHTML = '';
   container.classList.toggle('tooltip-on', tooltipOn);
 
-  var youNum = 0;
-
-  filteredRows.forEach(function(row, i) {
-    // Section header
-    if (row.sectionHeader) {
-      var header = document.createElement('div');
-      header.className = 'section-header';
-      header.textContent = row.sectionHeader;
-      container.appendChild(header);
-      return;
-    }
-
-    // Other speaker card
-    if (row.speaker === 'other') {
-      if (!showOther) return;
-      var other = document.createElement('div');
-      other.className = 'other-card';
-      other.id = 'card-' + i;
-
-      var lbl = document.createElement('div');
-      lbl.className = 'speaker-label';
-      lbl.textContent = row.speakerName;
-      other.appendChild(lbl);
-
-      var txt = document.createElement('div');
-      txt.className = 'line-text';
-      txt.textContent = row.text;
-      other.appendChild(txt);
-
-      // Click to speak via TTS
-      other.onclick = function() {
-        speakText(row.text);
-      };
-
-      container.appendChild(other);
-      return;
-    }
-
-    // You card
-    youNum++;
+  allLines.forEach(function(line, i) {
     var card = document.createElement('div');
-    card.className = 'you-card';
+    card.className = 'verse-card';
     card.id = 'card-' + i;
 
-    // Click card to toggle answer (not on expected-text or textarea/button)
+    // Click card to toggle answer area
     card.onclick = (function(ci) {
       return function(e) {
-        if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'BUTTON') return;
+        if (e.target.tagName === 'TEXTAREA') return;
         toggleExpand(ci);
       };
     })(i);
 
-    // Top row: num + answer button
-    var topRow = document.createElement('div');
-    topRow.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;';
-
+    // Line number
     var num = document.createElement('div');
     num.className = 'num';
-    num.style.marginBottom = '0';
-    num.textContent = '#' + youNum;
-    topRow.appendChild(num);
+    num.textContent = '#' + (i + 1);
+    card.appendChild(num);
 
-    var lbl2 = document.createElement('div');
-    lbl2.className = 'speaker-label';
-    lbl2.style.cssText = 'margin-bottom:0;flex:1;margin-left:8px;';
-    lbl2.textContent = 'YOU';
-    topRow.appendChild(lbl2);
-
-    var pasteBtn = document.createElement('button');
-    pasteBtn.className = 'try-btn';
-    pasteBtn.textContent = '\ud83d\udccb Paste';
-    pasteBtn.addEventListener('click', (function(ci) {
-      return function(e) {
-        e.stopPropagation();
-        // Open answer area if not already open
-        if (!expanded[ci]) toggleExpand(ci);
-        // Paste from clipboard
-        navigator.clipboard.readText().then(function(text) {
-          if (text && text.trim()) {
-            var ta = document.getElementById('ta-' + ci);
-            if (ta) {
-              ta.value = text.trim();
-              userAnswers[ci] = text.trim();
-              var cc = document.getElementById('chars-' + ci);
-              if (cc) cc.textContent = text.trim().length + ' chars';
-            }
-          }
-        }).catch(function() {});
-      };
-    })(i));
-    topRow.appendChild(pasteBtn);
-    card.appendChild(topRow);
-
-    // Expected text (hideable via You toggle)
-    if (row.text) {
-      var expected = document.createElement('div');
-      expected.className = 'expected-text' + (showYou ? '' : ' hidden');
-      expected.textContent = row.text;
-      card.appendChild(expected);
-    }
-
-    // Coaching tip
-    if (row.tip) {
-      var tipEl = document.createElement('div');
-      tipEl.className = 'tip-text' + (showTips ? '' : ' hidden');
-      tipEl.textContent = '\ud83d\udca1 ' + row.tip;
-      card.appendChild(tipEl);
-    }
+    // Verse text (hideable)
+    var textEl = document.createElement('div');
+    textEl.className = 'verse-text' + (showText ? '' : ' hidden');
+    textEl.textContent = line;
+    card.appendChild(textEl);
 
     // Answer area
     var ansArea = document.createElement('div');
@@ -596,7 +381,7 @@ function renderCards() {
 
     var ta = document.createElement('textarea');
     ta.id = 'ta-' + i;
-    ta.placeholder = 'Type your response\u2026';
+    ta.placeholder = 'Recite from memory\u2026';
     ta.value = userAnswers[i] || '';
     ta.addEventListener('input', (function(ci) {
       return function() {
@@ -610,7 +395,7 @@ function renderCards() {
     var hintDiv = document.createElement('div');
     hintDiv.className = 'answer-hint';
     var hintL = document.createElement('span');
-    hintL.textContent = 'Type your response';
+    hintL.textContent = 'Recite from memory';
     var hintR = document.createElement('span');
     hintR.className = 'char-count';
     hintR.id = 'chars-' + i;
@@ -622,13 +407,10 @@ function renderCards() {
     ansArea.appendChild(hintDiv);
     card.appendChild(ansArea);
 
-    // Hover-reveal tooltip (shows expected text when hidden)
+    // Hover-reveal tooltip
     var tip = document.createElement('div');
     tip.className = 'def-tip';
-    var tipParts = [];
-    if (row.text) tipParts.push('<span style="color:#e2e8f0;font-size:14px;">' + escHtml(row.text) + '</span>');
-    if (row.tip) tipParts.push('<span style="color:#fde68a;font-size:12px;">\ud83d\udca1 ' + escHtml(row.tip) + '</span>');
-    tip.innerHTML = tipParts.join('<br>');
+    tip.innerHTML = '<span style="color:#e2e8f0;font-size:14px;">' + escHtml(line) + '</span>';
     card.appendChild(tip);
 
     container.appendChild(card);
@@ -677,12 +459,9 @@ function gdriveSignIn() {
     document.getElementById('searchBtn').disabled = true;
     document.getElementById('fileSelect').innerHTML = '<option value="">Sign in first</option>';
     document.getElementById('fileSelect').disabled = true;
-    document.getElementById('sceneSelect').innerHTML = '<option value="">Load a file first</option>';
-    document.getElementById('sceneSelect').disabled = true;
     document.getElementById('cardsArea').classList.remove('active');
     document.getElementById('stickyBar').classList.remove('active');
-    allRows = [];
-    filteredRows = [];
+    allLines = [];
     setStatus('Signed out');
     return;
   }
@@ -720,7 +499,6 @@ async function gdriveSearch() {
     });
     sel.disabled = false;
 
-    // Auto-select if only one
     if (data.files.length === 1) {
       sel.value = data.files[0].id;
       onFileSelect();
@@ -737,51 +515,31 @@ async function onFileSelect() {
 
   try {
     setStatus('Loading document...');
-    // Export Google Doc as plain text
     var resp = await fetch('https://www.googleapis.com/drive/v3/files/' + fileId + '/export?mimeType=' + encodeURIComponent('text/plain'), {
       headers: { Authorization: 'Bearer ' + gdriveAccessToken }
     });
     if (!resp.ok) throw new Error('Export failed');
     var text = await resp.text();
 
-    allRows = parseScript(text);
+    allLines = parseLines(text);
     userAnswers = {};
     expanded = {};
 
-    if (allRows.length === 0) {
-      setStatus('No dialogue found. Check format: You: / Prospect: lines.');
+    if (allLines.length === 0) {
+      setStatus('No lines found in document.');
       return;
     }
 
-    // Populate scene dropdown
-    var scenes = [];
-    var seen = {};
-    allRows.forEach(function(r) {
-      if (r.section && !seen[r.section]) { seen[r.section] = true; scenes.push(r.section); }
-    });
+    // Use document name as scene tag
+    var sel = document.getElementById('fileSelect');
+    var docName = sel.options[sel.selectedIndex].textContent;
+    document.getElementById('sceneTag').textContent = docName;
 
-    var sceneSel = document.getElementById('sceneSelect');
-    sceneSel.innerHTML = '<option value="">-- all scenes --</option>';
-    scenes.forEach(function(s) {
-      var count = allRows.filter(function(r) { return r.section === s; }).length;
-      var opt = document.createElement('option');
-      opt.value = s;
-      opt.textContent = s + ' (' + count + ')';
-      sceneSel.appendChild(opt);
-    });
-    sceneSel.disabled = false;
-
-    setStatus(allRows.length + ' lines loaded (' + otherSpeaker + ' detected as other speaker)');
-    onSceneSelect();
+    setStatus(allLines.length + ' lines loaded');
+    renderCards();
   } catch (err) {
     setStatus('Error: ' + err.message);
   }
-}
-
-function onSceneSelect() {
-  var scene = document.getElementById('sceneSelect').value;
-  filteredRows = scene ? allRows.filter(function(r) { return r.section === scene; }) : allRows.slice();
-  renderCards();
 }
 
 // -- HELPERS --
@@ -805,74 +563,14 @@ function setTooltipMode(on) {
   document.getElementById('tipKnob').classList.toggle('on', on);
 }
 
-// -- EXPORT ALL FOR AI GRADING --
-async function exportAll() {
-  var answered = [];
-  filteredRows.forEach(function(row, i) {
-    if (row.speaker !== 'you') return;
-    if (userAnswers[i] && userAnswers[i].trim()) {
-      answered.push({ row: row, answer: userAnswers[i].trim(), idx: i });
-    }
-  });
-
-  if (answered.length === 0) {
-    alert('No answered cards yet. Click on a You card to open the answer area and type your response.');
-    return;
-  }
-
-  var lines = [
-    'Compare my roleplay responses against the expected responses below.',
-    'For each item, evaluate how well my response matches the expected one in terms of:',
-    '- Key message / intent conveyed',
-    '- Tone and technique (sales approach, interview structure, etc.)',
-    '- Completeness \u2014 did I cover the important points?',
-    '',
-    'For each item, rate as:',
-    '\u2705 Strong match \u2014 captures the key message and approach',
-    '\u26a0\ufe0f Partial match \u2014 gets some elements right but misses important parts',
-    '\u274c Weak match \u2014 misses the core message or uses a poor approach',
-    '',
-    'Format your response as:',
-    '#N: \u2705/\u26a0\ufe0f/\u274c',
-    'What I got right: [specific elements that matched]',
-    'What I missed: [specific elements from the expected response I didn\u2019t cover]',
-    'Suggestion: [how to improve, referencing the coaching tip if available]',
-    '',
-    'Then give an Overall Score (X/' + answered.length + ') and a brief summary of patterns \u2014 what I consistently do well and what I need to work on.',
-    '',
-    '---',
-    'ROLEPLAY DRILL (' + answered.length + ' responses):',
-    ''
-  ];
-
-  answered.forEach(function(item, n) {
-    lines.push('#' + (n + 1));
-    lines.push('Expected response: ' + item.row.text);
-    if (item.row.tip) lines.push('Coaching tip: ' + item.row.tip);
-    lines.push('My response: ' + item.answer);
-    lines.push('');
-  });
-
-  var text = lines.join('\n');
-  try {
-    await navigator.clipboard.writeText(text);
-    alert('Copied ' + answered.length + ' items! Paste into Claude or ChatGPT for grading.');
-  } catch(e) {
-    prompt('Copy this grading prompt:', text);
-  }
-}
-
 // -- TTS SETTINGS --
 var ttsProvider = localStorage.getItem('TTS_PROVIDER') || 'openai';
 
 function openTtsModal() {
   document.getElementById('ttsModalOverlay').classList.add('open');
-  // Set radio
   var radios = document.querySelectorAll('input[name="ttsProvider"]');
   radios.forEach(function(r) { r.checked = r.value === ttsProvider; });
-  // Set key input
   document.getElementById('ttsKeyInput').value = localStorage.getItem('OPENAI_API_KEY') || '';
-  // Show/hide key section
   document.getElementById('ttsKeySection').style.display = ttsProvider === 'openai' ? 'block' : 'none';
 }
 
@@ -898,7 +596,7 @@ function speakText(text) {
 
   if (ttsProvider === 'openai') {
     var apiKey = (localStorage.getItem('OPENAI_API_KEY') || '').trim();
-    if (!apiKey) { alert('No OpenAI API key set — click 🔑 Key to configure.'); return; }
+    if (!apiKey) { alert('No OpenAI API key set \u2014 click \ud83d\udd11 Key to configure.'); return; }
     fetch('https://api.openai.com/v1/audio/speech', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
@@ -920,57 +618,13 @@ function speakText(text) {
   }
 }
 
-// -- CARD NAVIGATION --
-var navCardIdx = -1;
-
-function getVisibleCards() {
-  var container = document.getElementById('linesContainer');
-  if (!container) return [];
-  return Array.from(container.querySelectorAll('.you-card, .other-card'));
-}
-
-function highlightCard(idx) {
-  var cards = getVisibleCards();
-  // Remove previous highlight
-  cards.forEach(function(c) { c.classList.remove('active-nav'); });
-  if (idx < 0 || idx >= cards.length) return;
-  navCardIdx = idx;
-  cards[idx].classList.add('active-nav');
-  cards[idx].scrollIntoView({ block: 'center', behavior: 'smooth' });
-}
-
-function readCurrentCard() {
-  var cards = getVisibleCards();
-  if (navCardIdx < 0 || navCardIdx >= cards.length) return;
-  var card = cards[navCardIdx];
-
-  if (card.classList.contains('other-card')) {
-    var lineEl = card.querySelector('.line-text');
-    if (lineEl) speakText(lineEl.textContent);
-  } else {
-    // You card — read textarea first, then expected answer
-    var rowIdx = parseInt(card.id.replace('card-', ''), 10);
-    var userText = (userAnswers[rowIdx] || '').trim();
-    var expEl = card.querySelector('.expected-text');
-    var expectedText = expEl ? expEl.textContent : '';
-
-    if (userText && expectedText) {
-      speakTextSequence(['Textarea', userText, 'Answer', expectedText]);
-    } else if (userText) {
-      speakTextSequence(['Textarea', userText]);
-    } else if (expectedText) {
-      speakText(expectedText);
-    }
-  }
-}
-
 function speakTextSequence(texts) {
   if (!texts.length) return;
   speechSynthesis.cancel();
 
   if (ttsProvider === 'openai') {
     var apiKey = (localStorage.getItem('OPENAI_API_KEY') || '').trim();
-    if (!apiKey) { alert('No OpenAI API key set — click 🔑 Key to configure.'); return; }
+    if (!apiKey) { alert('No OpenAI API key set \u2014 click \ud83d\udd11 Key to configure.'); return; }
     var idx = 0;
     function playNext() {
       if (idx >= texts.length) return;
@@ -993,7 +647,6 @@ function speakTextSequence(texts) {
     }
     playNext();
   } else {
-    // Browser TTS — queue utterances sequentially
     texts.forEach(function(text) {
       var u = new SpeechSynthesisUtterance(text);
       u.lang = 'en-US';
@@ -1002,33 +655,59 @@ function speakTextSequence(texts) {
   }
 }
 
+// -- CARD NAVIGATION --
+var navCardIdx = -1;
+
+function getVisibleCards() {
+  var container = document.getElementById('linesContainer');
+  if (!container) return [];
+  return Array.from(container.querySelectorAll('.verse-card'));
+}
+
+function highlightCard(idx) {
+  var cards = getVisibleCards();
+  cards.forEach(function(c) { c.classList.remove('active-nav'); });
+  if (idx < 0 || idx >= cards.length) return;
+  navCardIdx = idx;
+  cards[idx].classList.add('active-nav');
+  cards[idx].scrollIntoView({ block: 'center', behavior: 'smooth' });
+}
+
+function readCurrentCard() {
+  var cards = getVisibleCards();
+  if (navCardIdx < 0 || navCardIdx >= cards.length) return;
+  var card = cards[navCardIdx];
+  var rowIdx = parseInt(card.id.replace('card-', ''), 10);
+  var userText = (userAnswers[rowIdx] || '').trim();
+  var expectedText = allLines[rowIdx] || '';
+
+  if (userText && expectedText) {
+    speakTextSequence(['Textarea', userText, 'Answer', expectedText]);
+  } else if (userText) {
+    speakTextSequence(['Textarea', userText]);
+  } else if (expectedText) {
+    speakText(expectedText);
+  }
+}
+
 // -- ANSWER MODAL --
 var answerModalOpen = false;
-var answerModalTargetCardIdx = -1; // index into filteredRows for the you-card
+var answerModalTargetCardIdx = -1;
 
 function openAnswerModal() {
   var cards = getVisibleCards();
   if (navCardIdx < 0 || navCardIdx >= cards.length) return;
   var card = cards[navCardIdx];
-  // Only open for you-cards
-  if (!card.classList.contains('you-card')) return;
 
-  // Find the filteredRows index from the card id (card-N)
-  var cardId = card.id;
-  var rowIdx = parseInt(cardId.replace('card-', ''), 10);
+  var rowIdx = parseInt(card.id.replace('card-', ''), 10);
   answerModalTargetCardIdx = rowIdx;
 
-  // Set modal context
-  var row = filteredRows[rowIdx];
-  var title = card.querySelector('.num');
-  document.getElementById('answerModalTitle').textContent = title ? title.textContent + ' — Your Response' : 'Your Response';
-  document.getElementById('answerModalContext').textContent = row ? row.text.slice(0, 80) + (row.text.length > 80 ? '…' : '') : '';
+  document.getElementById('answerModalTitle').textContent = '#' + (rowIdx + 1) + ' \u2014 Recite from memory';
+  document.getElementById('answerModalContext').textContent = '';
 
-  // Pre-fill with existing answer
   var ta = document.getElementById('answerModalTextarea');
   ta.value = userAnswers[rowIdx] || '';
 
-  // Show modal
   document.getElementById('answerModalOverlay').classList.add('open');
   answerModalOpen = true;
   setTimeout(function() { ta.focus(); }, 50);
@@ -1045,12 +724,10 @@ function saveAnswerModal() {
   var val = ta.value.trim();
   if (answerModalTargetCardIdx >= 0) {
     userAnswers[answerModalTargetCardIdx] = val;
-    // Update the textarea in the card if it exists
     var cardTa = document.getElementById('ta-' + answerModalTargetCardIdx);
     if (cardTa) cardTa.value = val;
     var cc = document.getElementById('chars-' + answerModalTargetCardIdx);
     if (cc) cc.textContent = val.length ? val.length + ' chars' : '';
-    // Open the answer area so it's visible
     if (val && !expanded[answerModalTargetCardIdx]) {
       expanded[answerModalTargetCardIdx] = true;
       var area = document.getElementById('area-' + answerModalTargetCardIdx);
@@ -1067,7 +744,7 @@ document.addEventListener('keydown', function(e) {
     return;
   }
 
-  // Only navigate when cards are visible and not typing in a textarea/input
+  // Only navigate when not typing
   if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
   var cards = getVisibleCards();
   if (cards.length === 0) return;
