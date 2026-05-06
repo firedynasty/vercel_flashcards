@@ -16,6 +16,8 @@
     { "source": "/learn-french-tts", "destination": "/learn-french-tts.html" },
     { "source": "/learn-spanish-tts.html", "destination": "/learn-spanish-tts.html" },
     { "source": "/learn-spanish-tts", "destination": "/learn-spanish-tts.html" },
+    { "source": "/learn-memorize-verses.html", "destination": "/learn-memorize-verses.html" },
+    { "source": "/learn-memorize-verses", "destination": "/learn-memorize-verses.html" },
     { "source": "/(.*)", "destination": "/flashcards.html" }
   ]
 }
