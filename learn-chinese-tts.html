@@ -140,6 +140,10 @@
     cursor: pointer;
   }
   .context-line:hover { background: #fef9c3; }
+  .context-line.repeat { background: #ecfdf5; border-color: #6ee7b7; color: #065f46; }
+  .context-line.repeat:hover { background: #d1fae5; }
+  .context-line.repeat .ctx-chinese { color: #064e3b; }
+  .context-line.repeat .repeat-label { font-size: 11px; color: #059669; margin-bottom: 2px; }
   .context-line.speaking { background: #fde68a; border-color: #f59e0b; }
   .context-line .ctx-chinese {
     font-size: 20px; font-weight: 600; color: #78350f;
@@ -438,6 +442,10 @@
 
     <!-- Sticky control bar -->
     <div class="sticky-bar" id="stickyBar">
+      <select id="sheetDropdown" onchange="onSheetDropdownChange(this.value)" title="Sheet" style="font-size:11px;padding:3px 6px;border-radius:6px;border:1px solid #ccc;max-width:140px;">
+        <option value="">Loading...</option>
+      </select>
+      <div class="sep"></div>
       <select id="speechRateSelect" onchange="ttsRate = parseFloat(this.value)" title="Speed">
         <option value="0.5">0.5x</option>
         <option value="0.7">0.7x</option>
@@ -831,8 +839,14 @@ function renderLyrics() {
     if (row.contextLine) {
       if (!showSentences) return; // hidden by toggle
       var ctx = document.createElement('div');
-      ctx.className = 'context-line';
+      ctx.className = 'context-line' + (row.isRepeat ? ' repeat' : '');
       ctx.id = 'card-' + i;
+      if (row.isRepeat) {
+        var lbl = document.createElement('div');
+        lbl.className = 'repeat-label';
+        lbl.textContent = '\u21bb Review';
+        ctx.appendChild(lbl);
+      }
       // Detect if it contains CJK characters (Chinese sentence) vs English
       var hasCJK = /[\u4e00-\u9fff\u3400-\u4dbf]/.test(row.contextLine);
       if (hasCJK) {
@@ -1172,9 +1186,48 @@ function onSheetSelect() {
   onLessonSelect();
 }
 
+// Insert a repeat of the sentence pair (English + Chinese) after vocab words
+function insertSentenceRepeats(rows) {
+  var result = [];
+  var i = 0;
+  while (i < rows.length) {
+    // Detect sentence pair: English context line followed by Chinese context line
+    var isEnglishCtx = rows[i].contextLine && !/[\u4e00-\u9fff\u3400-\u4dbf]/.test(rows[i].contextLine);
+    var nextIsChinese = (i + 1 < rows.length) && rows[i + 1].contextLine && /[\u4e00-\u9fff\u3400-\u4dbf]/.test(rows[i + 1].contextLine);
+
+    if (isEnglishCtx && nextIsChinese) {
+      var engRow = rows[i];
+      var chnRow = rows[i + 1];
+      result.push(engRow);
+      result.push(chnRow);
+
+      // Check if vocab cards follow
+      var k = i + 2;
+      var hasVocab = false;
+      while (k < rows.length && !rows[k].contextLine && !rows[k].sectionHeader) {
+        if (rows[k].chinese) hasVocab = true;
+        result.push(rows[k]);
+        k++;
+      }
+
+      if (hasVocab) {
+        // Repeat the English + Chinese pair
+        result.push({ lesson: engRow.lesson, chinese: '', romanization: '', english: '', sectionHeader: '', contextLine: engRow.contextLine, isRepeat: true });
+        result.push({ lesson: chnRow.lesson, chinese: '', romanization: '', english: '', sectionHeader: '', contextLine: chnRow.contextLine, isRepeat: true });
+      }
+      i = k;
+    } else {
+      result.push(rows[i]);
+      i++;
+    }
+  }
+  return result;
+}
+
 function onLessonSelect() {
   var lesson = document.getElementById('lessonSelect').value;
   filteredRows = lesson ? allRows.filter(function(r) { return r.lesson === lesson; }) : allRows.slice();
+  filteredRows = insertSentenceRepeats(filteredRows);
   renderLyrics();
 }
 
@@ -1440,8 +1493,105 @@ document.getElementById('folderInput').addEventListener('change', function() {
   }
 });
 
+// ── SHEETS API (auto-load from Dropbox) ──
+var sheetsData = null; // { sheetName: [[row], ...], ... }
+var DEFAULT_SHEET = 'chinese'; // partial match — picks first sheet containing this
+
+async function fetchSheets() {
+  try {
+    var resp = await fetch('/api/sheets');
+    if (!resp.ok) return null;
+    return await resp.json();
+  } catch (e) {
+    return null;
+  }
+}
+
+function populateSheetDropdown(data) {
+  var dd = document.getElementById('sheetDropdown');
+  dd.innerHTML = '';
+  var names = Object.keys(data);
+  names.forEach(function(name) {
+    var opt = document.createElement('option');
+    opt.value = name;
+    opt.textContent = name;
+    dd.appendChild(opt);
+  });
+  return names;
+}
+
+function loadSheetByName(name) {
+  if (!sheetsData || !sheetsData[name]) return;
+  var rows = sheetsData[name];
+
+  // Parse CSV-style rows (same logic as loadCsvText / onSheetSelect)
+  allRows = [];
+  var currentLesson = '';
+  for (var i = 1; i < rows.length; i++) {
+    var colA = (rows[i][0] || '').trim();
+    var colB = (rows[i][1] || '').trim();
+    var colC = (rows[i][2] || '').trim();
+
+    if (!colA && !colB && !colC) continue;
+
+    if (colA && !colB && !colC) {
+      if (/^(Scene|Chapter|Part|Section|Lesson|Unit)\s/i.test(colA)) {
+        currentLesson = colA;
+        allRows.push({ lesson: currentLesson, chinese: '', romanization: '', english: '', sectionHeader: colA, contextLine: '' });
+      } else {
+        allRows.push({ lesson: currentLesson, chinese: '', romanization: '', english: '', sectionHeader: '', contextLine: colA });
+      }
+    } else {
+      allRows.push({ lesson: currentLesson, chinese: colA, romanization: colB, english: colC, sectionHeader: '', contextLine: '' });
+    }
+  }
+
+  var lessons = [], seen = {};
+  allRows.forEach(function(row) {
+    if (row.lesson && !seen[row.lesson]) { seen[row.lesson] = true; lessons.push(row.lesson); }
+  });
+  var lessonSel = document.getElementById('lessonSelect');
+  lessonSel.innerHTML = '<option value="">-- all lessons --</option>';
+  lessons.forEach(function(l) {
+    var opt = document.createElement('option');
+    opt.value = l;
+    opt.textContent = l + ' (' + allRows.filter(function(r) { return r.lesson === l; }).length + ')';
+    lessonSel.appendChild(opt);
+  });
+  lessonSel.disabled = false;
+
+  userAnswers = {};
+  expanded = {};
+  setStatus('Loaded ' + allRows.length + ' lines from "' + name + '"');
+  onLessonSelect();
+}
+
+function onSheetDropdownChange(name) {
+  if (!name || !sheetsData) return;
+  loadSheetByName(name);
+}
+
+async function initFromApi() {
+  sheetsData = await fetchSheets();
+  if (!sheetsData) {
+    document.getElementById('sheetDropdown').innerHTML = '<option value="">No data</option>';
+    return;
+  }
+
+  var names = populateSheetDropdown(sheetsData);
+  if (!names.length) return;
+
+  // Auto-select sheet matching DEFAULT_SHEET
+  var match = names.find(function(n) { return n.toLowerCase().indexOf(DEFAULT_SHEET) !== -1; });
+  var selected = match || names[0];
+  document.getElementById('sheetDropdown').value = selected;
+  loadSheetByName(selected);
+  toggleSetup(); // collapse the setup section
+}
+
 // ── INIT ──
 loadApiKey();
+initFromApi();
 </script>
 </body>
 </html>
