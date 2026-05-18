@@ -89,6 +89,57 @@
     }
     .access-code-area input:focus { border-color: #0FC0F5; }
 
+    /* Auto-load slider */
+    .autoload-area {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      margin-top: 4px;
+    }
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 50px;
+      height: 26px;
+    }
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .switch .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: #ddd;
+      transition: .4s;
+      border-radius: 26px;
+    }
+    .switch .slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 4px;
+      bottom: 4px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+    .switch input:checked + .slider {
+      background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+    }
+    .switch input:checked + .slider:before {
+      transform: translateX(24px);
+    }
+    .autoload-label {
+      font-size: 13px;
+      color: #555;
+      user-select: none;
+    }
+
     /* Todo list */
     .todo-list {
       background: #FFF;
@@ -256,6 +307,13 @@
     <button class="btn-local" onclick="saveToStorage()">Save to Storage</button>
     <button class="btn-vercel" onclick="loadFromVercel()">Load from Vercel</button>
     <button class="btn-vercel" onclick="saveToVercel()">Save to Vercel</button>
+    <div class="autoload-area">
+      <label class="switch">
+        <input type="checkbox" id="autoloadToggle">
+        <span class="slider"></span>
+      </label>
+      <span class="autoload-label" id="autoloadLabel">Auto-load: Off</span>
+    </div>
     <div class="access-code-area">
       <input type="password" id="accessCode" placeholder="ACCESS_CODE (for Vercel)" />
     </div>
@@ -338,6 +396,7 @@ function createTodoEl(todo) {
   checkbox.addEventListener('change', function() {
     var t = todos.find(function(t) { return t.id === todo.id; });
     if (t) t.checked = checkbox.checked;
+    autoSave();
   });
 
   // Click text to speak
@@ -351,6 +410,7 @@ function createTodoEl(todo) {
   // Delete button
   div.querySelector('.todo__delete').addEventListener('click', function() {
     todos = todos.filter(function(t) { return t.id !== todo.id; });
+    autoSave();
     div.style.transition = 'opacity 0.3s, max-height 0.3s';
     div.style.opacity = '0';
     div.style.maxHeight = '0';
@@ -383,6 +443,37 @@ function addTodo(text) {
   };
   todos.push(todo);
   document.getElementById('todoList').appendChild(createTodoEl(todo));
+  autoSave();
+}
+
+// Auto-load slider
+var autoloadToggle = document.getElementById('autoloadToggle');
+var autoloadLabel = document.getElementById('autoloadLabel');
+
+// Restore slider state and auto-load if ON
+var savedAutoload = localStorage.getItem('todoAutoload');
+if (savedAutoload === 'true') {
+  autoloadToggle.checked = true;
+  autoloadLabel.textContent = 'Auto-load: On';
+  // Auto-load from localStorage
+  var data = localStorage.getItem('todos');
+  if (data) {
+    todos = JSON.parse(data);
+    renderTodos();
+  }
+}
+
+autoloadToggle.addEventListener('change', function() {
+  var isOn = this.checked;
+  autoloadLabel.textContent = isOn ? 'Auto-load: On' : 'Auto-load: Off';
+  localStorage.setItem('todoAutoload', isOn.toString());
+});
+
+// Auto-save to localStorage whenever todos change (if autoload is on)
+function autoSave() {
+  if (autoloadToggle.checked) {
+    localStorage.setItem('todos', JSON.stringify(todos));
+  }
 }
 
 // Input handler
