@@ -276,6 +276,43 @@
       transition: color 0.2s;
     }
     .todo__delete:hover { color: #e74c3c; }
+
+    /* Video section */
+    .video-section {
+      background: #fff;
+      padding: 16px;
+      box-shadow: 0 5px 30px rgba(0,0,0,0.2);
+      margin-top: 12px;
+    }
+    .video-section video {
+      width: 100%;
+      border-radius: 4px;
+    }
+    .video-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 8px;
+    }
+    .repeat-btn {
+      font-size: 13px;
+      padding: 6px 12px;
+      border: 2px solid #ddd;
+      border-radius: 4px;
+      cursor: pointer;
+      background: #fff;
+      color: #555;
+      transition: all 0.2s;
+    }
+    .repeat-btn.active {
+      border-color: #0FC0F5;
+      background: #0FC0F5;
+      color: #fff;
+    }
+    .repeat-counter {
+      font-size: 13px;
+      color: #888;
+    }
   </style>
 </head>
 <body>
@@ -321,6 +358,14 @@
   </div>
 
   <div class="todo-list" id="todoList"></div>
+
+  <div class="video-section">
+    <video id="earthVideo" src="https://www.dropbox.com/scl/fi/evjucrcs1wg1lcp6ixkyf/Earth-Rotation-Loop-FREE-TO-USE-aiQdLP2mBJE.mp4?rlkey=l4yjtujzis4xaz7ps24uh4x3n&st=slwbn62i&raw=1" playsinline></video>
+    <div class="video-controls">
+      <button class="repeat-btn" id="repeatBtn" onclick="toggleRepeat()">Repeat: Off</button>
+      <span class="repeat-counter" id="repeatCounter"></span>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -551,6 +596,41 @@ function saveToVercel() {
       showStatus('Error: ' + err.message, true);
     });
 }
+
+// --- Video Repeat ---
+var earthVideo = document.getElementById('earthVideo');
+var repeatBtn = document.getElementById('repeatBtn');
+var repeatCounterEl = document.getElementById('repeatCounter');
+var repeatOn = false;
+var repeatCount = 0;
+var repeatMax = 50;
+
+function toggleRepeat() {
+  repeatOn = !repeatOn;
+  repeatBtn.textContent = 'Repeat: ' + (repeatOn ? 'On' : 'Off');
+  repeatBtn.classList.toggle('active', repeatOn);
+  if (repeatOn) {
+    repeatCount = 0;
+    repeatCounterEl.textContent = '0 / ' + repeatMax;
+    earthVideo.play();
+  } else {
+    repeatCounterEl.textContent = '';
+  }
+}
+
+earthVideo.addEventListener('ended', function() {
+  if (repeatOn && repeatCount < repeatMax) {
+    repeatCount++;
+    repeatCounterEl.textContent = repeatCount + ' / ' + repeatMax;
+    earthVideo.currentTime = 0;
+    earthVideo.play();
+  } else if (repeatCount >= repeatMax) {
+    repeatOn = false;
+    repeatBtn.textContent = 'Repeat: Off';
+    repeatBtn.classList.remove('active');
+    repeatCounterEl.textContent = 'Done! (' + repeatMax + ' loops)';
+  }
+});
 </script>
 </body>
 </html>
