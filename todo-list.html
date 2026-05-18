@@ -313,6 +313,78 @@
       font-size: 13px;
       color: #888;
     }
+
+    /* Theme toggle button */
+    .theme-btn {
+      font-size: 13px;
+      padding: 6px 12px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .theme-btn:hover { opacity: 0.8; }
+    .theme-btn-dark { background: #374151; color: #fff; }
+    .theme-btn-sepia { background: #f5e6c8; color: #8b6914; }
+    .theme-btn-light { background: #d1fae5; color: #065f46; }
+
+    /* Dark mode */
+    body.dark { background: #1f2937; }
+    .dark .todo-input-area,
+    .dark .controls,
+    .dark .todo-list,
+    .dark .video-section { background: #111827; color: #e5e7eb; box-shadow: 0 5px 30px rgba(0,0,0,0.5); }
+    .dark .todo-input-area input[type="text"] { background: #1f2937; color: #e5e7eb; border-color: #4b5563; }
+    .dark .todo-input-area input[type="text"]:focus { border-color: #0FC0F5; }
+    .dark .access-code-area input { background: #1f2937; color: #e5e7eb; border-color: #4b5563; }
+    .dark .access-code-area input:focus { border-color: #0FC0F5; }
+    .dark .todo__text { color: #e5e7eb; }
+    .dark .todo__state:checked ~ .todo__text { color: #9ca3af; }
+    .dark .todo { border-bottom-color: #374151; }
+    .dark .todo__delete { color: #6b7280; }
+    .dark .todo__delete:hover { color: #ef4444; }
+    .dark .todo-list:empty::after { color: #6b7280; }
+    .dark .autoload-label { color: #9ca3af; }
+    .dark .status-msg { color: #9ca3af; }
+    .dark .repeat-btn { background: #1f2937; color: #9ca3af; border-color: #4b5563; }
+    .dark .repeat-btn.active { background: #0FC0F5; color: #fff; border-color: #0FC0F5; }
+    .dark .repeat-counter { color: #9ca3af; }
+
+    /* Sepia mode */
+    body.sepia { background: #e8dcc8; }
+    .sepia .todo-input-area,
+    .sepia .controls,
+    .sepia .todo-list,
+    .sepia .video-section { background: #f4ecd8; color: #5a5a5a; box-shadow: 0 5px 30px rgba(0,0,0,0.15); }
+    .sepia .todo-input-area input[type="text"] { background: #faf6ee; color: #5a5a5a; border-color: #d4c9a8; }
+    .sepia .todo-input-area input[type="text"]:focus { border-color: #b8860b; }
+    .sepia .access-code-area input { background: #faf6ee; color: #5a5a5a; border-color: #d4c9a8; }
+    .sepia .access-code-area input:focus { border-color: #b8860b; }
+    .sepia .todo__text { color: #5a5a5a; }
+    .sepia .todo__state:checked ~ .todo__text { color: #8a8070; }
+    .sepia .todo { border-bottom-color: #d4c9a8; }
+    .sepia .todo__delete { color: #b8a88a; }
+    .sepia .todo__delete:hover { color: #c0392b; }
+    .sepia .todo-list:empty::after { color: #b8a88a; }
+    .sepia .autoload-label { color: #8a7a5a; }
+    .sepia .status-msg { color: #8a7a5a; }
+    .sepia .repeat-btn { background: #faf6ee; color: #8a7a5a; border-color: #d4c9a8; }
+    .sepia .repeat-btn.active { background: #b8860b; color: #fff; border-color: #b8860b; }
+    .sepia .repeat-counter { color: #8a7a5a; }
+
+    /* Scrollbar dark/sepia */
+    .dark .todo-list::-webkit-scrollbar,
+    .dark .video-section::-webkit-scrollbar { width: 8px; }
+    .dark .todo-list::-webkit-scrollbar-track,
+    .dark .video-section::-webkit-scrollbar-track { background: #2a2a2a; }
+    .dark .todo-list::-webkit-scrollbar-thumb,
+    .dark .video-section::-webkit-scrollbar-thumb { background: #555; border-radius: 4px; }
+    .sepia .todo-list::-webkit-scrollbar,
+    .sepia .video-section::-webkit-scrollbar { width: 8px; }
+    .sepia .todo-list::-webkit-scrollbar-track,
+    .sepia .video-section::-webkit-scrollbar-track { background: #f4ecd8; }
+    .sepia .todo-list::-webkit-scrollbar-thumb,
+    .sepia .video-section::-webkit-scrollbar-thumb { background: #c4b89a; border-radius: 4px; }
   </style>
 </head>
 <body>
@@ -344,6 +416,7 @@
     <button class="btn-local" onclick="saveToStorage()">Save to Storage</button>
     <button class="btn-vercel" onclick="loadFromVercel()">Load from Vercel</button>
     <button class="btn-vercel" onclick="saveToVercel()">Save to Vercel</button>
+    <button class="theme-btn theme-btn-dark" id="themeBtn" onclick="toggleTheme()" title="Switch to dark mode">Dark (d)</button>
     <div class="autoload-area">
       <label class="switch">
         <input type="checkbox" id="autoloadToggle">
@@ -617,6 +690,48 @@ function toggleRepeat() {
     repeatCounterEl.textContent = '';
   }
 }
+
+// --- Theme Toggle (light -> dark -> sepia -> light) ---
+var themeMode = localStorage.getItem('todoTheme') || 'light';
+var themeBtn = document.getElementById('themeBtn');
+
+function applyTheme(mode) {
+  document.body.classList.remove('dark', 'sepia');
+  if (mode === 'dark') {
+    document.body.classList.add('dark');
+    themeBtn.className = 'theme-btn theme-btn-sepia';
+    themeBtn.textContent = 'Sepia (d)';
+    themeBtn.title = 'Switch to sepia mode';
+  } else if (mode === 'sepia') {
+    document.body.classList.add('sepia');
+    themeBtn.className = 'theme-btn theme-btn-light';
+    themeBtn.textContent = 'Light (d)';
+    themeBtn.title = 'Switch to light mode';
+  } else {
+    themeBtn.className = 'theme-btn theme-btn-dark';
+    themeBtn.textContent = 'Dark (d)';
+    themeBtn.title = 'Switch to dark mode';
+  }
+  themeMode = mode;
+  localStorage.setItem('todoTheme', mode);
+}
+
+function toggleTheme() {
+  var next = themeMode === 'light' ? 'dark' : themeMode === 'dark' ? 'sepia' : 'light';
+  applyTheme(next);
+}
+
+// Keyboard shortcut: 'd' key
+document.addEventListener('keydown', function(e) {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+  if (e.key === 'd') {
+    toggleTheme();
+    e.preventDefault();
+  }
+});
+
+// Apply saved theme on load
+applyTheme(themeMode);
 
 earthVideo.addEventListener('ended', function() {
   if (repeatOn && repeatCount < repeatMax) {
