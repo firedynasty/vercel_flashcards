@@ -416,7 +416,7 @@
     <button class="btn-local" onclick="saveToStorage()">Save to Storage</button>
     <button class="btn-vercel" onclick="loadFromVercel()">Load from Vercel</button>
     <button class="btn-vercel" onclick="saveToVercel()">Save to Vercel</button>
-    <button class="theme-btn theme-btn-dark" id="themeBtn" onclick="toggleTheme()" title="Switch to dark mode">Dark (d)</button>
+    <button class="theme-btn theme-btn-dark" id="themeBtn" onclick="toggleTheme()" title="Switch to dark mode">Dark</button>
     <div class="autoload-area">
       <label class="switch">
         <input type="checkbox" id="autoloadToggle">
@@ -700,16 +700,16 @@ function applyTheme(mode) {
   if (mode === 'dark') {
     document.body.classList.add('dark');
     themeBtn.className = 'theme-btn theme-btn-sepia';
-    themeBtn.textContent = 'Sepia (d)';
+    themeBtn.textContent = 'Sepia';
     themeBtn.title = 'Switch to sepia mode';
   } else if (mode === 'sepia') {
     document.body.classList.add('sepia');
     themeBtn.className = 'theme-btn theme-btn-light';
-    themeBtn.textContent = 'Light (d)';
+    themeBtn.textContent = 'Light';
     themeBtn.title = 'Switch to light mode';
   } else {
     themeBtn.className = 'theme-btn theme-btn-dark';
-    themeBtn.textContent = 'Dark (d)';
+    themeBtn.textContent = 'Dark';
     themeBtn.title = 'Switch to dark mode';
   }
   themeMode = mode;
@@ -720,15 +720,6 @@ function toggleTheme() {
   var next = themeMode === 'light' ? 'dark' : themeMode === 'dark' ? 'sepia' : 'light';
   applyTheme(next);
 }
-
-// Keyboard shortcut: 'd' key
-document.addEventListener('keydown', function(e) {
-  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-  if (e.key === 'd') {
-    toggleTheme();
-    e.preventDefault();
-  }
-});
 
 // Apply saved theme on load
 applyTheme(themeMode);
