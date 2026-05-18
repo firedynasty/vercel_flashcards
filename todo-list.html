@@ -19,6 +19,13 @@
     .container {
       max-width: 500px;
       margin: 20px auto;
+      transition: all 0.3s ease;
+    }
+
+    /* Left-pane mode */
+    body.left-pane .container {
+      margin: 20px 0 20px 20px;
+      max-width: 50%;
     }
 
     /* Input area */
@@ -385,6 +392,55 @@
     .sepia .video-section::-webkit-scrollbar-track { background: #f4ecd8; }
     .sepia .todo-list::-webkit-scrollbar-thumb,
     .sepia .video-section::-webkit-scrollbar-thumb { background: #c4b89a; border-radius: 4px; }
+
+    /* Image section */
+    .image-section {
+      background: #fff;
+      padding: 16px;
+      box-shadow: 0 5px 30px rgba(0,0,0,0.2);
+      margin-top: 12px;
+    }
+    .image-section img {
+      width: 100%;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .dark .image-section { background: #111827; box-shadow: 0 5px 30px rgba(0,0,0,0.5); }
+    .sepia .image-section { background: #f4ecd8; box-shadow: 0 5px 30px rgba(0,0,0,0.15); }
+
+    /* Image modal */
+    .image-modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.85);
+      z-index: 9999;
+      justify-content: center;
+      align-items: center;
+    }
+    .image-modal.active {
+      display: flex;
+    }
+    .image-modal img {
+      max-width: 90vw;
+      max-height: 90vh;
+      border-radius: 8px;
+    }
+    .image-modal .modal-close {
+      position: absolute;
+      top: 20px;
+      right: 30px;
+      font-size: 36px;
+      color: #fff;
+      cursor: pointer;
+      background: none;
+      border: none;
+      font-weight: bold;
+      line-height: 1;
+    }
+    .image-modal .modal-close:hover {
+      color: #e74c3c;
+    }
   </style>
 </head>
 <body>
@@ -417,6 +473,7 @@
     <button class="btn-vercel" onclick="loadFromVercel()">Load from Vercel</button>
     <button class="btn-vercel" onclick="saveToVercel()">Save to Vercel</button>
     <button class="theme-btn theme-btn-dark" id="themeBtn" onclick="toggleTheme()" title="Switch to dark mode">Dark</button>
+    <button class="btn-local" id="paneBtn" onclick="togglePane()" title="Toggle left pane layout">Left Pane</button>
     <div class="autoload-area">
       <label class="switch">
         <input type="checkbox" id="autoloadToggle">
@@ -439,6 +496,15 @@
       <span class="repeat-counter" id="repeatCounter"></span>
     </div>
   </div>
+
+  <div class="image-section">
+    <img src="https://www.dropbox.com/scl/fi/1orddfele7r97tyggqxqa/church_mandarin_service_Lewis.png?rlkey=5i6usknkrrt9tqfvv4kpqe53e&st=5556fv9a&raw=1" alt="Church Mandarin Service Lewis" onclick="openImageModal(this.src)">
+  </div>
+</div>
+
+<div class="image-modal" id="imageModal">
+  <button class="modal-close" onclick="closeImageModal()">&times;</button>
+  <img src="" alt="Full size image" id="modalImage">
 </div>
 
 <script>
@@ -737,6 +803,54 @@ earthVideo.addEventListener('ended', function() {
     repeatCounterEl.textContent = 'Done! (' + repeatMax + ' loops)';
   }
 });
+
+// --- Image Modal ---
+var imageModal = document.getElementById('imageModal');
+var modalImage = document.getElementById('modalImage');
+
+function openImageModal(src) {
+  modalImage.src = src;
+  imageModal.classList.add('active');
+}
+
+function closeImageModal() {
+  imageModal.classList.remove('active');
+  modalImage.src = '';
+}
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape' && imageModal.classList.contains('active')) {
+    closeImageModal();
+  }
+});
+
+imageModal.addEventListener('click', function(e) {
+  if (e.target === imageModal) {
+    closeImageModal();
+  }
+});
+
+// --- Pane Toggle (center <-> left pane) ---
+var paneBtn = document.getElementById('paneBtn');
+var paneMode = localStorage.getItem('todoPaneMode') || 'center';
+
+function applyPane(mode) {
+  if (mode === 'left') {
+    document.body.classList.add('left-pane');
+    paneBtn.textContent = 'Center';
+  } else {
+    document.body.classList.remove('left-pane');
+    paneBtn.textContent = 'Left Pane';
+  }
+  paneMode = mode;
+  localStorage.setItem('todoPaneMode', mode);
+}
+
+function togglePane() {
+  applyPane(paneMode === 'center' ? 'left' : 'center');
+}
+
+applyPane(paneMode);
 </script>
 </body>
 </html>
