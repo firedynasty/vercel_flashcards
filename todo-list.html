@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Todo List</title>
+  <style>
+    html {
+      background: #ddd;
+      height: 100%;
+      display: flex;
+    }
+    body {
+      width: 100%;
+      margin: auto;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    .container {
+      max-width: 500px;
+      margin: 20px auto;
+    }
+
+    /* Input area */
+    .todo-input-area {
+      background: #fff;
+      padding: 16px;
+      box-shadow: 0 5px 30px rgba(0,0,0,0.2);
+      margin-bottom: 12px;
+      display: flex;
+      gap: 8px;
+    }
+    .todo-input-area input[type="text"] {
+      flex: 1;
+      font-size: 18px;
+      padding: 8px 12px;
+      border: 2px solid #ddd;
+      border-radius: 4px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .todo-input-area input[type="text"]:focus {
+      border-color: #0FC0F5;
+    }
+
+    /* Control buttons */
+    .controls {
+      background: #fff;
+      padding: 12px 16px;
+      box-shadow: 0 5px 30px rgba(0,0,0,0.2);
+      margin-bottom: 12px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .controls button {
+      font-size: 13px;
+      padding: 6px 12px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .controls button:hover { opacity: 0.8; }
+    .btn-local { background: #27FDC7; color: #135156; }
+    .btn-vercel { background: #0FC0F5; color: #fff; }
+    .controls .status-msg {
+      width: 100%;
+      font-size: 12px;
+      color: #888;
+      min-height: 16px;
+      margin-top: 4px;
+    }
+
+    /* ACCESS_CODE input */
+    .access-code-area {
+      display: flex;
+      gap: 8px;
+      width: 100%;
+      margin-top: 4px;
+    }
+    .access-code-area input {
+      flex: 1;
+      font-size: 13px;
+      padding: 4px 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      outline: none;
+    }
+    .access-code-area input:focus { border-color: #0FC0F5; }
+
+    /* Todo list */
+    .todo-list {
+      background: #FFF;
+      font-size: 20px;
+      padding: 0.5em 1em;
+      box-shadow: 0 5px 30px rgba(0,0,0,0.2);
+      min-height: 40px;
+    }
+    .todo-list:empty::after {
+      content: 'No todos loaded. Add one above or load from storage.';
+      color: #bbb;
+      font-size: 14px;
+      display: block;
+      padding: 1em 0;
+      text-align: center;
+    }
+
+    .todo {
+      display: block;
+      position: relative;
+      padding: 1em 2.5em 1em 16%;
+      margin: 0 auto;
+      border-bottom: solid 1px #ddd;
+      animation: slideIn 0.3s ease-out;
+    }
+    .todo:last-child { border-bottom: none; }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(-10px); max-height: 0; }
+      to { opacity: 1; transform: translateY(0); max-height: 100px; }
+    }
+
+    .todo__state {
+      position: absolute;
+      top: 0; left: 0;
+      opacity: 0;
+      pointer-events: none;
+    }
+    .todo__toggle {
+      position: absolute;
+      left: 2%; top: 15%;
+      width: 9%; height: 70%;
+      cursor: pointer;
+      z-index: 2;
+    }
+    .todo__text {
+      color: #135156;
+      transition: all 0.4s linear 0.4s;
+      position: relative;
+      z-index: 1;
+    }
+    .todo__icon {
+      position: absolute;
+      top: 0; bottom: 0; left: 0;
+      width: 100%; height: auto;
+      margin: auto;
+      fill: none;
+      stroke: #27FDC7;
+      stroke-width: 2;
+      stroke-linejoin: round;
+      stroke-linecap: round;
+      pointer-events: none;
+    }
+    .todo__line, .todo__box, .todo__check {
+      transition: stroke-dashoffset 0.8s cubic-bezier(0.9, 0, 0.5, 1);
+    }
+    .todo__circle {
+      stroke: #27FDC7;
+      stroke-dasharray: 1 6;
+      stroke-width: 0;
+      transform-origin: 13.5px 12.5px;
+      transform: scale(0.4) rotate(0deg);
+      animation: none 0.8s linear;
+    }
+    @keyframes explode {
+      30% { stroke-width: 3; stroke-opacity: 1; transform: scale(0.8) rotate(40deg); }
+      100% { stroke-width: 0; stroke-opacity: 0; transform: scale(1.1) rotate(60deg); }
+    }
+    .todo__box {
+      stroke-dasharray: 56.1053, 56.1053;
+      stroke-dashoffset: 0;
+      transition-delay: 0.16s;
+    }
+    .todo__check {
+      stroke: #27FDC7;
+      stroke-dasharray: 9.8995, 9.8995;
+      stroke-dashoffset: 9.8995;
+      transition-duration: 0.32s;
+    }
+    .todo__line {
+      stroke-dasharray: 168, 1684;
+      stroke-dashoffset: 168;
+    }
+    .todo__circle {
+      animation-delay: 0.56s;
+      animation-duration: 0.56s;
+    }
+    .todo__state:checked ~ .todo__text {
+      transition-delay: 0s;
+      color: #5EBEC1;
+      opacity: 0.6;
+    }
+    .todo__state:checked ~ .todo__icon .todo__box {
+      stroke-dashoffset: 56.1053;
+      transition-delay: 0s;
+    }
+    .todo__state:checked ~ .todo__icon .todo__line {
+      stroke-dashoffset: -8;
+    }
+    .todo__state:checked ~ .todo__icon .todo__check {
+      stroke-dashoffset: 0;
+      transition-delay: 0.48s;
+    }
+    .todo__state:checked ~ .todo__icon .todo__circle {
+      animation-name: explode;
+    }
+
+    /* Delete button */
+    .todo__delete {
+      position: absolute;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: #ccc;
+      font-size: 18px;
+      cursor: pointer;
+      z-index: 2;
+      padding: 4px 8px;
+      transition: color 0.2s;
+    }
+    .todo__delete:hover { color: #e74c3c; }
+  </style>
+</head>
+<body>
+
+<svg viewBox="0 0 0 0" style="position: absolute; z-index: -1; opacity: 0;">
+  <defs>
+    <linearGradient id="boxGradient" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="25" y2="25">
+      <stop offset="0%" stop-color="#27FDC7"/>
+      <stop offset="100%" stop-color="#0FC0F5"/>
+    </linearGradient>
+    <linearGradient id="lineGradient">
+      <stop offset="0%" stop-color="#0FC0F5"/>
+      <stop offset="100%" stop-color="#27FDC7"/>
+    </linearGradient>
+    <path id="todo__line" stroke="url(#lineGradient)" d="M21 12.3h168v0.1z"></path>
+    <path id="todo__box" stroke="url(#boxGradient)" d="M21 12.7v5c0 1.3-1 2.3-2.3 2.3H8.3C7 20 6 19 6 17.7V7.3C6 6 7 5 8.3 5h10.4C20 5 21 6 21 7.3v5.4"></path>
+    <path id="todo__check" stroke="url(#boxGradient)" d="M10 13l2 2 5-5"></path>
+    <circle id="todo__circle" cx="13.5" cy="12.5" r="10"></circle>
+  </defs>
+</svg>
+
+<div class="container">
+  <div class="todo-input-area">
+    <input type="text" id="todoInput" placeholder="Add a todo..." />
+  </div>
+
+  <div class="controls">
+    <button class="btn-local" onclick="loadFromStorage()">Load from Storage</button>
+    <button class="btn-local" onclick="saveToStorage()">Save to Storage</button>
+    <button class="btn-vercel" onclick="loadFromVercel()">Load from Vercel</button>
+    <button class="btn-vercel" onclick="saveToVercel()">Save to Vercel</button>
+    <div class="access-code-area">
+      <input type="password" id="accessCode" placeholder="ACCESS_CODE (for Vercel)" />
+    </div>
+    <div class="status-msg" id="statusMsg"></div>
+  </div>
+
+  <div class="todo-list" id="todoList"></div>
+</div>
+
+<script>
+var todoCounter = 0;
+var todos = []; // { id, text, checked }
+
+function showStatus(msg, isError) {
+  var el = document.getElementById('statusMsg');
+  el.textContent = msg;
+  el.style.color = isError ? '#e74c3c' : '#888';
+  setTimeout(function() { el.textContent = ''; }, 3000);
+}
+
+function getAccessCode() {
+  var code = document.getElementById('accessCode').value.trim();
+  if (!code) {
+    showStatus('Enter ACCESS_CODE first', true);
+    return null;
+  }
+  return code;
+}
+
+// Build a todo DOM element
+function createTodoEl(todo) {
+  var id = 'todo-' + (++todoCounter);
+
+  var div = document.createElement('div');
+  div.className = 'todo';
+  div.dataset.todoId = todo.id;
+
+  div.innerHTML =
+    '<input class="todo__state" type="checkbox" id="' + id + '"' + (todo.checked ? ' checked' : '') + ' />' +
+    '<label class="todo__toggle" for="' + id + '"></label>' +
+    '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 200 25" class="todo__icon">' +
+      '<use xlink:href="#todo__line" class="todo__line"></use>' +
+      '<use xlink:href="#todo__box" class="todo__box"></use>' +
+      '<use xlink:href="#todo__check" class="todo__check"></use>' +
+      '<use xlink:href="#todo__circle" class="todo__circle"></use>' +
+    '</svg>' +
+    '<div class="todo__text">' + escapeHtml(todo.text) + '</div>' +
+    '<button class="todo__delete" title="Delete">&times;</button>';
+
+  // Checkbox change
+  var checkbox = div.querySelector('.todo__state');
+  checkbox.addEventListener('change', function() {
+    var t = todos.find(function(t) { return t.id === todo.id; });
+    if (t) t.checked = checkbox.checked;
+  });
+
+  // Delete button
+  div.querySelector('.todo__delete').addEventListener('click', function() {
+    todos = todos.filter(function(t) { return t.id !== todo.id; });
+    div.style.transition = 'opacity 0.3s, max-height 0.3s';
+    div.style.opacity = '0';
+    div.style.maxHeight = '0';
+    div.style.overflow = 'hidden';
+    setTimeout(function() { div.remove(); }, 300);
+  });
+
+  return div;
+}
+
+function escapeHtml(str) {
+  var d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+function renderTodos() {
+  var list = document.getElementById('todoList');
+  list.innerHTML = '';
+  todos.forEach(function(todo) {
+    list.appendChild(createTodoEl(todo));
+  });
+}
+
+function addTodo(text) {
+  var todo = {
+    id: Date.now() + '-' + Math.random().toString(36).substr(2, 5),
+    text: text,
+    checked: false
+  };
+  todos.push(todo);
+  document.getElementById('todoList').appendChild(createTodoEl(todo));
+}
+
+// Input handler
+document.getElementById('todoInput').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') {
+    var text = this.value.trim();
+    if (text) {
+      addTodo(text);
+      this.value = '';
+    }
+  }
+});
+
+// localStorage
+function saveToStorage() {
+  localStorage.setItem('todos', JSON.stringify(todos));
+  showStatus('Saved to localStorage (' + todos.length + ' items)');
+}
+
+function loadFromStorage() {
+  var data = localStorage.getItem('todos');
+  if (data) {
+    todos = JSON.parse(data);
+    renderTodos();
+    showStatus('Loaded from localStorage (' + todos.length + ' items)');
+  } else {
+    showStatus('No data in localStorage', true);
+  }
+}
+
+// Vercel Blob
+function loadFromVercel() {
+  showStatus('Loading from Vercel...');
+  fetch('/api/todos')
+    .then(function(r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    })
+    .then(function(data) {
+      if (data.error) {
+        showStatus(data.error, true);
+        return;
+      }
+      todos = data.todos || [];
+      renderTodos();
+      showStatus('Loaded from Vercel (' + todos.length + ' items)');
+    })
+    .catch(function(err) {
+      showStatus('Error: ' + err.message, true);
+    });
+}
+
+function saveToVercel() {
+  var code = getAccessCode();
+  if (!code) return;
+
+  showStatus('Saving to Vercel...');
+  fetch('/api/todos', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ todos: todos, accessCode: code })
+  })
+    .then(function(r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    })
+    .then(function(data) {
+      if (data.error) {
+        showStatus(data.error, true);
+        return;
+      }
+      showStatus('Saved to Vercel (' + todos.length + ' items)');
+    })
+    .catch(function(err) {
+      showStatus('Error: ' + err.message, true);
+    });
+}
+</script>
+</body>
+</html>

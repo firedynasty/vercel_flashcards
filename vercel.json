@@ -18,6 +18,8 @@
     { "source": "/learn-spanish-tts", "destination": "/learn-spanish-tts.html" },
     { "source": "/learn-memorize-verses.html", "destination": "/learn-memorize-verses.html" },
     { "source": "/learn-memorize-verses", "destination": "/learn-memorize-verses.html" },
+    { "source": "/todo-list.html", "destination": "/todo-list.html" },
+    { "source": "/todo-list", "destination": "/todo-list.html" },
     { "source": "/(.*)", "destination": "/flashcards.html" }
   ]
 }
