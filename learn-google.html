@@ -188,7 +188,7 @@
     pointer-events: none;
     z-index: 20;
   }
-  .tooltip-on .vocab-card:hover .def-tip { display: block; }
+  /* tooltip is now shown via JS on checkbox hover */
 
   /* ── HOVER-REVEAL SLIDER ── */
   .tip-toggle {
@@ -374,8 +374,8 @@
     <div class="tip-toggle" onclick="setTooltipMode(!tooltipOn)" title="Hover any card to reveal its definition">
       <span>Reveal on hover</span>
       <div class="tip-switch">
-        <div class="tip-track" id="tipTrack"></div>
-        <div class="tip-knob" id="tipKnob"></div>
+        <div class="tip-track on" id="tipTrack"></div>
+        <div class="tip-knob on" id="tipKnob"></div>
       </div>
     </div>
     <button class="btn outline sm" id="exportAllBtn" style="display:none" onclick="exportAll()">&#128203; Export All</button>
@@ -429,7 +429,7 @@ var sections     = [];   // ordered list of section keys
 var sectionContexts = {}; // section -> [context strings] (sandwich "whole" lines)
 var modalFI      = -1;   // current filteredVocab index in modal
 var modalCB      = null; // the checkbox element that opened the modal
-var tooltipOn    = false;
+var tooltipOn    = true;
 
 // ── CSV PARSING ──
 function parseVocabCsv(text) {
@@ -656,11 +656,19 @@ function buildCard(row, fi) {
   area.appendChild(hint);
   card.appendChild(area);
 
-  // Hover-reveal tooltip (shown when tooltip mode is on)
+  // Hover-reveal tooltip (shown when checkbox is hovered)
   var tip = document.createElement('div');
   tip.className = 'def-tip';
   tip.textContent = row.definition;
   card.appendChild(tip);
+
+  // Show tooltip only on checkbox hover
+  cb.addEventListener('mouseenter', function() {
+    if (tooltipOn) tip.style.display = 'block';
+  });
+  cb.addEventListener('mouseleave', function() {
+    tip.style.display = 'none';
+  });
 
   return card;
 }
