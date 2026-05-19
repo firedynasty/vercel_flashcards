@@ -298,6 +298,19 @@
   .modal-footer {
     display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap;
   }
+
+  /* ── AUTO-SCORE ── */
+  .auto-score-box {
+    border-radius: 10px; padding: 12px 16px; font-size: 13px; line-height: 1.5;
+  }
+  .auto-score-box.correct { background: #f0fdf4; border: 1px solid #bbf7d0; }
+  .auto-score-box.partial { background: #fefce8; border: 1px solid #fde68a; }
+  .auto-score-box.wrong   { background: #fef2f2; border: 1px solid #fecaca; }
+  .auto-score-emoji { font-size: 20px; margin-right: 6px; vertical-align: middle; }
+  .auto-score-pct { font-weight: 700; font-size: 15px; }
+  .auto-score-detail { font-size: 11px; color: #888; margin-top: 6px; }
+  .matched-word { color: #16a34a; font-weight: 600; }
+  .missed-word { color: #dc2626; opacity: 0.6; }
 </style>
 </head>
 <body>
@@ -406,7 +419,9 @@
 
     <hr class="modal-divider">
 
-    <div class="grade-row">
+    <div id="autoScoreResult" style="margin-bottom:14px;"></div>
+
+    <div class="grade-row" id="gradeRow">
       <button class="btn success" onclick="scoreAndClose('correct')">&#9989; Correct</button>
       <button class="btn warn"    onclick="scoreAndClose('partial')">&#9651; Partial</button>
       <button class="btn danger"  onclick="scoreAndClose('wrong')">&#10060; Wrong</button>
@@ -703,6 +718,44 @@ function saveAnswer(idx, val) {
   if (cc) cc.textContent = val.length ? val.length + ' chars' : '';
 }
 
+// ── WORD MATCH ──
+var STOP_WORDS = ['a','an','the','is','it','of','to','in','for','on','and','or','that','this','with','as','by','from','are','was','were','be','been','being','have','has','had','do','does','did','will','would','could','should','can','may','might','not','no','but','if','at','its','your','you','we','they','them','their','our','what','which','who','how','when','where','than','then','also','just','about','into','over','after','before','between','through','during','under','within'];
+
+function getWords(text) {
+  return text.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(function(w) {
+    return w.length > 1 && STOP_WORDS.indexOf(w) < 0;
+  });
+}
+
+function wordMatch(userAns, correctDef) {
+  var userWords = getWords(userAns);
+  var defWords = getWords(correctDef);
+  if (defWords.length === 0) return { pct: 0, matched: [], missed: defWords, grade: 'wrong' };
+  if (userWords.length === 0) return { pct: 0, matched: [], missed: defWords, grade: 'wrong' };
+
+  var matched = [];
+  var missed = [];
+
+  for (var i = 0; i < defWords.length; i++) {
+    var found = false;
+    for (var j = 0; j < userWords.length; j++) {
+      // exact match or one contains the other (e.g. "authenticate" matches "authentication")
+      if (userWords[j] === defWords[i] ||
+          userWords[j].indexOf(defWords[i]) >= 0 ||
+          defWords[i].indexOf(userWords[j]) >= 0) {
+        found = true;
+        break;
+      }
+    }
+    if (found) matched.push(defWords[i]);
+    else missed.push(defWords[i]);
+  }
+
+  var pct = Math.round((matched.length / defWords.length) * 100);
+  var grade = pct >= 60 ? 'correct' : pct >= 30 ? 'partial' : 'wrong';
+  return { pct: pct, matched: matched, missed: missed, grade: grade };
+}
+
 // ── MODAL ──
 function openModal(fi) {
   modalFI = fi;
@@ -717,11 +770,62 @@ function openModal(fi) {
     yoursEl.textContent = ans;
     yoursEl.classList.remove('no-answer');
   } else {
-    yoursEl.textContent = '(no answer typed — click \u25bc Try on the card to add one)';
+    yoursEl.textContent = '(no answer typed \u2014 click \u25bc Try on the card to add one)';
     yoursEl.classList.add('no-answer');
   }
 
   document.getElementById('modalCorrect').textContent = row.definition;
+
+  // Auto-score with word matching
+  var resultEl = document.getElementById('autoScoreResult');
+  if (ans.trim()) {
+    var result = wordMatch(ans, row.definition);
+    var emoji = result.grade === 'correct' ? '\u2705' : result.grade === 'partial' ? '\u26a0\ufe0f' : '\u274c';
+    var label = result.grade === 'correct' ? 'Correct' : result.grade === 'partial' ? 'Partial' : 'Wrong';
+
+    var html = '<div class="auto-score-box ' + result.grade + '">';
+    html += '<span class="auto-score-emoji">' + emoji + '</span>';
+    html += '<span class="auto-score-pct">' + result.pct + '% match</span>';
+    html += ' \u2014 ' + label;
+    html += '<div class="auto-score-detail">';
+    if (result.matched.length > 0) {
+      html += 'Matched: ';
+      html += result.matched.map(function(w) { return '<span class="matched-word">' + w + '</span>'; }).join(', ');
+    }
+    if (result.missed.length > 0) {
+      if (result.matched.length > 0) html += ' &nbsp;|&nbsp; ';
+      html += 'Missed: ';
+      html += result.missed.map(function(w) { return '<span class="missed-word">' + w + '</span>'; }).join(', ');
+    }
+    html += '</div></div>';
+    resultEl.innerHTML = html;
+
+    // Auto-apply the grade
+    scores[idx] = result.grade;
+    applyScoreToCard(idx, result.grade);
+    updateScorePills();
+  } else {
+    resultEl.innerHTML = '<div class="auto-score-box wrong"><span class="auto-score-emoji">\u274c</span> No answer provided</div>';
+  }
+
+  // Auto-copy grading prompt to clipboard
+  var copyText = [
+    'Grade my definition for this vocabulary term.',
+    'Be lenient \u2014 grade on whether I understand the core concept, not exact wording.',
+    '',
+    'Term: ' + row.term,
+    'My Answer: ' + (ans.trim() || '(no answer provided)'),
+    'Correct Definition: ' + row.definition,
+    '',
+    'Rate as one of:',
+    '\u2705 Correct \u2014 captures the key meaning',
+    '\u26a0\ufe0f Partial \u2014 somewhat correct but misses important points',
+    '\u274c Wrong \u2014 misses the point',
+    '',
+    'Give one brief sentence of feedback explaining your rating.'
+  ].join('\n');
+  try { navigator.clipboard.writeText(copyText); } catch(e) {}
+
   document.getElementById('modalOverlay').classList.add('active');
 }
 
