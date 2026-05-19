@@ -95,6 +95,18 @@
     margin-bottom: 10px;
   }
 
+  /* ── SANDWICH CONTEXT (whole) ── */
+  .sandwich-context {
+    background: #f0f4ff; border: 1px solid #c7d8ff; border-radius: 10px;
+    padding: 14px 18px; margin: 12px 0 16px;
+    font-size: 14px; line-height: 1.65; color: #1e3a5f;
+    border-left: 4px solid #2563eb;
+  }
+  .sandwich-label {
+    font-size: 10px; font-weight: 700; letter-spacing: 1.5px;
+    text-transform: uppercase; color: #6b8cc7; margin-bottom: 6px;
+  }
+
   /* ── VOCAB CARD ── */
   .vocab-card {
     background: white; border: 1px solid #e8e8e8; border-radius: 12px;
@@ -293,7 +305,7 @@
 <!-- ── PAGE HEADER ── -->
 <div class="container">
   <h1>Vocabulary Drill</h1>
-  <div class="subtitle">Load a CSV · type your definitions · check &#9744; a card to compare and grade</div>
+  <div class="subtitle">Load a CSV · type your definitions · check &#9744; a card to compare and grade · <a href="parse-google-docs-to-csv-for-google.html" target="_blank" style="color:#2563eb; text-decoration:none; font-weight:600;">Open CSV Parser &rarr;</a></div>
 
   <!-- Upload zone -->
   <div class="upload-zone" id="uploadZone"
@@ -414,6 +426,7 @@ var userAnswers  = {};   // idx -> string
 var scores       = {};   // idx -> 'correct'|'partial'|'wrong'
 var expanded     = {};   // idx -> bool
 var sections     = [];   // ordered list of section keys
+var sectionContexts = {}; // section -> [context strings] (sandwich "whole" lines)
 var modalFI      = -1;   // current filteredVocab index in modal
 var modalCB      = null; // the checkbox element that opened the modal
 var tooltipOn    = false;
@@ -424,6 +437,7 @@ function parseVocabCsv(text) {
   var vocab = [];
   var sec = '';
   var secs = [];
+  var ctxs = {}; // section -> [context lines]
 
   lines.forEach(function(line) {
     line = line.trim();
@@ -432,6 +446,16 @@ function parseVocabCsv(text) {
     // Unescape CSV-quoted field
     if (line.charAt(0) === '"' && line.charAt(line.length - 1) === '"') {
       line = line.slice(1, -1).replace(/""/g, '"');
+    }
+
+    // Sandwich context line: starts with "> "
+    if (line.indexOf('> ') === 0) {
+      var ctx = line.slice(2).trim();
+      if (ctx) {
+        if (!ctxs[sec]) ctxs[sec] = [];
+        ctxs[sec].push(ctx);
+      }
+      return;
     }
 
     // Find first ': ' separator
@@ -453,6 +477,7 @@ function parseVocabCsv(text) {
   });
 
   sections = secs;
+  sectionContexts = ctxs;
   return vocab;
 }
 
@@ -496,8 +521,11 @@ function renderCards() {
   var lastSec = null;
 
   filteredVocab.forEach(function(row, fi) {
-    // Section divider
+    // Section divider — also append sandwich context for previous section
     if (row.section !== lastSec) {
+      // Append sandwich "whole" for the section we just finished
+      if (lastSec !== null) appendSandwichContext(container, lastSec);
+
       if (row.section) {
         var hdr = document.createElement('div');
         hdr.className = 'section-divider';
@@ -510,7 +538,27 @@ function renderCards() {
     container.appendChild(buildCard(row, fi));
   });
 
+  // Append sandwich context for the last section
+  if (lastSec !== null) appendSandwichContext(container, lastSec);
+
   updateScorePills();
+}
+
+function appendSandwichContext(container, sec) {
+  var ctxList = sectionContexts[sec];
+  if (!ctxList || ctxList.length === 0) return;
+  ctxList.forEach(function(ctx) {
+    var wrapper = document.createElement('div');
+    wrapper.className = 'sandwich-context';
+    var label = document.createElement('div');
+    label.className = 'sandwich-label';
+    label.textContent = 'Context \u2014 Whole';
+    var body = document.createElement('div');
+    body.textContent = ctx;
+    wrapper.appendChild(label);
+    wrapper.appendChild(body);
+    container.appendChild(wrapper);
+  });
 }
 
 function buildCard(row, fi) {
@@ -1109,10 +1157,9 @@ function onGSectionSelect() {
   document.getElementById('cardsArea').classList.add('active');
   document.getElementById('exportAllBtn').style.display = '';
 
-  // Hide upload zone
+  // Hide upload zone but keep Google Sheets controls visible
   document.getElementById('uploadZone').style.display = 'none';
   document.getElementById('orDivider').style.display = 'none';
-  document.getElementById('setupSection').style.display = 'none';
 
   setUploadStatus('\u2705 Loaded ' + allVocab.length + ' terms from Google Sheets');
   filterAndRender();
