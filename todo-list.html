@@ -513,6 +513,9 @@
       margin-bottom: 6px;
       text-align: center;
     }
+    .bible-text-wrap {
+      position: relative;
+    }
     .bible-text-display {
       border: 1px solid #e5e7eb;
       border-radius: 4px;
@@ -522,6 +525,27 @@
       font-size: 15px;
       line-height: 1.7;
       color: #333;
+    }
+    .bible-page-down {
+      position: absolute;
+      left: 6px;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 10;
+      width: 40px;
+      height: 40px;
+      background: rgba(0,0,0,0.45);
+      border-radius: 50%;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+    }
+    .bible-page-down:hover {
+      background: rgba(0,0,0,0.75);
+      transform: translateY(-50%) scale(1.1);
     }
     .bible-text-display .verse { margin-bottom: 3px; }
     .bible-text-display .verse-num {
@@ -630,7 +654,12 @@
         <button onclick="bibleFontSize(1)" title="Increase font size">A+</button>
       </div>
       <div class="bible-current-section" id="bibleCurrentSection">Select a section or press play</div>
-      <div class="bible-text-display bible-text-scalable" id="bibleTextDisplay"></div>
+      <div class="bible-text-wrap">
+        <button class="bible-page-down" onclick="biblePageDown('bibleTextDisplay')" title="Page down">
+          <svg width="36" height="36" viewBox="0 0 64 64"><path d="M8 20 L32 44 L56 20" stroke="white" stroke-width="8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <div class="bible-text-display bible-text-scalable" id="bibleTextDisplay"></div>
+      </div>
     </div>
   </div>
 
@@ -651,7 +680,12 @@
         <button onclick="bibleFontSize(1)" title="Increase font size">A+</button>
       </div>
       <div class="bible-current-section" id="corCurrentSection">Select a section or press play</div>
-      <div class="bible-text-display bible-text-scalable" id="corTextDisplay"></div>
+      <div class="bible-text-wrap">
+        <button class="bible-page-down" onclick="biblePageDown('corTextDisplay')" title="Page down">
+          <svg width="36" height="36" viewBox="0 0 64 64"><path d="M8 20 L32 44 L56 20" stroke="white" stroke-width="8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <div class="bible-text-display bible-text-scalable" id="corTextDisplay"></div>
+      </div>
     </div>
   </div>
 
@@ -672,7 +706,12 @@
         <button onclick="bibleFontSize(1)" title="Increase font size">A+</button>
       </div>
       <div class="bible-current-section" id="romCurrentSection">Select a section or press play</div>
-      <div class="bible-text-display bible-text-scalable" id="romTextDisplay"></div>
+      <div class="bible-text-wrap">
+        <button class="bible-page-down" onclick="biblePageDown('romTextDisplay')" title="Page down">
+          <svg width="36" height="36" viewBox="0 0 64 64"><path d="M8 20 L32 44 L56 20" stroke="white" stroke-width="8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <div class="bible-text-display bible-text-scalable" id="romTextDisplay"></div>
+      </div>
     </div>
   </div>
 
@@ -1110,6 +1149,11 @@ function toggleBibleAudio() {
   document.getElementById('bibleAudioBody').classList.toggle('show', bibleAudioOpen);
   document.getElementById('bibleToggleArrow').classList.toggle('open', bibleAudioOpen);
   if (bibleAudioOpen) loadMarkData();
+}
+
+function biblePageDown(id) {
+  var el = document.getElementById(id);
+  if (el) el.scrollTop = Math.min(el.scrollHeight - el.clientHeight, el.scrollTop + el.clientHeight * 0.9);
 }
 
 var bibleFontSizeVal = parseInt(localStorage.getItem('bibleFontSize')) || 15;
