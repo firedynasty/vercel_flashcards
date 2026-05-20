@@ -724,6 +724,15 @@
       <input type="range" class="music-time-bar" id="musicTimeBar" min="0" max="100" value="0" step="0.1" />
       <input type="range" class="music-volume" id="musicVolume" min="0" max="1" value="0.5" step="0.01" title="Volume" />
     </div>
+    <audio id="soakingAudio" loop preload="none"
+      src="https://www.dropbox.com/scl/fi/hiz6z82rwhpjhr1ip6ipm/QUIET-TIME-WITH-GOD-Soaking-worship-instrumental-Prayer-and-Devotional-OsgkVc-pWv8.mp3?rlkey=w99i60rnicu9asf4ev6vk958a&st=ebvy2i77&raw=1">
+    </audio>
+    <div class="music-player">
+      <button class="music-btn" id="soakingBtn" onclick="toggleSoaking()">Soaking: Off</button>
+      <span class="music-time-label" id="soakingTimeLabel">0:00 / 0:00</span>
+      <input type="range" class="music-time-bar" id="soakingTimeBar" min="0" max="100" value="0" step="0.1" />
+      <input type="range" class="music-volume" id="soakingVolume" min="0" max="1" value="0.5" step="0.01" title="Volume" />
+    </div>
   </div>
 
   <div class="bible-audio-section">
@@ -1266,6 +1275,50 @@ musicTimeBar.addEventListener('input', function() {
 
 musicVolume.addEventListener('input', function() {
   musicAudio.volume = this.value;
+});
+
+// --- Soaking Player ---
+var soakingAudio = document.getElementById('soakingAudio');
+var soakingBtn = document.getElementById('soakingBtn');
+var soakingTimeBar = document.getElementById('soakingTimeBar');
+var soakingVol = document.getElementById('soakingVolume');
+var soakingTimeLabel = document.getElementById('soakingTimeLabel');
+var soakingPlaying = false;
+
+soakingAudio.volume = 0.5;
+
+function toggleSoaking() {
+  if (soakingPlaying) {
+    soakingAudio.pause();
+    soakingPlaying = false;
+    soakingBtn.textContent = 'Soaking: Off';
+    soakingBtn.classList.remove('active');
+  } else {
+    soakingAudio.play();
+    soakingPlaying = true;
+    soakingBtn.textContent = 'Soaking: On';
+    soakingBtn.classList.add('active');
+  }
+}
+
+soakingAudio.addEventListener('timeupdate', function() {
+  if (!soakingAudio.duration) return;
+  soakingTimeBar.value = (soakingAudio.currentTime / soakingAudio.duration) * 100;
+  soakingTimeLabel.textContent = formatTime(soakingAudio.currentTime) + ' / ' + formatTime(soakingAudio.duration);
+});
+
+soakingAudio.addEventListener('loadedmetadata', function() {
+  soakingTimeLabel.textContent = '0:00 / ' + formatTime(soakingAudio.duration);
+});
+
+soakingTimeBar.addEventListener('input', function() {
+  if (soakingAudio.duration) {
+    soakingAudio.currentTime = (this.value / 100) * soakingAudio.duration;
+  }
+});
+
+soakingVol.addEventListener('input', function() {
+  soakingAudio.volume = this.value;
 });
 
 // --- Image Modal ---
