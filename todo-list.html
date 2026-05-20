@@ -321,6 +321,84 @@
       color: #888;
     }
 
+    /* Music player controls */
+    .music-player {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 8px;
+      flex-wrap: wrap;
+    }
+    .music-btn {
+      font-size: 13px;
+      padding: 6px 12px;
+      border: 2px solid #ddd;
+      border-radius: 4px;
+      cursor: pointer;
+      background: #fff;
+      color: #555;
+      transition: all 0.2s;
+    }
+    .music-btn.active {
+      border-color: #e91e63;
+      background: #e91e63;
+      color: #fff;
+    }
+    .music-time-bar {
+      flex: 1;
+      min-width: 120px;
+      height: 6px;
+      -webkit-appearance: none;
+      appearance: none;
+      background: #ddd;
+      border-radius: 3px;
+      outline: none;
+      cursor: pointer;
+    }
+    .music-time-bar::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #e91e63;
+      cursor: pointer;
+    }
+    .music-volume {
+      width: 80px;
+      height: 6px;
+      -webkit-appearance: none;
+      appearance: none;
+      background: #ddd;
+      border-radius: 3px;
+      outline: none;
+      cursor: pointer;
+    }
+    .music-volume::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #e91e63;
+      cursor: pointer;
+    }
+    .music-time-label {
+      font-size: 11px;
+      color: #888;
+      white-space: nowrap;
+    }
+
+    /* Dark mode music */
+    .dark .music-btn { background: #1f2937; color: #9ca3af; border-color: #4b5563; }
+    .dark .music-btn.active { background: #e91e63; color: #fff; border-color: #e91e63; }
+    .dark .music-time-bar, .dark .music-volume { background: #4b5563; }
+    .dark .music-time-label { color: #9ca3af; }
+
+    /* Sepia mode music */
+    .sepia .music-btn { background: #faf6ee; color: #8a7a5a; border-color: #d4c9a8; }
+    .sepia .music-btn.active { background: #b8860b; color: #fff; border-color: #b8860b; }
+    .sepia .music-time-bar, .sepia .music-volume { background: #d4c9a8; }
+    .sepia .music-time-label { color: #8a7a5a; }
+
     /* Theme toggle button */
     .theme-btn {
       font-size: 13px;
@@ -534,17 +612,19 @@
       z-index: 10;
       width: 40px;
       height: 40px;
-      background: rgba(0,0,0,0.45);
+      background: rgba(0,0,0,0.08);
       border-radius: 50%;
       border: none;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
+      opacity: 0.15;
       transition: all 0.2s ease;
     }
     .bible-page-down:hover {
-      background: rgba(0,0,0,0.75);
+      background: rgba(0,0,0,0.12);
+      opacity: 0.2;
       transform: translateY(-50%) scale(1.1);
     }
     .bible-text-display .verse { margin-bottom: 3px; }
@@ -634,6 +714,15 @@
     <div class="video-controls">
       <button class="repeat-btn" id="repeatBtn" onclick="toggleRepeat()">Repeat: Off</button>
       <span class="repeat-counter" id="repeatCounter"></span>
+    </div>
+    <audio id="musicAudio" loop preload="none"
+      src="https://www.dropbox.com/scl/fi/hkvbuuu55lcmdba1ugtek/Mendelssohn-Lieder-ohne-Worte-Songs-Without-Words-Complete-Piano-Collection-QInNyUj676o-_1.mp3?rlkey=a7rw58hhuqdh061el9pd7bdzw&st=woa0bqbq&raw=1">
+    </audio>
+    <div class="music-player">
+      <button class="music-btn" id="musicBtn" onclick="toggleMusic()">Mendelssohn: Off</button>
+      <span class="music-time-label" id="musicTimeLabel">0:00 / 0:00</span>
+      <input type="range" class="music-time-bar" id="musicTimeBar" min="0" max="100" value="0" step="0.1" />
+      <input type="range" class="music-volume" id="musicVolume" min="0" max="1" value="0.5" step="0.01" title="Volume" />
     </div>
   </div>
 
@@ -1124,6 +1213,59 @@ earthVideo.addEventListener('ended', function() {
     repeatBtn.classList.remove('active');
     repeatCounterEl.textContent = 'Done! (' + repeatMax + ' loops)';
   }
+});
+
+// --- Music Player ---
+var musicAudio = document.getElementById('musicAudio');
+var musicBtn = document.getElementById('musicBtn');
+var musicTimeBar = document.getElementById('musicTimeBar');
+var musicVolume = document.getElementById('musicVolume');
+var musicTimeLabel = document.getElementById('musicTimeLabel');
+var musicPlaying = false;
+
+musicAudio.volume = 0.5;
+
+function formatTime(sec) {
+  if (isNaN(sec) || !isFinite(sec)) return '0:00';
+  var h = Math.floor(sec / 3600);
+  var m = Math.floor((sec % 3600) / 60);
+  var s = Math.floor(sec % 60);
+  if (h > 0) return h + ':' + (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+  return m + ':' + (s < 10 ? '0' : '') + s;
+}
+
+function toggleMusic() {
+  if (musicPlaying) {
+    musicAudio.pause();
+    musicPlaying = false;
+    musicBtn.textContent = 'Mendelssohn: Off';
+    musicBtn.classList.remove('active');
+  } else {
+    musicAudio.play();
+    musicPlaying = true;
+    musicBtn.textContent = 'Mendelssohn: On';
+    musicBtn.classList.add('active');
+  }
+}
+
+musicAudio.addEventListener('timeupdate', function() {
+  if (!musicAudio.duration) return;
+  musicTimeBar.value = (musicAudio.currentTime / musicAudio.duration) * 100;
+  musicTimeLabel.textContent = formatTime(musicAudio.currentTime) + ' / ' + formatTime(musicAudio.duration);
+});
+
+musicAudio.addEventListener('loadedmetadata', function() {
+  musicTimeLabel.textContent = '0:00 / ' + formatTime(musicAudio.duration);
+});
+
+musicTimeBar.addEventListener('input', function() {
+  if (musicAudio.duration) {
+    musicAudio.currentTime = (this.value / 100) * musicAudio.duration;
+  }
+});
+
+musicVolume.addEventListener('input', function() {
+  musicAudio.volume = this.value;
 });
 
 // --- Image Modal ---
