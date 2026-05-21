@@ -16,24 +16,31 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'OPENAI_API_KEY not configured on server' });
   }
 
-  const { input, voice, speed } = req.body;
+  const { input, voice, speed, dialect } = req.body;
   if (!input) {
     return res.status(400).json({ error: 'Missing input text' });
   }
 
+  const instructions = dialect === 'cantonese'
+    ? 'Read the text in Cantonese (粵語). Use Cantonese pronunciation, not Mandarin.'
+    : undefined;
+
   try {
+    const body = {
+      model: 'gpt-4o-mini-tts',
+      input: input,
+      voice: voice || 'alloy',
+      speed: speed || 1
+    };
+    if (instructions) body.instructions = instructions;
+
     const response = await fetch('https://api.openai.com/v1/audio/speech', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer ' + apiKey
       },
-      body: JSON.stringify({
-        model: 'tts-1',
-        input: input,
-        voice: voice || 'alloy',
-        speed: speed || 1
-      })
+      body: JSON.stringify(body)
     });
 
     if (!response.ok) {

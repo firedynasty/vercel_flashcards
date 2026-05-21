@@ -454,13 +454,6 @@
         <option value="1.5">1.5x</option>
       </select>
       <div class="sep"></div>
-      <span class="auto-label" id="stopLabel" onmouseenter="setAutoAdvance(false)" style="background:#ffcdd2;">Stop</span>
-      <label class="switch-wrap">
-        <input type="checkbox" id="autoAdvanceCheckbox" onchange="setAutoAdvance(this.checked)">
-        <span class="switch-track" id="switchTrack"><span class="switch-knob" id="switchKnob"></span></span>
-      </label>
-      <span class="auto-label" id="autoLabel" onmouseenter="setAutoAdvance(true)">Auto</span>
-      <div class="sep"></div>
       <span class="toggle-chip on" id="toggleChinese" onclick="toggleSetting('chinese')">Chin</span>
       <span class="toggle-chip on" id="toggleRomanization" onclick="toggleSetting('romanization')">Pin</span>
       <span class="toggle-chip on" id="toggleMeaning" onclick="toggleSetting('meanings')">Eng</span>
@@ -600,7 +593,8 @@ async function speakOpenAI(text, onEnd) {
       body: JSON.stringify({
         input: text,
         voice: voice,
-        speed: ttsRate
+        speed: ttsRate,
+        dialect: dialect
       })
     });
 
@@ -1500,11 +1494,14 @@ var DEFAULT_SHEET = 'chinese'; // partial match — picks first sheet containing
 async function fetchSheets() {
   try {
     var resp = await fetch('/api/sheets');
-    if (!resp.ok) return null;
-    return await resp.json();
-  } catch (e) {
-    return null;
-  }
+    if (resp.ok) return await resp.json();
+  } catch (e) {}
+  // Fallback to local sheets.json (for static servers without API routes)
+  try {
+    var resp2 = await fetch('/sheets.json');
+    if (resp2.ok) return await resp2.json();
+  } catch (e) {}
+  return null;
 }
 
 function populateSheetDropdown(data) {
