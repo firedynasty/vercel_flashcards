@@ -733,6 +733,15 @@
       <input type="range" class="music-time-bar" id="soakingTimeBar" min="0" max="100" value="0" step="0.1" />
       <input type="range" class="music-volume" id="soakingVolume" min="0" max="1" value="0.5" step="0.01" title="Volume" />
     </div>
+    <audio id="bachTechnoAudio" loop preload="none"
+      src="https://www.dropbox.com/scl/fi/r7ln0zml3tr2slcl62p9y/bach-techno-3cveEE5JDUc.mp3?rlkey=8avw8so3fygny4ek1fzildd74&st=mlq1q3b4&raw=1">
+    </audio>
+    <div class="music-player">
+      <button class="music-btn" id="bachTechnoBtn" onclick="toggleBachTechno()">Bach and Techno: Off</button>
+      <span class="music-time-label" id="bachTechnoTimeLabel">0:00 / 0:00</span>
+      <input type="range" class="music-time-bar" id="bachTechnoTimeBar" min="0" max="100" value="0" step="0.1" />
+      <input type="range" class="music-volume" id="bachTechnoVolume" min="0" max="1" value="0.5" step="0.01" title="Volume" />
+    </div>
   </div>
 
   <div class="bible-audio-section">
@@ -1319,6 +1328,50 @@ soakingTimeBar.addEventListener('input', function() {
 
 soakingVol.addEventListener('input', function() {
   soakingAudio.volume = this.value;
+});
+
+// --- Bach and Techno Player ---
+var bachTechnoAudio = document.getElementById('bachTechnoAudio');
+var bachTechnoBtn = document.getElementById('bachTechnoBtn');
+var bachTechnoTimeBar = document.getElementById('bachTechnoTimeBar');
+var bachTechnoVol = document.getElementById('bachTechnoVolume');
+var bachTechnoTimeLabel = document.getElementById('bachTechnoTimeLabel');
+var bachTechnoPlaying = false;
+
+bachTechnoAudio.volume = 0.5;
+
+function toggleBachTechno() {
+  if (bachTechnoPlaying) {
+    bachTechnoAudio.pause();
+    bachTechnoPlaying = false;
+    bachTechnoBtn.textContent = 'Bach and Techno: Off';
+    bachTechnoBtn.classList.remove('active');
+  } else {
+    bachTechnoAudio.play();
+    bachTechnoPlaying = true;
+    bachTechnoBtn.textContent = 'Bach and Techno: On';
+    bachTechnoBtn.classList.add('active');
+  }
+}
+
+bachTechnoAudio.addEventListener('timeupdate', function() {
+  if (!bachTechnoAudio.duration) return;
+  bachTechnoTimeBar.value = (bachTechnoAudio.currentTime / bachTechnoAudio.duration) * 100;
+  bachTechnoTimeLabel.textContent = formatTime(bachTechnoAudio.currentTime) + ' / ' + formatTime(bachTechnoAudio.duration);
+});
+
+bachTechnoAudio.addEventListener('loadedmetadata', function() {
+  bachTechnoTimeLabel.textContent = '0:00 / ' + formatTime(bachTechnoAudio.duration);
+});
+
+bachTechnoTimeBar.addEventListener('input', function() {
+  if (bachTechnoAudio.duration) {
+    bachTechnoAudio.currentTime = (this.value / 100) * bachTechnoAudio.duration;
+  }
+});
+
+bachTechnoVol.addEventListener('input', function() {
+  bachTechnoAudio.volume = this.value;
 });
 
 // --- Image Modal ---
