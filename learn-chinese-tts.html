@@ -697,6 +697,10 @@ function toggleExpand(i) {
 }
 
 // ── SPEAK LINE (click on line) ──
+function copyToClipboard(text) {
+  navigator.clipboard.writeText(text).catch(function() {});
+}
+
 function speakLine(index) {
   stopSpeaking();
   if (index < 0 || index >= filteredRows.length) {
@@ -713,6 +717,9 @@ function speakLine(index) {
     if (autoAdvance) { speakLine(index + 1); return; }
     return;
   }
+
+  // Copy to clipboard for use with translate.google.com
+  copyToClipboard(textToSpeak);
 
   currentSpeakingIndex = index;
   highlightLine(index);
@@ -869,6 +876,8 @@ function renderLyrics() {
       return function(e) {
         if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'BUTTON') return;
         if (e.target.classList.contains('chinese')) return; // handled separately
+        var r = filteredRows[capturedI];
+        if (r && r.chinese) copyToClipboard(r.chinese);
         toggleExpand(capturedI);
       };
     })(i);
