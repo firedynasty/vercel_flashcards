@@ -757,6 +757,18 @@
   </div>
 
   <div class="bible-audio-section">
+    <button class="bible-audio-toggle" id="adhdVideoToggle" onclick="toggleAdhdVideo()">
+      <span>ADHD Listening Method | 18Hz → 40Hz Binaural Beats for Deep Work (90 Min)</span>
+      <span class="toggle-arrow" id="adhdToggleArrow">▶</span>
+    </button>
+    <div class="bible-audio-body" id="adhdVideoBody">
+      <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;">
+        <iframe id="adhdIframe" width="100%" height="100%" style="position:absolute;top:0;left:0;" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+      </div>
+    </div>
+  </div>
+
+  <div class="bible-audio-section">
     <button class="bible-audio-toggle" id="bibleAudioToggle" onclick="toggleBibleAudio()">
       <span>Gospel of Mark (BSB Audio Bible)</span>
       <span class="toggle-arrow" id="bibleToggleArrow">&#9660;</span>
@@ -1517,6 +1529,19 @@ function toggleYoutubeVideo() {
     var iframe = document.getElementById('youtubeIframe');
     if (!iframe.getAttribute('src') || iframe.getAttribute('src') === '') {
       iframe.src = 'https://www.youtube.com/embed/8Onket44Xbo';
+    }
+  }
+}
+
+var adhdVideoOpen = false;
+function toggleAdhdVideo() {
+  adhdVideoOpen = !adhdVideoOpen;
+  document.getElementById('adhdVideoBody').classList.toggle('show', adhdVideoOpen);
+  document.getElementById('adhdToggleArrow').classList.toggle('open', adhdVideoOpen);
+  if (adhdVideoOpen) {
+    var iframe = document.getElementById('adhdIframe');
+    if (!iframe.getAttribute('src') || iframe.getAttribute('src') === '') {
+      iframe.src = 'https://www.youtube.com/embed/fZCthK3DB9U?start=446';
     }
   }
 }
