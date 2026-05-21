@@ -745,6 +745,18 @@
   </div>
 
   <div class="bible-audio-section">
+    <button class="bible-audio-toggle" id="youtubeVideoToggle" onclick="toggleYoutubeVideo()">
+      <span>Train My Hands | Psalm 144 (Shavuot 206)</span>
+      <span class="toggle-arrow" id="youtubeToggleArrow">▶</span>
+    </button>
+    <div class="bible-audio-body" id="youtubeVideoBody">
+      <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;">
+        <iframe id="youtubeIframe" width="100%" height="100%" style="position:absolute;top:0;left:0;" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+      </div>
+    </div>
+  </div>
+
+  <div class="bible-audio-section">
     <button class="bible-audio-toggle" id="bibleAudioToggle" onclick="toggleBibleAudio()">
       <span>Gospel of Mark (BSB Audio Bible)</span>
       <span class="toggle-arrow" id="bibleToggleArrow">&#9660;</span>
@@ -1495,6 +1507,19 @@ bibleTimestamps.forEach(function(ts, i) {
   opt.textContent = (mins < 10 ? '' : '') + mins + ':' + (secs < 10 ? '0' : '') + secs + ' - ' + ts.label;
   bibleChapterSelect.appendChild(opt);
 });
+
+var youtubeVideoOpen = false;
+function toggleYoutubeVideo() {
+  youtubeVideoOpen = !youtubeVideoOpen;
+  document.getElementById('youtubeVideoBody').classList.toggle('show', youtubeVideoOpen);
+  document.getElementById('youtubeToggleArrow').classList.toggle('open', youtubeVideoOpen);
+  if (youtubeVideoOpen) {
+    var iframe = document.getElementById('youtubeIframe');
+    if (!iframe.getAttribute('src') || iframe.getAttribute('src') === '') {
+      iframe.src = 'https://www.youtube.com/embed/8Onket44Xbo';
+    }
+  }
+}
 
 function toggleBibleAudio() {
   bibleAudioOpen = !bibleAudioOpen;
