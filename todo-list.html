@@ -1503,9 +1503,27 @@ function toggleBibleAudio() {
   if (bibleAudioOpen) loadMarkData();
 }
 
+var pageDownNextMap = {
+  'bibleTextDisplay': nextBibleSection,
+  'corTextDisplay': nextCorSection,
+  'romTextDisplay': nextRomSection,
+  'galTextDisplay': nextGalSection,
+  'ephTextDisplay': nextEphSection,
+  'phiTextDisplay': nextPhiSection,
+  'ps1TextDisplay': nextPs1Section
+};
+
 function biblePageDown(id) {
   var el = document.getElementById(id);
-  if (el) el.scrollTop = Math.min(el.scrollHeight - el.clientHeight, el.scrollTop + el.clientHeight * 0.9);
+  if (!el) return;
+  var maxScroll = el.scrollHeight - el.clientHeight;
+  var atBottom = maxScroll > 0 && el.scrollTop >= maxScroll - 5;
+  if (atBottom && pageDownNextMap[id]) {
+    pageDownNextMap[id]();
+    el.scrollTop = 0;
+  } else {
+    el.scrollTop = Math.min(maxScroll, el.scrollTop + el.clientHeight * 0.9);
+  }
 }
 
 var bibleFontSizeVal = parseInt(localStorage.getItem('bibleFontSize')) || 15;
