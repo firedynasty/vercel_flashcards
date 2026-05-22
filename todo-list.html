@@ -802,6 +802,24 @@
       <input type="range" class="music-time-bar" id="bachTechnoTimeBar" min="0" max="100" value="0" step="0.1" />
       <input type="range" class="music-volume" id="bachTechnoVolume" min="0" max="1" value="0.5" step="0.01" title="Volume" />
     </div>
+    <audio id="drumLineAudio" preload="none"
+      src="https://www.dropbox.com/scl/fi/ru3tbp8alzhpxv8t7l2hd/Drum-Line-AI-VIO.mp3?rlkey=9oq4edc1c1w4f850evmfcnv20&st=283voitn&raw=1">
+    </audio>
+    <div class="music-player">
+      <button class="music-btn" id="drumLineBtn" onclick="toggleDrumLine()">Drum Line-AI-VIO: Off</button>
+      <span class="music-time-label" id="drumLineTimeLabel">0:00 / 0:00</span>
+      <input type="range" class="music-time-bar" id="drumLineTimeBar" min="0" max="100" value="0" step="0.1" />
+      <input type="range" class="music-volume" id="drumLineVolume" min="0" max="1" value="0.5" step="0.01" title="Volume" />
+    </div>
+    <audio id="psalm23BassAudio" preload="none"
+      src="https://www.dropbox.com/scl/fi/dfxt8usj8adn83v5sslro/Phil-Wickham-Psalm-23-Drade-Bass-Remix1-JFFeJC9yrbs.mp3?rlkey=w5ivasnxtv0v0ukgr53wzuta2&st=qhdmw980&raw=1">
+    </audio>
+    <div class="music-player">
+      <button class="music-btn" id="psalm23BassBtn" onclick="togglePsalm23Bass()">Phil Wickham Psalm 23 Bass: Off</button>
+      <span class="music-time-label" id="psalm23BassTimeLabel">0:00 / 0:00</span>
+      <input type="range" class="music-time-bar" id="psalm23BassTimeBar" min="0" max="100" value="0" step="0.1" />
+      <input type="range" class="music-volume" id="psalm23BassVolume" min="0" max="1" value="0.5" step="0.01" title="Volume" />
+    </div>
   </div>
 
   <div class="bible-audio-section">
@@ -824,6 +842,18 @@
     <div class="bible-audio-body" id="adhdVideoBody">
       <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;">
         <iframe id="adhdIframe" width="100%" height="100%" style="position:absolute;top:0;left:0;" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+      </div>
+    </div>
+  </div>
+
+  <div class="bible-audio-section">
+    <button class="bible-audio-toggle" id="hebrewVideoToggle" onclick="toggleHebrewVideo()">
+      <span>BoA (보아) - Everybody Knows [Han/Rom/Eng Lyrics]</span>
+      <span class="toggle-arrow" id="hebrewToggleArrow">▶</span>
+    </button>
+    <div class="bible-audio-body" id="hebrewVideoBody">
+      <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;">
+        <iframe id="hebrewIframe" width="100%" height="100%" style="position:absolute;top:0;left:0;" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
       </div>
     </div>
   </div>
@@ -1485,6 +1515,94 @@ bachTechnoVol.addEventListener('input', function() {
   bachTechnoAudio.volume = this.value;
 });
 
+// --- Phil Wickham Psalm 23 Bass Player ---
+var psalm23BassAudio = document.getElementById('psalm23BassAudio');
+var psalm23BassBtn = document.getElementById('psalm23BassBtn');
+var psalm23BassTimeBar = document.getElementById('psalm23BassTimeBar');
+var psalm23BassVol = document.getElementById('psalm23BassVolume');
+var psalm23BassTimeLabel = document.getElementById('psalm23BassTimeLabel');
+var psalm23BassPlaying = false;
+
+psalm23BassAudio.volume = 0.5;
+
+function togglePsalm23Bass() {
+  if (psalm23BassPlaying) {
+    psalm23BassAudio.pause();
+    psalm23BassPlaying = false;
+    psalm23BassBtn.textContent = 'Phil Wickham Psalm 23 Bass: Off';
+    psalm23BassBtn.classList.remove('active');
+  } else {
+    psalm23BassAudio.play();
+    psalm23BassPlaying = true;
+    psalm23BassBtn.textContent = 'Phil Wickham Psalm 23 Bass: On';
+    psalm23BassBtn.classList.add('active');
+  }
+}
+
+psalm23BassAudio.addEventListener('timeupdate', function() {
+  if (!psalm23BassAudio.duration) return;
+  psalm23BassTimeBar.value = (psalm23BassAudio.currentTime / psalm23BassAudio.duration) * 100;
+  psalm23BassTimeLabel.textContent = formatTime(psalm23BassAudio.currentTime) + ' / ' + formatTime(psalm23BassAudio.duration);
+});
+
+psalm23BassAudio.addEventListener('loadedmetadata', function() {
+  psalm23BassTimeLabel.textContent = '0:00 / ' + formatTime(psalm23BassAudio.duration);
+});
+
+psalm23BassTimeBar.addEventListener('input', function() {
+  if (psalm23BassAudio.duration) {
+    psalm23BassAudio.currentTime = (this.value / 100) * psalm23BassAudio.duration;
+  }
+});
+
+psalm23BassVol.addEventListener('input', function() {
+  psalm23BassAudio.volume = this.value;
+});
+
+// --- Drum Line-AI-VIO Player ---
+var drumLineAudio = document.getElementById('drumLineAudio');
+var drumLineBtn = document.getElementById('drumLineBtn');
+var drumLineTimeBar = document.getElementById('drumLineTimeBar');
+var drumLineVol = document.getElementById('drumLineVolume');
+var drumLineTimeLabel = document.getElementById('drumLineTimeLabel');
+var drumLinePlaying = false;
+
+drumLineAudio.volume = 0.5;
+
+function toggleDrumLine() {
+  if (drumLinePlaying) {
+    drumLineAudio.pause();
+    drumLinePlaying = false;
+    drumLineBtn.textContent = 'Drum Line-AI-VIO: Off';
+    drumLineBtn.classList.remove('active');
+  } else {
+    drumLineAudio.play();
+    drumLinePlaying = true;
+    drumLineBtn.textContent = 'Drum Line-AI-VIO: On';
+    drumLineBtn.classList.add('active');
+  }
+}
+
+drumLineAudio.addEventListener('timeupdate', function() {
+  if (!drumLineAudio.duration) return;
+  drumLineTimeBar.value = (drumLineAudio.currentTime / drumLineAudio.duration) * 100;
+  drumLineTimeLabel.textContent = formatTime(drumLineAudio.currentTime) + ' / ' + formatTime(drumLineAudio.duration);
+});
+
+drumLineAudio.addEventListener('loadedmetadata', function() {
+  drumLineTimeLabel.textContent = '0:00 / ' + formatTime(drumLineAudio.duration);
+});
+
+drumLineTimeBar.addEventListener('input', function() {
+  if (drumLineAudio.duration) {
+    drumLineAudio.currentTime = (this.value / 100) * drumLineAudio.duration;
+  }
+});
+
+drumLineVol.addEventListener('input', function() {
+  drumLineAudio.volume = this.value;
+});
+
 // --- Image Modal ---
 var imageModal = document.getElementById('imageModal');
 var modalImage = document.getElementById('modalImage');
@@ -1629,6 +1747,19 @@ function toggleAdhdVideo() {
     var iframe = document.getElementById('adhdIframe');
     if (!iframe.getAttribute('src') || iframe.getAttribute('src') === '') {
       iframe.src = 'https://www.youtube.com/embed/fZCthK3DB9U?start=446';
+    }
+  }
+}
+
+var hebrewVideoOpen = false;
+function toggleHebrewVideo() {
+  hebrewVideoOpen = !hebrewVideoOpen;
+  document.getElementById('hebrewVideoBody').classList.toggle('show', hebrewVideoOpen);
+  document.getElementById('hebrewToggleArrow').classList.toggle('open', hebrewVideoOpen);
+  if (hebrewVideoOpen) {
+    var iframe = document.getElementById('hebrewIframe');
+    if (!iframe.getAttribute('src') || iframe.getAttribute('src') === '') {
+      iframe.src = 'https://www.youtube.com/embed/YL9sTyc-jk4';
     }
   }
 }
