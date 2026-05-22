@@ -859,6 +859,18 @@
   </div>
 
   <div class="bible-audio-section">
+    <button class="bible-audio-toggle" id="perlmanVideoToggle" onclick="togglePerlmanVideo()">
+      <span>Itzhak Perlman: Popular Jewish Melodies, A Yiddishe Mam</span>
+      <span class="toggle-arrow" id="perlmanToggleArrow">▶</span>
+    </button>
+    <div class="bible-audio-body" id="perlmanVideoBody">
+      <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;">
+        <iframe id="perlmanIframe" width="100%" height="100%" style="position:absolute;top:0;left:0;" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+      </div>
+    </div>
+  </div>
+
+  <div class="bible-audio-section">
     <button class="bible-audio-toggle" id="learnVideoToggle" onclick="toggleLearnVideo()">
       <span>Vol. 3 - Saved | 51 Min Christian HipHop Mix for that Deep Faith Energy</span>
       <span class="toggle-arrow" id="learnToggleArrow">&#9654;</span>
@@ -1760,6 +1772,19 @@ function toggleHebrewVideo() {
     var iframe = document.getElementById('hebrewIframe');
     if (!iframe.getAttribute('src') || iframe.getAttribute('src') === '') {
       iframe.src = 'https://www.youtube.com/embed/YL9sTyc-jk4';
+    }
+  }
+}
+
+var perlmanVideoOpen = false;
+function togglePerlmanVideo() {
+  perlmanVideoOpen = !perlmanVideoOpen;
+  document.getElementById('perlmanVideoBody').classList.toggle('show', perlmanVideoOpen);
+  document.getElementById('perlmanToggleArrow').classList.toggle('open', perlmanVideoOpen);
+  if (perlmanVideoOpen) {
+    var iframe = document.getElementById('perlmanIframe');
+    if (!iframe.getAttribute('src') || iframe.getAttribute('src') === '') {
+      iframe.src = 'https://www.youtube.com/embed/NCWxgDuT75o';
     }
   }
 }
