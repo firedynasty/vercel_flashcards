@@ -871,6 +871,30 @@
   </div>
 
   <div class="bible-audio-section">
+    <button class="bible-audio-toggle" id="babySleepVideoToggle" onclick="toggleBabySleepVideo()">
+      <span>Baby Sleep Music - Mother Singing & Humming</span>
+      <span class="toggle-arrow" id="babySleepToggleArrow">▶</span>
+    </button>
+    <div class="bible-audio-body" id="babySleepVideoBody">
+      <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;">
+        <iframe id="babySleepIframe" width="100%" height="100%" style="position:absolute;top:0;left:0;" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+      </div>
+    </div>
+  </div>
+
+  <div class="bible-audio-section">
+    <button class="bible-audio-toggle" id="omHealingVideoToggle" onclick="toggleOmHealingVideo()">
+      <span>Om Healing Vibration Music 136.1Hz | Harmonize With the Cosmos</span>
+      <span class="toggle-arrow" id="omHealingToggleArrow">▶</span>
+    </button>
+    <div class="bible-audio-body" id="omHealingVideoBody">
+      <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;">
+        <iframe id="omHealingIframe" width="100%" height="100%" style="position:absolute;top:0;left:0;" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+      </div>
+    </div>
+  </div>
+
+  <div class="bible-audio-section">
     <button class="bible-audio-toggle" id="learnVideoToggle" onclick="toggleLearnVideo()">
       <span>Vol. 3 - Saved | 51 Min Christian HipHop Mix for that Deep Faith Energy</span>
       <span class="toggle-arrow" id="learnToggleArrow">&#9654;</span>
@@ -1785,6 +1809,32 @@ function togglePerlmanVideo() {
     var iframe = document.getElementById('perlmanIframe');
     if (!iframe.getAttribute('src') || iframe.getAttribute('src') === '') {
       iframe.src = 'https://www.youtube.com/embed/NCWxgDuT75o';
+    }
+  }
+}
+
+var babySleepVideoOpen = false;
+function toggleBabySleepVideo() {
+  babySleepVideoOpen = !babySleepVideoOpen;
+  document.getElementById('babySleepVideoBody').classList.toggle('show', babySleepVideoOpen);
+  document.getElementById('babySleepToggleArrow').classList.toggle('open', babySleepVideoOpen);
+  if (babySleepVideoOpen) {
+    var iframe = document.getElementById('babySleepIframe');
+    if (!iframe.getAttribute('src') || iframe.getAttribute('src') === '') {
+      iframe.src = 'https://www.youtube.com/embed/wEwuJTo2PYU';
+    }
+  }
+}
+
+var omHealingVideoOpen = false;
+function toggleOmHealingVideo() {
+  omHealingVideoOpen = !omHealingVideoOpen;
+  document.getElementById('omHealingVideoBody').classList.toggle('show', omHealingVideoOpen);
+  document.getElementById('omHealingToggleArrow').classList.toggle('open', omHealingVideoOpen);
+  if (omHealingVideoOpen) {
+    var iframe = document.getElementById('omHealingIframe');
+    if (!iframe.getAttribute('src') || iframe.getAttribute('src') === '') {
+      iframe.src = 'https://www.youtube.com/embed/kar7_NFzTjE';
     }
   }
 }
