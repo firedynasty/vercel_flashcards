@@ -566,6 +566,20 @@
     .noun-modal .modal-close:hover {
       color: #e74c3c;
     }
+    .noun-modal #nounSectionSelect {
+      width: 100%;
+      padding: 6px 8px;
+      margin-bottom: 12px;
+      border-radius: 6px;
+      border: 1px solid #555;
+      background: #222;
+      color: #fff;
+      font-size: 14px;
+    }
+    .noun-modal #nounSectionSelect option {
+      background: #222;
+      color: #fff;
+    }
     .noun-modal .noun-refresh {
       margin-top: 18px;
       padding: 8px 22px;
@@ -2157,6 +2171,7 @@ var BIBLE_NOUNS = [
 ];
 
 var nounModalBook = 'mark';
+var nounAutoShuffleTimer = null;
 
 var NOUN_BOOK_CONFIG = {
   mark:  { timestamps: function() { return bibleTimestamps; }, chapters: function() { return markChapters || MARK_CHAPTERS; }, idx: function() { return currentBibleSectionIdx; }, load: function() { loadMarkData(); } },
@@ -2169,10 +2184,10 @@ var NOUN_BOOK_CONFIG = {
   prv:   { timestamps: function() { return prvTimestamps; },   chapters: function() { return PRV_CHAPTERS; },  idx: function() { return currentPrvSectionIdx; } }
 };
 
-function extractNounsFromSection(book) {
+function extractNounsFromSection(book, overrideIdx) {
   var cfg = NOUN_BOOK_CONFIG[book];
   if (!cfg) return BIBLE_NOUNS.slice();
-  var idx = cfg.idx();
+  var idx = (overrideIdx !== undefined) ? overrideIdx : cfg.idx();
   var chapters = cfg.chapters();
   var timestamps = cfg.timestamps();
   var text = '';
@@ -2206,9 +2221,26 @@ function extractNounsFromSection(book) {
   return pairs;
 }
 
+function buildNounSectionDropdown(book) {
+  var cfg = NOUN_BOOK_CONFIG[book];
+  if (!cfg) return '';
+  var timestamps = cfg.timestamps();
+  var currentIdx = cfg.idx();
+  var sel = document.getElementById('nounSectionSelect');
+  var selectedIdx = (sel && sel.value !== '') ? parseInt(sel.value) : currentIdx;
+  var html = '<select id="nounSectionSelect" onchange="renderNounPairs()">';
+  for (var i = 0; i < timestamps.length; i++) {
+    html += '<option value="' + i + '"' + (i === selectedIdx ? ' selected' : '') + '>' + escapeHtml(timestamps[i].label) + '</option>';
+  }
+  html += '</select>';
+  return html;
+}
+
 function renderNounPairs() {
-  var pairs = extractNounsFromSection(nounModalBook);
-  var html = '';
+  var sel = document.getElementById('nounSectionSelect');
+  var overrideIdx = (sel && sel.value !== '') ? parseInt(sel.value) : undefined;
+  var pairs = extractNounsFromSection(nounModalBook, overrideIdx);
+  var html = buildNounSectionDropdown(nounModalBook);
   for (var i = 0; i < pairs.length; i++) {
     html += '<div class="noun-pair">' + escapeHtml(pairs[i][0]) + '<span class="amp">&amp;</span>' + escapeHtml(pairs[i][1]) + '</div>';
   }
@@ -2222,10 +2254,13 @@ function openNounModal(book) {
   if (cfg && cfg.load) cfg.load();
   renderNounPairs();
   document.getElementById('nounModal').classList.add('active');
+  if (nounAutoShuffleTimer) clearInterval(nounAutoShuffleTimer);
+  nounAutoShuffleTimer = setInterval(renderNounPairs, 10000);
 }
 
 function closeNounModal() {
   document.getElementById('nounModal').classList.remove('active');
+  if (nounAutoShuffleTimer) { clearInterval(nounAutoShuffleTimer); nounAutoShuffleTimer = null; }
 }
 
 document.getElementById('nounModal').addEventListener('click', function(e) {
