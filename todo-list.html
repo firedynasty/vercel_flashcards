@@ -612,6 +612,34 @@
       justify-content: space-between;
       box-shadow: 0 5px 30px rgba(0,0,0,0.2);
     }
+    .vol-controls {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      margin-left: auto;
+      margin-right: 10px;
+    }
+    .vol-btn {
+      background: rgba(255,255,255,0.25);
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      width: 24px;
+      height: 24px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+    }
+    .vol-btn:hover { background: rgba(255,255,255,0.4); }
+    .vol-label {
+      font-size: 11px;
+      min-width: 24px;
+      text-align: center;
+    }
     .bible-audio-toggle .toggle-arrow {
       transition: transform 0.3s ease;
     }
@@ -861,6 +889,30 @@
   </div>
 
   <div class="bible-audio-section">
+    <button class="bible-audio-toggle" id="adhdPianoToggle" onclick="toggleAdhdPiano()">
+      <span>ADHD Study Music – 2 Hours of 60 BPM Binaural Piano for Deep Focus & Calm Concentration</span>
+      <span class="toggle-arrow" id="adhdPianoArrow">▶</span>
+    </button>
+    <div class="bible-audio-body" id="adhdPianoBody">
+      <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;">
+        <iframe id="adhdPianoIframe" width="100%" height="100%" style="position:absolute;top:0;left:0;" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+      </div>
+    </div>
+  </div>
+
+  <div class="bible-audio-section">
+    <button class="bible-audio-toggle" id="popClassroomToggle" onclick="togglePopClassroom()">
+      <span>Instrumental Pop Music for the Classroom | 2 Hours of Clean Pop Covers for Studying</span>
+      <span class="toggle-arrow" id="popClassroomArrow">▶</span>
+    </button>
+    <div class="bible-audio-body" id="popClassroomBody">
+      <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;">
+        <iframe id="popClassroomIframe" width="100%" height="100%" style="position:absolute;top:0;left:0;" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+      </div>
+    </div>
+  </div>
+
+  <div class="bible-audio-section">
     <button class="bible-audio-toggle" id="hebrewVideoToggle" onclick="toggleHebrewVideo()">
       <span>BoA (보아) - Everybody Knows [Han/Rom/Eng Lyrics]</span>
       <span class="toggle-arrow" id="hebrewToggleArrow">▶</span>
@@ -904,6 +956,18 @@
     <div class="bible-audio-body" id="omHealingVideoBody">
       <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;">
         <iframe id="omHealingIframe" width="100%" height="100%" style="position:absolute;top:0;left:0;" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+      </div>
+    </div>
+  </div>
+
+  <div class="bible-audio-section">
+    <button class="bible-audio-toggle" id="metronome60Toggle" onclick="toggleMetronome60()">
+      <span>60 BPM Metronome</span>
+      <span class="toggle-arrow" id="metronome60Arrow">▶</span>
+    </button>
+    <div class="bible-audio-body" id="metronome60Body">
+      <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;">
+        <iframe id="metronome60Iframe" width="100%" height="100%" style="position:absolute;top:0;left:0;" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
       </div>
     </div>
   </div>
@@ -1007,6 +1071,268 @@
         <div class="bible-audio-body" id="fhh7">
           <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;">
             <iframe id="fhh7Iframe" width="100%" height="100%" style="position:absolute;top:0;left:0;" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+          </div>
+        </div>
+      </div>
+
+      <div class="bible-audio-section" style="margin:4px 0;">
+        <button class="bible-audio-toggle" onclick="toggleFhhTrack('fhh8','fhh8Arrow','-iKtiveApUo')">
+          <span>M.I.A. - Paper Planes (Instrumental)</span>
+          <span class="toggle-arrow" id="fhh8Arrow">▶</span>
+        </button>
+        <div class="bible-audio-body" id="fhh8">
+          <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;">
+            <iframe id="fhh8Iframe" width="100%" height="100%" style="position:absolute;top:0;left:0;" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+          </div>
+        </div>
+      </div>
+
+      <div class="bible-audio-section" style="margin:4px 0;">
+        <button class="bible-audio-toggle" onclick="toggleFhhTrack('fhh9','fhh9Arrow','ozqF7SDmlag')">
+          <span>Rihanna - Umbrella</span>
+          <span class="toggle-arrow" id="fhh9Arrow">▶</span>
+        </button>
+        <div class="bible-audio-body" id="fhh9">
+          <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;">
+            <iframe id="fhh9Iframe" width="100%" height="100%" style="position:absolute;top:0;left:0;" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+          </div>
+        </div>
+      </div>
+
+      <div class="bible-audio-section" style="margin:4px 0;">
+        <button class="bible-audio-toggle" onclick="toggleFhhTrack('fhh10','fhh10Arrow','a4M5HT3Poxo')">
+          <span>Evanescence (Instrumental)</span>
+          <span class="toggle-arrow" id="fhh10Arrow">▶</span>
+        </button>
+        <div class="bible-audio-body" id="fhh10">
+          <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;">
+            <iframe id="fhh10Iframe" width="100%" height="100%" style="position:absolute;top:0;left:0;" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+          </div>
+        </div>
+      </div>
+
+      <div class="bible-audio-section" style="margin:4px 0;">
+        <button class="bible-audio-toggle" onclick="toggleFhhTrack('fhh11','fhh11Arrow','v3IL18YADDE')">
+          <span>Alicia Keys - You Don't Know My Name</span>
+          <span class="toggle-arrow" id="fhh11Arrow">▶</span>
+        </button>
+        <div class="bible-audio-body" id="fhh11">
+          <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;">
+            <iframe id="fhh11Iframe" width="100%" height="100%" style="position:absolute;top:0;left:0;" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+          </div>
+        </div>
+      </div>
+
+      <div class="bible-audio-section" style="margin:4px 0;">
+        <button class="bible-audio-toggle" onclick="toggleFhhTrack('fhh12','fhh12Arrow','tJ19WxmdQs0')">
+          <span>If I Ain't Got You (Alicia Keys Cover) - Queen Charlotte Series</span>
+          <span class="toggle-arrow" id="fhh12Arrow">▶</span>
+        </button>
+        <div class="bible-audio-body" id="fhh12">
+          <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;">
+            <iframe id="fhh12Iframe" width="100%" height="100%" style="position:absolute;top:0;left:0;" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="bible-audio-section">
+    <button class="bible-audio-toggle" id="maleHipHopToggle" onclick="toggleMaleHipHop()">
+      <span>Male Hip Hop Instrumentals</span>
+      <span class="toggle-arrow" id="maleHipHopArrow">▶</span>
+    </button>
+    <div class="bible-audio-body" id="maleHipHopBody">
+
+      <div class="bible-audio-section" style="margin:4px 0;">
+        <button class="bible-audio-toggle" onclick="toggleMhhTrack('mhh0','mhh0Arrow','xHrqTdJEEUs')">
+          <span>2Pac - Hail Mary</span>
+          <span class="toggle-arrow" id="mhh0Arrow">▶</span>
+        </button>
+        <div class="bible-audio-body" id="mhh0">
+          <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;">
+            <iframe id="mhh0Iframe" width="100%" height="100%" style="position:absolute;top:0;left:0;" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+          </div>
+        </div>
+      </div>
+
+      <div class="bible-audio-section" style="margin:4px 0;">
+        <button class="bible-audio-toggle" onclick="toggleMhhTrack('mhh1','mhh1Arrow','Ezpi5KKp7b4')">
+          <span>Eminem - The Way I Am</span>
+          <span class="toggle-arrow" id="mhh1Arrow">▶</span>
+        </button>
+        <div class="bible-audio-body" id="mhh1">
+          <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;">
+            <iframe id="mhh1Iframe" width="100%" height="100%" style="position:absolute;top:0;left:0;" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+          </div>
+        </div>
+      </div>
+
+      <div class="bible-audio-section" style="margin:4px 0;">
+        <button class="bible-audio-toggle" onclick="toggleMhhTrack('mhh2','mhh2Arrow','vUijLVP_wBI')">
+          <span>2Pac - How Do You Want It</span>
+          <span class="toggle-arrow" id="mhh2Arrow">▶</span>
+        </button>
+        <div class="bible-audio-body" id="mhh2">
+          <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;">
+            <iframe id="mhh2Iframe" width="100%" height="100%" style="position:absolute;top:0;left:0;" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+          </div>
+        </div>
+      </div>
+
+      <div class="bible-audio-section" style="margin:4px 0;">
+        <button class="bible-audio-toggle" onclick="toggleMhhTrack('mhh3','mhh3Arrow','9iNlAT9BLzo')">
+          <span>2Pac - Hit Em Up</span>
+          <span class="toggle-arrow" id="mhh3Arrow">▶</span>
+        </button>
+        <div class="bible-audio-body" id="mhh3">
+          <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;">
+            <iframe id="mhh3Iframe" width="100%" height="100%" style="position:absolute;top:0;left:0;" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+          </div>
+        </div>
+      </div>
+
+      <div class="bible-audio-section" style="margin:4px 0;">
+        <button class="bible-audio-toggle" onclick="toggleMhhTrack('mhh4','mhh4Arrow','Yquc73h4Yws')">
+          <span>2Pac - Changes</span>
+          <span class="toggle-arrow" id="mhh4Arrow">▶</span>
+        </button>
+        <div class="bible-audio-body" id="mhh4">
+          <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;">
+            <iframe id="mhh4Iframe" width="100%" height="100%" style="position:absolute;top:0;left:0;" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+          </div>
+        </div>
+      </div>
+
+      <div class="bible-audio-section" style="margin:4px 0;">
+        <button class="bible-audio-toggle" onclick="toggleMhhTrack('mhh5','mhh5Arrow','d32_35UvEd0')">
+          <span>Puff Daddy - It's All About the Benjamins</span>
+          <span class="toggle-arrow" id="mhh5Arrow">▶</span>
+        </button>
+        <div class="bible-audio-body" id="mhh5">
+          <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;">
+            <iframe id="mhh5Iframe" width="100%" height="100%" style="position:absolute;top:0;left:0;" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+          </div>
+        </div>
+      </div>
+
+      <div class="bible-audio-section" style="margin:4px 0;">
+        <button class="bible-audio-toggle" onclick="toggleMhhTrack('mhh6','mhh6Arrow','p_4QVidbKkg')">
+          <span>The Notorious B.I.G.</span>
+          <span class="toggle-arrow" id="mhh6Arrow">▶</span>
+        </button>
+        <div class="bible-audio-body" id="mhh6">
+          <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;">
+            <iframe id="mhh6Iframe" width="100%" height="100%" style="position:absolute;top:0;left:0;" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+          </div>
+        </div>
+      </div>
+
+      <div class="bible-audio-section" style="margin:4px 0;">
+        <button class="bible-audio-toggle" onclick="toggleMhhTrack('mhh7','mhh7Arrow','aNeq7bUYDgo')">
+          <span>DMX - First I'm Gonna Crawl (Romeo Must Die)</span>
+          <span class="toggle-arrow" id="mhh7Arrow">▶</span>
+        </button>
+        <div class="bible-audio-body" id="mhh7">
+          <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;">
+            <iframe id="mhh7Iframe" width="100%" height="100%" style="position:absolute;top:0;left:0;" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+          </div>
+        </div>
+      </div>
+
+      <div class="bible-audio-section" style="margin:4px 0;">
+        <button class="bible-audio-toggle" onclick="toggleMhhTrack('mhh8','mhh8Arrow','dS9wVCM5TkM')">
+          <span>50 Cent - In Da Club</span>
+          <span class="toggle-arrow" id="mhh8Arrow">▶</span>
+        </button>
+        <div class="bible-audio-body" id="mhh8">
+          <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;">
+            <iframe id="mhh8Iframe" width="100%" height="100%" style="position:absolute;top:0;left:0;" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+          </div>
+        </div>
+      </div>
+
+      <div class="bible-audio-section" style="margin:4px 0;">
+        <button class="bible-audio-toggle" onclick="toggleMhhTrack('mhh9','mhh9Arrow','XajaJYraODs')">
+          <span>The Weeknd (Instrumental)</span>
+          <span class="toggle-arrow" id="mhh9Arrow">▶</span>
+        </button>
+        <div class="bible-audio-body" id="mhh9">
+          <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;">
+            <iframe id="mhh9Iframe" width="100%" height="100%" style="position:absolute;top:0;left:0;" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+          </div>
+        </div>
+      </div>
+
+      <div class="bible-audio-section" style="margin:4px 0;">
+        <button class="bible-audio-toggle" onclick="toggleMhhTrack('mhh10','mhh10Arrow','89kpfkTu3oA')">
+          <span>Kendrick Lamar - Pray for Me (Black Panther)</span>
+          <span class="toggle-arrow" id="mhh10Arrow">▶</span>
+        </button>
+        <div class="bible-audio-body" id="mhh10">
+          <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;">
+            <iframe id="mhh10Iframe" width="100%" height="100%" style="position:absolute;top:0;left:0;" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+          </div>
+        </div>
+      </div>
+
+      <div class="bible-audio-section" style="margin:4px 0;">
+        <button class="bible-audio-toggle" onclick="toggleMhhTrack('mhh11','mhh11Arrow','TdAI_6rGRek')">
+          <span>Rick Ross</span>
+          <span class="toggle-arrow" id="mhh11Arrow">▶</span>
+        </button>
+        <div class="bible-audio-body" id="mhh11">
+          <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;">
+            <iframe id="mhh11Iframe" width="100%" height="100%" style="position:absolute;top:0;left:0;" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+          </div>
+        </div>
+      </div>
+
+      <div class="bible-audio-section" style="margin:4px 0;">
+        <button class="bible-audio-toggle" onclick="toggleMhhTrack('mhh12','mhh12Arrow','hVauRbcxOdw')">
+          <span>Kid Cudi - Pursuit of Happiness</span>
+          <span class="toggle-arrow" id="mhh12Arrow">▶</span>
+        </button>
+        <div class="bible-audio-body" id="mhh12">
+          <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;">
+            <iframe id="mhh12Iframe" width="100%" height="100%" style="position:absolute;top:0;left:0;" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+          </div>
+        </div>
+      </div>
+
+      <div class="bible-audio-section" style="margin:4px 0;">
+        <button class="bible-audio-toggle" onclick="toggleMhhTrack('mhh13','mhh13Arrow','wC6eCcCqXnk')">
+          <span>Linkin Park - By Myself</span>
+          <span class="toggle-arrow" id="mhh13Arrow">▶</span>
+        </button>
+        <div class="bible-audio-body" id="mhh13">
+          <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;">
+            <iframe id="mhh13Iframe" width="100%" height="100%" style="position:absolute;top:0;left:0;" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+          </div>
+        </div>
+      </div>
+
+      <div class="bible-audio-section" style="margin:4px 0;">
+        <button class="bible-audio-toggle" onclick="toggleMhhTrack('mhh14','mhh14Arrow','WPYqzrgT_as')">
+          <span>Mobb Deep - Shook Ones</span>
+          <span class="toggle-arrow" id="mhh14Arrow">▶</span>
+        </button>
+        <div class="bible-audio-body" id="mhh14">
+          <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;">
+            <iframe id="mhh14Iframe" width="100%" height="100%" style="position:absolute;top:0;left:0;" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+          </div>
+        </div>
+      </div>
+
+      <div class="bible-audio-section" style="margin:4px 0;">
+        <button class="bible-audio-toggle" onclick="toggleMhhTrack('mhh15','mhh15Arrow','K2NwXwKA05s')">
+          <span>Kanye West - Drive Slow</span>
+          <span class="toggle-arrow" id="mhh15Arrow">▶</span>
+        </button>
+        <div class="bible-audio-body" id="mhh15">
+          <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;">
+            <iframe id="mhh15Iframe" width="100%" height="100%" style="position:absolute;top:0;left:0;" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
           </div>
         </div>
       </div>
@@ -1916,7 +2242,33 @@ function toggleYoutubeVideo() {
   if (youtubeVideoOpen) {
     var iframe = document.getElementById('youtubeIframe');
     if (!iframe.getAttribute('src') || iframe.getAttribute('src') === '') {
-      iframe.src = 'https://www.youtube.com/embed/8Onket44Xbo';
+      iframe.src = 'https://www.youtube.com/embed/8Onket44Xbo?enablejsapi=1';
+    }
+  }
+}
+
+var adhdPianoOpen = false;
+function toggleAdhdPiano() {
+  adhdPianoOpen = !adhdPianoOpen;
+  document.getElementById('adhdPianoBody').classList.toggle('show', adhdPianoOpen);
+  document.getElementById('adhdPianoArrow').classList.toggle('open', adhdPianoOpen);
+  if (adhdPianoOpen) {
+    var iframe = document.getElementById('adhdPianoIframe');
+    if (!iframe.getAttribute('src') || iframe.getAttribute('src') === '') {
+      iframe.src = 'https://www.youtube.com/embed/MyS1ub5EOTI?enablejsapi=1';
+    }
+  }
+}
+
+var popClassroomOpen = false;
+function togglePopClassroom() {
+  popClassroomOpen = !popClassroomOpen;
+  document.getElementById('popClassroomBody').classList.toggle('show', popClassroomOpen);
+  document.getElementById('popClassroomArrow').classList.toggle('open', popClassroomOpen);
+  if (popClassroomOpen) {
+    var iframe = document.getElementById('popClassroomIframe');
+    if (!iframe.getAttribute('src') || iframe.getAttribute('src') === '') {
+      iframe.src = 'https://www.youtube.com/embed/X-yJhGcS7U4?enablejsapi=1';
     }
   }
 }
@@ -1929,7 +2281,7 @@ function toggleAdhdVideo() {
   if (adhdVideoOpen) {
     var iframe = document.getElementById('adhdIframe');
     if (!iframe.getAttribute('src') || iframe.getAttribute('src') === '') {
-      iframe.src = 'https://www.youtube.com/embed/fZCthK3DB9U?start=446';
+      iframe.src = 'https://www.youtube.com/embed/fZCthK3DB9U?start=446&enablejsapi=1';
     }
   }
 }
@@ -1942,7 +2294,7 @@ function toggleHebrewVideo() {
   if (hebrewVideoOpen) {
     var iframe = document.getElementById('hebrewIframe');
     if (!iframe.getAttribute('src') || iframe.getAttribute('src') === '') {
-      iframe.src = 'https://www.youtube.com/embed/YL9sTyc-jk4';
+      iframe.src = 'https://www.youtube.com/embed/YL9sTyc-jk4?enablejsapi=1';
     }
   }
 }
@@ -1955,7 +2307,7 @@ function togglePerlmanVideo() {
   if (perlmanVideoOpen) {
     var iframe = document.getElementById('perlmanIframe');
     if (!iframe.getAttribute('src') || iframe.getAttribute('src') === '') {
-      iframe.src = 'https://www.youtube.com/embed/NCWxgDuT75o';
+      iframe.src = 'https://www.youtube.com/embed/NCWxgDuT75o?enablejsapi=1';
     }
   }
 }
@@ -1968,7 +2320,7 @@ function toggleBabySleepVideo() {
   if (babySleepVideoOpen) {
     var iframe = document.getElementById('babySleepIframe');
     if (!iframe.getAttribute('src') || iframe.getAttribute('src') === '') {
-      iframe.src = 'https://www.youtube.com/embed/wEwuJTo2PYU';
+      iframe.src = 'https://www.youtube.com/embed/wEwuJTo2PYU?enablejsapi=1';
     }
   }
 }
@@ -1981,7 +2333,20 @@ function toggleOmHealingVideo() {
   if (omHealingVideoOpen) {
     var iframe = document.getElementById('omHealingIframe');
     if (!iframe.getAttribute('src') || iframe.getAttribute('src') === '') {
-      iframe.src = 'https://www.youtube.com/embed/kar7_NFzTjE';
+      iframe.src = 'https://www.youtube.com/embed/kar7_NFzTjE?enablejsapi=1';
+    }
+  }
+}
+
+var metronome60Open = false;
+function toggleMetronome60() {
+  metronome60Open = !metronome60Open;
+  document.getElementById('metronome60Body').classList.toggle('show', metronome60Open);
+  document.getElementById('metronome60Arrow').classList.toggle('open', metronome60Open);
+  if (metronome60Open) {
+    var iframe = document.getElementById('metronome60Iframe');
+    if (!iframe.getAttribute('src') || iframe.getAttribute('src') === '') {
+      iframe.src = 'https://www.youtube.com/embed/ymJIXzvDvj4?start=20&enablejsapi=1';
     }
   }
 }
@@ -2002,10 +2367,69 @@ function toggleFhhTrack(bodyId, arrowId, videoId) {
   if (fhhOpenStates[bodyId]) {
     var iframe = document.getElementById(bodyId + 'Iframe');
     if (!iframe.getAttribute('src') || iframe.getAttribute('src') === '') {
-      iframe.src = 'https://www.youtube.com/embed/' + videoId;
+      iframe.src = 'https://www.youtube.com/embed/' + videoId + '?enablejsapi=1';
     }
   }
 }
+
+// --- Male Hip Hop Instrumentals ---
+var maleHipHopOpen = false;
+function toggleMaleHipHop() {
+  maleHipHopOpen = !maleHipHopOpen;
+  document.getElementById('maleHipHopBody').classList.toggle('show', maleHipHopOpen);
+  document.getElementById('maleHipHopArrow').classList.toggle('open', maleHipHopOpen);
+}
+
+var mhhOpenStates = {};
+function toggleMhhTrack(bodyId, arrowId, videoId) {
+  mhhOpenStates[bodyId] = !mhhOpenStates[bodyId];
+  document.getElementById(bodyId).classList.toggle('show', mhhOpenStates[bodyId]);
+  document.getElementById(arrowId).classList.toggle('open', mhhOpenStates[bodyId]);
+  if (mhhOpenStates[bodyId]) {
+    var iframe = document.getElementById(bodyId + 'Iframe');
+    if (!iframe.getAttribute('src') || iframe.getAttribute('src') === '') {
+      iframe.src = 'https://www.youtube.com/embed/' + videoId + '?enablejsapi=1';
+    }
+  }
+}
+
+// --- Volume Controls for YouTube iframes ---
+var iframeVolumes = {};
+function adjustIframeVolume(iframeId, delta) {
+  var iframe = document.getElementById(iframeId);
+  if (!iframe || !iframe.src || iframe.src === '') return;
+  if (iframeVolumes[iframeId] === undefined) iframeVolumes[iframeId] = 100;
+  iframeVolumes[iframeId] = Math.max(0, Math.min(100, iframeVolumes[iframeId] + delta));
+  iframe.contentWindow.postMessage(JSON.stringify({
+    event: 'command',
+    func: 'setVolume',
+    args: [iframeVolumes[iframeId]]
+  }), '*');
+  var label = document.getElementById(iframeId + 'Vol');
+  if (label) label.textContent = iframeVolumes[iframeId];
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  var allSections = document.querySelectorAll('.bible-audio-section');
+  allSections.forEach(function(section) {
+    var body = section.querySelector(':scope > .bible-audio-body');
+    if (!body) return;
+    // Skip container sections (like femaleHipHop/maleHipHop parents) that hold nested sections
+    if (body.querySelector(':scope > .bible-audio-section')) return;
+    var iframe = body.querySelector('iframe');
+    if (!iframe || !iframe.id) return;
+    var iframeId = iframe.id;
+    var btn = section.querySelector(':scope > .bible-audio-toggle');
+    if (!btn) return;
+    var volControls = document.createElement('span');
+    volControls.className = 'vol-controls';
+    volControls.innerHTML = '<button class="vol-btn" onclick="event.stopPropagation();adjustIframeVolume(\'' + iframeId + '\',-10)">\u2212</button>' +
+      '<span class="vol-label" id="' + iframeId + 'Vol">100</span>' +
+      '<button class="vol-btn" onclick="event.stopPropagation();adjustIframeVolume(\'' + iframeId + '\',10)">+</button>';
+    var arrow = btn.querySelector('.toggle-arrow');
+    btn.insertBefore(volControls, arrow);
+  });
+});
 
 var learnVideoOpen = false;
 function toggleLearnVideo() {
