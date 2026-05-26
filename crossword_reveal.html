@@ -147,34 +147,20 @@ const $ = sel => document.querySelector(sel);
 const drop = $('#drop'), fileInput = $('#file'), stage = $('#stage');
 const controls = $('#controls'), status = $('#status'), errorBox = $('#error');
 
-// === Dropbox loading ===
-$('#loadDropbox').addEventListener('click', async () => {
+// === Dropbox loading (proxied to avoid CORS) ===
+$('#loadDropbox').addEventListener('click', () => {
   errorBox.textContent = '';
-  status.textContent = 'Fetching puzzle URL...';
-  try {
-    const resp = await fetch('/api/crossword-url');
-    const data = await resp.json();
-    if (!resp.ok || !data.url) {
-      errorBox.textContent = data.error || 'No crossword URL configured.';
-      status.textContent = '';
-      return;
-    }
-    status.textContent = 'Loading image from Dropbox...';
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = () => {
-      $('#loadDropbox').style.display = 'none';
-      processImage(img);
-    };
-    img.onerror = () => {
-      errorBox.textContent = 'Could not load image from Dropbox URL.';
-      status.textContent = '';
-    };
-    img.src = data.url;
-  } catch (e) {
-    errorBox.textContent = 'Failed to fetch crossword URL: ' + e.message;
+  status.textContent = 'Loading puzzle from Dropbox...';
+  const img = new Image();
+  img.onload = () => {
+    $('#loadDropbox').style.display = 'none';
+    processImage(img);
+  };
+  img.onerror = () => {
+    errorBox.textContent = 'Could not load image. Check that DROPBOX_CROSSWORD_URL is configured.';
     status.textContent = '';
-  }
+  };
+  img.src = '/api/crossword-image';
 });
 
 // === File handling ===
