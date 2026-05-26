@@ -20,6 +20,8 @@
     { "source": "/learn-memorize-verses", "destination": "/learn-memorize-verses.html" },
     { "source": "/todo-list.html", "destination": "/todo-list.html" },
     { "source": "/todo-list", "destination": "/todo-list.html" },
+    { "source": "/crossword-reveal.html", "destination": "/crossword_reveal.html" },
+    { "source": "/crossword-reveal", "destination": "/crossword_reveal.html" },
     { "source": "/(.*)", "destination": "/flashcards.html" }
   ]
 }

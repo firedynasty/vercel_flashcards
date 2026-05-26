@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Crossword Reveal</title>
+<style>
+  :root {
+    --bg: #f7f7f4;
+    --ink: #1a1a1a;
+    --muted: #666;
+    --accent: #2a4d8f;
+    --cover: #f4f4ec;
+    --cover-edge: #d8d8c8;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    margin: 0;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+  }
+  h1 {
+    font-size: 20px;
+    font-weight: 600;
+    margin: 0 0 4px 0;
+  }
+  .subtitle {
+    color: var(--muted);
+    font-size: 14px;
+    margin-bottom: 24px;
+  }
+  .drop {
+    border: 2px dashed #bbb;
+    border-radius: 12px;
+    padding: 40px 32px;
+    text-align: center;
+    background: white;
+    cursor: pointer;
+    transition: all 0.15s;
+    max-width: 480px;
+    width: 100%;
+  }
+  .drop:hover, .drop.dragover {
+    border-color: var(--accent);
+    background: #fafbff;
+  }
+  .drop p { margin: 8px 0; }
+  .drop .hint { font-size: 13px; color: var(--muted); }
+  input[type=file] { display: none; }
+  .controls {
+    margin: 16px 0;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  button {
+    border: 1px solid #ccc;
+    background: white;
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  button:hover { background: #f0f0f0; }
+  button.primary {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+  }
+  button.primary:hover { background: #1f3d75; }
+  #stage {
+    position: relative;
+    display: inline-block;
+    margin-top: 8px;
+  }
+  #stage img { display: block; max-width: 100%; height: auto; }
+  .overlay {
+    position: absolute;
+    background: #4a5560;
+    border: 1px solid #2a3540;
+    cursor: pointer;
+    transition: opacity 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #c8d0d8;
+    font-size: 16px;
+    font-weight: 600;
+    user-select: none;
+  }
+  .overlay::before {
+    content: "?";
+    opacity: 0.5;
+  }
+  @media (hover: hover) {
+    .overlay:hover { background: #5a6570; }
+  }
+  .overlay.revealed {
+    opacity: 0;
+    pointer-events: none;
+  }
+  .error {
+    color: #b00;
+    margin-top: 12px;
+    font-size: 14px;
+  }
+  .status {
+    color: var(--muted);
+    font-size: 13px;
+    margin-top: 12px;
+  }
+</style>
+</head>
+<body>
+
+<h1>Crossword Reveal</h1>
+<div class="subtitle">Drop a puzzle solution PNG — click cells to reveal letters</div>
+
+<label class="drop" id="drop">
+  <p>Click or drop a puzzle PNG here</p>
+  <p class="hint">Works with solution images from onlinecrosswords.net</p>
+  <input type="file" id="file" accept="image/png,image/jpeg">
+</label>
+
+<div class="controls" id="controls" style="display:none">
+  <button id="revealAll">Reveal all</button>
+  <button id="hideAll">Hide all</button>
+  <button class="primary" id="reset">Load another puzzle</button>
+</div>
+
+<div id="status" class="status"></div>
+<div id="error" class="error"></div>
+
+<div id="stage"></div>
+
+<script>
+const $ = sel => document.querySelector(sel);
+const drop = $('#drop'), fileInput = $('#file'), stage = $('#stage');
+const controls = $('#controls'), status = $('#status'), errorBox = $('#error');
+
+// === File handling ===
+drop.addEventListener('click', () => fileInput.click());
+drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('dragover'); });
+drop.addEventListener('dragleave', () => drop.classList.remove('dragover'));
+drop.addEventListener('drop', e => {
+  e.preventDefault();
+  drop.classList.remove('dragover');
+  if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', e => {
+  if (e.target.files[0]) loadFile(e.target.files[0]);
+});
+$('#reset').addEventListener('click', resetUI);
+$('#revealAll').addEventListener('click', () => {
+  document.querySelectorAll('.overlay').forEach(o => o.classList.add('revealed'));
+});
+$('#hideAll').addEventListener('click', () => {
+  document.querySelectorAll('.overlay').forEach(o => o.classList.remove('revealed'));
+});
+
+function resetUI() {
+  stage.innerHTML = '';
+  controls.style.display = 'none';
+  drop.style.display = 'block';
+  status.textContent = '';
+  errorBox.textContent = '';
+  fileInput.value = '';
+}
+
+function loadFile(file) {
+  errorBox.textContent = '';
+  status.textContent = 'Reading image...';
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const img = new Image();
+    img.onload = () => processImage(img);
+    img.onerror = () => { errorBox.textContent = 'Could not load image.'; };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+// === Grid detection ===
+function processImage(img) {
+  status.textContent = 'Detecting grid...';
+  const W = img.naturalWidth, H = img.naturalHeight;
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(img, 0, 0);
+  const data = ctx.getImageData(0, 0, W, H).data;
+
+  // Helper: pixel access with bounds checking
+  const at = (x, y) => {
+    if (x < 0 || x >= W || y < 0 || y >= H) return [0, 0, 0];
+    const i = (y * W + x) * 4;
+    return [data[i], data[i+1], data[i+2]];
+  };
+  const isBlue = ([r,g,b]) => b > 100 && r < 150 && b > r + 30;
+  const isDark = ([r,g,b]) => r < 60 && g < 60 && b < 60;
+  const isBlack = ([r,g,b]) => r < 40 && g < 40 && b < 40;
+  const isLight = ([r,g,b]) => r > 200 && g > 200 && b > 200;
+
+  // --- Strategy 1: blue-letter detection (onlinecrosswords.net solution PNGs) ---
+  const bluePerCol = new Int32Array(W);
+  let totalBlue = 0;
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      if (isBlue(at(x, y))) { bluePerCol[x]++; totalBlue++; }
+    }
+  }
+
+  let cellSize, gridLeft, gridTop, gridBottom, nRows, nCols;
+  let detectionMethod = '';
+
+  if (totalBlue > W * 2) {
+    // Enough blue pixels — use blue-column-peak method
+    detectionMethod = 'blue letters';
+    const colPeaks = findPeaks(bluePerCol, 15, 8);
+    if (colPeaks.length < 3) {
+      errorBox.textContent = "Couldn't detect grid columns. Is this a standard puzzle PNG?";
+      status.textContent = '';
+      return;
+    }
+
+    const colDiffs = [];
+    for (let i = 1; i < colPeaks.length; i++) colDiffs.push(colPeaks[i] - colPeaks[i-1]);
+    colDiffs.sort((a,b) => a-b);
+    cellSize = colDiffs[Math.floor(colDiffs.length/2)];
+
+    const firstPeak = colPeaks[0];
+    gridLeft = firstPeak - Math.round(cellSize/2);
+    while (gridLeft - cellSize >= 0) gridLeft -= cellSize;
+    if (gridLeft < 0) gridLeft = 0;
+
+    const lastPeak = colPeaks[colPeaks.length-1];
+    let gridRight = lastPeak + Math.round(cellSize/2);
+    while (gridRight + cellSize <= W) gridRight += cellSize;
+    if (gridRight > W) gridRight = W;
+    nCols = Math.round((gridRight - gridLeft) / cellSize);
+  } else {
+    // Fallback: detect grid lines by looking for rows/cols with many dark pixels
+    detectionMethod = 'grid lines';
+    const result = detectGridByLines(W, H, at, isDark);
+    if (!result) {
+      errorBox.textContent = "Couldn't detect grid. Try a clearer puzzle image.";
+      status.textContent = '';
+      return;
+    }
+    cellSize = result.cellSize;
+    gridLeft = result.gridLeft;
+    nCols = result.nCols;
+  }
+
+  // Detect grid top: first row with a long dark horizontal run
+  gridTop = -1;
+  for (let y = 0; y < H; y++) {
+    let run = 0, maxRun = 0;
+    for (let x = 0; x < W; x++) {
+      if (isDark(at(x, y))) { run++; if (run > maxRun) maxRun = run; }
+      else run = 0;
+    }
+    if (maxRun >= cellSize - 4) { gridTop = y; break; }
+  }
+  if (gridTop < 0) {
+    errorBox.textContent = "Couldn't detect grid top.";
+    status.textContent = '';
+    return;
+  }
+
+  // Detect grid bottom: last row with a long dark horizontal run
+  gridBottom = -1;
+  for (let y = H - 1; y >= 0; y--) {
+    let run = 0, maxRun = 0;
+    for (let x = 0; x < W; x++) {
+      if (isDark(at(x, y))) { run++; if (run > maxRun) maxRun = run; }
+      else run = 0;
+    }
+    if (maxRun >= cellSize - 4) { gridBottom = y; break; }
+  }
+  if (gridBottom < 0) gridBottom = H - 1;
+  nRows = Math.round((gridBottom - gridTop + 1) / cellSize);
+
+  status.textContent = `Detected ${nRows}\u00d7${nCols} grid (${cellSize}px cells) via ${detectionMethod}.`;
+
+  // === Build interactive overlay ===
+  drop.style.display = 'none';
+  controls.style.display = 'flex';
+  stage.innerHTML = '';
+  const imgEl = document.createElement('img');
+  imgEl.src = img.src;
+  stage.appendChild(imgEl);
+
+  // Use requestAnimationFrame to ensure image is laid out before measuring
+  let overlaysCreated = false;
+  function tryCreateOverlays() {
+    if (overlaysCreated) return;
+    if (imgEl.clientWidth > 0) {
+      overlaysCreated = true;
+      createOverlays(imgEl, gridLeft, gridTop, cellSize, nRows, nCols, W, at, isDark, isLight);
+    } else {
+      requestAnimationFrame(tryCreateOverlays);
+    }
+  }
+  imgEl.onload = tryCreateOverlays;
+  if (imgEl.complete) tryCreateOverlays();
+  requestAnimationFrame(tryCreateOverlays);
+}
+
+// Fallback grid detection via dark horizontal/vertical line analysis
+function detectGridByLines(W, H, at, isDark) {
+  // Count dark pixels per row
+  const darkPerRow = new Int32Array(H);
+  const darkPerCol = new Int32Array(W);
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      if (isDark(at(x, y))) {
+        darkPerRow[y]++;
+        darkPerCol[x]++;
+      }
+    }
+  }
+
+  // Find rows that are likely grid lines (high dark pixel count)
+  const rowThreshold = W * 0.3;
+  const gridRows = [];
+  for (let y = 0; y < H; y++) {
+    if (darkPerRow[y] > rowThreshold) gridRows.push(y);
+  }
+
+  // Cluster consecutive rows into line centers
+  const rowLines = clusterValues(gridRows, 3);
+  if (rowLines.length < 3) return null;
+
+  const rowDiffs = [];
+  for (let i = 1; i < rowLines.length; i++) rowDiffs.push(rowLines[i] - rowLines[i-1]);
+  rowDiffs.sort((a,b) => a-b);
+  const cellSize = rowDiffs[Math.floor(rowDiffs.length/2)];
+  if (cellSize < 10) return null;
+
+  // Detect columns similarly
+  const colThreshold = H * 0.3;
+  const gridCols = [];
+  for (let x = 0; x < W; x++) {
+    if (darkPerCol[x] > colThreshold) gridCols.push(x);
+  }
+  const colLines = clusterValues(gridCols, 3);
+  if (colLines.length < 3) return null;
+
+  const gridLeft = colLines[0];
+  const gridRight = colLines[colLines.length - 1];
+  const nCols = Math.round((gridRight - gridLeft) / cellSize);
+
+  return { cellSize, gridLeft, nCols };
+}
+
+// Cluster consecutive integers into their centers
+function clusterValues(sorted, maxGap) {
+  if (sorted.length === 0) return [];
+  const clusters = [];
+  let start = sorted[0], end = sorted[0];
+  for (let i = 1; i < sorted.length; i++) {
+    if (sorted[i] - end <= maxGap) {
+      end = sorted[i];
+    } else {
+      clusters.push(Math.round((start + end) / 2));
+      start = sorted[i];
+      end = sorted[i];
+    }
+  }
+  clusters.push(Math.round((start + end) / 2));
+  return clusters;
+}
+
+// Determine if a cell is a black/filled square by sampling its interior
+function isCellBlack(cx, cy, cellSize, at, isDark, isLight) {
+  // Sample a grid of points inside the cell (avoid edges which are grid lines)
+  const inset = Math.max(3, Math.round(cellSize * 0.15));
+  let darkCount = 0, lightCount = 0, total = 0;
+  const step = Math.max(1, Math.round(cellSize / 8));
+  for (let dy = -cellSize/2 + inset; dy <= cellSize/2 - inset; dy += step) {
+    for (let dx = -cellSize/2 + inset; dx <= cellSize/2 - inset; dx += step) {
+      const px = Math.round(cx + dx);
+      const py = Math.round(cy + dy);
+      const c = at(px, py);
+      if (isDark(c)) darkCount++;
+      if (isLight(c)) lightCount++;
+      total++;
+    }
+  }
+  // A black square has mostly dark pixels; a letter cell has mostly light background
+  return total > 0 && darkCount / total > 0.5;
+}
+
+function createOverlays(imgEl, gridLeft, gridTop, cellSize, nRows, nCols, natW, at, isDark, isLight) {
+  const scale = imgEl.clientWidth / natW;
+  const sCell = cellSize * scale;
+  const sLeft = gridLeft * scale;
+  const sTop = gridTop * scale;
+
+  // Track which cells are non-black for resize
+  const cellMap = [];
+
+  for (let r = 0; r < nRows; r++) {
+    for (let c = 0; c < nCols; c++) {
+      const cx = Math.round(gridLeft + c * cellSize + cellSize / 2);
+      const cy = Math.round(gridTop + r * cellSize + cellSize / 2);
+
+      if (isCellBlack(cx, cy, cellSize, at, isDark, isLight)) continue;
+
+      cellMap.push({ r, c });
+
+      const ov = document.createElement('div');
+      ov.className = 'overlay';
+      ov.style.left = (sLeft + c * sCell + 1) + 'px';
+      ov.style.top = (sTop + r * sCell + 1) + 'px';
+      ov.style.width = (sCell - 2) + 'px';
+      ov.style.height = (sCell - 2) + 'px';
+      ov.addEventListener('click', () => ov.classList.add('revealed'));
+      stage.appendChild(ov);
+    }
+  }
+
+  // Re-position on resize
+  window.addEventListener('resize', () => {
+    const newScale = imgEl.clientWidth / natW;
+    const ns = cellSize * newScale;
+    const nl = gridLeft * newScale;
+    const nt = gridTop * newScale;
+    const ovs = stage.querySelectorAll('.overlay');
+    for (let i = 0; i < cellMap.length && i < ovs.length; i++) {
+      const { r, c } = cellMap[i];
+      ovs[i].style.left = (nl + c * ns + 1) + 'px';
+      ovs[i].style.top = (nt + r * ns + 1) + 'px';
+      ovs[i].style.width = (ns - 2) + 'px';
+      ovs[i].style.height = (ns - 2) + 'px';
+    }
+  });
+}
+
+// Find local maxima in a 1D array with min distance and min height
+function findPeaks(arr, minDist, minHeight) {
+  const peaks = [];
+  for (let i = 1; i < arr.length - 1; i++) {
+    if (arr[i] < minHeight) continue;
+    let isPeak = true;
+    for (let j = Math.max(0, i - minDist); j <= Math.min(arr.length - 1, i + minDist); j++) {
+      if (j !== i && arr[j] > arr[i]) { isPeak = false; break; }
+    }
+    if (isPeak) {
+      if (peaks.length === 0 || i - peaks[peaks.length-1] >= minDist) peaks.push(i);
+    }
+  }
+  return peaks;
+}
+</script>
+
+</body>
+</html>
