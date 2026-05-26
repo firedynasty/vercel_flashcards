@@ -125,7 +125,8 @@
 
 <div style="display:flex;gap:10px;margin-bottom:12px;align-items:center;flex-wrap:wrap;justify-content:center;">
   <button class="primary" id="loadDropbox" style="font-size:16px;padding:12px 24px;">Load solution from Dropbox</button>
-  <a id="puzzleLink" href="#" target="_blank" style="display:none;font-size:15px;color:var(--accent);">Open puzzle page</a>
+  <a id="puzzleLink" href="#" target="_blank" style="display:none;font-size:15px;color:var(--accent);">OnlineCrosswords.net</a>
+  <a id="pdfLink" href="/api/crossword-pdf" target="_blank" style="display:none;font-size:15px;color:var(--accent);">Download PDF</a>
 </div>
 
 <label class="drop" id="drop">
@@ -150,7 +151,7 @@ const $ = sel => document.querySelector(sel);
 const drop = $('#drop'), fileInput = $('#file'), stage = $('#stage');
 const controls = $('#controls'), status = $('#status'), errorBox = $('#error');
 
-// === Fetch puzzle link on load ===
+// === Fetch puzzle link and PDF availability on load ===
 fetch('/api/crossword-link')
   .then(r => r.json())
   .then(data => {
@@ -160,6 +161,10 @@ fetch('/api/crossword-link')
       link.style.display = '';
     }
   })
+  .catch(() => {});
+
+fetch('/api/crossword-pdf', { method: 'HEAD' })
+  .then(r => { if (r.ok) $('#pdfLink').style.display = ''; })
   .catch(() => {});
 
 // === Dropbox loading (proxied to avoid CORS) ===
