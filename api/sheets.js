@@ -1,14 +1,16 @@
 export default async function handler(req, res) {
   const lang = (req.query.lang || '').toLowerCase();
-  let url = req.query.url;
+  let url = req.query.url || '';
   if (!url) {
-    if (lang === 'spanish') {
+    if (lang === 'spanish' && process.env.DROPBOX_SHEETS_SPANISH_URL) {
       url = process.env.DROPBOX_SHEETS_SPANISH_URL;
-    } else if (lang === 'chinese') {
+    } else if (lang === 'chinese' && process.env.DROPBOX_SHEETS_CHINESE_URL) {
       url = process.env.DROPBOX_SHEETS_CHINESE_URL;
     }
-    // Fallback to the original env var for backward compat
-    if (!url) url = process.env.DROPBOX_SHEETS_URL;
+  }
+  // Fallback to the original env var for backward compat
+  if (!url && process.env.DROPBOX_SHEETS_URL) {
+    url = process.env.DROPBOX_SHEETS_URL;
   }
   if (!url) {
     return res.status(400).json({ error: 'Missing ?url= parameter or DROPBOX_SHEETS_*_URL env var' });
