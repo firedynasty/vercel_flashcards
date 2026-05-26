@@ -123,6 +123,8 @@
 <h1>Crossword Reveal</h1>
 <div class="subtitle">Drop a puzzle solution PNG — click cells to reveal letters</div>
 
+<button class="primary" id="loadDropbox" style="margin-bottom:12px;font-size:16px;padding:12px 24px;">Load puzzle from Dropbox</button>
+
 <label class="drop" id="drop">
   <p>Click or drop a puzzle PNG here</p>
   <p class="hint">Works with solution images from onlinecrosswords.net</p>
@@ -145,8 +147,37 @@ const $ = sel => document.querySelector(sel);
 const drop = $('#drop'), fileInput = $('#file'), stage = $('#stage');
 const controls = $('#controls'), status = $('#status'), errorBox = $('#error');
 
+// === Dropbox loading ===
+$('#loadDropbox').addEventListener('click', async () => {
+  errorBox.textContent = '';
+  status.textContent = 'Fetching puzzle URL...';
+  try {
+    const resp = await fetch('/api/crossword-url');
+    const data = await resp.json();
+    if (!resp.ok || !data.url) {
+      errorBox.textContent = data.error || 'No crossword URL configured.';
+      status.textContent = '';
+      return;
+    }
+    status.textContent = 'Loading image from Dropbox...';
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      $('#loadDropbox').style.display = 'none';
+      processImage(img);
+    };
+    img.onerror = () => {
+      errorBox.textContent = 'Could not load image from Dropbox URL.';
+      status.textContent = '';
+    };
+    img.src = data.url;
+  } catch (e) {
+    errorBox.textContent = 'Failed to fetch crossword URL: ' + e.message;
+    status.textContent = '';
+  }
+});
+
 // === File handling ===
-drop.addEventListener('click', () => fileInput.click());
 drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('dragover'); });
 drop.addEventListener('dragleave', () => drop.classList.remove('dragover'));
 drop.addEventListener('drop', e => {
@@ -169,6 +200,7 @@ function resetUI() {
   stage.innerHTML = '';
   controls.style.display = 'none';
   drop.style.display = 'block';
+  $('#loadDropbox').style.display = '';
   status.textContent = '';
   errorBox.textContent = '';
   fileInput.value = '';
@@ -177,6 +209,7 @@ function resetUI() {
 function loadFile(file) {
   errorBox.textContent = '';
   status.textContent = 'Reading image...';
+  $('#loadDropbox').style.display = 'none';
   const reader = new FileReader();
   reader.onload = ev => {
     const img = new Image();
