@@ -1,7 +1,17 @@
 export default async function handler(req, res) {
-  const url = req.query.url || process.env.DROPBOX_SHEETS_URL;
+  const lang = (req.query.lang || '').toLowerCase();
+  let url = req.query.url;
   if (!url) {
-    return res.status(400).json({ error: 'Missing ?url= parameter or DROPBOX_SHEETS_URL env var' });
+    if (lang === 'spanish') {
+      url = process.env.DROPBOX_SHEETS_SPANISH_URL;
+    } else if (lang === 'chinese') {
+      url = process.env.DROPBOX_SHEETS_CHINESE_URL;
+    }
+    // Fallback to the original env var for backward compat
+    if (!url) url = process.env.DROPBOX_SHEETS_URL;
+  }
+  if (!url) {
+    return res.status(400).json({ error: 'Missing ?url= parameter or DROPBOX_SHEETS_*_URL env var' });
   }
 
   try {
