@@ -166,7 +166,7 @@ fetch('/api/crossword-link')
       const link = $('#puzzleLink');
       link.href = data.url;
       const match = data.url.match(/\/(\d+)\/?$/);
-      if (match) link.textContent = 'Puzzle #' + match[1];
+      if (match) link.textContent = 'Puzzle #' + match[1] + ' Solution';
       link.style.display = '';
     }
   })
