@@ -4,9 +4,9 @@ export default async function handler(req, res) {
     return res.status(200).end();
   }
 
-  const url = process.env.DROPBOX_CROSSWORD_URL || '';
+  const url = process.env.DROPBOX_CROSSWORD_SOLUTION || '';
   if (!url) {
-    return res.status(404).json({ error: 'DROPBOX_CROSSWORD_URL not configured' });
+    return res.status(404).json({ error: 'DROPBOX_CROSSWORD_SOLUTION not configured' });
   }
 
   try {

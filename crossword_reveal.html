@@ -123,7 +123,10 @@
 <h1>Crossword Reveal</h1>
 <div class="subtitle">Drop a puzzle solution PNG — click cells to reveal letters</div>
 
-<button class="primary" id="loadDropbox" style="margin-bottom:12px;font-size:16px;padding:12px 24px;">Load puzzle from Dropbox</button>
+<div style="display:flex;gap:10px;margin-bottom:12px;align-items:center;flex-wrap:wrap;justify-content:center;">
+  <button class="primary" id="loadDropbox" style="font-size:16px;padding:12px 24px;">Load solution from Dropbox</button>
+  <a id="puzzleLink" href="#" target="_blank" style="display:none;font-size:15px;color:var(--accent);">Open puzzle page</a>
+</div>
 
 <label class="drop" id="drop">
   <p>Click or drop a puzzle PNG here</p>
@@ -147,17 +150,29 @@ const $ = sel => document.querySelector(sel);
 const drop = $('#drop'), fileInput = $('#file'), stage = $('#stage');
 const controls = $('#controls'), status = $('#status'), errorBox = $('#error');
 
+// === Fetch puzzle link on load ===
+fetch('/api/crossword-link')
+  .then(r => r.json())
+  .then(data => {
+    if (data.url) {
+      const link = $('#puzzleLink');
+      link.href = data.url;
+      link.style.display = '';
+    }
+  })
+  .catch(() => {});
+
 // === Dropbox loading (proxied to avoid CORS) ===
 $('#loadDropbox').addEventListener('click', () => {
   errorBox.textContent = '';
-  status.textContent = 'Loading puzzle from Dropbox...';
+  status.textContent = 'Loading solution from Dropbox...';
   const img = new Image();
   img.onload = () => {
     $('#loadDropbox').style.display = 'none';
     processImage(img);
   };
   img.onerror = () => {
-    errorBox.textContent = 'Could not load image. Check that DROPBOX_CROSSWORD_URL is configured.';
+    errorBox.textContent = 'Could not load image. Check that DROPBOX_CROSSWORD_SOLUTION is configured.';
     status.textContent = '';
   };
   img.src = '/api/crossword-image';
