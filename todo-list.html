@@ -1623,7 +1623,7 @@
   <div class="bible-audio-section">
     <button class="bible-audio-toggle" id="learnVideoToggle" onclick="toggleLearnVideo()">
       <span>Vol. 3 - Saved | 51 Min Christian HipHop Mix for that Deep Faith Energy</span>
-      <span class="toggle-arrow" id="learnToggleArrow">&#9654;</span>
+      <span class="vol-controls"><button class="vol-btn" onclick="event.stopPropagation();adjustIframeVolume('learnIframe',-10)">−</button><span class="vol-label" id="learnIframeVol">100</span><button class="vol-btn" onclick="event.stopPropagation();adjustIframeVolume('learnIframe',10)">+</button></span><span class="toggle-arrow open" id="learnToggleArrow">&#9654;</span>
     </button>
     <div class="bible-audio-body" id="learnVideoBody">
       <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;">
@@ -1631,6 +1631,18 @@
       </div>
       <div style="margin-top:8px;">
         <button onclick="seekLearnVideo(1802)" style="background:linear-gradient(45deg,#4CAF50,#45a049);color:white;border:none;border-radius:20px;padding:5px 14px;font-size:12px;font-weight:700;cursor:pointer;">30:02</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="bible-audio-section">
+    <button class="bible-audio-toggle" id="worshipVideoToggle" onclick="toggleWorshipVideo()">
+      <span>God's Nation: WORSHIP RISING (Best Of Christian Remixes & Worship Mashups & CEDM)</span>
+      <span class="vol-controls"><button class="vol-btn" onclick="event.stopPropagation();adjustIframeVolume('worshipIframe',-10)">−</button><span class="vol-label" id="worshipIframeVol">100</span><button class="vol-btn" onclick="event.stopPropagation();adjustIframeVolume('worshipIframe',10)">+</button></span><span class="toggle-arrow" id="worshipToggleArrow">&#9654;</span>
+    </button>
+    <div class="bible-audio-body" id="worshipVideoBody">
+      <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;">
+        <iframe id="worshipIframe" width="100%" height="100%" style="position:absolute;top:0;left:0;" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
       </div>
     </div>
   </div>
@@ -2922,6 +2934,19 @@ document.addEventListener('DOMContentLoaded', function() {
     btn.insertBefore(volControls, arrow);
   });
 });
+
+var worshipVideoOpen = false;
+function toggleWorshipVideo() {
+  worshipVideoOpen = !worshipVideoOpen;
+  document.getElementById('worshipVideoBody').classList.toggle('show', worshipVideoOpen);
+  document.getElementById('worshipToggleArrow').classList.toggle('open', worshipVideoOpen);
+  if (worshipVideoOpen) {
+    var iframe = document.getElementById('worshipIframe');
+    if (!iframe.getAttribute('src') || iframe.getAttribute('src') === '') {
+      iframe.src = 'https://www.youtube.com/embed/16iaMUvSnpI?enablejsapi=1';
+    }
+  }
+}
 
 var learnVideoOpen = false;
 function toggleLearnVideo() {
