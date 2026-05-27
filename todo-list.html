@@ -652,6 +652,18 @@
       padding: 16px;
       box-shadow: 0 5px 30px rgba(0,0,0,0.2);
     }
+    .shuffle-btn {
+      background: linear-gradient(45deg, #6c5ce7, #a29bfe);
+      color: white;
+      border: none;
+      border-radius: 20px;
+      padding: 6px 16px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      margin-bottom: 8px;
+    }
+    .shuffle-btn:hover { opacity: 0.85; }
     .bible-audio-body.show { display: block; }
     .bible-audio-body audio {
       width: 100%;
@@ -991,6 +1003,8 @@
     </button>
     <div class="bible-audio-body" id="femaleHipHopBody">
 
+      <button class="shuffle-btn" onclick="shuffleTracks('femaleHipHopBody', fhhTrackList)">Shuffle</button>
+
       <div class="bible-audio-section" style="margin:4px 0;">
         <button class="bible-audio-toggle" onclick="toggleFhhTrack('fhh0','fhh0Arrow','JdgHjNSQ-I0')">
           <span>Brandy - I Wanna Be Down (Instrumental w/ Hook)</span>
@@ -1156,6 +1170,8 @@
       <span class="toggle-arrow" id="maleHipHopArrow">▶</span>
     </button>
     <div class="bible-audio-body" id="maleHipHopBody">
+
+      <button class="shuffle-btn" onclick="shuffleTracks('maleHipHopBody', mhhTrackList)">Shuffle</button>
 
       <div class="bible-audio-section" style="margin:4px 0;">
         <button class="bible-audio-toggle" onclick="toggleMhhTrack('mhh0','mhh0Arrow','xHrqTdJEEUs')">
@@ -1349,18 +1365,32 @@
         </div>
       </div>
 
+      <div class="bible-audio-section" style="margin:4px 0;">
+        <button class="bible-audio-toggle" onclick="toggleMhhTrack('mhh16','mhh16Arrow','JVISRjhXzzM')">
+          <span>Dr Dre - Still Dre Instrumental</span>
+          <span class="toggle-arrow" id="mhh16Arrow">▶</span>
+        </button>
+        <div class="bible-audio-body" id="mhh16">
+          <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;">
+            <iframe id="mhh16Iframe" width="100%" height="100%" style="position:absolute;top:0;left:0;" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 
   <div class="bible-audio-section">
-    <button class="bible-audio-toggle" id="classicalToggle" onclick="toggleClassical()">
-      <span>Classical Music</span>
-      <span class="toggle-arrow" id="classicalArrow">▶</span>
+    <button class="bible-audio-toggle" id="classical1Toggle" onclick="toggleClassical1()">
+      <span>Classical Music 1</span>
+      <span class="toggle-arrow" id="classical1Arrow">▶</span>
     </button>
-    <div class="bible-audio-body" id="classicalBody">
+    <div class="bible-audio-body" id="classical1Body">
+
+      <button class="shuffle-btn" onclick="shuffleTracks('classical1Body', cl1TrackList)">Shuffle</button>
 
       <div class="bible-audio-section" style="margin:4px 0;">
-        <button class="bible-audio-toggle" onclick="toggleClTrack('cl0','cl0Arrow','xW8xJS1N2ek')">
+        <button class="bible-audio-toggle" onclick="toggleCl1Track('cl0','cl0Arrow','xW8xJS1N2ek')">
           <span>Beethoven: Piano Sonata No. 17 "The Tempest": III. Allegretto</span>
           <span class="toggle-arrow" id="cl0Arrow">▶</span>
         </button>
@@ -1372,7 +1402,7 @@
       </div>
 
       <div class="bible-audio-section" style="margin:4px 0;">
-        <button class="bible-audio-toggle" onclick="toggleClTrack('cl1','cl1Arrow','QkJvh7i-fCc')">
+        <button class="bible-audio-toggle" onclick="toggleCl1Track('cl1','cl1Arrow','QkJvh7i-fCc')">
           <span>Schubert: Four Impromptus, D. 899: No. 3 in G-Flat Major (Live)</span>
           <span class="toggle-arrow" id="cl1Arrow">▶</span>
         </button>
@@ -1384,7 +1414,7 @@
       </div>
 
       <div class="bible-audio-section" style="margin:4px 0;">
-        <button class="bible-audio-toggle" onclick="toggleClTrack('cl2','cl2Arrow','qDaeGcgowiw')">
+        <button class="bible-audio-toggle" onclick="toggleCl1Track('cl2','cl2Arrow','qDaeGcgowiw')">
           <span>Beethoven: Piano Sonata No. 14 "Moonlight Sonata": I. Adagio sostenuto</span>
           <span class="toggle-arrow" id="cl2Arrow">▶</span>
         </button>
@@ -1396,7 +1426,7 @@
       </div>
 
       <div class="bible-audio-section" style="margin:4px 0;">
-        <button class="bible-audio-toggle" onclick="toggleClTrack('cl3','cl3Arrow','YeRdSGE5D1I')">
+        <button class="bible-audio-toggle" onclick="toggleCl1Track('cl3','cl3Arrow','YeRdSGE5D1I')">
           <span>Bach: Prelude and Fugue No. 9 in E Major, BWV 878</span>
           <span class="toggle-arrow" id="cl3Arrow">▶</span>
         </button>
@@ -1408,7 +1438,7 @@
       </div>
 
       <div class="bible-audio-section" style="margin:4px 0;">
-        <button class="bible-audio-toggle" onclick="toggleClTrack('cl4','cl4Arrow','7nVrJ3K6q-A')">
+        <button class="bible-audio-toggle" onclick="toggleCl1Track('cl4','cl4Arrow','7nVrJ3K6q-A')">
           <span>Mozart: Rondo in A Minor, K. 511</span>
           <span class="toggle-arrow" id="cl4Arrow">▶</span>
         </button>
@@ -1420,7 +1450,7 @@
       </div>
 
       <div class="bible-audio-section" style="margin:4px 0;">
-        <button class="bible-audio-toggle" onclick="toggleClTrack('cl5','cl5Arrow','w1tnHi1jvrk')">
+        <button class="bible-audio-toggle" onclick="toggleCl1Track('cl5','cl5Arrow','w1tnHi1jvrk')">
           <span>Bach: Prelude and Fugue No. 12 in F Minor, BWV 881</span>
           <span class="toggle-arrow" id="cl5Arrow">▶</span>
         </button>
@@ -1432,7 +1462,7 @@
       </div>
 
       <div class="bible-audio-section" style="margin:4px 0;">
-        <button class="bible-audio-toggle" onclick="toggleClTrack('cl6','cl6Arrow','ll0OMl3bFsQ')">
+        <button class="bible-audio-toggle" onclick="toggleCl1Track('cl6','cl6Arrow','ll0OMl3bFsQ')">
           <span>Mendelssohn: Piano Concerto No. 1 in G Minor, Op. 25: II. Andante</span>
           <span class="toggle-arrow" id="cl6Arrow">▶</span>
         </button>
@@ -1444,7 +1474,7 @@
       </div>
 
       <div class="bible-audio-section" style="margin:4px 0;">
-        <button class="bible-audio-toggle" onclick="toggleClTrack('cl7','cl7Arrow','wQYO7Ay9PfY')">
+        <button class="bible-audio-toggle" onclick="toggleCl1Track('cl7','cl7Arrow','wQYO7Ay9PfY')">
           <span>Chopin: Nocturnes, Op. 9: No. 3 in B Major</span>
           <span class="toggle-arrow" id="cl7Arrow">▶</span>
         </button>
@@ -1455,8 +1485,20 @@
         </div>
       </div>
 
+    </div>
+  </div>
+
+  <div class="bible-audio-section">
+    <button class="bible-audio-toggle" id="classical2Toggle" onclick="toggleClassical2()">
+      <span>Classical Music 2</span>
+      <span class="toggle-arrow" id="classical2Arrow">▶</span>
+    </button>
+    <div class="bible-audio-body" id="classical2Body">
+
+      <button class="shuffle-btn" onclick="shuffleTracks('classical2Body', cl2TrackList)">Shuffle</button>
+
       <div class="bible-audio-section" style="margin:4px 0;">
-        <button class="bible-audio-toggle" onclick="toggleClTrack('cl8','cl8Arrow','Hu7hscHkfPw')">
+        <button class="bible-audio-toggle" onclick="toggleCl2Track('cl8','cl8Arrow','Hu7hscHkfPw')">
           <span>Beethoven - Moonlight Sonata | Piano & Orchestra</span>
           <span class="toggle-arrow" id="cl8Arrow">▶</span>
         </button>
@@ -1468,7 +1510,7 @@
       </div>
 
       <div class="bible-audio-section" style="margin:4px 0;">
-        <button class="bible-audio-toggle" onclick="toggleClTrack('cl9','cl9Arrow','scBWmuZQIGM')">
+        <button class="bible-audio-toggle" onclick="toggleCl2Track('cl9','cl9Arrow','scBWmuZQIGM')">
           <span>Claude Debussy - Clair De Lune</span>
           <span class="toggle-arrow" id="cl9Arrow">▶</span>
         </button>
@@ -1480,7 +1522,7 @@
       </div>
 
       <div class="bible-audio-section" style="margin:4px 0;">
-        <button class="bible-audio-toggle" onclick="toggleClTrack('cl10','cl10Arrow','4U5jAdKOqj8')">
+        <button class="bible-audio-toggle" onclick="toggleCl2Track('cl10','cl10Arrow','4U5jAdKOqj8')">
           <span>Chopin Nocturne Op. 2 No. 8 in C Minor</span>
           <span class="toggle-arrow" id="cl10Arrow">▶</span>
         </button>
@@ -1492,7 +1534,7 @@
       </div>
 
       <div class="bible-audio-section" style="margin:4px 0;">
-        <button class="bible-audio-toggle" onclick="toggleClTrack('cl11','cl11Arrow','Tut4DByTm9c')">
+        <button class="bible-audio-toggle" onclick="toggleCl2Track('cl11','cl11Arrow','Tut4DByTm9c')">
           <span>Chad Lawson - irreplaceable (orchestral)</span>
           <span class="toggle-arrow" id="cl11Arrow">▶</span>
         </button>
@@ -1504,7 +1546,7 @@
       </div>
 
       <div class="bible-audio-section" style="margin:4px 0;">
-        <button class="bible-audio-toggle" onclick="toggleClTrack('cl12','cl12Arrow','9nX_ReyaetE')">
+        <button class="bible-audio-toggle" onclick="toggleCl2Track('cl12','cl12Arrow','9nX_ReyaetE')">
           <span>Pachelbel - Canon in D Major (Original Version)</span>
           <span class="toggle-arrow" id="cl12Arrow">▶</span>
         </button>
@@ -1516,7 +1558,7 @@
       </div>
 
       <div class="bible-audio-section" style="margin:4px 0;">
-        <button class="bible-audio-toggle" onclick="toggleClTrack('cl13','cl13Arrow','hyUhEjtlDLA')">
+        <button class="bible-audio-toggle" onclick="toggleCl2Track('cl13','cl13Arrow','hyUhEjtlDLA')">
           <span>Yo-Yo Ma, Kathryn Stott - Ave Maria (J.S. Bach/Gounod)</span>
           <span class="toggle-arrow" id="cl13Arrow">▶</span>
         </button>
@@ -1528,7 +1570,7 @@
       </div>
 
       <div class="bible-audio-section" style="margin:4px 0;">
-        <button class="bible-audio-toggle" onclick="toggleClTrack('cl14','cl14Arrow','x9cbf9HC09Q')">
+        <button class="bible-audio-toggle" onclick="toggleCl2Track('cl14','cl14Arrow','x9cbf9HC09Q')">
           <span>Ludovico Einaudi - Rolling Like A Ball</span>
           <span class="toggle-arrow" id="cl14Arrow">▶</span>
         </button>
@@ -1540,7 +1582,7 @@
       </div>
 
       <div class="bible-audio-section" style="margin:4px 0;">
-        <button class="bible-audio-toggle" onclick="toggleClTrack('cl15','cl15Arrow','tHBoA8kc5aI')">
+        <button class="bible-audio-toggle" onclick="toggleCl2Track('cl15','cl15Arrow','tHBoA8kc5aI')">
           <span>From Home - Vivian Roost [4K Piano Tutorial Visualiser]</span>
           <span class="toggle-arrow" id="cl15Arrow">▶</span>
         </button>
@@ -1552,7 +1594,7 @@
       </div>
 
       <div class="bible-audio-section" style="margin:4px 0;">
-        <button class="bible-audio-toggle" onclick="toggleClTrack('cl16','cl16Arrow','FxhbAGwEYGQ')">
+        <button class="bible-audio-toggle" onclick="toggleCl2Track('cl16','cl16Arrow','FxhbAGwEYGQ')">
           <span>Schubert - Impromptu No. 3 (Horowitz)</span>
           <span class="toggle-arrow" id="cl16Arrow">▶</span>
         </button>
@@ -1848,10 +1890,11 @@ var mhhTrackList = [
   {bodyId:'mhh12', arrowId:'mhh12Arrow', videoId:'hVauRbcxOdw'},
   {bodyId:'mhh13', arrowId:'mhh13Arrow', videoId:'wC6eCcCqXnk'},
   {bodyId:'mhh14', arrowId:'mhh14Arrow', videoId:'WPYqzrgT_as'},
-  {bodyId:'mhh15', arrowId:'mhh15Arrow', videoId:'K2NwXwKA05s'}
+  {bodyId:'mhh15', arrowId:'mhh15Arrow', videoId:'K2NwXwKA05s'},
+  {bodyId:'mhh16', arrowId:'mhh16Arrow', videoId:'JVISRjhXzzM'}
 ];
 
-var clTrackList = [
+var cl1TrackList = [
   {bodyId:'cl0', arrowId:'cl0Arrow', videoId:'xW8xJS1N2ek'},
   {bodyId:'cl1', arrowId:'cl1Arrow', videoId:'QkJvh7i-fCc'},
   {bodyId:'cl2', arrowId:'cl2Arrow', videoId:'qDaeGcgowiw'},
@@ -1859,7 +1902,10 @@ var clTrackList = [
   {bodyId:'cl4', arrowId:'cl4Arrow', videoId:'7nVrJ3K6q-A'},
   {bodyId:'cl5', arrowId:'cl5Arrow', videoId:'w1tnHi1jvrk'},
   {bodyId:'cl6', arrowId:'cl6Arrow', videoId:'ll0OMl3bFsQ'},
-  {bodyId:'cl7', arrowId:'cl7Arrow', videoId:'wQYO7Ay9PfY'},
+  {bodyId:'cl7', arrowId:'cl7Arrow', videoId:'wQYO7Ay9PfY'}
+];
+
+var cl2TrackList = [
   {bodyId:'cl8', arrowId:'cl8Arrow', videoId:'Hu7hscHkfPw'},
   {bodyId:'cl9', arrowId:'cl9Arrow', videoId:'scBWmuZQIGM'},
   {bodyId:'cl10', arrowId:'cl10Arrow', videoId:'4U5jAdKOqj8'},
@@ -1887,6 +1933,22 @@ function createYTPlayerForTrack(iframeId, trackList, trackIndex, openStates, aut
       }
     }
   });
+}
+
+function shuffleTracks(bodyId, trackList) {
+  var body = document.getElementById(bodyId);
+  // Fisher-Yates shuffle the trackList array
+  for (var i = trackList.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var tmp = trackList[i];
+    trackList[i] = trackList[j];
+    trackList[j] = tmp;
+  }
+  // Reorder DOM elements to match shuffled array
+  for (var k = 0; k < trackList.length; k++) {
+    var el = document.getElementById(trackList[k].bodyId).parentElement;
+    body.appendChild(el);
+  }
 }
 
 function advanceToNextTrack(trackList, currentIndex, openStates) {
@@ -2746,27 +2808,53 @@ function toggleMhhTrack(bodyId, arrowId, videoId) {
   }
 }
 
-// --- Classical Music ---
-var classicalOpen = false;
-function toggleClassical() {
-  classicalOpen = !classicalOpen;
-  document.getElementById('classicalBody').classList.toggle('show', classicalOpen);
-  document.getElementById('classicalArrow').classList.toggle('open', classicalOpen);
+// --- Classical Music 1 ---
+var classical1Open = false;
+function toggleClassical1() {
+  classical1Open = !classical1Open;
+  document.getElementById('classical1Body').classList.toggle('show', classical1Open);
+  document.getElementById('classical1Arrow').classList.toggle('open', classical1Open);
 }
 
-var clOpenStates = {};
-function toggleClTrack(bodyId, arrowId, videoId) {
-  clOpenStates[bodyId] = !clOpenStates[bodyId];
-  document.getElementById(bodyId).classList.toggle('show', clOpenStates[bodyId]);
-  document.getElementById(arrowId).classList.toggle('open', clOpenStates[bodyId]);
-  if (clOpenStates[bodyId]) {
+var cl1OpenStates = {};
+function toggleCl1Track(bodyId, arrowId, videoId) {
+  cl1OpenStates[bodyId] = !cl1OpenStates[bodyId];
+  document.getElementById(bodyId).classList.toggle('show', cl1OpenStates[bodyId]);
+  document.getElementById(arrowId).classList.toggle('open', cl1OpenStates[bodyId]);
+  if (cl1OpenStates[bodyId]) {
     var iframeId = bodyId + 'Iframe';
     var iframe = document.getElementById(iframeId);
     if (!iframe.getAttribute('src') || iframe.getAttribute('src') === '') {
       iframe.src = 'https://www.youtube.com/embed/' + videoId + '?enablejsapi=1';
-      var idx = clTrackList.findIndex(function(t) { return t.bodyId === bodyId; });
+      var idx = cl1TrackList.findIndex(function(t) { return t.bodyId === bodyId; });
       if (idx >= 0) {
-        iframe.onload = function() { createYTPlayerForTrack(iframeId, clTrackList, idx, clOpenStates, false); };
+        iframe.onload = function() { createYTPlayerForTrack(iframeId, cl1TrackList, idx, cl1OpenStates, false); };
+      }
+    }
+  }
+}
+
+// --- Classical Music 2 ---
+var classical2Open = false;
+function toggleClassical2() {
+  classical2Open = !classical2Open;
+  document.getElementById('classical2Body').classList.toggle('show', classical2Open);
+  document.getElementById('classical2Arrow').classList.toggle('open', classical2Open);
+}
+
+var cl2OpenStates = {};
+function toggleCl2Track(bodyId, arrowId, videoId) {
+  cl2OpenStates[bodyId] = !cl2OpenStates[bodyId];
+  document.getElementById(bodyId).classList.toggle('show', cl2OpenStates[bodyId]);
+  document.getElementById(arrowId).classList.toggle('open', cl2OpenStates[bodyId]);
+  if (cl2OpenStates[bodyId]) {
+    var iframeId = bodyId + 'Iframe';
+    var iframe = document.getElementById(iframeId);
+    if (!iframe.getAttribute('src') || iframe.getAttribute('src') === '') {
+      iframe.src = 'https://www.youtube.com/embed/' + videoId + '?enablejsapi=1';
+      var idx = cl2TrackList.findIndex(function(t) { return t.bodyId === bodyId; });
+      if (idx >= 0) {
+        iframe.onload = function() { createYTPlayerForTrack(iframeId, cl2TrackList, idx, cl2OpenStates, false); };
       }
     }
   }
