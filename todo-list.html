@@ -961,6 +961,102 @@
   </div>
 
   <div class="bible-audio-section">
+    <button class="bible-audio-toggle" id="koreanToggle" onclick="toggleKorean()">
+      <span>Korean</span>
+      <span class="toggle-arrow" id="koreanArrow">▶</span>
+    </button>
+    <div class="bible-audio-body" id="koreanBody">
+
+      <button class="shuffle-btn" onclick="shuffleTracks('koreanBody', krTrackList)">Shuffle</button>
+
+      <div class="bible-audio-section" style="margin:4px 0;">
+        <button class="bible-audio-toggle" onclick="toggleKrTrack('kr0','kr0Arrow','toAewgAeMWE')">
+          <span>BTS - Heartbeat</span>
+          <span class="toggle-arrow" id="kr0Arrow">▶</span>
+        </button>
+        <div class="bible-audio-body" id="kr0">
+          <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;">
+            <iframe id="kr0Iframe" width="100%" height="100%" style="position:absolute;top:0;left:0;" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+          </div>
+        </div>
+      </div>
+
+      <div class="bible-audio-section" style="margin:4px 0;">
+        <button class="bible-audio-toggle" onclick="toggleKrTrack('kr1','kr1Arrow','TvQ7zg3ybYA')">
+          <span>Say Yes</span>
+          <span class="toggle-arrow" id="kr1Arrow">▶</span>
+        </button>
+        <div class="bible-audio-body" id="kr1">
+          <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;">
+            <iframe id="kr1Iframe" width="100%" height="100%" style="position:absolute;top:0;left:0;" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+          </div>
+        </div>
+      </div>
+
+      <div class="bible-audio-section" style="margin:4px 0;">
+        <button class="bible-audio-toggle" onclick="toggleKrTrack('kr2','kr2Arrow','zadppu2Bmy0')">
+          <span>Girls' Generation - Gee</span>
+          <span class="toggle-arrow" id="kr2Arrow">▶</span>
+        </button>
+        <div class="bible-audio-body" id="kr2">
+          <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;">
+            <iframe id="kr2Iframe" width="100%" height="100%" style="position:absolute;top:0;left:0;" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+          </div>
+        </div>
+      </div>
+
+      <div class="bible-audio-section" style="margin:4px 0;">
+        <button class="bible-audio-toggle" onclick="toggleKrTrack('kr3','kr3Arrow','A4jp4bH52E8')">
+          <span>IU - Love Poem</span>
+          <span class="toggle-arrow" id="kr3Arrow">▶</span>
+        </button>
+        <div class="bible-audio-body" id="kr3">
+          <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;">
+            <iframe id="kr3Iframe" width="100%" height="100%" style="position:absolute;top:0;left:0;" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+          </div>
+        </div>
+      </div>
+
+      <div class="bible-audio-section" style="margin:4px 0;">
+        <button class="bible-audio-toggle" onclick="toggleKrTrack('kr4','kr4Arrow','iqFPdPMuHVM')">
+          <span>EXID - Up and Down</span>
+          <span class="toggle-arrow" id="kr4Arrow">▶</span>
+        </button>
+        <div class="bible-audio-body" id="kr4">
+          <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;">
+            <iframe id="kr4Iframe" width="100%" height="100%" style="position:absolute;top:0;left:0;" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+          </div>
+        </div>
+      </div>
+
+      <div class="bible-audio-section" style="margin:4px 0;">
+        <button class="bible-audio-toggle" onclick="toggleKrTrack('kr5','kr5Arrow','hCrkGZ8shCg')">
+          <span>Bol4 (English Dub)</span>
+          <span class="toggle-arrow" id="kr5Arrow">▶</span>
+        </button>
+        <div class="bible-audio-body" id="kr5">
+          <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;">
+            <iframe id="kr5Iframe" width="100%" height="100%" style="position:absolute;top:0;left:0;" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+          </div>
+        </div>
+      </div>
+
+      <div class="bible-audio-section" style="margin:4px 0;">
+        <button class="bible-audio-toggle" onclick="toggleKrTrack('kr6','kr6Arrow','h0o8EtwCDaQ')">
+          <span>IU (English Dub)</span>
+          <span class="toggle-arrow" id="kr6Arrow">▶</span>
+        </button>
+        <div class="bible-audio-body" id="kr6">
+          <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;">
+            <iframe id="kr6Iframe" width="100%" height="100%" style="position:absolute;top:0;left:0;" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="bible-audio-section">
     <button class="bible-audio-toggle" id="perlmanVideoToggle" onclick="togglePerlmanVideo()">
       <span>Itzhak Perlman: Popular Jewish Melodies, A Yiddishe Mam</span>
       <span class="toggle-arrow" id="perlmanToggleArrow">▶</span>
@@ -1918,6 +2014,16 @@ var mhhTrackList = [
   {bodyId:'mhh16', arrowId:'mhh16Arrow', videoId:'JVISRjhXzzM'}
 ];
 
+var krTrackList = [
+  {bodyId:'kr0', arrowId:'kr0Arrow', videoId:'toAewgAeMWE'},
+  {bodyId:'kr1', arrowId:'kr1Arrow', videoId:'TvQ7zg3ybYA'},
+  {bodyId:'kr2', arrowId:'kr2Arrow', videoId:'zadppu2Bmy0'},
+  {bodyId:'kr3', arrowId:'kr3Arrow', videoId:'A4jp4bH52E8'},
+  {bodyId:'kr4', arrowId:'kr4Arrow', videoId:'iqFPdPMuHVM'},
+  {bodyId:'kr5', arrowId:'kr5Arrow', videoId:'hCrkGZ8shCg'},
+  {bodyId:'kr6', arrowId:'kr6Arrow', videoId:'h0o8EtwCDaQ'}
+];
+
 var cl1TrackList = [
   {bodyId:'cl0', arrowId:'cl0Arrow', videoId:'xW8xJS1N2ek'},
   {bodyId:'cl1', arrowId:'cl1Arrow', videoId:'QkJvh7i-fCc'},
@@ -2737,6 +2843,32 @@ function toggleHebrewVideo() {
     var iframe = document.getElementById('hebrewIframe');
     if (!iframe.getAttribute('src') || iframe.getAttribute('src') === '') {
       iframe.src = 'https://www.youtube.com/embed/YL9sTyc-jk4?enablejsapi=1';
+    }
+  }
+}
+
+// --- Korean ---
+var koreanOpen = false;
+function toggleKorean() {
+  koreanOpen = !koreanOpen;
+  document.getElementById('koreanBody').classList.toggle('show', koreanOpen);
+  document.getElementById('koreanArrow').classList.toggle('open', koreanOpen);
+}
+
+var krOpenStates = {};
+function toggleKrTrack(bodyId, arrowId, videoId) {
+  krOpenStates[bodyId] = !krOpenStates[bodyId];
+  document.getElementById(bodyId).classList.toggle('show', krOpenStates[bodyId]);
+  document.getElementById(arrowId).classList.toggle('open', krOpenStates[bodyId]);
+  if (krOpenStates[bodyId]) {
+    var iframeId = bodyId + 'Iframe';
+    var iframe = document.getElementById(iframeId);
+    if (!iframe.getAttribute('src') || iframe.getAttribute('src') === '') {
+      iframe.src = 'https://www.youtube.com/embed/' + videoId + '?enablejsapi=1';
+      var idx = krTrackList.findIndex(function(t) { return t.bodyId === bodyId; });
+      if (idx >= 0) {
+        iframe.onload = function() { createYTPlayerForTrack(iframeId, krTrackList, idx, krOpenStates, false); };
+      }
     }
   }
 }
