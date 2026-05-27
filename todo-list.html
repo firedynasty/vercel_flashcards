@@ -925,6 +925,18 @@
   </div>
 
   <div class="bible-audio-section">
+    <button class="bible-audio-toggle" id="schumannToggle" onclick="toggleSchumann()">
+      <span>Schumann Resonance 7.83Hz + 852Hz: Instant Nervous System Reset and Deep Grounding</span>
+      <span class="toggle-arrow" id="schumannArrow">▶</span>
+    </button>
+    <div class="bible-audio-body" id="schumannBody">
+      <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;">
+        <iframe id="schumannIframe" width="100%" height="100%" style="position:absolute;top:0;left:0;" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+      </div>
+    </div>
+  </div>
+
+  <div class="bible-audio-section">
     <button class="bible-audio-toggle" id="popClassroomToggle" onclick="togglePopClassroom()">
       <span>Instrumental Pop Music for the Classroom | 2 Hours of Clean Pop Covers for Studying</span>
       <span class="toggle-arrow" id="popClassroomArrow">▶</span>
@@ -2661,6 +2673,19 @@ function toggleDopamineReset() {
     var iframe = document.getElementById('dopamineResetIframe');
     if (!iframe.getAttribute('src') || iframe.getAttribute('src') === '') {
       iframe.src = 'https://www.youtube.com/embed/EnjyNDP0ues?start=2641&enablejsapi=1';
+    }
+  }
+}
+
+var schumannOpen = false;
+function toggleSchumann() {
+  schumannOpen = !schumannOpen;
+  document.getElementById('schumannBody').classList.toggle('show', schumannOpen);
+  document.getElementById('schumannArrow').classList.toggle('open', schumannOpen);
+  if (schumannOpen) {
+    var iframe = document.getElementById('schumannIframe');
+    if (!iframe.getAttribute('src') || iframe.getAttribute('src') === '') {
+      iframe.src = 'https://www.youtube.com/embed/j4Rk3Co-Evc?start=10696&enablejsapi=1';
     }
   }
 }
