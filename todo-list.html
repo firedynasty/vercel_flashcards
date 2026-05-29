@@ -2109,27 +2109,24 @@ function onYouTubeIframeAPIReady() {
   });
 }
 
-// Auto-create YT.Player for any iframe that loads a YouTube embed
-function registerIframeForYT(iframe) {
-  iframe.addEventListener('load', function() {
-    // Defer so createYTPlayerForTrack (if called) runs first
-    setTimeout(function() {
-      if (!ytApiReady) return;
-      var src = iframe.getAttribute('src') || '';
-      if (src.indexOf('youtube.com/embed/') === -1) return;
-      // Skip if already registered by createYTPlayerForTrack
-      if (ytPlayers[iframe.id]) return;
-      ytPlayers[iframe.id] = new YT.Player(iframe.id, {
-        events: {
-          onReady: function(event) {
-            ytPlayersReady[iframe.id] = true;
-            var vol = iframeVolumes[iframe.id] !== undefined ? iframeVolumes[iframe.id] : globalVolume;
-            event.target.setVolume(vol);
-          }
+// Helper: set iframe src AND hook onload to create YT.Player fresh
+// This is the reliable way — player is created when YouTube content just loaded
+function loadYTIframe(iframeId, src) {
+  var iframe = document.getElementById(iframeId);
+  if (!iframe) return;
+  iframe.onload = function() {
+    if (ytPlayers[iframeId] || !ytApiReady) return;
+    ytPlayers[iframeId] = new YT.Player(iframeId, {
+      events: {
+        onReady: function(event) {
+          ytPlayersReady[iframeId] = true;
+          var vol = iframeVolumes[iframeId] !== undefined ? iframeVolumes[iframeId] : globalVolume;
+          event.target.setVolume(vol);
         }
-      });
-    }, 100);
-  });
+      }
+    });
+  };
+  iframe.src = src;
 }
 
 var fhhTrackList = [
@@ -2921,7 +2918,7 @@ function toggleYoutubeVideo() {
   if (youtubeVideoOpen) {
     var iframe = document.getElementById('youtubeIframe');
     if (!iframe.getAttribute('src') || iframe.getAttribute('src') === '') {
-      iframe.src = 'https://www.youtube.com/embed/8Onket44Xbo?enablejsapi=1';
+      loadYTIframe('youtubeIframe', 'https://www.youtube.com/embed/8Onket44Xbo?enablejsapi=1');
     }
   }
 }
@@ -2934,7 +2931,7 @@ function toggleAdhdPiano() {
   if (adhdPianoOpen) {
     var iframe = document.getElementById('adhdPianoIframe');
     if (!iframe.getAttribute('src') || iframe.getAttribute('src') === '') {
-      iframe.src = 'https://www.youtube.com/embed/MyS1ub5EOTI?enablejsapi=1';
+      loadYTIframe('adhdPianoIframe', 'https://www.youtube.com/embed/MyS1ub5EOTI?enablejsapi=1');
     }
   }
 }
@@ -2947,7 +2944,7 @@ function toggleDopamineReset() {
   if (dopamineResetOpen) {
     var iframe = document.getElementById('dopamineResetIframe');
     if (!iframe.getAttribute('src') || iframe.getAttribute('src') === '') {
-      iframe.src = 'https://www.youtube.com/embed/EnjyNDP0ues?start=2641&enablejsapi=1';
+      loadYTIframe('dopamineResetIframe', 'https://www.youtube.com/embed/EnjyNDP0ues?start=2641&enablejsapi=1');
     }
   }
 }
@@ -2960,7 +2957,7 @@ function toggleSchumann() {
   if (schumannOpen) {
     var iframe = document.getElementById('schumannIframe');
     if (!iframe.getAttribute('src') || iframe.getAttribute('src') === '') {
-      iframe.src = 'https://www.youtube.com/embed/j4Rk3Co-Evc?start=10696&enablejsapi=1';
+      loadYTIframe('schumannIframe', 'https://www.youtube.com/embed/j4Rk3Co-Evc?start=10696&enablejsapi=1');
     }
   }
 }
@@ -2973,7 +2970,7 @@ function togglePopClassroom() {
   if (popClassroomOpen) {
     var iframe = document.getElementById('popClassroomIframe');
     if (!iframe.getAttribute('src') || iframe.getAttribute('src') === '') {
-      iframe.src = 'https://www.youtube.com/embed/X-yJhGcS7U4?enablejsapi=1';
+      loadYTIframe('popClassroomIframe', 'https://www.youtube.com/embed/X-yJhGcS7U4?enablejsapi=1');
     }
   }
 }
@@ -2986,7 +2983,7 @@ function toggleClassicalCoding() {
   if (classicalCodingOpen) {
     var iframe = document.getElementById('classicalCodingIframe');
     if (!iframe.getAttribute('src') || iframe.getAttribute('src') === '') {
-      iframe.src = 'https://www.youtube.com/embed/CFhr-5f3Ufk?start=7061&enablejsapi=1';
+      loadYTIframe('classicalCodingIframe', 'https://www.youtube.com/embed/CFhr-5f3Ufk?start=7061&enablejsapi=1');
     }
   }
 }
@@ -2999,7 +2996,7 @@ function toggleMozartNostalgia() {
   if (mozartNostalgiaOpen) {
     var iframe = document.getElementById('mozartNostalgiaIframe');
     if (!iframe.getAttribute('src') || iframe.getAttribute('src') === '') {
-      iframe.src = 'https://www.youtube.com/embed/QmBCD5TsUak?enablejsapi=1';
+      loadYTIframe('mozartNostalgiaIframe', 'https://www.youtube.com/embed/QmBCD5TsUak?enablejsapi=1');
     }
   }
 }
@@ -3012,7 +3009,7 @@ function toggleChopinTechno() {
   if (chopinTechnoOpen) {
     var iframe = document.getElementById('chopinTechnoIframe');
     if (!iframe.getAttribute('src') || iframe.getAttribute('src') === '') {
-      iframe.src = 'https://www.youtube.com/embed/NhtA5AzL7Ts?start=24&enablejsapi=1';
+      loadYTIframe('chopinTechnoIframe', 'https://www.youtube.com/embed/NhtA5AzL7Ts?start=24&enablejsapi=1');
     }
   }
 }
@@ -3025,7 +3022,7 @@ function toggleStraussHouse() {
   if (straussHouseOpen) {
     var iframe = document.getElementById('straussHouseIframe');
     if (!iframe.getAttribute('src') || iframe.getAttribute('src') === '') {
-      iframe.src = 'https://www.youtube.com/embed/Qk-lxrAypxU?enablejsapi=1';
+      loadYTIframe('straussHouseIframe', 'https://www.youtube.com/embed/Qk-lxrAypxU?enablejsapi=1');
     }
   }
 }
@@ -3038,7 +3035,7 @@ function toggleMozartVivaldi() {
   if (mozartVivaldiOpen) {
     var iframe = document.getElementById('mozartVivaldiIframe');
     if (!iframe.getAttribute('src') || iframe.getAttribute('src') === '') {
-      iframe.src = 'https://www.youtube.com/embed/5ybXqnzPunY?enablejsapi=1';
+      loadYTIframe('mozartVivaldiIframe', 'https://www.youtube.com/embed/5ybXqnzPunY?enablejsapi=1');
     }
   }
 }
@@ -3051,7 +3048,7 @@ function toggleAdhdVideo() {
   if (adhdVideoOpen) {
     var iframe = document.getElementById('adhdIframe');
     if (!iframe.getAttribute('src') || iframe.getAttribute('src') === '') {
-      iframe.src = 'https://www.youtube.com/embed/fZCthK3DB9U?start=446&enablejsapi=1';
+      loadYTIframe('adhdIframe', 'https://www.youtube.com/embed/fZCthK3DB9U?start=446&enablejsapi=1');
     }
   }
 }
@@ -3064,7 +3061,7 @@ function toggleHebrewVideo() {
   if (hebrewVideoOpen) {
     var iframe = document.getElementById('hebrewIframe');
     if (!iframe.getAttribute('src') || iframe.getAttribute('src') === '') {
-      iframe.src = 'https://www.youtube.com/embed/YL9sTyc-jk4?enablejsapi=1';
+      loadYTIframe('hebrewIframe', 'https://www.youtube.com/embed/YL9sTyc-jk4?enablejsapi=1');
     }
   }
 }
@@ -3103,7 +3100,7 @@ function togglePerlmanVideo() {
   if (perlmanVideoOpen) {
     var iframe = document.getElementById('perlmanIframe');
     if (!iframe.getAttribute('src') || iframe.getAttribute('src') === '') {
-      iframe.src = 'https://www.youtube.com/embed/NCWxgDuT75o?enablejsapi=1';
+      loadYTIframe('perlmanIframe', 'https://www.youtube.com/embed/NCWxgDuT75o?enablejsapi=1');
     }
   }
 }
@@ -3116,7 +3113,7 @@ function toggleBabySleepVideo() {
   if (babySleepVideoOpen) {
     var iframe = document.getElementById('babySleepIframe');
     if (!iframe.getAttribute('src') || iframe.getAttribute('src') === '') {
-      iframe.src = 'https://www.youtube.com/embed/wEwuJTo2PYU?enablejsapi=1';
+      loadYTIframe('babySleepIframe', 'https://www.youtube.com/embed/wEwuJTo2PYU?enablejsapi=1');
     }
   }
 }
@@ -3129,7 +3126,7 @@ function toggleOmHealingVideo() {
   if (omHealingVideoOpen) {
     var iframe = document.getElementById('omHealingIframe');
     if (!iframe.getAttribute('src') || iframe.getAttribute('src') === '') {
-      iframe.src = 'https://www.youtube.com/embed/kar7_NFzTjE?enablejsapi=1';
+      loadYTIframe('omHealingIframe', 'https://www.youtube.com/embed/kar7_NFzTjE?enablejsapi=1');
     }
   }
 }
@@ -3142,7 +3139,7 @@ function toggleMetronome60() {
   if (metronome60Open) {
     var iframe = document.getElementById('metronome60Iframe');
     if (!iframe.getAttribute('src') || iframe.getAttribute('src') === '') {
-      iframe.src = 'https://www.youtube.com/embed/ymJIXzvDvj4?start=20&enablejsapi=1';
+      loadYTIframe('metronome60Iframe', 'https://www.youtube.com/embed/ymJIXzvDvj4?start=20&enablejsapi=1');
     }
   }
 }
@@ -3255,21 +3252,11 @@ function toggleCl2Track(bodyId, arrowId, videoId) {
 var iframeVolumes = {};
 
 function sendVolumeToIframe(iframeId, vol) {
-  // Use YT.Player API if player is ready, otherwise postMessage fallback
-  if (ytPlayersReady[iframeId] && ytPlayers[iframeId] && typeof ytPlayers[iframeId].setVolume === 'function') {
-    ytPlayers[iframeId].setVolume(vol);
-  } else {
-    var iframe = document.getElementById(iframeId);
-    if (iframe && iframe.contentWindow) {
-      try {
-        iframe.contentWindow.postMessage(JSON.stringify({
-          event: 'command',
-          func: 'setVolume',
-          args: [vol]
-        }), '*');
-      } catch(e) {}
-    }
+  if (ytPlayers[iframeId] && typeof ytPlayers[iframeId].setVolume === 'function') {
+    try { ytPlayers[iframeId].setVolume(vol); } catch(e) {}
   }
+  // Also update iframeVolumes so onReady applies the right vol if player not ready yet
+  iframeVolumes[iframeId] = vol;
 }
 
 function adjustIframeVolume(iframeId, delta) {
@@ -3557,7 +3544,7 @@ function toggleWorshipVideo() {
   if (worshipVideoOpen) {
     var iframe = document.getElementById('worshipIframe');
     if (!iframe.getAttribute('src') || iframe.getAttribute('src') === '') {
-      iframe.src = 'https://www.youtube.com/embed/16iaMUvSnpI?enablejsapi=1';
+      loadYTIframe('worshipIframe', 'https://www.youtube.com/embed/16iaMUvSnpI?enablejsapi=1');
     }
   }
 }
@@ -3570,7 +3557,7 @@ function toggleLearnVideo() {
   if (learnVideoOpen) {
     var iframe = document.getElementById('learnIframe');
     if (!iframe.getAttribute('src') || iframe.getAttribute('src') === '') {
-      iframe.src = 'https://www.youtube.com/embed/1Tg0ptuAzk4?enablejsapi=1';
+      loadYTIframe('learnIframe', 'https://www.youtube.com/embed/1Tg0ptuAzk4?enablejsapi=1');
     }
   }
 }
