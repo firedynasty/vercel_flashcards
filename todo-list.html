@@ -678,6 +678,20 @@
       line-height: 1;
     }
     .vol-btn:hover { background: rgba(255,255,255,0.4); }
+    .soak-btn {
+      background: linear-gradient(45deg, #26A69A, #00897B);
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      padding: 2px 6px;
+      font-size: 10px;
+      font-weight: 700;
+      cursor: pointer;
+      line-height: 1.4;
+    }
+    .soak-btn:hover { filter: brightness(1.2); }
+    .soak-btn.active { background: linear-gradient(45deg, #FF5722, #E64A19); }
+    .soak-btn.paused { background: linear-gradient(45deg, #607D8B, #455A64); }
     .vol-label {
       font-size: 11px;
       min-width: 24px;
@@ -994,6 +1008,66 @@
     <div class="bible-audio-body" id="popClassroomBody">
       <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;">
         <iframe id="popClassroomIframe" width="100%" height="100%" style="position:absolute;top:0;left:0;" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+      </div>
+    </div>
+  </div>
+
+  <div class="bible-audio-section">
+    <button class="bible-audio-toggle" id="classicalCodingToggle" onclick="toggleClassicalCoding()">
+      <span>Classical Music for Coding, Programming, Focus</span>
+      <span class="toggle-arrow" id="classicalCodingArrow">&#9654;</span>
+    </button>
+    <div class="bible-audio-body" id="classicalCodingBody">
+      <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;">
+        <iframe id="classicalCodingIframe" width="100%" height="100%" style="position:absolute;top:0;left:0;" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+      </div>
+    </div>
+  </div>
+
+  <div class="bible-audio-section">
+    <button class="bible-audio-toggle" id="mozartNostalgiaToggle" onclick="toggleMozartNostalgia()">
+      <span>Let Mozart Guide Your Lost Memories (Classic Nostalgia)</span>
+      <span class="toggle-arrow" id="mozartNostalgiaArrow">&#9654;</span>
+    </button>
+    <div class="bible-audio-body" id="mozartNostalgiaBody">
+      <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;">
+        <iframe id="mozartNostalgiaIframe" width="100%" height="100%" style="position:absolute;top:0;left:0;" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+      </div>
+    </div>
+  </div>
+
+  <div class="bible-audio-section">
+    <button class="bible-audio-toggle" id="chopinTechnoToggle" onclick="toggleChopinTechno()">
+      <span>Chopin Techno Mix</span>
+      <span class="toggle-arrow" id="chopinTechnoArrow">&#9654;</span>
+    </button>
+    <div class="bible-audio-body" id="chopinTechnoBody">
+      <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;">
+        <iframe id="chopinTechnoIframe" width="100%" height="100%" style="position:absolute;top:0;left:0;" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+      </div>
+    </div>
+  </div>
+
+  <div class="bible-audio-section">
+    <button class="bible-audio-toggle" id="straussHouseToggle" onclick="toggleStraussHouse()">
+      <span>Strauss x Melodic House | Deep Focus & Work Mix</span>
+      <span class="toggle-arrow" id="straussHouseArrow">&#9654;</span>
+    </button>
+    <div class="bible-audio-body" id="straussHouseBody">
+      <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;">
+        <iframe id="straussHouseIframe" width="100%" height="100%" style="position:absolute;top:0;left:0;" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+      </div>
+    </div>
+  </div>
+
+  <div class="bible-audio-section">
+    <button class="bible-audio-toggle" id="mozartVivaldiToggle" onclick="toggleMozartVivaldi()">
+      <span>Melodic Techno Mozart x Vivaldi</span>
+      <span class="toggle-arrow" id="mozartVivaldiArrow">&#9654;</span>
+    </button>
+    <div class="bible-audio-body" id="mozartVivaldiBody">
+      <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;">
+        <iframe id="mozartVivaldiIframe" width="100%" height="100%" style="position:absolute;top:0;left:0;" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
       </div>
     </div>
   </div>
@@ -2027,7 +2101,35 @@
 <script src="https://www.youtube.com/iframe_api"></script>
 <script>
 var ytApiReady = false;
-function onYouTubeIframeAPIReady() { ytApiReady = true; }
+function onYouTubeIframeAPIReady() {
+  ytApiReady = true;
+  // Observe all iframes: auto-register YT.Player when src is set
+  document.querySelectorAll('.bible-audio-body iframe[id]').forEach(function(iframe) {
+    registerIframeForYT(iframe);
+  });
+}
+
+// Auto-create YT.Player for any iframe that loads a YouTube embed
+function registerIframeForYT(iframe) {
+  iframe.addEventListener('load', function() {
+    // Defer so createYTPlayerForTrack (if called) runs first
+    setTimeout(function() {
+      if (!ytApiReady) return;
+      var src = iframe.getAttribute('src') || '';
+      if (src.indexOf('youtube.com/embed/') === -1) return;
+      // Skip if already registered by createYTPlayerForTrack
+      if (ytPlayers[iframe.id]) return;
+      ytPlayers[iframe.id] = new YT.Player(iframe.id, {
+        events: {
+          onReady: function(event) {
+            var vol = iframeVolumes[iframe.id] !== undefined ? iframeVolumes[iframe.id] : globalVolume;
+            event.target.setVolume(vol);
+          }
+        }
+      });
+    }, 100);
+  });
+}
 
 var fhhTrackList = [
   {bodyId:'fhh0', arrowId:'fhh0Arrow', videoId:'JdgHjNSQ-I0'},
@@ -2104,6 +2206,8 @@ function createYTPlayerForTrack(iframeId, trackList, trackIndex, openStates, aut
   ytPlayers[iframeId] = new YT.Player(iframeId, {
     events: {
       onReady: function(event) {
+        var vol = iframeVolumes[iframeId] !== undefined ? iframeVolumes[iframeId] : globalVolume;
+        event.target.setVolume(vol);
         if (autoplay) event.target.playVideo();
       },
       onStateChange: function(event) {
@@ -2871,6 +2975,71 @@ function togglePopClassroom() {
   }
 }
 
+var classicalCodingOpen = false;
+function toggleClassicalCoding() {
+  classicalCodingOpen = !classicalCodingOpen;
+  document.getElementById('classicalCodingBody').classList.toggle('show', classicalCodingOpen);
+  document.getElementById('classicalCodingArrow').classList.toggle('open', classicalCodingOpen);
+  if (classicalCodingOpen) {
+    var iframe = document.getElementById('classicalCodingIframe');
+    if (!iframe.getAttribute('src') || iframe.getAttribute('src') === '') {
+      iframe.src = 'https://www.youtube.com/embed/CFhr-5f3Ufk?start=7061&enablejsapi=1';
+    }
+  }
+}
+
+var mozartNostalgiaOpen = false;
+function toggleMozartNostalgia() {
+  mozartNostalgiaOpen = !mozartNostalgiaOpen;
+  document.getElementById('mozartNostalgiaBody').classList.toggle('show', mozartNostalgiaOpen);
+  document.getElementById('mozartNostalgiaArrow').classList.toggle('open', mozartNostalgiaOpen);
+  if (mozartNostalgiaOpen) {
+    var iframe = document.getElementById('mozartNostalgiaIframe');
+    if (!iframe.getAttribute('src') || iframe.getAttribute('src') === '') {
+      iframe.src = 'https://www.youtube.com/embed/QmBCD5TsUak?enablejsapi=1';
+    }
+  }
+}
+
+var chopinTechnoOpen = false;
+function toggleChopinTechno() {
+  chopinTechnoOpen = !chopinTechnoOpen;
+  document.getElementById('chopinTechnoBody').classList.toggle('show', chopinTechnoOpen);
+  document.getElementById('chopinTechnoArrow').classList.toggle('open', chopinTechnoOpen);
+  if (chopinTechnoOpen) {
+    var iframe = document.getElementById('chopinTechnoIframe');
+    if (!iframe.getAttribute('src') || iframe.getAttribute('src') === '') {
+      iframe.src = 'https://www.youtube.com/embed/NhtA5AzL7Ts?start=24&enablejsapi=1';
+    }
+  }
+}
+
+var straussHouseOpen = false;
+function toggleStraussHouse() {
+  straussHouseOpen = !straussHouseOpen;
+  document.getElementById('straussHouseBody').classList.toggle('show', straussHouseOpen);
+  document.getElementById('straussHouseArrow').classList.toggle('open', straussHouseOpen);
+  if (straussHouseOpen) {
+    var iframe = document.getElementById('straussHouseIframe');
+    if (!iframe.getAttribute('src') || iframe.getAttribute('src') === '') {
+      iframe.src = 'https://www.youtube.com/embed/Qk-lxrAypxU?enablejsapi=1';
+    }
+  }
+}
+
+var mozartVivaldiOpen = false;
+function toggleMozartVivaldi() {
+  mozartVivaldiOpen = !mozartVivaldiOpen;
+  document.getElementById('mozartVivaldiBody').classList.toggle('show', mozartVivaldiOpen);
+  document.getElementById('mozartVivaldiArrow').classList.toggle('open', mozartVivaldiOpen);
+  if (mozartVivaldiOpen) {
+    var iframe = document.getElementById('mozartVivaldiIframe');
+    if (!iframe.getAttribute('src') || iframe.getAttribute('src') === '') {
+      iframe.src = 'https://www.youtube.com/embed/5ybXqnzPunY?enablejsapi=1';
+    }
+  }
+}
+
 var adhdVideoOpen = false;
 function toggleAdhdVideo() {
   adhdVideoOpen = !adhdVideoOpen;
@@ -3082,15 +3251,12 @@ function toggleCl2Track(bodyId, arrowId, videoId) {
 // --- Volume Controls for YouTube iframes ---
 var iframeVolumes = {};
 function adjustIframeVolume(iframeId, delta) {
-  var iframe = document.getElementById(iframeId);
-  if (!iframe || !iframe.src || iframe.src === '') return;
   if (iframeVolumes[iframeId] === undefined) iframeVolumes[iframeId] = 100;
   iframeVolumes[iframeId] = Math.max(0, Math.min(100, iframeVolumes[iframeId] + delta));
-  iframe.contentWindow.postMessage(JSON.stringify({
-    event: 'command',
-    func: 'setVolume',
-    args: [iframeVolumes[iframeId]]
-  }), '*');
+  // Use YT.Player API if available (reliable), fall back to postMessage
+  if (ytPlayers[iframeId] && typeof ytPlayers[iframeId].setVolume === 'function') {
+    ytPlayers[iframeId].setVolume(iframeVolumes[iframeId]);
+  }
   var label = document.getElementById(iframeId + 'Vol');
   if (label) label.textContent = iframeVolumes[iframeId];
 }
@@ -3099,23 +3265,230 @@ var globalVolume = 100;
 function adjustAllVolumes(delta) {
   globalVolume = Math.max(0, Math.min(100, globalVolume + delta));
   document.getElementById('globalVolLevel').textContent = globalVolume;
-  // Apply to every iframe that has a loaded src
-  var iframes = document.querySelectorAll('.bible-audio-body iframe[id]');
-  iframes.forEach(function(iframe) {
-    if (!iframe.src || iframe.src === '' || iframe.src === 'about:blank') return;
-    var id = iframe.id;
-    iframeVolumes[id] = globalVolume;
-    iframe.contentWindow.postMessage(JSON.stringify({
-      event: 'command',
-      func: 'setVolume',
-      args: [globalVolume]
-    }), '*');
-    var label = document.getElementById(id + 'Vol');
-    if (label) label.textContent = globalVolume;
-  });
+  // Apply to every YT.Player that has been registered
+  for (var id in ytPlayers) {
+    if (ytPlayers[id] && typeof ytPlayers[id].setVolume === 'function') {
+      ytPlayers[id].setVolume(globalVolume);
+      iframeVolumes[id] = globalVolume;
+      var label = document.getElementById(id + 'Vol');
+      if (label) label.textContent = globalVolume;
+    }
+  }
+}
+
+// ============================================
+// SOAKING MODE ENGINE — per-iframe soak with fade
+// ============================================
+var soakStates = {}; // keyed by iframeId
+
+var SOAK_FADE_OUT_MS = 1500;
+var SOAK_FADE_IN_MS = 500;
+var SOAK_FADE_STEPS = 20;
+
+function getSoakState(iframeId) {
+  if (!soakStates[iframeId]) {
+    soakStates[iframeId] = {
+      active: false,
+      playSeconds: 0,
+      pauseSeconds: 0,
+      timeout: null,
+      countdownInterval: null,
+      fadeInterval: null,
+      originalVolume: 100,
+      btn: null
+    };
+  }
+  return soakStates[iframeId];
+}
+
+function toggleSoak(iframeId, playS, pauseS, btn) {
+  var s = getSoakState(iframeId);
+  if (s.active && s.playSeconds === playS && s.pauseSeconds === pauseS) {
+    stopSoak(iframeId);
+  } else {
+    // Stop any other soak on this iframe first
+    if (s.active) stopSoak(iframeId);
+    startSoak(iframeId, playS, pauseS, btn);
+  }
+}
+
+function startSoak(iframeId, playS, pauseS, btn) {
+  var s = getSoakState(iframeId);
+  s.active = true;
+  s.playSeconds = playS;
+  s.pauseSeconds = pauseS;
+  s.btn = btn;
+  var p = ytPlayers[iframeId];
+  if (p && typeof p.getVolume === 'function') {
+    s.originalVolume = p.getVolume();
+  } else {
+    s.originalVolume = iframeVolumes[iframeId] !== undefined ? iframeVolumes[iframeId] : 100;
+  }
+
+  // Ensure playing
+  if (p && typeof p.playVideo === 'function') p.playVideo();
+
+  // Update all soak buttons for this iframe — highlight active one
+  updateSoakButtons(iframeId, playS, pauseS);
+  soakPlayPhase(iframeId, playS);
+}
+
+function stopSoak(iframeId) {
+  var s = getSoakState(iframeId);
+  s.active = false;
+  if (s.timeout) { clearTimeout(s.timeout); s.timeout = null; }
+  if (s.countdownInterval) { clearInterval(s.countdownInterval); s.countdownInterval = null; }
+  if (s.fadeInterval) { clearInterval(s.fadeInterval); s.fadeInterval = null; }
+  // Restore volume
+  var p = ytPlayers[iframeId];
+  if (p && typeof p.setVolume === 'function') p.setVolume(s.originalVolume);
+  // Reset all soak buttons for this iframe
+  resetSoakButtons(iframeId);
+}
+
+function soakPlayPhase(iframeId, secondsLeft) {
+  var s = getSoakState(iframeId);
+  if (!s.active) return;
+
+  updateActiveSoakBtn(s, 'Soak ' + secondsLeft, 'active');
+
+  s.countdownInterval = setInterval(function() {
+    secondsLeft--;
+    if (secondsLeft <= 0) {
+      clearInterval(s.countdownInterval);
+      s.countdownInterval = null;
+      return;
+    }
+    if (s.active) updateActiveSoakBtn(s, 'Soak ' + secondsLeft, 'active');
+  }, 1000);
+
+  var fadeStartDelay = Math.max(0, (s.playSeconds * 1000) - SOAK_FADE_OUT_MS);
+  s.timeout = setTimeout(function() {
+    if (!s.active) return;
+    soakFadeOut(iframeId, function() {
+      if (!s.active) return;
+      // Check if video ended
+      var p = ytPlayers[iframeId];
+      if (p && typeof p.getPlayerState === 'function' && p.getPlayerState() === 0) {
+        stopSoak(iframeId);
+        return;
+      }
+      // Pause
+      if (p && typeof p.pauseVideo === 'function') p.pauseVideo();
+      soakPausePhase(iframeId, s.pauseSeconds);
+    });
+  }, fadeStartDelay);
+}
+
+function soakPausePhase(iframeId, secondsLeft) {
+  var s = getSoakState(iframeId);
+  if (!s.active) return;
+
+  updateActiveSoakBtn(s, 'Pause ' + secondsLeft, 'paused');
+
+  s.countdownInterval = setInterval(function() {
+    secondsLeft--;
+    if (secondsLeft <= 0) {
+      clearInterval(s.countdownInterval);
+      s.countdownInterval = null;
+      return;
+    }
+    if (s.active) updateActiveSoakBtn(s, 'Pause ' + secondsLeft, 'paused');
+  }, 1000);
+
+  s.timeout = setTimeout(function() {
+    if (!s.active) return;
+    var p = ytPlayers[iframeId];
+    if (p && typeof p.playVideo === 'function') p.playVideo();
+    soakFadeIn(iframeId);
+    soakPlayPhase(iframeId, s.playSeconds);
+  }, s.pauseSeconds * 1000);
+}
+
+function soakFadeOut(iframeId, callback) {
+  var s = getSoakState(iframeId);
+  var p = ytPlayers[iframeId];
+  if (!p || typeof p.setVolume !== 'function') { callback(); return; }
+  var startVol = p.getVolume();
+  s.originalVolume = startVol;
+  var step = 0;
+  var stepDur = SOAK_FADE_OUT_MS / SOAK_FADE_STEPS;
+  var volStep = startVol / SOAK_FADE_STEPS;
+  s.fadeInterval = setInterval(function() {
+    step++;
+    var newVol = Math.max(0, startVol - (volStep * step));
+    p.setVolume(newVol);
+    if (step >= SOAK_FADE_STEPS || newVol <= 0) {
+      clearInterval(s.fadeInterval);
+      s.fadeInterval = null;
+      p.setVolume(0);
+      callback();
+    }
+  }, stepDur);
+}
+
+function soakFadeIn(iframeId) {
+  var s = getSoakState(iframeId);
+  var p = ytPlayers[iframeId];
+  if (!p || typeof p.setVolume !== 'function') return;
+  var targetVol = s.originalVolume || 100;
+  var step = 0;
+  var stepDur = SOAK_FADE_IN_MS / SOAK_FADE_STEPS;
+  var volStep = targetVol / SOAK_FADE_STEPS;
+  if (s.fadeInterval) clearInterval(s.fadeInterval);
+  s.fadeInterval = setInterval(function() {
+    step++;
+    var newVol = Math.min(targetVol, volStep * step);
+    p.setVolume(newVol);
+    if (step >= SOAK_FADE_STEPS || newVol >= targetVol) {
+      clearInterval(s.fadeInterval);
+      s.fadeInterval = null;
+      p.setVolume(targetVol);
+    }
+  }, stepDur);
+}
+
+function updateActiveSoakBtn(s, text, cls) {
+  if (!s.btn) return;
+  s.btn.textContent = text;
+  s.btn.className = 'soak-btn ' + cls;
+}
+
+function updateSoakButtons(iframeId, activePlayS, activePauseS) {
+  var container = document.getElementById(iframeId + 'SoakBtns');
+  if (!container) return;
+  var btns = container.querySelectorAll('.soak-btn');
+  for (var i = 0; i < btns.length; i++) {
+    var bp = parseInt(btns[i].getAttribute('data-play'));
+    var bpa = parseFloat(btns[i].getAttribute('data-pause'));
+    if (bp === activePlayS && bpa === activePauseS) {
+      btns[i].className = 'soak-btn active';
+    } else {
+      btns[i].className = 'soak-btn';
+    }
+  }
+}
+
+function resetSoakButtons(iframeId) {
+  var container = document.getElementById(iframeId + 'SoakBtns');
+  if (!container) return;
+  var btns = container.querySelectorAll('.soak-btn');
+  for (var i = 0; i < btns.length; i++) {
+    var p = btns[i].getAttribute('data-play');
+    var pa = btns[i].getAttribute('data-pause');
+    btns[i].textContent = 'Soak ' + p + '/' + pa;
+    btns[i].className = 'soak-btn';
+  }
 }
 
 document.addEventListener('DOMContentLoaded', function() {
+  var soakConfigs = [
+    {play: 10, pause: 7},
+    {play: 10, pause: 4},
+    {play: 10, pause: 2},
+    {play: 10, pause: 1.5}
+  ];
+
   var allSections = document.querySelectorAll('.bible-audio-section');
   allSections.forEach(function(section) {
     var body = section.querySelector(':scope > .bible-audio-body');
@@ -3134,6 +3507,26 @@ document.addEventListener('DOMContentLoaded', function() {
       '<button class="vol-btn" onclick="event.stopPropagation();adjustIframeVolume(\'' + iframeId + '\',10)">+</button>';
     var arrow = btn.querySelector('.toggle-arrow');
     btn.insertBefore(volControls, arrow);
+
+    // Add soak buttons row inside the body, above the iframe
+    var soakRow = document.createElement('div');
+    soakRow.id = iframeId + 'SoakBtns';
+    soakRow.style.cssText = 'display:flex;gap:4px;padding:4px 8px;flex-wrap:wrap;';
+    for (var i = 0; i < soakConfigs.length; i++) {
+      (function(cfg) {
+        var sb = document.createElement('button');
+        sb.className = 'soak-btn';
+        sb.textContent = 'Soak ' + cfg.play + '/' + cfg.pause;
+        sb.setAttribute('data-play', cfg.play);
+        sb.setAttribute('data-pause', cfg.pause);
+        sb.onclick = function(e) {
+          e.stopPropagation();
+          toggleSoak(iframeId, cfg.play, cfg.pause, sb);
+        };
+        soakRow.appendChild(sb);
+      })(soakConfigs[i]);
+    }
+    body.insertBefore(soakRow, body.firstChild);
   });
 });
 
