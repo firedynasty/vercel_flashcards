@@ -2122,6 +2122,7 @@ function registerIframeForYT(iframe) {
       ytPlayers[iframe.id] = new YT.Player(iframe.id, {
         events: {
           onReady: function(event) {
+            ytPlayersReady[iframe.id] = true;
             var vol = iframeVolumes[iframe.id] !== undefined ? iframeVolumes[iframe.id] : globalVolume;
             event.target.setVolume(vol);
           }
@@ -2200,12 +2201,14 @@ var cl2TrackList = [
 ];
 
 var ytPlayers = {};
+var ytPlayersReady = {};
 
 function createYTPlayerForTrack(iframeId, trackList, trackIndex, openStates, autoplay) {
   if (ytPlayers[iframeId] || !ytApiReady) return;
   ytPlayers[iframeId] = new YT.Player(iframeId, {
     events: {
       onReady: function(event) {
+        ytPlayersReady[iframeId] = true;
         var vol = iframeVolumes[iframeId] !== undefined ? iframeVolumes[iframeId] : globalVolume;
         event.target.setVolume(vol);
         if (autoplay) event.target.playVideo();
@@ -3250,13 +3253,29 @@ function toggleCl2Track(bodyId, arrowId, videoId) {
 
 // --- Volume Controls for YouTube iframes ---
 var iframeVolumes = {};
+
+function sendVolumeToIframe(iframeId, vol) {
+  // Use YT.Player API if player is ready, otherwise postMessage fallback
+  if (ytPlayersReady[iframeId] && ytPlayers[iframeId] && typeof ytPlayers[iframeId].setVolume === 'function') {
+    ytPlayers[iframeId].setVolume(vol);
+  } else {
+    var iframe = document.getElementById(iframeId);
+    if (iframe && iframe.contentWindow) {
+      try {
+        iframe.contentWindow.postMessage(JSON.stringify({
+          event: 'command',
+          func: 'setVolume',
+          args: [vol]
+        }), '*');
+      } catch(e) {}
+    }
+  }
+}
+
 function adjustIframeVolume(iframeId, delta) {
   if (iframeVolumes[iframeId] === undefined) iframeVolumes[iframeId] = 100;
   iframeVolumes[iframeId] = Math.max(0, Math.min(100, iframeVolumes[iframeId] + delta));
-  // Use YT.Player API if available (reliable), fall back to postMessage
-  if (ytPlayers[iframeId] && typeof ytPlayers[iframeId].setVolume === 'function') {
-    ytPlayers[iframeId].setVolume(iframeVolumes[iframeId]);
-  }
+  sendVolumeToIframe(iframeId, iframeVolumes[iframeId]);
   var label = document.getElementById(iframeId + 'Vol');
   if (label) label.textContent = iframeVolumes[iframeId];
 }
@@ -3265,15 +3284,17 @@ var globalVolume = 100;
 function adjustAllVolumes(delta) {
   globalVolume = Math.max(0, Math.min(100, globalVolume + delta));
   document.getElementById('globalVolLevel').textContent = globalVolume;
-  // Apply to every YT.Player that has been registered
-  for (var id in ytPlayers) {
-    if (ytPlayers[id] && typeof ytPlayers[id].setVolume === 'function') {
-      ytPlayers[id].setVolume(globalVolume);
-      iframeVolumes[id] = globalVolume;
-      var label = document.getElementById(id + 'Vol');
-      if (label) label.textContent = globalVolume;
-    }
-  }
+  // Apply to every iframe that has a loaded src
+  var iframes = document.querySelectorAll('.bible-audio-body iframe[id]');
+  iframes.forEach(function(iframe) {
+    var src = iframe.getAttribute('src') || '';
+    if (!src || src.indexOf('youtube.com/embed/') === -1) return;
+    var id = iframe.id;
+    iframeVolumes[id] = globalVolume;
+    sendVolumeToIframe(id, globalVolume);
+    var label = document.getElementById(id + 'Vol');
+    if (label) label.textContent = globalVolume;
+  });
 }
 
 // ============================================
@@ -3318,14 +3339,14 @@ function startSoak(iframeId, playS, pauseS, btn) {
   s.playSeconds = playS;
   s.pauseSeconds = pauseS;
   s.btn = btn;
-  var p = ytPlayers[iframeId];
-  if (p && typeof p.getVolume === 'function') {
-    s.originalVolume = p.getVolume();
+  if (ytPlayersReady[iframeId] && ytPlayers[iframeId] && typeof ytPlayers[iframeId].getVolume === 'function') {
+    s.originalVolume = ytPlayers[iframeId].getVolume();
   } else {
     s.originalVolume = iframeVolumes[iframeId] !== undefined ? iframeVolumes[iframeId] : 100;
   }
 
   // Ensure playing
+  var p = ytPlayersReady[iframeId] ? ytPlayers[iframeId] : null;
   if (p && typeof p.playVideo === 'function') p.playVideo();
 
   // Update all soak buttons for this iframe — highlight active one
@@ -3340,8 +3361,7 @@ function stopSoak(iframeId) {
   if (s.countdownInterval) { clearInterval(s.countdownInterval); s.countdownInterval = null; }
   if (s.fadeInterval) { clearInterval(s.fadeInterval); s.fadeInterval = null; }
   // Restore volume
-  var p = ytPlayers[iframeId];
-  if (p && typeof p.setVolume === 'function') p.setVolume(s.originalVolume);
+  sendVolumeToIframe(iframeId, s.originalVolume);
   // Reset all soak buttons for this iframe
   resetSoakButtons(iframeId);
 }
@@ -3368,7 +3388,7 @@ function soakPlayPhase(iframeId, secondsLeft) {
     soakFadeOut(iframeId, function() {
       if (!s.active) return;
       // Check if video ended
-      var p = ytPlayers[iframeId];
+      var p = ytPlayersReady[iframeId] ? ytPlayers[iframeId] : null;
       if (p && typeof p.getPlayerState === 'function' && p.getPlayerState() === 0) {
         stopSoak(iframeId);
         return;
@@ -3398,7 +3418,7 @@ function soakPausePhase(iframeId, secondsLeft) {
 
   s.timeout = setTimeout(function() {
     if (!s.active) return;
-    var p = ytPlayers[iframeId];
+    var p = ytPlayersReady[iframeId] ? ytPlayers[iframeId] : null;
     if (p && typeof p.playVideo === 'function') p.playVideo();
     soakFadeIn(iframeId);
     soakPlayPhase(iframeId, s.playSeconds);
@@ -3407,9 +3427,10 @@ function soakPausePhase(iframeId, secondsLeft) {
 
 function soakFadeOut(iframeId, callback) {
   var s = getSoakState(iframeId);
-  var p = ytPlayers[iframeId];
-  if (!p || typeof p.setVolume !== 'function') { callback(); return; }
-  var startVol = p.getVolume();
+  var startVol = s.originalVolume || 100;
+  if (ytPlayersReady[iframeId] && ytPlayers[iframeId] && typeof ytPlayers[iframeId].getVolume === 'function') {
+    startVol = ytPlayers[iframeId].getVolume();
+  }
   s.originalVolume = startVol;
   var step = 0;
   var stepDur = SOAK_FADE_OUT_MS / SOAK_FADE_STEPS;
@@ -3417,11 +3438,11 @@ function soakFadeOut(iframeId, callback) {
   s.fadeInterval = setInterval(function() {
     step++;
     var newVol = Math.max(0, startVol - (volStep * step));
-    p.setVolume(newVol);
+    sendVolumeToIframe(iframeId, newVol);
     if (step >= SOAK_FADE_STEPS || newVol <= 0) {
       clearInterval(s.fadeInterval);
       s.fadeInterval = null;
-      p.setVolume(0);
+      sendVolumeToIframe(iframeId, 0);
       callback();
     }
   }, stepDur);
@@ -3429,8 +3450,6 @@ function soakFadeOut(iframeId, callback) {
 
 function soakFadeIn(iframeId) {
   var s = getSoakState(iframeId);
-  var p = ytPlayers[iframeId];
-  if (!p || typeof p.setVolume !== 'function') return;
   var targetVol = s.originalVolume || 100;
   var step = 0;
   var stepDur = SOAK_FADE_IN_MS / SOAK_FADE_STEPS;
@@ -3439,11 +3458,11 @@ function soakFadeIn(iframeId) {
   s.fadeInterval = setInterval(function() {
     step++;
     var newVol = Math.min(targetVol, volStep * step);
-    p.setVolume(newVol);
+    sendVolumeToIframe(iframeId, newVol);
     if (step >= SOAK_FADE_STEPS || newVol >= targetVol) {
       clearInterval(s.fadeInterval);
       s.fadeInterval = null;
-      p.setVolume(targetVol);
+      sendVolumeToIframe(iframeId, targetVol);
     }
   }, stepDur);
 }
