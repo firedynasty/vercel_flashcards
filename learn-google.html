@@ -188,7 +188,8 @@
     pointer-events: none;
     z-index: 20;
   }
-  /* tooltip is now shown via JS on checkbox hover */
+  /* when toggle is on, all tooltips are always visible */
+  .tooltip-on .def-tip { display: block !important; position: static; background: #1e293b; border-radius: 0 0 12px 12px; box-shadow: none; margin-top: -1px; }
 
   /* ── HOVER-REVEAL SLIDER ── */
   .tip-toggle {
@@ -391,6 +392,7 @@
         <div class="tip-knob on" id="tipKnob"></div>
       </div>
     </div>
+    <button class="try-btn" id="toggleAllTryBtn" onclick="toggleAllExpand()">&#9660; Open All</button>
     <button class="btn outline sm" id="exportAllBtn" style="display:none" onclick="exportAll()">&#128203; Export All</button>
   </div>
 </div>
@@ -615,6 +617,20 @@ function buildCard(row, fi) {
     return function() { toggleExpand(capturedFI); };
   })(fi));
 
+  // Clear button
+  var clearBtn = document.createElement('button');
+  clearBtn.className = 'try-btn';
+  clearBtn.textContent = '\u2715 Clear(esc)';
+  clearBtn.title = 'Clear the answer';
+  clearBtn.addEventListener('click', (function(capturedIdx) {
+    return function(e) {
+      e.stopPropagation();
+      var ta = document.getElementById('ta-' + capturedIdx);
+      if (ta) { ta.value = ''; ta.focus(); }
+      saveAnswer(capturedIdx, '');
+    };
+  })(idx));
+
   // Actions
   var actions = document.createElement('div');
   actions.className = 'card-actions';
@@ -638,6 +654,7 @@ function buildCard(row, fi) {
 
   header.appendChild(cb);
   header.appendChild(termEl);
+  header.appendChild(clearBtn);
   header.appendChild(actions);
   card.appendChild(header);
 
@@ -677,13 +694,6 @@ function buildCard(row, fi) {
   tip.textContent = row.definition;
   card.appendChild(tip);
 
-  // Show tooltip only on checkbox hover
-  cb.addEventListener('mouseenter', function() {
-    if (tooltipOn) tip.style.display = 'block';
-  });
-  cb.addEventListener('mouseleave', function() {
-    tip.style.display = 'none';
-  });
 
   return card;
 }
@@ -709,6 +719,32 @@ function toggleExpand(fi) {
     tryBtn.classList.remove('open');
     tryBtn.textContent = '\u25bc Try';
   }
+}
+
+// ── TOGGLE ALL EXPAND ──
+var allExpanded = false;
+function toggleAllExpand() {
+  allExpanded = !allExpanded;
+  var btn = document.getElementById('toggleAllTryBtn');
+  btn.textContent = allExpanded ? '\u25b2 Close All' : '\u25bc Open All';
+  btn.classList.toggle('open', allExpanded);
+
+  filteredVocab.forEach(function(row) {
+    var idx = row.idx;
+    expanded[idx] = allExpanded;
+    var area = document.getElementById('area-' + idx);
+    var tryBtn = document.getElementById('trybtn-' + idx);
+    if (!area || !tryBtn) return;
+    if (allExpanded) {
+      area.classList.add('open');
+      tryBtn.classList.add('open');
+      tryBtn.textContent = '\u25b2 Hide';
+    } else {
+      area.classList.remove('open');
+      tryBtn.classList.remove('open');
+      tryBtn.textContent = '\u25bc Try';
+    }
+  });
 }
 
 // ── SAVE ANSWER ──
@@ -1029,6 +1065,7 @@ function readFile(file) {
       // Show control bar, cards area, and export button
       document.getElementById('controlBar').classList.add('active');
       document.getElementById('cardsArea').classList.add('active');
+      if (tooltipOn) document.getElementById('cardsArea').classList.add('tooltip-on');
       document.getElementById('exportAllBtn').style.display = '';
 
       // Collapse upload zone
@@ -1267,6 +1304,7 @@ function onGSectionSelect() {
   // Show control bar and cards
   document.getElementById('controlBar').classList.add('active');
   document.getElementById('cardsArea').classList.add('active');
+  if (tooltipOn) document.getElementById('cardsArea').classList.add('tooltip-on');
   document.getElementById('exportAllBtn').style.display = '';
 
   // Hide upload zone but keep Google Sheets controls visible
@@ -1277,9 +1315,22 @@ function onGSectionSelect() {
   filterAndRender();
 }
 
-// ── KEYBOARD: Escape closes modal ──
+// ── KEYBOARD: Escape ──
 document.addEventListener('keydown', function(e) {
-  if (e.key === 'Escape') closeModal();
+  if (e.key === 'Escape') {
+    // If a textarea is focused, clear it for re-typing practice
+    if (document.activeElement && document.activeElement.tagName === 'TEXTAREA') {
+      document.activeElement.value = '';
+      var id = document.activeElement.id; // e.g. "ta-3"
+      if (id && id.indexOf('ta-') === 0) {
+        var idx = parseInt(id.slice(3));
+        saveAnswer(idx, '');
+      }
+      e.preventDefault();
+      return;
+    }
+    closeModal();
+  }
 });
 </script>
 </body>
