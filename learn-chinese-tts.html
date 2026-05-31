@@ -393,9 +393,11 @@
       <div class="setup-row">
         <input type="file" id="folderInput" webkitdirectory style="display:none">
         <button class="btn primary" onclick="document.getElementById('folderInput').click()">Drop Folder</button>
+        <input type="file" id="fileInput" accept=".csv,.txt,.xlsx,.xls" style="display:none">
+        <button class="btn outline" onclick="document.getElementById('fileInput').click()">Drop File</button>
         <span id="folderName" style="font-size:12px;color:#888;font-family:monospace;">No folder selected</span>
       </div>
-      <div class="hint">Picks the first .csv and all .mp4 files from the top level of the folder.</div>
+      <div class="hint">Picks the first .csv, .txt (;delimited), or .xlsx and all .mp4 files from the top level of the folder.</div>
 
       <hr style="border:none;border-top:1px solid #eee;margin:12px 0;">
 
@@ -472,6 +474,7 @@
       </div>
       <div class="sep"></div>
       <button class="btn outline" style="font-size:11px;padding:4px 10px;" onclick="exportAll()">&#128203; Export All</button>
+      <button class="try-btn" id="toggleAllTryBtn" onclick="toggleAllExpand()">&#9660; Open All</button>
     </div>
 
     <!-- Export compare modal -->
@@ -558,6 +561,7 @@ let showSentences = localStorage.getItem('chineseTts_showSentences') !== null ? 
 let tooltipOn = false;
 let userAnswers = {};  // index -> string
 let expanded = {};     // index -> bool
+let allExpanded = false;
 
 // ── OPENAI API KEY (localStorage) ──
 function getApiKey() {
@@ -749,6 +753,25 @@ function toggleExpand(i) {
     area.classList.remove('open');
     if (tryBtn) { tryBtn.classList.remove('open'); tryBtn.textContent = '\u270e Answer'; }
   }
+}
+
+// ── TOGGLE ALL EXPAND ──
+function toggleAllExpand() {
+  allExpanded = !allExpanded;
+  var btn = document.getElementById('toggleAllTryBtn');
+  btn.textContent = allExpanded ? '\u25b2 Close All' : '\u25bc Open All';
+  btn.classList.toggle('open', allExpanded);
+
+  filteredRows.forEach(function(row, i) {
+    expanded[i] = allExpanded;
+    var area = document.getElementById('area-' + i);
+    var tryBtn = document.getElementById('trybtn-' + i);
+    if (area) area.classList.toggle('open', allExpanded);
+    if (tryBtn) {
+      tryBtn.classList.toggle('open', allExpanded);
+      tryBtn.textContent = allExpanded ? '\u25b2 Hide' : '\u270e Answer';
+    }
+  });
 }
 
 // ── SPEAK LINE (click on line) ──
@@ -1021,6 +1044,16 @@ function renderLyrics() {
     area.appendChild(ta);
     area.appendChild(hint);
     card.appendChild(area);
+
+    // When Open All is active, hover auto-focuses textarea
+    card.addEventListener('mouseenter', (function(capturedI) {
+      return function() {
+        if (allExpanded) {
+          var t = document.getElementById('ta-' + capturedI);
+          if (t) t.focus();
+        }
+      };
+    })(i));
 
     // Hover-reveal tooltip
     var tip = document.createElement('div');
@@ -1390,6 +1423,13 @@ document.addEventListener('keydown', function(e) {
     var hovered = document.querySelector('.vocab-card:hover');
     if (hovered) hovered.click();
   }
+  // Escape clears focused textarea
+  if (e.key === 'Escape' && e.target.matches('textarea')) {
+    var ta = e.target;
+    ta.value = '';
+    var idMatch = ta.id.match(/^ta-(\d+)$/);
+    if (idMatch) userAnswers[parseInt(idMatch[1])] = '';
+  }
 });
 
 // ── DROP FOLDER ──
@@ -1555,22 +1595,69 @@ document.getElementById('folderInput').addEventListener('change', function() {
 
   document.getElementById('folderName').textContent = folderName;
 
-  // Find first .csv
+  // Find data file: .csv first, then .txt, then .xlsx
   var csvFile = topLevel.find(function(f) { return /\.csv$/i.test(f.name); });
+  var txtFile = !csvFile ? topLevel.find(function(f) { return /\.txt$/i.test(f.name); }) : null;
+  var xlsxFile = (!csvFile && !txtFile) ? topLevel.find(function(f) { return /\.xlsx?$/i.test(f.name); }) : null;
+  var dataFile = csvFile || txtFile || xlsxFile;
   // Find all .mp4
   var mp4Files = topLevel.filter(function(f) { return /\.mp4$/i.test(f.name); });
   mp4Files.sort(function(a, b) { return a.name.localeCompare(b.name); });
 
-  var parts = [];
-  if (csvFile) parts.push('CSV: ' + csvFile.name);
-  if (mp4Files.length) parts.push(mp4Files.length + ' video(s)');
-  if (!csvFile && !mp4Files.length) { setStatus('No .csv or .mp4 found in folder'); return; }
+  if (!dataFile && !mp4Files.length) { setStatus('No .csv/.txt/.xlsx or .mp4 found in folder'); return; }
 
   // Load videos
   loadVideos(mp4Files);
 
-  // Load CSV
-  if (csvFile) {
+  // Load data file
+  if (xlsxFile) {
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      var wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+      gdriveWorkbook = wb;
+      var sel = document.getElementById('sheetSelect');
+      sel.innerHTML = '<option value="">-- select sheet --</option>';
+      wb.SheetNames.forEach(function(name) {
+        var opt = document.createElement('option');
+        opt.value = name; opt.textContent = name;
+        sel.appendChild(opt);
+      });
+      sel.disabled = false;
+      if (wb.SheetNames.length === 1) {
+        sel.value = wb.SheetNames[0];
+        onSheetSelect();
+        toggleSetup();
+      } else {
+        setStatus('Loaded "' + xlsxFile.name + '" — ' + wb.SheetNames.length + ' sheet(s). Pick a sheet.');
+      }
+    };
+    reader.readAsArrayBuffer(xlsxFile);
+  } else if (txtFile) {
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      var text = e.target.result;
+      var delim = text.indexOf(';') >= 0 ? ';' : text.indexOf('\t') >= 0 ? '\t' : ':';
+      var lines = text.split('\n');
+      var csvLines = ['Chinese,Romanization,English'];
+      var sectionNum = 0;
+      lines.forEach(function(line) {
+        line = line.trim();
+        if (!line) { sectionNum++; csvLines.push('Section ' + sectionNum + ',,'); return; }
+        var parts = line.split(delim);
+        if (parts.length < 2) return;
+        var chinese = parts[0].trim();
+        var rest = parts.slice(1).join(delim).trim();
+        var roman = '', english = rest;
+        var parenMatch = rest.match(/^(.*?)\s*\(([^)]+)\)\s*$/);
+        if (parenMatch) { english = parenMatch[1].trim(); roman = parenMatch[2].trim(); }
+        function esc(s) { return s.indexOf(',') >= 0 ? '"' + s.replace(/"/g, '""') + '"' : s; }
+        csvLines.push(esc(chinese) + ',' + esc(roman) + ',' + esc(english));
+      });
+      loadCsvText(csvLines.join('\n'), txtFile.name);
+      toggleSetup();
+    };
+    reader.readAsText(txtFile);
+  } else if (csvFile) {
     var reader = new FileReader();
     reader.onload = function(e) {
       loadCsvText(e.target.result, csvFile.name);
@@ -1578,8 +1665,85 @@ document.getElementById('folderInput').addEventListener('change', function() {
     };
     reader.readAsText(csvFile);
   } else {
-    setStatus('No .csv found — loaded ' + mp4Files.length + ' video(s) only');
+    setStatus('No data file found — loaded ' + mp4Files.length + ' video(s) only');
     toggleSetup();
+  }
+});
+
+// ── DROP FILE (single CSV or XLSX) ──
+document.getElementById('fileInput').addEventListener('change', function() {
+  var file = this.files[0];
+  if (!file) return;
+  document.getElementById('folderName').textContent = file.name;
+
+  if (/\.xlsx?$/i.test(file.name)) {
+    // Parse XLSX with SheetJS
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      var wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+      // Populate the sheet dropdown for selection
+      gdriveWorkbook = wb;
+      var sel = document.getElementById('sheetSelect');
+      sel.innerHTML = '<option value="">-- select sheet --</option>';
+      wb.SheetNames.forEach(function(name) {
+        var opt = document.createElement('option');
+        opt.value = name; opt.textContent = name;
+        sel.appendChild(opt);
+      });
+      sel.disabled = false;
+      if (wb.SheetNames.length === 1) {
+        sel.value = wb.SheetNames[0];
+        onSheetSelect();
+        toggleSetup();
+      } else {
+        setStatus('Loaded "' + file.name + '" — ' + wb.SheetNames.length + ' sheet(s). Pick a sheet.');
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  } else if (/\.txt$/i.test(file.name)) {
+    // TXT file — detect delimiter and convert to CSV
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      var text = e.target.result;
+      var delim = text.indexOf(';') >= 0 ? ';' : text.indexOf('\t') >= 0 ? '\t' : ':';
+      var lines = text.split('\n');
+      var csvLines = ['Chinese,Romanization,English'];
+      var sectionNum = 0;
+      lines.forEach(function(line) {
+        line = line.trim();
+        if (!line) {
+          // Empty line = section break
+          sectionNum++;
+          csvLines.push('Section ' + sectionNum + ',,');
+          return;
+        }
+        var parts = line.split(delim);
+        if (parts.length < 2) return;
+        var chinese = parts[0].trim();
+        var rest = parts.slice(1).join(delim).trim();
+        // Extract romanization from parentheses: "english (romanization)"
+        var roman = '', english = rest;
+        var parenMatch = rest.match(/^(.*?)\s*\(([^)]+)\)\s*$/);
+        if (parenMatch) {
+          english = parenMatch[1].trim();
+          roman = parenMatch[2].trim();
+        }
+        // CSV-escape fields with commas
+        function esc(s) { return s.indexOf(',') >= 0 ? '"' + s.replace(/"/g, '""') + '"' : s; }
+        csvLines.push(esc(chinese) + ',' + esc(roman) + ',' + esc(english));
+      });
+      loadCsvText(csvLines.join('\n'), file.name);
+      toggleSetup();
+    };
+    reader.readAsText(file);
+  } else {
+    // Plain CSV
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      loadCsvText(e.target.result, file.name);
+      toggleSetup();
+    };
+    reader.readAsText(file);
   }
 });
 
