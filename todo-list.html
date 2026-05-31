@@ -1148,6 +1148,18 @@
   </div>
 
   <div class="bible-audio-section">
+    <button class="bible-audio-toggle" id="paganiniToggle" onclick="togglePaganini()">
+      <span>Paganini Techno Mix II (Inspired by Niccolò Paganini) – Hypnotic Violin for Deep</span>
+      <span class="toggle-arrow" id="paganiniArrow">&#9654;</span>
+    </button>
+    <div class="bible-audio-body" id="paganiniBody">
+      <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;">
+        <iframe id="paganiniIframe" width="100%" height="100%" style="position:absolute;top:0;left:0;" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+      </div>
+    </div>
+  </div>
+
+  <div class="bible-audio-section">
     <button class="bible-audio-toggle" id="hebrewVideoToggle" onclick="toggleHebrewVideo()">
       <span>BoA (보아) - Everybody Knows [Han/Rom/Eng Lyrics]</span>
       <span class="toggle-arrow" id="hebrewToggleArrow">▶</span>
@@ -3111,6 +3123,19 @@ function toggleMozartVivaldi() {
     var iframe = document.getElementById('mozartVivaldiIframe');
     if (!iframe.getAttribute('src') || iframe.getAttribute('src') === '') {
       loadYTIframe('mozartVivaldiIframe', 'https://www.youtube.com/embed/5ybXqnzPunY?enablejsapi=1');
+    }
+  }
+}
+
+var paganiniOpen = false;
+function togglePaganini() {
+  paganiniOpen = !paganiniOpen;
+  document.getElementById('paganiniBody').classList.toggle('show', paganiniOpen);
+  document.getElementById('paganiniArrow').classList.toggle('open', paganiniOpen);
+  if (paganiniOpen) {
+    var iframe = document.getElementById('paganiniIframe');
+    if (!iframe.getAttribute('src') || iframe.getAttribute('src') === '') {
+      loadYTIframe('paganiniIframe', 'https://www.youtube.com/embed/j6VvVvGEAKo?enablejsapi=1');
     }
   }
 }
