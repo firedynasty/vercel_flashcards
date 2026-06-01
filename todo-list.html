@@ -678,6 +678,16 @@
       line-height: 1;
     }
     .vol-btn:hover { background: rgba(255,255,255,0.4); }
+    .pm-rename-input {
+      background: rgba(255,255,255,0.9);
+      color: #333;
+      border: 1px solid #2196F3;
+      border-radius: 4px;
+      padding: 2px 6px;
+      font-size: 13px;
+      max-width: 160px;
+      outline: none;
+    }
     .soak-btn {
       background: linear-gradient(45deg, #26A69A, #00897B);
       color: #fff;
@@ -4898,7 +4908,9 @@ function renderPmSections() {
     var btn = document.createElement('button');
     btn.className = 'bible-audio-toggle';
     btn.onclick = function() { togglePmSection(idx); };
-    btn.innerHTML = '<span>' + entry.title + '</span>' +
+    btn.innerHTML = '<span id="pmTitle' + idx + '">' + entry.title + '</span>' +
+      '<input type="text" id="pmRenameInput' + idx + '" class="pm-rename-input" style="display:none;" onclick="event.stopPropagation();" onkeydown="if(event.key===\'Enter\'){event.stopPropagation();savePmRename(' + idx + ');}" onblur="savePmRename(' + idx + ')">' +
+      '<button class="vol-btn" style="background:#2196F3;margin-left:4px;font-size:11px;" onclick="event.stopPropagation();startPmRename(' + idx + ')">&#9998;</button>' +
       '<span class="vol-controls">' +
         '<button class="vol-btn" onclick="event.stopPropagation();adjustIframeVolume(\'' + iframeId + '\',-10)">\u2212</button>' +
         '<span class="vol-label" id="' + iframeId + 'Vol">100</span>' +
@@ -4948,6 +4960,30 @@ function renderPmSections() {
     section.appendChild(body);
     container.appendChild(section);
   });
+}
+
+function startPmRename(idx) {
+  var titleSpan = document.getElementById('pmTitle' + idx);
+  var input = document.getElementById('pmRenameInput' + idx);
+  titleSpan.style.display = 'none';
+  input.style.display = 'inline-block';
+  input.value = pmEntries[idx].title;
+  input.focus();
+  input.select();
+}
+
+function savePmRename(idx) {
+  var titleSpan = document.getElementById('pmTitle' + idx);
+  var input = document.getElementById('pmRenameInput' + idx);
+  if (input.style.display === 'none') return;
+  var newName = input.value.trim();
+  if (newName) {
+    pmEntries[idx].title = newName;
+    titleSpan.textContent = newName;
+    savePmEntries();
+  }
+  input.style.display = 'none';
+  titleSpan.style.display = '';
 }
 
 // Render on load
