@@ -4909,7 +4909,7 @@ function renderPmSections() {
     btn.className = 'bible-audio-toggle';
     btn.onclick = function() { togglePmSection(idx); };
     btn.innerHTML = '<span id="pmTitle' + idx + '">' + entry.title + '</span>' +
-      '<input type="text" id="pmRenameInput' + idx + '" class="pm-rename-input" style="display:none;" onclick="event.stopPropagation();" onkeydown="if(event.key===\'Enter\'){event.stopPropagation();savePmRename(' + idx + ');}" onblur="savePmRename(' + idx + ')">' +
+      '<input type="text" id="pmRenameInput' + idx + '" class="pm-rename-input" style="display:none;" onclick="event.stopPropagation();" onkeydown="event.stopPropagation();if(event.key===\'Enter\'){savePmRename(' + idx + ');}" onkeyup="event.stopPropagation();" onkeypress="event.stopPropagation();" onblur="savePmRename(' + idx + ')">' +
       '<button class="vol-btn" style="background:#2196F3;margin-left:4px;font-size:11px;" onclick="event.stopPropagation();startPmRename(' + idx + ')">&#9998;</button>' +
       '<span class="vol-controls">' +
         '<button class="vol-btn" onclick="event.stopPropagation();adjustIframeVolume(\'' + iframeId + '\',-10)">\u2212</button>' +
