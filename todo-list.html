@@ -612,6 +612,116 @@
       justify-content: space-between;
       box-shadow: 0 5px 30px rgba(0,0,0,0.2);
     }
+    /* Bricks Gallery Modal */
+    .bricks-modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.92);
+      z-index: 10000;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+    .bricks-modal.active {
+      display: flex;
+    }
+    .bricks-modal .modal-close {
+      position: absolute;
+      top: 20px;
+      right: 30px;
+      font-size: 36px;
+      color: #fff;
+      cursor: pointer;
+      background: none;
+      border: none;
+      font-weight: bold;
+      line-height: 1;
+      z-index: 10001;
+    }
+    .bricks-modal .modal-close:hover { color: #e74c3c; }
+    .bricks-gallery {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+      max-width: 95vw;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    .bricks-gallery img {
+      width: 280px;
+      height: 200px;
+      object-fit: cover;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .bricks-gallery img:hover {
+      transform: scale(1.05);
+      box-shadow: 0 4px 20px rgba(255,255,255,0.3);
+    }
+    .bricks-slideshow-btn {
+      margin-top: 12px;
+      padding: 8px 20px;
+      font-size: 15px;
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 6px;
+      background: rgba(255,255,255,0.12);
+      color: #fff;
+      cursor: pointer;
+      transition: background 0.2s;
+      width: 100%;
+      max-width: 200px;
+    }
+    .bricks-slideshow-btn:hover { background: rgba(255,255,255,0.25); }
+    .bricks-slideshow-btn.active { background: #e74c3c; border-color: #e74c3c; }
+    /* Bricks lightbox (full-size view) */
+    .bricks-lightbox {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.95);
+      z-index: 10002;
+      justify-content: center;
+      align-items: center;
+    }
+    .bricks-lightbox.active { display: flex; }
+    .bricks-lightbox img {
+      max-width: 92vw;
+      max-height: 92vh;
+      border-radius: 8px;
+    }
+    .bricks-lightbox .lb-close {
+      position: absolute;
+      top: 20px;
+      right: 30px;
+      font-size: 36px;
+      color: #fff;
+      cursor: pointer;
+      background: none;
+      border: none;
+      font-weight: bold;
+    }
+    .bricks-lightbox .lb-close:hover { color: #e74c3c; }
+    .bricks-lightbox .lb-nav {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 48px;
+      color: #fff;
+      cursor: pointer;
+      background: none;
+      border: none;
+      padding: 10px 18px;
+      opacity: 0.7;
+      transition: opacity 0.2s;
+    }
+    .bricks-lightbox .lb-nav:hover { opacity: 1; }
+    .bricks-lightbox .lb-prev { left: 10px; }
+    .bricks-lightbox .lb-next { right: 10px; }
+
     /* Global volume navbar */
     .global-vol-bar {
       position: fixed;
@@ -919,6 +1029,7 @@
   <button class="gv-btn" onclick="adjustSoakWhiteNoiseVol(-10)">−</button>
   <span class="gv-level" id="soakWnVolLevel">30</span>
   <button class="gv-btn" onclick="adjustSoakWhiteNoiseVol(10)">+</button>
+  <button class="gv-btn" onclick="openBricksModal()" title="Bricks gallery">Bricks</button>
 </div>
 
 <div class="paste-media-modal" id="pasteMediaModal">
@@ -2202,6 +2313,23 @@
   <div class="noun-modal-content" id="nounModalContent"></div>
 </div>
 
+<div class="bricks-modal" id="bricksModal">
+  <button class="modal-close" onclick="closeBricksModal()">&times;</button>
+  <div class="bricks-gallery">
+    <img src="https://www.dropbox.com/scl/fi/tynch4ibfnykafzqf0j2y/bricks_compressed.png?rlkey=32qevkhkmnp8otvtzy97kcdj8&st=p99vmjux&raw=1" alt="Bricks" onclick="openBricksLightbox(0)">
+    <img src="https://www.dropbox.com/scl/fi/i0yi2uzl97tawbseq29us/w0167_1s_Building-Material-Texture-Wallpaper_Repeating-Pattern-Sample-1.png?rlkey=xwptdh8cpznyw92ob0hwf4ym2&st=wkqnzl66&raw=1" alt="Building Material Texture" onclick="openBricksLightbox(1)">
+    <img src="https://www.dropbox.com/scl/fi/77frycng4jombgsr6qx9t/yellow_brick_compressed.jpg?rlkey=i2hwjuhh9z7e695nbgk1h5fhd&st=9nzyeus7&raw=1" alt="Yellow Brick" onclick="openBricksLightbox(2)">
+    <button class="bricks-slideshow-btn" id="bricksSlideshowBtn" onclick="toggleBricksSlideshow()">&#9654; Slideshow</button>
+  </div>
+</div>
+
+<div class="bricks-lightbox" id="bricksLightbox">
+  <button class="lb-close" onclick="closeBricksLightbox()">&times;</button>
+  <button class="lb-nav lb-prev" onclick="bricksLightboxNav(-1)">&#8249;</button>
+  <img src="" alt="Lightbox image" id="bricksLightboxImg">
+  <button class="lb-nav lb-next" onclick="bricksLightboxNav(1)">&#8250;</button>
+</div>
+
 <script src="https://www.youtube.com/iframe_api"></script>
 <script>
 var ytApiReady = false;
@@ -2915,6 +3043,83 @@ document.addEventListener('keydown', function(e) {
 imageModal.addEventListener('click', function(e) {
   if (e.target === imageModal) {
     closeImageModal();
+  }
+});
+
+// --- Bricks Gallery Modal & Lightbox ---
+var bricksImages = [
+  'https://www.dropbox.com/scl/fi/tynch4ibfnykafzqf0j2y/bricks_compressed.png?rlkey=32qevkhkmnp8otvtzy97kcdj8&st=p99vmjux&raw=1',
+  'https://www.dropbox.com/scl/fi/i0yi2uzl97tawbseq29us/w0167_1s_Building-Material-Texture-Wallpaper_Repeating-Pattern-Sample-1.png?rlkey=xwptdh8cpznyw92ob0hwf4ym2&st=wkqnzl66&raw=1',
+  'https://www.dropbox.com/scl/fi/77frycng4jombgsr6qx9t/yellow_brick_compressed.jpg?rlkey=i2hwjuhh9z7e695nbgk1h5fhd&st=9nzyeus7&raw=1'
+];
+var bricksLightboxIdx = 0;
+var bricksSlideshowTimer = null;
+
+function openBricksModal() {
+  document.getElementById('bricksModal').classList.add('active');
+}
+
+function closeBricksModal() {
+  stopBricksSlideshow();
+  document.getElementById('bricksModal').classList.remove('active');
+}
+
+function openBricksLightbox(idx) {
+  bricksLightboxIdx = idx;
+  document.getElementById('bricksLightboxImg').src = bricksImages[idx];
+  document.getElementById('bricksLightbox').classList.add('active');
+}
+
+function closeBricksLightbox() {
+  stopBricksSlideshow();
+  document.getElementById('bricksLightbox').classList.remove('active');
+  document.getElementById('bricksLightboxImg').src = '';
+}
+
+function toggleBricksSlideshow() {
+  if (bricksSlideshowTimer) {
+    stopBricksSlideshow();
+  } else {
+    openBricksLightbox(0);
+    bricksSlideshowTimer = setInterval(function() {
+      bricksLightboxNav(1);
+    }, 3000);
+    var btn = document.getElementById('bricksSlideshowBtn');
+    btn.classList.add('active');
+    btn.innerHTML = '&#9724; Stop';
+  }
+}
+
+function stopBricksSlideshow() {
+  if (bricksSlideshowTimer) {
+    clearInterval(bricksSlideshowTimer);
+    bricksSlideshowTimer = null;
+  }
+  var btn = document.getElementById('bricksSlideshowBtn');
+  btn.classList.remove('active');
+  btn.innerHTML = '&#9654; Slideshow';
+}
+
+function bricksLightboxNav(dir) {
+  bricksLightboxIdx = (bricksLightboxIdx + dir + bricksImages.length) % bricksImages.length;
+  document.getElementById('bricksLightboxImg').src = bricksImages[bricksLightboxIdx];
+}
+
+document.getElementById('bricksModal').addEventListener('click', function(e) {
+  if (e.target === this) closeBricksModal();
+});
+
+document.getElementById('bricksLightbox').addEventListener('click', function(e) {
+  if (e.target === this) closeBricksLightbox();
+});
+
+document.addEventListener('keydown', function(e) {
+  if (document.getElementById('bricksLightbox').classList.contains('active')) {
+    if (e.key === 'Escape') closeBricksLightbox();
+    else if (e.key === 'ArrowLeft') bricksLightboxNav(-1);
+    else if (e.key === 'ArrowRight') bricksLightboxNav(1);
+  } else if (e.key === 'Escape' && document.getElementById('bricksModal').classList.contains('active')) {
+    closeBricksModal();
   }
 });
 
