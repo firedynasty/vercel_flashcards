@@ -1026,7 +1026,7 @@
   <button class="gv-media-btn paste" onclick="pasteMediaUrl()">Paste</button>
   <button class="gv-media-btn toggle" id="pmToggleBtn" onclick="togglePasteMediaModal()">Toggle</button>
   <span class="gv-label" style="margin-left:8px;">Soak 10/2:</span>
-  <button class="gv-btn" onclick="adjustSoakWhiteNoiseVol(-10)">−</button>
+  <button class="gv-btn" onclick="adjustSoakWhiteNoiseVol(-10)">&minus;</button>
   <span class="gv-level" id="soakWnVolLevel">30</span>
   <button class="gv-btn" onclick="adjustSoakWhiteNoiseVol(10)">+</button>
   <button class="gv-btn" onclick="openBricksModal()" title="Bricks gallery">Bricks</button>
@@ -1093,9 +1093,39 @@
       <button class="repeat-btn" id="repeatBtn" onclick="toggleRepeat()">Repeat: Off</button>
       <span class="repeat-counter" id="repeatCounter"></span>
     </div>
-    <audio id="soakWhiteNoise" loop preload="none"
-      src="https://www.dropbox.com/scl/fi/jdw6pg6it3xem6s1j0yv9/white_noise_30s.mp3?rlkey=5w9ijkvbt72kx2sl0w5wka1a6&st=e60iu395&raw=1">
-    </audio>
+    <!-- White noise generated via Web Audio API (no external file needed) -->
+    <script>
+    var whiteNoiseCtx = null, whiteNoiseNode = null, whiteNoiseGain = null, whiteNoiseActive = false;
+    function initWhiteNoise() {
+      if (whiteNoiseCtx) return;
+      whiteNoiseCtx = new (window.AudioContext || window.webkitAudioContext)();
+      var bufSize = whiteNoiseCtx.sampleRate * 2; // 2 seconds buffer
+      var buf = whiteNoiseCtx.createBuffer(1, bufSize, whiteNoiseCtx.sampleRate);
+      var data = buf.getChannelData(0);
+      for (var i = 0; i < bufSize; i++) data[i] = Math.random() * 2 - 1;
+      whiteNoiseNode = whiteNoiseCtx.createBufferSource();
+      whiteNoiseNode.buffer = buf;
+      whiteNoiseNode.loop = true;
+      whiteNoiseGain = whiteNoiseCtx.createGain();
+      whiteNoiseGain.gain.value = 0;
+      whiteNoiseNode.connect(whiteNoiseGain);
+      whiteNoiseGain.connect(whiteNoiseCtx.destination);
+      whiteNoiseNode.start();
+    }
+    function playWhiteNoise(vol) {
+      initWhiteNoise();
+      if (whiteNoiseCtx.state === 'suspended') whiteNoiseCtx.resume();
+      whiteNoiseGain.gain.value = vol;
+      whiteNoiseActive = true;
+    }
+    function stopWhiteNoise() {
+      if (whiteNoiseGain) whiteNoiseGain.gain.value = 0;
+      whiteNoiseActive = false;
+    }
+    function setWhiteNoiseVolume(vol) {
+      if (whiteNoiseGain && whiteNoiseActive) whiteNoiseGain.gain.value = vol;
+    }
+    </script>
     <audio id="musicAudio" loop preload="none"
       src="https://www.dropbox.com/scl/fi/hkvbuuu55lcmdba1ugtek/Mendelssohn-Lieder-ohne-Worte-Songs-Without-Words-Complete-Piano-Collection-QInNyUj676o-_1.mp3?rlkey=a7rw58hhuqdh061el9pd7bdzw&st=woa0bqbq&raw=1">
     </audio>
@@ -3613,8 +3643,7 @@ var soakWhiteNoiseVol = 30; // 0-100 scale
 function adjustSoakWhiteNoiseVol(delta) {
   soakWhiteNoiseVol = Math.max(0, Math.min(100, soakWhiteNoiseVol + delta));
   document.getElementById('soakWnVolLevel').textContent = soakWhiteNoiseVol;
-  var wn = document.getElementById('soakWhiteNoise');
-  if (wn) wn.volume = soakWhiteNoiseVol / 100;
+  setWhiteNoiseVolume(soakWhiteNoiseVol / 100);
 }
 var soakStates = {}; // keyed by iframeId
 
@@ -3676,8 +3705,7 @@ function stopSoak(iframeId) {
   if (s.timeout) { clearTimeout(s.timeout); s.timeout = null; }
   if (s.countdownInterval) { clearInterval(s.countdownInterval); s.countdownInterval = null; }
   if (s.fadeInterval) { clearInterval(s.fadeInterval); s.fadeInterval = null; }
-  var wn = document.getElementById('soakWhiteNoise');
-  if (wn) { wn.pause(); wn.currentTime = 0; }
+  stopWhiteNoise();
   // Restore volume
   sendVolumeToIframe(iframeId, s.originalVolume);
   // Reset all soak buttons for this iframe
@@ -3724,8 +3752,7 @@ function soakPausePhase(iframeId, secondsLeft) {
 
   updateActiveSoakBtn(s, 'Pause ' + secondsLeft, 'paused');
 
-  var wn = document.getElementById('soakWhiteNoise');
-  if (wn) { wn.volume = soakWhiteNoiseVol / 100; try { wn.play().catch(function(){}); } catch(e){} }
+  playWhiteNoise(soakWhiteNoiseVol / 100);
 
   s.countdownInterval = setInterval(function() {
     secondsLeft--;
@@ -3739,8 +3766,7 @@ function soakPausePhase(iframeId, secondsLeft) {
 
   s.timeout = setTimeout(function() {
     if (!s.active) return;
-    var wn = document.getElementById('soakWhiteNoise');
-    if (wn) { wn.pause(); wn.currentTime = 0; }
+    stopWhiteNoise();
     var p = ytPlayersReady[iframeId] ? ytPlayers[iframeId] : null;
     if (p && typeof p.playVideo === 'function') p.playVideo();
     soakFadeIn(iframeId);
