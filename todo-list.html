@@ -1026,9 +1026,9 @@
   <button class="gv-media-btn paste" onclick="pasteMediaUrl()">Paste</button>
   <button class="gv-media-btn toggle" id="pmToggleBtn" onclick="togglePasteMediaModal()">Toggle</button>
   <span class="gv-label" style="margin-left:8px;">Soak 10/2:</span>
-  <button class="gv-btn" onclick="adjustSoakWhiteNoiseVol(-10)">&minus;</button>
-  <span class="gv-level" id="soakWnVolLevel">30</span>
-  <button class="gv-btn" onclick="adjustSoakWhiteNoiseVol(10)">+</button>
+  <button class="gv-btn" onclick="adjustSoakWhiteNoiseVol(-5)">&minus;</button>
+  <span class="gv-level" id="soakWnVolLevel">15</span>
+  <button class="gv-btn" onclick="adjustSoakWhiteNoiseVol(5)">+</button>
   <button class="gv-btn" onclick="openBricksModal()" title="Bricks gallery">Bricks</button>
 </div>
 
@@ -3639,7 +3639,7 @@ function adjustAllVolumes(delta) {
 // ============================================
 // SOAKING MODE ENGINE — per-iframe soak with fade
 // ============================================
-var soakWhiteNoiseVol = 30; // 0-100 scale
+var soakWhiteNoiseVol = 15; // 0-100 scale
 function adjustSoakWhiteNoiseVol(delta) {
   soakWhiteNoiseVol = Math.max(0, Math.min(100, soakWhiteNoiseVol + delta));
   document.getElementById('soakWnVolLevel').textContent = soakWhiteNoiseVol;
