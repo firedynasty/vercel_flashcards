@@ -3716,6 +3716,11 @@ function soakPlayPhase(iframeId, secondsLeft) {
   var s = getSoakState(iframeId);
   if (!s.active) return;
 
+  // Clear any leftover timers from previous phase
+  if (s.countdownInterval) { clearInterval(s.countdownInterval); s.countdownInterval = null; }
+  if (s.timeout) { clearTimeout(s.timeout); s.timeout = null; }
+  if (s.fadeInterval) { clearInterval(s.fadeInterval); s.fadeInterval = null; }
+
   updateActiveSoakBtn(s, 'Soak ' + secondsLeft, 'active');
 
   s.countdownInterval = setInterval(function() {
@@ -3749,6 +3754,11 @@ function soakPlayPhase(iframeId, secondsLeft) {
 function soakPausePhase(iframeId, secondsLeft) {
   var s = getSoakState(iframeId);
   if (!s.active) return;
+
+  // Clear any leftover timers from previous phase
+  if (s.countdownInterval) { clearInterval(s.countdownInterval); s.countdownInterval = null; }
+  if (s.timeout) { clearTimeout(s.timeout); s.timeout = null; }
+  if (s.fadeInterval) { clearInterval(s.fadeInterval); s.fadeInterval = null; }
 
   updateActiveSoakBtn(s, 'Pause ' + secondsLeft, 'paused');
 
