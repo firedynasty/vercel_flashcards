@@ -3859,6 +3859,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
   var allSections = document.querySelectorAll('.bible-audio-section');
   allSections.forEach(function(section) {
+    // Skip PM sections — they already have soak buttons and vol controls from renderPmSections()
+    if (section.closest('#pmSectionsContainer')) return;
     var body = section.querySelector(':scope > .bible-audio-body');
     if (!body) return;
     // Skip container sections (like femaleHipHop/maleHipHop parents) that hold nested sections
