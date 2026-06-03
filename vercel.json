@@ -18,6 +18,8 @@
     { "source": "/learn-french-tts", "destination": "/learn-french-tts.html" },
     { "source": "/learn-spanish-tts.html", "destination": "/learn-spanish-tts.html" },
     { "source": "/learn-spanish-tts", "destination": "/learn-spanish-tts.html" },
+    { "source": "/spanish-csv-to-table.html", "destination": "/spanish-csv-to-table.html" },
+    { "source": "/spanish-csv-to-table", "destination": "/spanish-csv-to-table.html" },
     { "source": "/learn-spanish-tts1.html", "destination": "/learn-spanish-tts-2.html" },
     { "source": "/learn-spanish-tts1", "destination": "/learn-spanish-tts-2.html" },
     { "source": "/learn-memorize-verses.html", "destination": "/learn-memorize-verses.html" },

@@ -220,7 +220,7 @@
     border: 1px solid #d0d0d0; background: #f5f5f3; color: #555;
     cursor: pointer; font-weight: 600; font-family: inherit;
     transition: background 0.15s, border-color 0.15s, color 0.15s;
-    white-space: nowrap; margin-left: auto;
+    white-space: nowrap;
   }
   .try-btn:hover { background: #e0e7ff; border-color: #a5b4fc; color: #4338ca; }
   .try-btn.open  { background: #dbeafe; border-color: #93c5fd; color: #1d4ed8; }
@@ -328,6 +328,7 @@
 <div class="container">
   <h1>Spanish Vocab Reader</h1>
   <div class="subtitle">Click to hear pronunciation — Spanish via OpenAI or Browser TTS</div>
+  <a href="spanish-csv-to-table.html" style="display:inline-block;margin:6px 0 10px;font-size:12px;color:#2563eb;text-decoration:none;">CSV to Table Tool &rarr;</a>
 
   <!-- Setup Section -->
   <div class="setup-section" id="setupSection">
@@ -415,6 +416,26 @@
       </div>
       <div class="status" id="status"></div>
       <div class="hint">Sheet format: Spanish | Pronunciation | English (3 columns, header row). Section headers (e.g. "Lesson 1") in column A with B+C empty.</div>
+
+      <hr style="border:none;border-top:1px solid #eee;margin:12px 0;">
+
+      <!-- Paste from Sheets -->
+      <div style="font-size:12px;font-weight:600;color:#555;margin-bottom:6px;">Paste from Google Sheets</div>
+      <textarea id="pasteSheetInput" rows="8" style="width:100%;border:1px solid #ddd;border-radius:8px;padding:10px 14px;font-family:'SF Mono',Monaco,monospace;font-size:12px;line-height:1.6;resize:vertical;color:#333;" placeholder="Select rows in Google Sheets, copy (Cmd+C), then paste here...
+hola	oh-lah	hello
+gato	gah-toh	cat
+perro	peh-rroh	dog"></textarea>
+      <div class="setup-row" style="margin-top:8px;align-items:center;">
+        <label style="font-size:12px;color:#555;">Rows</label>
+        <input type="number" id="pasteRowFrom" min="1" value="1" style="width:60px;padding:4px 8px;border:1px solid #ddd;border-radius:6px;font-size:12px;">
+        <span style="font-size:12px;color:#888;">to</span>
+        <input type="number" id="pasteRowTo" min="1" value="" style="width:60px;padding:4px 8px;border:1px solid #ddd;border-radius:6px;font-size:12px;" placeholder="end">
+        <button class="btn primary" onclick="loadPastedSheet()">Load Range</button>
+        <button class="btn outline" onclick="loadPastedSheet(true)">Load All</button>
+        <span id="pasteRowCount" style="font-size:11px;color:#888;"></span>
+      </div>
+      <div class="hint">Paste tab-separated data from Google Sheets. Use row range to load a subset (e.g. rows 25-45). First row auto-detected as header.</div>
+      <div class="status" id="pasteStatus"></div>
     </div>
   </div>
 
@@ -1470,6 +1491,66 @@ function loadCsvText(text, fileName) {
   expanded = {};
   setStatus('Loaded ' + allRows.length + ' lines from ' + fileName);
   onLessonSelect();
+}
+
+// ── PASTE FROM SHEETS ──
+document.getElementById('pasteSheetInput').addEventListener('paste', function() {
+  setTimeout(function() {
+    var raw = document.getElementById('pasteSheetInput').value.trim();
+    if (!raw) return;
+    var lines = raw.split('\n').filter(function(l) { return l.trim(); });
+    var first = lines[0].split('\t');
+    var hasHeader = first.length >= 3 && /^(spanish|palabra|word)/i.test(first[0].trim());
+    var dataCount = hasHeader ? lines.length - 1 : lines.length;
+    document.getElementById('pasteRowCount').textContent = dataCount + ' rows detected';
+    document.getElementById('pasteRowTo').placeholder = dataCount;
+  }, 50);
+});
+
+function loadPastedSheet(loadAll) {
+  var raw = document.getElementById('pasteSheetInput').value.trim();
+  if (!raw) {
+    document.getElementById('pasteStatus').textContent = 'Paste some data first.';
+    document.getElementById('pasteStatus').className = 'status error';
+    return;
+  }
+
+  var lines = raw.split('\n').filter(function(l) { return l.trim(); });
+  if (lines.length === 0) return;
+
+  var first = lines[0].split('\t');
+  var hasHeader = first.length >= 3 && /^(spanish|palabra|word)/i.test(first[0].trim());
+  var headerLine = hasHeader ? lines[0] : 'Spanish\tPronunciation\tEnglish';
+  var dataLines = hasHeader ? lines.slice(1) : lines;
+
+  if (!loadAll) {
+    var from = parseInt(document.getElementById('pasteRowFrom').value) || 1;
+    var toVal = document.getElementById('pasteRowTo').value.trim();
+    var to = toVal ? parseInt(toVal) : dataLines.length;
+    from = Math.max(1, Math.min(from, dataLines.length));
+    to = Math.max(from, Math.min(to, dataLines.length));
+    dataLines = dataLines.slice(from - 1, to);
+  }
+
+  var csvLines = [tabToCsv(headerLine)];
+  for (var i = 0; i < dataLines.length; i++) {
+    csvLines.push(tabToCsv(dataLines[i]));
+  }
+
+  var csvText = csvLines.join('\n');
+  loadCsvText(csvText, 'pasted-sheet');
+  document.getElementById('pasteStatus').textContent = 'Loaded ' + dataLines.length + ' rows.';
+  document.getElementById('pasteStatus').className = 'status';
+}
+
+function tabToCsv(line) {
+  return line.split('\t').map(function(cell) {
+    cell = cell.trim();
+    if (cell.indexOf(',') >= 0 || cell.indexOf('"') >= 0) {
+      return '"' + cell.replace(/"/g, '""') + '"';
+    }
+    return cell;
+  }).join(',');
 }
 
 function loadVideos(videoFiles) {

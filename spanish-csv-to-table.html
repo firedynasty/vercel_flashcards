@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spanish CSV to Table</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, 'Inter', sans-serif;
+    background: #f9f9f7;
+    min-height: 100vh;
+    color: #1a1a1a;
+  }
+  .container { max-width: 860px; margin: 0 auto; padding: 24px 20px; }
+  h1 { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+  .subtitle { font-size: 12px; color: #888; margin-bottom: 20px; }
+
+  .section {
+    background: white; border: 1px solid #e8e8e8; border-radius: 12px;
+    padding: 18px 20px; margin-bottom: 14px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  }
+  .section h3 {
+    font-size: 14px; font-weight: 700; color: #2563eb;
+    margin-bottom: 10px;
+  }
+
+  textarea {
+    width: 100%; border: 1px solid #ddd; border-radius: 8px;
+    padding: 10px 14px; font-family: 'SF Mono', Monaco, monospace;
+    font-size: 12px; line-height: 1.6; resize: vertical; color: #333;
+  }
+  textarea:focus { outline: none; border-color: #2563eb; }
+  textarea::placeholder { color: #c0c0c0; }
+
+  .btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0; align-items: center; }
+
+  .btn {
+    border: none; border-radius: 6px; padding: 7px 14px;
+    font-weight: 600; font-size: 12px; cursor: pointer;
+    transition: opacity 0.15s; font-family: inherit;
+  }
+  .btn:hover { opacity: 0.85; }
+  .btn.primary { background: #2563eb; color: white; }
+  .btn.green   { background: #16a34a; color: white; }
+  .btn.outline { background: none; border: 1px solid #ccc; color: #555; }
+
+  .status { font-size: 12px; color: #16a34a; min-height: 18px; }
+  .status.error { color: #dc2626; }
+
+  .format-hint {
+    background: #f0f4ff; border: 1px solid #c7d8ff; border-radius: 8px;
+    padding: 10px 14px; font-size: 12px; color: #555; line-height: 1.6;
+    margin-bottom: 10px;
+  }
+  .format-hint code {
+    background: #e0e7ff; padding: 1px 5px; border-radius: 3px;
+    font-size: 11px; color: #3b5998;
+  }
+
+  #outputTable {
+    width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 13px;
+  }
+  #outputTable th {
+    background: #f0f4ff; color: #2563eb; padding: 6px 10px;
+    text-align: left; font-weight: 700; font-size: 12px;
+    border: 1px solid #dbeafe;
+  }
+  #outputTable td {
+    padding: 6px 10px; border: 1px solid #e8e8e8;
+  }
+  #outputTable tr:hover { background: #fafbff; }
+
+  .back-link {
+    display: inline-block; margin-bottom: 14px; font-size: 12px;
+    color: #2563eb; text-decoration: none;
+  }
+  .back-link:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+<div class="container">
+  <a class="back-link" href="learn-spanish-tts.html">&larr; Back to Learn Spanish TTS</a>
+  <h1>Spanish CSV to Table</h1>
+  <div class="subtitle">Paste Spanish,Pronunciation,English CSV &rarr; select table &rarr; paste into Google Sheets</div>
+
+  <!-- Input -->
+  <div class="section">
+    <h3>1. Paste CSV</h3>
+    <div class="format-hint">
+      Format: <code>Spanish,Pronunciation,English</code> (one per line)<br>
+      First line can be a header row (auto-detected and skipped)
+    </div>
+    <textarea id="inputText" rows="14" placeholder="hola,oh-lah,hello
+gato,gah-toh,cat
+perro,peh-rroh,dog
+casa,kah-sah,house
+libro,lee-broh,book
+agua,ah-gwah,water
+comer,koh-mehr,to eat
+dormir,dohr-meer,to sleep
+hablar,ah-blahr,to speak
+escuela,ehs-kweh-lah,school"></textarea>
+    <div class="btn-row">
+      <button class="btn primary" onclick="parseInput()">Generate Table</button>
+      <button class="btn outline" onclick="clearAll()">Clear</button>
+    </div>
+    <div class="status" id="parseStatus"></div>
+  </div>
+
+  <!-- Output Table -->
+  <div class="section" id="outputSection" style="display:none;">
+    <h3>2. Select All &amp; Copy to Google Sheets</h3>
+    <div class="btn-row">
+      <button class="btn green" onclick="selectTable()">Select Table</button>
+      <button class="btn outline" onclick="copyTable()">Copy to Clipboard</button>
+      <span class="status" id="copyStatus"></span>
+    </div>
+    <div id="tableContainer"></div>
+    <div class="stats" style="font-size:12px;color:#888;margin-top:8px;" id="statsRow"></div>
+  </div>
+</div>
+
+<script>
+function parseInput() {
+  var raw = document.getElementById('inputText').value;
+  if (!raw.trim()) {
+    setStatus('parseStatus', 'Paste some CSV first.', true);
+    return;
+  }
+
+  var lines = raw.split('\n');
+  var rows = [];
+
+  for (var i = 0; i < lines.length; i++) {
+    var line = lines[i].trim();
+    if (!line) continue;
+
+    var parts = splitCsvLine(line);
+    if (parts.length < 3) continue;
+
+    var spanish = parts[0].trim();
+    var pronunciation = parts[1].trim();
+    var english = parts[2].trim();
+
+    // Skip header row
+    if (i === 0 && /^(spanish|palabra|word)/i.test(spanish)) continue;
+
+    if (spanish) rows.push({ spanish: spanish, pronunciation: pronunciation, english: english });
+  }
+
+  if (rows.length === 0) {
+    setStatus('parseStatus', 'No rows found. Check format: Spanish,Pronunciation,English', true);
+    return;
+  }
+
+  setStatus('parseStatus', 'Generated ' + rows.length + ' rows.');
+  showTable(rows);
+}
+
+function splitCsvLine(line) {
+  var parts = [];
+  var current = '';
+  var inQuotes = false;
+  for (var i = 0; i < line.length; i++) {
+    var c = line[i];
+    if (c === '"') {
+      if (inQuotes && i + 1 < line.length && line[i + 1] === '"') {
+        current += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (c === ',' && !inQuotes) {
+      parts.push(current);
+      current = '';
+    } else {
+      current += c;
+    }
+  }
+  parts.push(current);
+  return parts;
+}
+
+function showTable(rows) {
+  document.getElementById('outputSection').style.display = '';
+
+  var html = '<table id="outputTable">';
+  html += '<tr><th>Spanish</th><th>Pronunciation</th><th>English</th></tr>';
+  for (var i = 0; i < rows.length; i++) {
+    html += '<tr>' +
+      '<td>' + esc(rows[i].spanish) + '</td>' +
+      '<td>' + esc(rows[i].pronunciation) + '</td>' +
+      '<td>' + esc(rows[i].english) + '</td>' +
+      '</tr>';
+  }
+  html += '</table>';
+
+  document.getElementById('tableContainer').innerHTML = html;
+  document.getElementById('statsRow').innerHTML = '<span style="font-weight:600">' + rows.length + ' rows</span>';
+}
+
+function selectTable() {
+  var table = document.getElementById('outputTable');
+  if (!table) return;
+  var range = document.createRange();
+  range.selectNodeContents(table);
+  var sel = window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(range);
+  setStatus('copyStatus', 'Table selected — press Cmd+C to copy');
+}
+
+function copyTable() {
+  var table = document.getElementById('outputTable');
+  if (!table) return;
+  var range = document.createRange();
+  range.selectNodeContents(table);
+  var sel = window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(range);
+  document.execCommand('copy');
+  setStatus('copyStatus', 'Copied!');
+}
+
+function clearAll() {
+  document.getElementById('inputText').value = '';
+  document.getElementById('outputSection').style.display = 'none';
+  document.getElementById('parseStatus').textContent = '';
+}
+
+function setStatus(id, msg, isError) {
+  var el = document.getElementById(id);
+  el.textContent = msg;
+  el.className = 'status' + (isError ? ' error' : '');
+}
+
+function esc(s) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// Auto-parse on paste
+document.getElementById('inputText').addEventListener('paste', function() {
+  setTimeout(parseInput, 50);
+});
+</script>
+</body>
+</html>
