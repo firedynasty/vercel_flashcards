@@ -1545,9 +1545,15 @@ function savePracAnswer() {
 function renderPracCard() {
   var idx = pracVocabIndices[pracCurrent];
   var row = filteredRows[idx];
-  document.getElementById('pracChinese').textContent = row.chinese || '';
-  document.getElementById('pracRom').textContent = row.romanization || '';
-  document.getElementById('pracEng').textContent = row.english || '';
+  var cn = document.getElementById('pracChinese');
+  var rom = document.getElementById('pracRom');
+  var eng = document.getElementById('pracEng');
+  cn.textContent = row.chinese || '';
+  cn.style.display = showChinese ? '' : 'none';
+  rom.textContent = row.romanization || '';
+  rom.style.display = showRomanization ? '' : 'none';
+  eng.textContent = row.english || '';
+  eng.style.display = showMeanings ? '' : 'none';
   document.getElementById('pracCounter').textContent = (pracCurrent + 1) + ' / ' + pracVocabIndices.length;
   document.getElementById('pracTextarea').value = userAnswers[idx] || '';
   var cc = document.getElementById('pracCharCount');
