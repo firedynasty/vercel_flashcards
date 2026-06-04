@@ -305,6 +305,63 @@
     background: #2563eb; border: none; cursor: pointer;
   }
 
+  /* ── PRACTICE MODAL ── */
+  .practice-overlay {
+    display: none; position: fixed; inset: 0; z-index: 2000;
+    background: rgba(0,0,0,0.7); align-items: center; justify-content: center;
+  }
+  .practice-overlay.open { display: flex; }
+  .practice-modal {
+    background: white; border-radius: 16px; width: 95%; max-width: 600px;
+    padding: 28px 28px 20px; position: relative;
+    box-shadow: 0 16px 50px rgba(0,0,0,0.35);
+  }
+  .practice-close {
+    position: absolute; top: 12px; right: 16px; border: none; background: none;
+    font-size: 24px; cursor: pointer; color: #999; line-height: 1;
+  }
+  .practice-close:hover { color: #333; }
+  .practice-nav {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .practice-nav button {
+    border: none; border-radius: 8px; padding: 8px 18px;
+    font-size: 14px; font-weight: 600; cursor: pointer;
+    background: #e5e7eb; color: #333; transition: background 0.15s;
+  }
+  .practice-nav button:hover { background: #d1d5db; }
+  .practice-nav button:disabled { opacity: 0.3; cursor: not-allowed; }
+  .practice-counter {
+    font-size: 13px; font-weight: 700; color: #555;
+  }
+  .practice-card-chinese {
+    font-size: 32px; font-weight: 700; text-align: center;
+    margin-bottom: 8px; cursor: pointer; color: #1a1a1a;
+  }
+  .practice-card-chinese:hover { color: #2563eb; }
+  .practice-card-rom {
+    font-size: 15px; color: #888; font-style: italic; text-align: center;
+    margin-bottom: 6px;
+  }
+  .practice-card-eng {
+    font-size: 15px; color: #15803d; background: #f0fdf4;
+    border: 1px solid #bbf7d0; border-radius: 8px; padding: 10px 14px;
+    text-align: center; margin-bottom: 14px;
+  }
+  .practice-textarea {
+    width: 100%; min-height: 80px; border: 2px solid #ddd; border-radius: 10px;
+    padding: 12px 14px; font-family: inherit; font-size: 15px;
+    line-height: 1.55; resize: vertical; color: #333;
+  }
+  .practice-textarea:focus { outline: none; border-color: #2563eb; }
+  .practice-textarea::placeholder { color: #c0c0c0; }
+  .practice-hint {
+    margin-top: 6px; font-size: 11px; color: #aaa;
+    display: flex; justify-content: space-between;
+  }
+  .practice-hint .char-count { font-weight: 600; color: #16a34a; }
+
   /* ── LOADING SPINNER ── */
   .loading-dot {
     display: inline-block; width: 8px; height: 8px; border-radius: 50%;
@@ -485,7 +542,7 @@ perro	peh-rroh	dog"></textarea>
       </div>
       <div class="sep"></div>
       <button class="btn outline" style="font-size:11px;padding:4px 10px;" onclick="exportAll()">&#128203; Export All</button>
-      <button class="try-btn" id="toggleAllTryBtn" onclick="toggleAllExpand()">&#9660; Open All</button>
+      <button class="try-btn" id="toggleAllTryBtn" onclick="openPracticeModal()">&#9660; Practice</button>
     </div>
 
     <!-- Export compare modal -->
@@ -539,6 +596,29 @@ perro	peh-rroh	dog"></textarea>
         <p style="font-size:11px;line-height:1.55;color:#999;margin:8px 0 0;">
           Clicking any card or sentence automatically copies the Spanish text to your clipboard &mdash; paste into <strong>translate.google.com</strong> to hear it read aloud.
         </p>
+      </div>
+    </div>
+
+    <!-- Practice modal -->
+    <div class="practice-overlay" id="practiceOverlay" onclick="if(event.target===this)closePracticeModal()">
+      <div class="practice-modal">
+        <button class="practice-close" onclick="closePracticeModal()">&times;</button>
+        <div class="practice-nav">
+          <button id="pracPrev" onclick="pracNavigate(-1)">&larr; Prev</button>
+          <span class="practice-counter" id="pracCounter">1 / 10</span>
+          <button id="pracNext" onclick="pracNavigate(1)">Next &rarr;</button>
+        </div>
+        <div class="practice-card-chinese" id="pracChinese" onclick="speakPracCard()"></div>
+        <div class="practice-card-rom" id="pracRom"></div>
+        <div class="practice-card-eng" id="pracEng"></div>
+        <textarea class="practice-textarea" id="pracTextarea" placeholder="Type your answer&#8230;"></textarea>
+        <div class="practice-hint">
+          <span>&larr; &rarr; arrow keys to navigate &middot; Esc to close</span>
+          <span class="char-count" id="pracCharCount"></span>
+        </div>
+        <div style="margin-top:12px;text-align:right;">
+          <button class="btn outline" style="font-size:12px;padding:6px 14px;" onclick="savePracAnswer();closePracticeModal();exportAll()">&#128203; Export All</button>
+        </div>
       </div>
     </div>
 
@@ -1422,8 +1502,89 @@ async function copyExportText() {
   }
 }
 
+// ── PRACTICE MODAL ──
+var pracVocabIndices = []; // filteredRows indices that are vocab cards
+var pracCurrent = 0;       // position within pracVocabIndices
+
+function openPracticeModal() {
+  // Build list of vocab-card indices (skip headers, context lines)
+  pracVocabIndices = [];
+  filteredRows.forEach(function(row, i) {
+    if (row.chinese && !row.sectionHeader && !row.contextLine) {
+      pracVocabIndices.push(i);
+    }
+  });
+  if (pracVocabIndices.length === 0) return;
+  pracCurrent = 0;
+  renderPracCard();
+  document.getElementById('practiceOverlay').classList.add('open');
+  setTimeout(function() { document.getElementById('pracTextarea').focus(); }, 60);
+}
+
+function closePracticeModal() {
+  savePracAnswer(); // save current before closing
+  document.getElementById('practiceOverlay').classList.remove('open');
+  // Sync any answers back into inline textareas
+  pracVocabIndices.forEach(function(idx) {
+    var ta = document.getElementById('ta-' + idx);
+    if (ta && userAnswers[idx] !== undefined) {
+      ta.value = userAnswers[idx];
+      var cc = document.getElementById('chars-' + idx);
+      if (cc) cc.textContent = userAnswers[idx].length ? userAnswers[idx].length + ' chars' : '';
+    }
+  });
+}
+
+function savePracAnswer() {
+  var idx = pracVocabIndices[pracCurrent];
+  if (idx === undefined) return;
+  var val = document.getElementById('pracTextarea').value;
+  userAnswers[idx] = val;
+}
+
+function renderPracCard() {
+  var idx = pracVocabIndices[pracCurrent];
+  var row = filteredRows[idx];
+  document.getElementById('pracChinese').textContent = row.chinese || '';
+  document.getElementById('pracRom').textContent = row.romanization || '';
+  document.getElementById('pracEng').textContent = row.english || '';
+  document.getElementById('pracCounter').textContent = (pracCurrent + 1) + ' / ' + pracVocabIndices.length;
+  document.getElementById('pracTextarea').value = userAnswers[idx] || '';
+  var cc = document.getElementById('pracCharCount');
+  var len = (userAnswers[idx] || '').length;
+  cc.textContent = len ? len + ' chars' : '';
+  document.getElementById('pracPrev').disabled = pracCurrent === 0;
+  document.getElementById('pracNext').disabled = pracCurrent === pracVocabIndices.length - 1;
+}
+
+function pracNavigate(dir) {
+  savePracAnswer();
+  var next = pracCurrent + dir;
+  if (next < 0 || next >= pracVocabIndices.length) return;
+  pracCurrent = next;
+  renderPracCard();
+  document.getElementById('pracTextarea').focus();
+}
+
+function speakPracCard() {
+  var idx = pracVocabIndices[pracCurrent];
+  if (idx === undefined) return;
+  var row = filteredRows[idx];
+  if (row.chinese) speakText(row.chinese);
+}
+
 // ── SPACEBAR TO CLICK HOVERED CARD ──
 document.addEventListener('keydown', function(e) {
+  var modalOpen = document.getElementById('practiceOverlay').classList.contains('open');
+
+  // Practice modal keys
+  if (modalOpen) {
+    if (e.key === 'ArrowLeft') { e.preventDefault(); pracNavigate(-1); return; }
+    if (e.key === 'ArrowRight') { e.preventDefault(); pracNavigate(1); return; }
+    if (e.key === 'Escape') { e.preventDefault(); closePracticeModal(); return; }
+    return; // don't run other shortcuts while modal is open
+  }
+
   if (e.code === 'Space' && !e.target.matches('input, textarea, select')) {
     e.preventDefault();
     var hovered = document.querySelector('.vocab-card:hover');
@@ -1894,6 +2055,15 @@ async function initFromApi() {
   loadSheetByName(selected);
   toggleSetup(); // collapse the setup section
 }
+
+// ── PRACTICE MODAL TEXTAREA LIVE SYNC ──
+document.getElementById('pracTextarea').addEventListener('input', function() {
+  var idx = pracVocabIndices[pracCurrent];
+  if (idx === undefined) return;
+  userAnswers[idx] = this.value;
+  var cc = document.getElementById('pracCharCount');
+  cc.textContent = this.value.length ? this.value.length + ' chars' : '';
+});
 
 // ── INIT ──
 loadApiKey();
