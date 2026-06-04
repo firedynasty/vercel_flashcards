@@ -172,6 +172,11 @@
   }
   .tooltip-on .vocab-card:hover .def-tip { display: block; }
 
+  /* ── CLICK-TO-REVEAL (per-card) ── */
+  .vocab-card.revealed .english.hidden { display: block; }
+  .vocab-card.revealed .romanization.hidden { display: block; }
+  .vocab-card.revealed { background-color: #f0fdf4; border-color: #bbf7d0; }
+
   /* ── HOVER-REVEAL SLIDER ── */
   .tip-toggle {
     display: flex; align-items: center; gap: 6px;
@@ -1054,14 +1059,14 @@ function renderLyrics() {
     card.className = 'vocab-card';
     card.id = 'card-' + i;
 
-    // Click the card area to toggle answer (except on chinese text or textarea)
+    // Click the card area to reveal/hide answer (except on chinese text or textarea)
     card.onclick = (function(capturedI) {
       return function(e) {
         if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'BUTTON') return;
         if (e.target.classList.contains('chinese')) return; // handled separately
         var r = filteredRows[capturedI];
         if (r && r.chinese) copyToClipboard(r.chinese);
-        toggleExpand(capturedI);
+        this.classList.toggle('revealed');
       };
     })(i);
 
