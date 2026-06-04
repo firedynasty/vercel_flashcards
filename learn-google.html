@@ -184,7 +184,7 @@
     z-index: 20;
   }
   /* when toggle is on, all tooltips are always visible */
-  .tooltip-on .def-tip { display: block !important; position: static; background: #1e293b; border-radius: 0 0 12px 12px; box-shadow: none; margin-top: -1px; padding-left: 51px; }
+  .tooltip-on .def-tip { display: block !important; position: static; background: #1e293b; border-radius: 0 0 12px 12px; box-shadow: none; margin-top: -1px; padding-left: 51px; pointer-events: none; }
 
   /* ── HOVER-REVEAL SLIDER ── */
   .tip-toggle {
@@ -213,6 +213,7 @@
     display: block !important; position: static;
     background: #1e293b; border-radius: 0 0 12px 12px;
     box-shadow: none; margin-top: -1px; padding-left: 51px;
+    pointer-events: none;
   }
 
   /* ── PRACTICE MODAL ── */
@@ -783,9 +784,6 @@ function buildCard(row, fi) {
   termEl.className = 'card-term';
   termEl.textContent = row.term;
   termEl.title = 'Click to reveal definition';
-  termEl.addEventListener('click', (function(capturedIdx) {
-    return function() { document.getElementById('card-' + capturedIdx).classList.toggle('revealed'); };
-  })(idx));
 
   // Clear button
   var clearBtn = document.createElement('button');
