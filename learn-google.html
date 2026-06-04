@@ -208,6 +208,71 @@
   }
   .tip-knob.on { left: 21px; }
 
+  /* ── CLICK-TO-REVEAL (per-card) ── */
+  .vocab-card.revealed .def-tip {
+    display: block !important; position: static;
+    background: #1e293b; border-radius: 0 0 12px 12px;
+    box-shadow: none; margin-top: -1px; padding-left: 51px;
+  }
+
+  /* ── PRACTICE MODAL ── */
+  .practice-overlay {
+    display: none; position: fixed; inset: 0; z-index: 2000;
+    background: rgba(0,0,0,0.7); align-items: center; justify-content: center;
+  }
+  .practice-overlay.open { display: flex; }
+  .practice-modal {
+    background: white; border-radius: 16px; width: 95%; max-width: 600px;
+    padding: 28px 28px 20px; position: relative;
+    box-shadow: 0 16px 50px rgba(0,0,0,0.35);
+  }
+  body.dark-mode .practice-modal { background: #2a2a3e; color: #e0e0e0; }
+  .practice-close {
+    position: absolute; top: 12px; right: 16px; border: none; background: none;
+    font-size: 24px; cursor: pointer; color: #999; line-height: 1;
+  }
+  .practice-close:hover { color: #333; }
+  .practice-nav {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .practice-nav button {
+    border: none; border-radius: 8px; padding: 8px 18px;
+    font-size: 14px; font-weight: 600; cursor: pointer;
+    background: #e5e7eb; color: #333; transition: background 0.15s;
+  }
+  .practice-nav button:hover { background: #d1d5db; }
+  .practice-nav button:disabled { opacity: 0.3; cursor: not-allowed; }
+  body.dark-mode .practice-nav button { background: #444; color: #ccc; }
+  .practice-counter {
+    font-size: 13px; font-weight: 700; color: #555;
+  }
+  body.dark-mode .practice-counter { color: #ccc; }
+  .practice-card-term {
+    font-size: 22px; font-weight: 700; text-align: center;
+    margin-bottom: 14px; color: #1a1a1a;
+  }
+  body.dark-mode .practice-card-term { color: #e0e0e0; }
+  .practice-card-def {
+    font-size: 15px; color: #15803d; background: #f0fdf4;
+    border: 1px solid #bbf7d0; border-radius: 8px; padding: 10px 14px;
+    text-align: center; margin-bottom: 14px;
+  }
+  body.dark-mode .practice-card-def { background: #1a2e1a; border-color: #2a5a2a; color: #86efac; }
+  .practice-textarea {
+    width: 100%; min-height: 80px; border: 2px solid #ddd; border-radius: 10px;
+    padding: 12px 14px; font-family: inherit; font-size: 15px;
+    line-height: 1.55; resize: vertical; color: #333;
+  }
+  .practice-textarea:focus { outline: none; border-color: #2563eb; }
+  .practice-textarea::placeholder { color: #c0c0c0; }
+  body.dark-mode .practice-textarea { background: #1e1e32; border-color: #444; color: #e0e0e0; }
+  .practice-hint {
+    margin-top: 6px; font-size: 11px; color: #aaa;
+    display: flex; justify-content: space-between;
+  }
+  .practice-hint .char-count { font-weight: 600; color: #16a34a; }
+
   /* ── GOOGLE SHEETS SETUP ── */
   .setup-section {
     margin-top: 16px;
@@ -450,9 +515,31 @@
         <div class="tip-knob on" id="tipKnob"></div>
       </div>
     </div>
-    <button class="try-btn" id="toggleAllTryBtn" onclick="toggleAllExpand()">&#9660; Open All</button>
+    <button class="try-btn" id="toggleAllTryBtn" onclick="openPracticeModal()">&#9660; Practice</button>
     <button class="btn outline sm" id="exportAllBtn" style="display:none" onclick="exportAll()">&#128203; Export All</button>
     <button class="btn success sm" id="exportUnmasteredBtn" style="display:none" onclick="exportUnmastered()">&#128190; Export Unmastered</button>
+  </div>
+</div>
+
+<!-- ── PRACTICE MODAL ── -->
+<div class="practice-overlay" id="practiceOverlay" onclick="if(event.target===this)closePracticeModal()">
+  <div class="practice-modal">
+    <button class="practice-close" onclick="closePracticeModal()">&times;</button>
+    <div class="practice-nav">
+      <button id="pracPrev" onclick="pracNavigate(-1)">&larr; Prev</button>
+      <span class="practice-counter" id="pracCounter">1 / 10</span>
+      <button id="pracNext" onclick="pracNavigate(1)">Next &rarr;</button>
+    </div>
+    <div class="practice-card-term" id="pracTerm"></div>
+    <div class="practice-card-def" id="pracDef"></div>
+    <textarea class="practice-textarea" id="pracTextarea" placeholder="Type your definition&#8230;"></textarea>
+    <div class="practice-hint">
+      <span>&larr; &rarr; arrow keys to navigate &middot; Esc to close</span>
+      <span class="char-count" id="pracCharCount"></span>
+    </div>
+    <div style="margin-top:12px;text-align:right;">
+      <button class="btn outline" style="font-size:12px;padding:6px 14px;" onclick="savePracAnswer();closePracticeModal();exportAll()">&#128203; Export All</button>
+    </div>
   </div>
 </div>
 
@@ -770,66 +857,12 @@ function buildCard(row, fi) {
   tip.textContent = row.definition;
   card.appendChild(tip);
 
-  // ── Hover to reveal textarea ──
-  var hoverInside = false;
-  // When Open All is active, hover over checkbox toggles it
-  mcb.addEventListener('mouseenter', (function(capturedIdx, capturedCard) {
-    return function() {
-      if (!allExpanded) return;
-      var m = document.getElementById('mcb-' + capturedIdx);
-      if (m) {
-        m.checked = !m.checked;
-        mastered[capturedIdx] = m.checked;
-        capturedCard.classList.toggle('mastered', m.checked);
-        updateMasteredPill();
-      }
-    };
-  })(idx, card));
-
-  card.addEventListener('mouseenter', (function(capturedIdx, capturedFI) {
-    return function() {
-      hoverInside = true;
-      if (!expanded[capturedIdx]) {
-        expanded[capturedIdx] = true;
-        var a = document.getElementById('area-' + capturedIdx);
-        var tb = document.getElementById('trybtn-' + capturedIdx);
-        if (a) a.classList.add('open');
-        if (tb) { tb.classList.add('open'); tb.textContent = '\u25b2 Hide'; }
-        var t = document.getElementById('ta-' + capturedIdx);
-        if (t) setTimeout(function() { t.focus(); }, 40);
-      }
-    };
-  })(idx, fi));
-
-  card.addEventListener('mouseleave', (function(capturedIdx) {
-    return function() {
-      hoverInside = false;
-      if (allExpanded) return;
-      var t = document.getElementById('ta-' + capturedIdx);
-      var hasText = t && t.value.trim();
-      var isFocused = t && document.activeElement === t;
-      if (!hasText && !isFocused && expanded[capturedIdx]) {
-        expanded[capturedIdx] = false;
-        var a = document.getElementById('area-' + capturedIdx);
-        var tb = document.getElementById('trybtn-' + capturedIdx);
-        if (a) a.classList.remove('open');
-        if (tb) { tb.classList.remove('open'); tb.textContent = '\u25bc Try'; }
-      }
-    };
-  })(idx));
-
-  // Close on blur if empty and mouse not over card
-  ta.addEventListener('blur', (function(capturedIdx) {
-    return function() {
-      if (allExpanded) return;
-      var t = document.getElementById('ta-' + capturedIdx);
-      if (!hoverInside && t && !t.value.trim() && expanded[capturedIdx]) {
-        expanded[capturedIdx] = false;
-        var a = document.getElementById('area-' + capturedIdx);
-        var tb = document.getElementById('trybtn-' + capturedIdx);
-        if (a) a.classList.remove('open');
-        if (tb) { tb.classList.remove('open'); tb.textContent = '\u25bc Try'; }
-      }
+  // ── Click card to reveal/hide definition ──
+  card.addEventListener('click', (function(capturedIdx) {
+    return function(e) {
+      if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT') return;
+      if (e.target.classList.contains('card-term')) return; // handled separately
+      document.getElementById('card-' + capturedIdx).classList.toggle('revealed');
     };
   })(idx));
 
@@ -859,31 +892,78 @@ function toggleExpand(fi) {
   }
 }
 
-// ── TOGGLE ALL EXPAND ──
-var allExpanded = false;
-function toggleAllExpand() {
-  allExpanded = !allExpanded;
-  var btn = document.getElementById('toggleAllTryBtn');
-  btn.textContent = allExpanded ? '\u25b2 Close All' : '\u25bc Open All';
-  btn.classList.toggle('open', allExpanded);
+// ── PRACTICE MODAL ──
+var pracVocabIndices = []; // indices into filteredVocab
+var pracCurrent = 0;
 
-  filteredVocab.forEach(function(row) {
-    var idx = row.idx;
-    expanded[idx] = allExpanded;
-    var area = document.getElementById('area-' + idx);
-    var tryBtn = document.getElementById('trybtn-' + idx);
-    if (!area || !tryBtn) return;
-    if (allExpanded) {
-      area.classList.add('open');
-      tryBtn.classList.add('open');
-      tryBtn.textContent = '\u25b2 Hide';
-    } else {
-      area.classList.remove('open');
-      tryBtn.classList.remove('open');
-      tryBtn.textContent = '\u25bc Try';
+function openPracticeModal() {
+  pracVocabIndices = [];
+  filteredVocab.forEach(function(row, fi) {
+    pracVocabIndices.push(fi);
+  });
+  if (pracVocabIndices.length === 0) return;
+  pracCurrent = 0;
+  renderPracCard();
+  document.getElementById('practiceOverlay').classList.add('open');
+  setTimeout(function() { document.getElementById('pracTextarea').focus(); }, 60);
+}
+
+function closePracticeModal() {
+  savePracAnswer();
+  document.getElementById('practiceOverlay').classList.remove('open');
+  // Sync answers back into inline textareas
+  pracVocabIndices.forEach(function(fi) {
+    var idx = filteredVocab[fi].idx;
+    var ta = document.getElementById('ta-' + idx);
+    if (ta && userAnswers[idx] !== undefined) {
+      ta.value = userAnswers[idx];
+      var cc = document.getElementById('chars-' + idx);
+      if (cc) cc.textContent = userAnswers[idx].length ? userAnswers[idx].length + ' chars' : '';
     }
   });
 }
+
+function savePracAnswer() {
+  var fi = pracVocabIndices[pracCurrent];
+  if (fi === undefined) return;
+  var idx = filteredVocab[fi].idx;
+  userAnswers[idx] = document.getElementById('pracTextarea').value;
+}
+
+function renderPracCard() {
+  var fi = pracVocabIndices[pracCurrent];
+  var row = filteredVocab[fi];
+  var idx = row.idx;
+  document.getElementById('pracTerm').textContent = row.term || '';
+  var defEl = document.getElementById('pracDef');
+  defEl.textContent = row.definition || '';
+  defEl.style.display = tooltipOn ? '' : 'none';
+  document.getElementById('pracCounter').textContent = (pracCurrent + 1) + ' / ' + pracVocabIndices.length;
+  document.getElementById('pracTextarea').value = userAnswers[idx] || '';
+  var cc = document.getElementById('pracCharCount');
+  var len = (userAnswers[idx] || '').length;
+  cc.textContent = len ? len + ' chars' : '';
+  document.getElementById('pracPrev').disabled = pracCurrent === 0;
+  document.getElementById('pracNext').disabled = pracCurrent === pracVocabIndices.length - 1;
+}
+
+function pracNavigate(dir) {
+  savePracAnswer();
+  var next = pracCurrent + dir;
+  if (next < 0 || next >= pracVocabIndices.length) return;
+  pracCurrent = next;
+  renderPracCard();
+  document.getElementById('pracTextarea').focus();
+}
+
+document.getElementById('pracTextarea').addEventListener('input', function() {
+  var fi = pracVocabIndices[pracCurrent];
+  if (fi === undefined) return;
+  var idx = filteredVocab[fi].idx;
+  userAnswers[idx] = this.value;
+  var cc = document.getElementById('pracCharCount');
+  cc.textContent = this.value.length ? this.value.length + ' chars' : '';
+});
 
 // ── SAVE ANSWER ──
 function saveAnswer(idx, val) {
@@ -1497,8 +1577,18 @@ function onGSectionSelect() {
   filterAndRender();
 }
 
-// ── KEYBOARD: Escape ──
+// ── KEYBOARD ──
 document.addEventListener('keydown', function(e) {
+  var pracOpen = document.getElementById('practiceOverlay').classList.contains('open');
+
+  // Practice modal keys
+  if (pracOpen) {
+    if (e.key === 'ArrowLeft') { e.preventDefault(); pracNavigate(-1); return; }
+    if (e.key === 'ArrowRight') { e.preventDefault(); pracNavigate(1); return; }
+    if (e.key === 'Escape') { e.preventDefault(); closePracticeModal(); return; }
+    return;
+  }
+
   if (e.key === 'Escape') {
     // If a textarea is focused, clear it for re-typing practice
     if (document.activeElement && document.activeElement.tagName === 'TEXTAREA') {
