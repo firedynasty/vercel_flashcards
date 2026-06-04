@@ -537,7 +537,14 @@
       <span>&larr; &rarr; arrow keys to navigate &middot; Esc to close</span>
       <span class="char-count" id="pracCharCount"></span>
     </div>
-    <div style="margin-top:12px;text-align:right;">
+    <div style="margin-top:12px;display:flex;align-items:center;justify-content:space-between;">
+      <div class="tip-toggle" onclick="togglePracReveal()" title="Show or hide the definition">
+        <span>Reveal answer</span>
+        <div class="tip-switch">
+          <div class="tip-track" id="pracTipTrack"></div>
+          <div class="tip-knob" id="pracTipKnob"></div>
+        </div>
+      </div>
       <button class="btn outline" style="font-size:12px;padding:6px 14px;" onclick="savePracAnswer();closePracticeModal();exportAll()">&#128203; Export All</button>
     </div>
   </div>
@@ -775,10 +782,10 @@ function buildCard(row, fi) {
   var termEl = document.createElement('div');
   termEl.className = 'card-term';
   termEl.textContent = row.term;
-  termEl.title = 'Click to open answer area';
-  termEl.addEventListener('click', (function(capturedFI) {
-    return function() { toggleExpand(capturedFI); };
-  })(fi));
+  termEl.title = 'Click to reveal definition';
+  termEl.addEventListener('click', (function(capturedIdx) {
+    return function() { document.getElementById('card-' + capturedIdx).classList.toggle('revealed'); };
+  })(idx));
 
   // Clear button
   var clearBtn = document.createElement('button');
@@ -861,7 +868,6 @@ function buildCard(row, fi) {
   card.addEventListener('click', (function(capturedIdx) {
     return function(e) {
       if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT') return;
-      if (e.target.classList.contains('card-term')) return; // handled separately
       document.getElementById('card-' + capturedIdx).classList.toggle('revealed');
     };
   })(idx));
@@ -903,6 +909,7 @@ function openPracticeModal() {
   });
   if (pracVocabIndices.length === 0) return;
   pracCurrent = 0;
+  syncPracRevealUI();
   renderPracCard();
   document.getElementById('practiceOverlay').classList.add('open');
   setTimeout(function() { document.getElementById('pracTextarea').focus(); }, 60);
@@ -930,6 +937,20 @@ function savePracAnswer() {
   userAnswers[idx] = document.getElementById('pracTextarea').value;
 }
 
+var pracRevealOn = false; // separate toggle for practice modal
+
+function togglePracReveal() {
+  pracRevealOn = !pracRevealOn;
+  document.getElementById('pracTipTrack').classList.toggle('on', pracRevealOn);
+  document.getElementById('pracTipKnob').classList.toggle('on', pracRevealOn);
+  document.getElementById('pracDef').style.display = pracRevealOn ? '' : 'none';
+}
+
+function syncPracRevealUI() {
+  document.getElementById('pracTipTrack').classList.toggle('on', pracRevealOn);
+  document.getElementById('pracTipKnob').classList.toggle('on', pracRevealOn);
+}
+
 function renderPracCard() {
   var fi = pracVocabIndices[pracCurrent];
   var row = filteredVocab[fi];
@@ -937,7 +958,7 @@ function renderPracCard() {
   document.getElementById('pracTerm').textContent = row.term || '';
   var defEl = document.getElementById('pracDef');
   defEl.textContent = row.definition || '';
-  defEl.style.display = tooltipOn ? '' : 'none';
+  defEl.style.display = pracRevealOn ? '' : 'none';
   document.getElementById('pracCounter').textContent = (pracCurrent + 1) + ' / ' + pracVocabIndices.length;
   document.getElementById('pracTextarea').value = userAnswers[idx] || '';
   var cc = document.getElementById('pracCharCount');
