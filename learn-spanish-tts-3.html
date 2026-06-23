@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Chinese Lyrics Reader</title>
+<title>Spanish Vocab Reader</title>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -393,9 +393,9 @@
 </button>
 
 <div class="container">
-  <h1>Chinese Lyrics Reader</h1>
-  <div class="subtitle">Click to hear pronunciation — Mandarin or Cantonese via OpenAI or Browser TTS</div>
-  <a href="chinese-csv-to-table.html" style="display:inline-block;margin:6px 0 10px;font-size:12px;color:#2563eb;text-decoration:none;">CSV to Table Tool &rarr;</a>
+  <h1>Spanish Vocab Reader</h1>
+  <div class="subtitle">Click to hear pronunciation — Spanish via OpenAI or Browser TTS</div>
+  <a href="spanish-csv-to-table.html" style="display:inline-block;margin:6px 0 10px;font-size:12px;color:#2563eb;text-decoration:none;">CSV to Table Tool &rarr;</a>
 
   <!-- Setup Section -->
   <div class="setup-section" id="setupSection">
@@ -404,13 +404,6 @@
       <span class="toggle-arrow" id="setupArrow">&#9660;</span>
     </div>
     <div class="setup-body">
-
-      <!-- Dialect Toggle -->
-      <div style="font-size:12px;font-weight:600;color:#555;margin-bottom:6px;">Dialect</div>
-      <div class="tts-toggle">
-        <button id="dialectMandarin" class="active" onclick="setDialect('mandarin')">Mandarin</button>
-        <button id="dialectCantonese" onclick="setDialect('cantonese')">Cantonese</button>
-      </div>
 
       <!-- TTS Engine Toggle -->
       <div style="font-size:12px;font-weight:600;color:#555;margin-bottom:6px;">Voice Engine</div>
@@ -473,7 +466,7 @@
       <div style="font-size:12px;font-weight:600;color:#555;margin-bottom:6px;">Google Sheets</div>
       <div class="setup-row">
         <button class="btn google" id="authBtn" onclick="gdriveSignIn()">Sign In</button>
-        <input type="text" id="searchInput" placeholder="Spreadsheet name..." value="chinese">
+        <input type="text" id="searchInput" placeholder="Spreadsheet name..." value="spanish">
         <button class="btn primary" id="searchBtn" onclick="gdriveSearch()" disabled>Load</button>
       </div>
       <div class="setup-row">
@@ -489,16 +482,16 @@
         </select>
       </div>
       <div class="status" id="status"></div>
-      <div class="hint">Sheet format: Chinese | Pinyin | English (3 columns, header row). Section headers (e.g. "Verse 1") in column A with B+C empty.</div>
+      <div class="hint">Sheet format: Spanish | Pronunciation | English (3 columns, header row). Section headers (e.g. "Verse 1") in column A with B+C empty.</div>
 
       <hr style="border:none;border-top:1px solid #eee;margin:12px 0;">
 
       <!-- Paste from Sheets -->
       <div style="font-size:12px;font-weight:600;color:#555;margin-bottom:6px;">Paste from Google Sheets</div>
       <textarea id="pasteSheetInput" rows="8" style="width:100%;border:1px solid #ddd;border-radius:8px;padding:10px 14px;font-family:'SF Mono',Monaco,monospace;font-size:12px;line-height:1.6;resize:vertical;color:#333;" placeholder="Select rows in Google Sheets, copy (Cmd+C), then paste here...
-一	yī	one
-五	wǔ	five
-魚	yú	fish"></textarea>
+hola	oh-lah	hello
+gato	gah-toh	cat
+perro	peh-rroh	dog"></textarea>
       <div class="setup-row" style="margin-top:8px;align-items:center;">
         <label style="font-size:12px;color:#555;">Rows</label>
         <input type="number" id="pasteRowFrom" min="1" value="1" style="width:60px;padding:4px 8px;border:1px solid #ddd;border-radius:6px;font-size:12px;">
@@ -545,13 +538,11 @@
       </select>
       <button onclick="document.getElementById('learnModal').style.display='flex'" style="font-size:12px;font-weight:700;width:22px;height:22px;border-radius:50%;border:1px solid #aaa;background:white;color:#555;cursor:pointer;" title="Learning approach guide">?</button>
       <div class="sep"></div>
-      <span class="toggle-chip on" id="toggleChinese" onclick="toggleSetting('chinese')">Chin</span>
-      <span class="toggle-chip on" id="toggleRomanization" onclick="toggleSetting('romanization')">Pin</span>
+      <span class="toggle-chip on" id="toggleChinese" onclick="toggleSetting('chinese')">Span</span>
+      <span class="toggle-chip on" id="toggleRomanization" onclick="toggleSetting('romanization')">Pron</span>
       <span class="toggle-chip on" id="toggleMeaning" onclick="toggleSetting('meanings')">Eng</span>
       <span class="toggle-chip on" id="toggleSentences" onclick="toggleSetting('sentences')">Sent</span>
       <div class="sep"></div>
-      <label style="font-size:12px;font-weight:600;cursor:pointer;"><input type="radio" name="dialectBar" value="mandarin" checked onchange="setDialect('mandarin')"> Mandarin</label>
-      <label style="font-size:12px;font-weight:600;cursor:pointer;"><input type="radio" name="dialectBar" value="cantonese" onchange="setDialect('cantonese')"> Cantonese</label>
       <div class="sep"></div>
       <div class="tip-toggle" onclick="setTooltipMode(!tooltipOn)" title="Hover any card to reveal its English meaning">
         <span>Reveal on hover</span>
@@ -584,39 +575,39 @@
     <div id="learnModal" style="display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;" onclick="if(event.target===this)this.style.display='none'">
       <div style="background:white;border-radius:14px;max-width:520px;width:90%;max-height:80vh;overflow-y:auto;padding:24px 28px;box-shadow:0 12px 40px rgba(0,0,0,0.25);position:relative;">
         <button onclick="document.getElementById('learnModal').style.display='none'" style="position:absolute;top:12px;right:14px;border:none;background:none;font-size:20px;cursor:pointer;color:#999;">&times;</button>
-        <h3 style="margin:0 0 12px;font-size:17px;color:#1a1a1a;">Pick Your Lane First</h3>
+        <h3 style="margin:0 0 12px;font-size:17px;color:#1a1a1a;">Learning Approach</h3>
         <p style="font-size:13px;line-height:1.65;color:#444;margin:0 0 14px;">
-          Trying to learn speaking <em>and</em> reading at the same time splits your attention and slows both. Pick one track first, build confidence, then layer the other on top.
+          Focus on one skill at a time — listening comprehension or reading — then layer the other on top.
         </p>
         <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
           <div style="flex:1;min-width:200px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:14px;">
-            <div style="font-size:13px;font-weight:700;color:#1d4ed8;margin-bottom:6px;">Speaking / Understanding</div>
+            <div style="font-size:13px;font-weight:700;color:#1d4ed8;margin-bottom:6px;">Listening / Speaking</div>
             <p style="font-size:12px;line-height:1.6;color:#1e40af;margin:0;">
-              Focus on pinyin + tones. Skip characters at first. Use TTS, listen and repeat. Train your ear before your eyes.
+              Focus on pronunciation. Use TTS, listen and repeat. Train your ear and mouth together.
             </p>
             <div style="margin-top:10px;font-size:11px;color:#3b82f6;font-weight:600;">Suggested settings:</div>
             <div style="font-size:11px;color:#555;line-height:1.6;margin-top:2px;">
-              Chin <strong>OFF</strong> &middot; Pin <strong>ON</strong> &middot; Eng <strong>ON</strong> &middot; Sent <strong>ON</strong><br>
+              Span <strong>OFF</strong> &middot; Pron <strong>ON</strong> &middot; Eng <strong>ON</strong> &middot; Sent <strong>ON</strong><br>
               Reveal on hover for self-testing
             </div>
           </div>
           <div style="flex:1;min-width:200px;background:#fefce8;border:1px solid #fde68a;border-radius:10px;padding:14px;">
             <div style="font-size:13px;font-weight:700;color:#92400e;margin-bottom:6px;">Reading / Writing</div>
             <p style="font-size:12px;line-height:1.6;color:#78350f;margin:0;">
-              Focus on characters. Each one is its own memorization project (~2,000-3,000 to read a newspaper). Attach sounds to shapes you recognize.
+              Focus on reading the Spanish text. Hide pronunciation and try to recall meanings from the written words.
             </p>
             <div style="margin-top:10px;font-size:11px;color:#d97706;font-weight:600;">Suggested settings:</div>
             <div style="font-size:11px;color:#555;line-height:1.6;margin-top:2px;">
-              Chin <strong>ON</strong> &middot; Pin <strong>OFF</strong> &middot; Eng <strong>ON</strong> &middot; Sent <strong>ON</strong><br>
+              Span <strong>ON</strong> &middot; Pron <strong>OFF</strong> &middot; Eng <strong>ON</strong> &middot; Sent <strong>ON</strong><br>
               Use answer area to practice writing
             </div>
           </div>
         </div>
         <p style="font-size:11px;line-height:1.55;color:#999;margin:0;">
-          The sandwich method here helps both tracks: sentence &rarr; glossed vocab &rarr; sentence again. Your brain gets context, detail, then reinforcement.
+          The sandwich method: sentence &rarr; glossed vocab &rarr; sentence again. Your brain gets context, detail, then reinforcement.
         </p>
         <p style="font-size:11px;line-height:1.55;color:#999;margin:8px 0 0;">
-          Clicking any card or sentence automatically copies the Chinese text to your clipboard &mdash; paste into <strong>translate.google.com</strong> to hear it read aloud.
+          Clicking any card or sentence automatically copies the Spanish text to your clipboard &mdash; paste into <strong>translate.google.com</strong> to hear it read aloud.
         </p>
       </div>
     </div>
@@ -662,16 +653,16 @@ let allRows = [];
 let filteredRows = [];
 var hardSet = new Set();
 let ttsEngine = 'browser'; // 'browser' or 'openai'
-let dialect = 'mandarin'; // 'mandarin' or 'cantonese'
+let dialect = 'spanish';
 let ttsRate = 1;
 let autoAdvance = false;
 let currentSpeakingIndex = -1;
 let currentAudio = null; // for OpenAI playback
 
-let showMeanings = localStorage.getItem('chineseTts_showMeanings') !== null ? localStorage.getItem('chineseTts_showMeanings') === 'true' : true;
-let showChinese = localStorage.getItem('chineseTts_showChinese') !== null ? localStorage.getItem('chineseTts_showChinese') === 'true' : true;
-let showRomanization = localStorage.getItem('chineseTts_showRomanization') !== null ? localStorage.getItem('chineseTts_showRomanization') === 'true' : true;
-let showSentences = localStorage.getItem('chineseTts_showSentences') !== null ? localStorage.getItem('chineseTts_showSentences') === 'true' : true;
+let showMeanings = localStorage.getItem('spanishTts_showMeanings') !== null ? localStorage.getItem('spanishTts_showMeanings') === 'true' : true;
+let showChinese = localStorage.getItem('spanishTts_showChinese') !== null ? localStorage.getItem('spanishTts_showChinese') === 'true' : true;
+let showRomanization = localStorage.getItem('spanishTts_showRomanization') !== null ? localStorage.getItem('spanishTts_showRomanization') === 'true' : true;
+let showSentences = localStorage.getItem('spanishTts_showSentences') !== null ? localStorage.getItem('spanishTts_showSentences') === 'true' : true;
 let tooltipOn = false;
 let userAnswers = {};  // index -> string
 let expanded = {};     // index -> bool
@@ -712,11 +703,6 @@ function getElevenLabsKey() {
 // ── DIALECT ──
 function setDialect(d) {
   dialect = d;
-  document.getElementById('dialectMandarin').className = d === 'mandarin' ? 'active' : '';
-  document.getElementById('dialectCantonese').className = d === 'cantonese' ? 'active' : '';
-  // Sync sticky bar radio buttons
-  var radios = document.querySelectorAll('input[name="dialectBar"]');
-  radios.forEach(function(r) { r.checked = r.value === d; });
 }
 
 // ── TTS ENGINE ──
@@ -751,7 +737,7 @@ function speakText(text, onEnd) {
 
 function speakBrowser(text, onEnd) {
   var utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = dialect === 'cantonese' ? 'zh-HK' : 'zh-CN';
+  utterance.lang = 'es-ES';
   utterance.rate = ttsRate;
   utterance.onend = function() { if (onEnd) onEnd(); };
   speechSynthesis.speak(utterance);
@@ -962,10 +948,10 @@ function toggleSetting(key) {
   if (key === 'chinese') showChinese = !showChinese;
   if (key === 'romanization') showRomanization = !showRomanization;
   if (key === 'sentences') showSentences = !showSentences;
-  localStorage.setItem('chineseTts_showMeanings', showMeanings);
-  localStorage.setItem('chineseTts_showChinese', showChinese);
-  localStorage.setItem('chineseTts_showRomanization', showRomanization);
-  localStorage.setItem('chineseTts_showSentences', showSentences);
+  localStorage.setItem('spanishTts_showMeanings', showMeanings);
+  localStorage.setItem('spanishTts_showChinese', showChinese);
+  localStorage.setItem('spanishTts_showRomanization', showRomanization);
+  localStorage.setItem('spanishTts_showSentences', showSentences);
   renderLyrics();
 }
 
@@ -1044,9 +1030,9 @@ function renderLyrics() {
         lbl.textContent = '\u21bb Review';
         ctx.appendChild(lbl);
       }
-      // Detect if it contains CJK characters (Chinese sentence) vs English
-      var hasCJK = /[\u4e00-\u9fff\u3400-\u4dbf]/.test(row.contextLine);
-      if (hasCJK) {
+      // Detect if it contains Spanish characters (accented Latin) vs plain English
+      var hasSpanish = /[áéíóúñ¿¡ü]/i.test(row.contextLine);
+      if (hasSpanish) {
         var ctxCn = document.createElement('div');
         ctxCn.className = 'ctx-chinese';
         ctxCn.textContent = row.contextLine;
@@ -1401,10 +1387,10 @@ function insertSentenceRepeats(rows) {
   var i = 0;
   while (i < rows.length) {
     // Detect sentence pair: English context line followed by Chinese context line
-    var isEnglishCtx = rows[i].contextLine && !/[\u4e00-\u9fff\u3400-\u4dbf]/.test(rows[i].contextLine);
-    var nextIsChinese = (i + 1 < rows.length) && rows[i + 1].contextLine && /[\u4e00-\u9fff\u3400-\u4dbf]/.test(rows[i + 1].contextLine);
+    var isEnglishCtx = rows[i].contextLine && !/[áéíóúñ¿¡ü]/i.test(rows[i].contextLine);
+    var nextIsSpanish = (i + 1 < rows.length) && rows[i + 1].contextLine && /[áéíóúñ¿¡ü]/i.test(rows[i + 1].contextLine);
 
-    if (isEnglishCtx && nextIsChinese) {
+    if (isEnglishCtx && nextIsSpanish) {
       var engRow = rows[i];
       var chnRow = rows[i + 1];
       result.push(engRow);
@@ -1473,7 +1459,7 @@ function exportAll() {
   var html = '<table style="width:100%;border-collapse:collapse;font-size:13px;">';
   html += '<thead><tr style="background:#f1f5f9;text-align:left;">';
   html += '<th style="padding:8px 10px;border-bottom:2px solid #cbd5e1;width:5%;">#</th>';
-  html += '<th style="padding:8px 10px;border-bottom:2px solid #cbd5e1;width:25%;">Chinese</th>';
+  html += '<th style="padding:8px 10px;border-bottom:2px solid #cbd5e1;width:25%;">Spanish</th>';
   html += '<th style="padding:8px 10px;border-bottom:2px solid #cbd5e1;width:35%;">Your Answer</th>';
   html += '<th style="padding:8px 10px;border-bottom:2px solid #cbd5e1;width:35%;">Correct Answer</th>';
   html += '</tr></thead><tbody>';
@@ -1497,7 +1483,7 @@ function exportAll() {
 
 async function copyExportText() {
   var lines = [
-    'Grade my Chinese vocabulary translations. Be lenient \u2014 grade on whether I understand the meaning, not exact wording.',
+    'Grade my Spanish vocabulary translations. Be lenient \u2014 grade on whether I understand the meaning, not exact wording.',
     '',
     'For each item, rate as:',
     '\u2705 Correct \u2014 captures the key meaning',
@@ -1505,7 +1491,7 @@ async function copyExportText() {
     '\u274c Wrong \u2014 misses the point',
     '',
     'Format your response as:',
-    '#N: [Chinese] \u2192 \u2705/\u26a0\ufe0f/\u274c \u2014 [one-line note]',
+    '#N: [Spanish] \u2192 \u2705/\u26a0\ufe0f/\u274c \u2014 [one-line note]',
     '',
     'Then give an Overall Score (X/' + _exportAnswered.length + ') and a brief summary.',
     '',
@@ -1515,7 +1501,7 @@ async function copyExportText() {
   ];
 
   _exportAnswered.forEach(function(item, n) {
-    lines.push('#' + (n + 1) + ' Chinese: ' + item.row.chinese + (item.row.romanization ? ' (' + item.row.romanization + ')' : ''));
+    lines.push('#' + (n + 1) + ' Spanish: ' + item.row.chinese + (item.row.romanization ? ' (' + item.row.romanization + ')' : ''));
     lines.push('My Answer: ' + item.answer);
     lines.push('Correct: ' + item.row.english);
     lines.push('');
@@ -1541,7 +1527,7 @@ function exportHard() {
     alert('No cards marked as hard yet. Click on any card to mark it purple.');
     return;
   }
-  var lines = ['Chinese\tRomanization\tEnglish'];
+  var lines = ['Spanish\tPronunciation\tEnglish'];
   var sorted = Array.from(hardSet).sort(function(a, b) { return a - b; });
   sorted.forEach(function(idx) {
     var row = filteredRows[idx];
@@ -1727,7 +1713,7 @@ document.getElementById('pasteSheetInput').addEventListener('paste', function() 
     var lines = raw.split('\n').filter(function(l) { return l.trim(); });
     // Count data rows (skip header if detected)
     var first = lines[0].split('\t');
-    var hasHeader = first.length >= 3 && /^(chinese|hanzi|character)/i.test(first[0].trim());
+    var hasHeader = first.length >= 3 && /^(spanish|chinese|hanzi|character)/i.test(first[0].trim());
     var dataCount = hasHeader ? lines.length - 1 : lines.length;
     document.getElementById('pasteRowCount').textContent = dataCount + ' rows detected';
     document.getElementById('pasteRowTo').placeholder = dataCount;
@@ -1747,8 +1733,8 @@ function loadPastedSheet(loadAll) {
 
   // Detect header row
   var first = lines[0].split('\t');
-  var hasHeader = first.length >= 3 && /^(chinese|hanzi|character)/i.test(first[0].trim());
-  var headerLine = hasHeader ? lines[0] : 'Chinese\tPinyin\tEnglish';
+  var hasHeader = first.length >= 3 && /^(spanish|chinese|hanzi|character)/i.test(first[0].trim());
+  var headerLine = hasHeader ? lines[0] : 'Spanish\tPronunciation\tEnglish';
   var dataLines = hasHeader ? lines.slice(1) : lines;
 
   if (!loadAll) {
@@ -2044,11 +2030,11 @@ document.getElementById('fileInput').addEventListener('change', function() {
 
 // ── SHEETS API (auto-load from Dropbox) ──
 var sheetsData = null; // { sheetName: [[row], ...], ... }
-var DEFAULT_SHEET = 'chinese'; // partial match — picks first sheet containing this
+var DEFAULT_SHEET = 'spanish'; // partial match — picks first sheet containing this
 
 async function fetchSheets() {
   try {
-    var resp = await fetch('/api/sheets?lang=chinese');
+    var resp = await fetch('/api/sheets?lang=spanish');
     if (resp.ok) return await resp.json();
   } catch (e) {}
   // Fallback to local sheets.json (for static servers without API routes)
