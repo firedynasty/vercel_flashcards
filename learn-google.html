@@ -142,79 +142,16 @@
     white-space: nowrap;
   }
   .try-btn:hover { background: #e0e7ff; border-color: #a5b4fc; color: #4338ca; }
-  .try-btn.open  { background: #dbeafe; border-color: #93c5fd; color: #1d4ed8; }
 
-  /* ── ANSWER AREA (inline) ── */
-  .answer-area {
+  /* ── CARD DEFINITION (reveal per card) ── */
+  .card-definition {
     display: none;
-    padding: 0 16px 14px 38px;
-    border-top: 1px dashed #ebebeb;
-  }
-  .answer-area.open { display: block; padding-top: 12px; }
-  .answer-area textarea {
-    width: 100%; min-height: 70px;
-    border: 1px solid #ddd; border-radius: 8px;
-    padding: 8px 12px; font-family: inherit; font-size: 13px;
-    line-height: 1.55; resize: vertical; color: #333;
-  }
-  .answer-area textarea:focus { outline: none; border-color: #2563eb; }
-  .answer-area textarea::placeholder { color: #c0c0c0; }
-  .answer-hint {
-    margin-top: 5px; font-size: 11px; color: #b0b0b0;
-    display: flex; justify-content: space-between;
-  }
-  .char-count { font-weight: 600; color: #16a34a; }
-
-  /* ── HOVER TOOLTIP (reveal-on-hover mode) ── */
-  .vocab-card { position: relative; z-index: 1; }
-  .vocab-card:hover { z-index: 10; }
-  .def-tip {
-    display: none;
-    position: absolute;
-    top: 100%;
-    left: -1px; right: -1px;
-    background: #1e293b;
-    color: #e2e8f0;
-    padding: 12px 16px 14px;
-    font-size: 14px;
-    line-height: 1.65;
+    padding: 10px 16px 14px;
+    font-size: 14px; line-height: 1.65; color: #15803d;
+    background: #f0fdf4; border-top: 1px solid #bbf7d0;
     border-radius: 0 0 12px 12px;
-    box-shadow: 0 8px 20px rgba(0,0,0,0.25);
-    pointer-events: none;
-    z-index: 20;
   }
-  /* when toggle is on, all tooltips are always visible */
-  .tooltip-on .def-tip { display: block !important; position: static; background: #1e293b; border-radius: 0 0 12px 12px; box-shadow: none; margin-top: -1px; padding-left: 51px; pointer-events: none; }
-
-  /* ── HOVER-REVEAL SLIDER ── */
-  .tip-toggle {
-    display: flex; align-items: center; gap: 6px;
-    font-size: 11px; font-weight: 700; color: #555;
-    cursor: pointer; user-select: none; white-space: nowrap;
-  }
-  .tip-switch {
-    position: relative; width: 38px; height: 20px; flex-shrink: 0;
-  }
-  .tip-track {
-    position: absolute; inset: 0;
-    background: #d0d0d0; border-radius: 20px; transition: background 0.25s;
-  }
-  .tip-track.on { background: #2563eb; }
-  .tip-knob {
-    position: absolute; width: 14px; height: 14px;
-    background: white; border-radius: 50%;
-    top: 3px; left: 3px; transition: left 0.25s;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-  }
-  .tip-knob.on { left: 21px; }
-
-  /* ── CLICK-TO-REVEAL (per-card) ── */
-  .vocab-card.revealed .def-tip {
-    display: block !important; position: static;
-    background: #1e293b; border-radius: 0 0 12px 12px;
-    box-shadow: none; margin-top: -1px; padding-left: 51px;
-    pointer-events: none;
-  }
+  .vocab-card.revealed .card-definition { display: block; }
 
   /* ── PRACTICE MODAL ── */
   .practice-overlay {
@@ -395,16 +332,9 @@
   body.dark-mode .vocab-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
   body.dark-mode .card-term { color: #e0e0e0; }
   body.dark-mode .card-term:hover { color: #60a5fa; }
-  body.dark-mode .answer-area { border-top-color: #3a3a4e; }
-  body.dark-mode .answer-area textarea { background: #1e1e32; border-color: #444; color: #e0e0e0; }
-  body.dark-mode .answer-area textarea:focus { border-color: #3b82f6; }
-  body.dark-mode .answer-area textarea::placeholder { color: #666; }
   body.dark-mode .try-btn { background: #333; border-color: #555; color: #ccc; }
   body.dark-mode .try-btn:hover { background: #2a2a4e; border-color: #6366f1; color: #a5b4fc; }
-  body.dark-mode .try-btn.open { background: #1e2940; border-color: #3b82f6; color: #60a5fa; }
   body.dark-mode .section-divider { color: #60a5fa; border-bottom-color: #2a2a4e; }
-  body.dark-mode .def-tip { background: #0f172a; color: #cbd5e1; }
-  body.dark-mode .tooltip-on .def-tip { background: #0f172a; }
   body.dark-mode .setup-section { background: #2a2a3e; border-color: #3a3a4e; }
   body.dark-mode .setup-header { background: #222238; }
   body.dark-mode .setup-header span { color: #ccc; }
@@ -486,13 +416,6 @@
     <span class="score-pill pill-partial"  id="pillPartial"  style="display:none">&#9651; 0</span>
     <span class="score-pill pill-wrong"    id="pillWrong"    style="display:none">&#10060; 0</span>
     <span class="score-pill" id="pillHard" style="display:none; background:#f3e8ff; color:#7c3aed;">0 hard</span>
-    <div class="tip-toggle" onclick="setTooltipMode(!tooltipOn)" title="Hover any card to reveal its definition">
-      <span>Reveal on hover</span>
-      <div class="tip-switch">
-        <div class="tip-track on" id="tipTrack"></div>
-        <div class="tip-knob on" id="tipKnob"></div>
-      </div>
-    </div>
     <button class="try-btn" id="toggleAllTryBtn" onclick="openPracticeModal()">&#9660; Practice</button>
     <button class="btn outline sm" id="exportAllBtn" style="display:none" onclick="exportAll()">&#128203; Export All</button>
     <button class="btn outline sm" id="exportHardBtn" style="display:none" onclick="exportHard()">Export Hard</button>
@@ -572,9 +495,7 @@ var allVocab     = [];   // [{term, definition, section, idx}]
 var filteredVocab = [];  // current view
 var userAnswers  = {};   // idx -> string
 var scores       = {};   // idx -> 'correct'|'partial'|'wrong'
-var expanded     = {};   // idx -> bool
 var modalFI      = -1;   // current filteredVocab index in modal
-var tooltipOn    = true;
 var hardSet      = new Set();
 var darkModeOn   = localStorage.getItem('darkMode') === 'true';
 
@@ -685,8 +606,6 @@ function renderCards() {
 function buildCard(row, fi) {
   var idx = row.idx;
   var score = scores[idx];
-  var ans   = userAnswers[idx] || '';
-  var isOpen = expanded[idx];
 
   // ── Card wrapper ──
   var card = document.createElement('div');
@@ -701,83 +620,31 @@ function buildCard(row, fi) {
   var termEl = document.createElement('div');
   termEl.className = 'card-term';
   termEl.textContent = row.term;
-  termEl.title = 'Click to reveal definition';
 
-  // Clear button
-  var clearBtn = document.createElement('button');
-  clearBtn.className = 'try-btn';
-  clearBtn.textContent = '\u2715 Clear(esc)';
-  clearBtn.title = 'Clear the answer';
-  clearBtn.addEventListener('click', (function(capturedIdx) {
+  // Reveal button
+  var revealBtn = document.createElement('button');
+  revealBtn.className = 'try-btn';
+  revealBtn.id = 'revbtn-' + idx;
+  revealBtn.textContent = '\u25bc Reveal';
+  revealBtn.addEventListener('click', (function(capturedIdx) {
     return function(e) {
       e.stopPropagation();
-      var ta = document.getElementById('ta-' + capturedIdx);
-      if (ta) { ta.value = ''; ta.focus(); }
-      saveAnswer(capturedIdx, '');
+      var cardEl = document.getElementById('card-' + capturedIdx);
+      var btn = document.getElementById('revbtn-' + capturedIdx);
+      cardEl.classList.toggle('revealed');
+      btn.textContent = cardEl.classList.contains('revealed') ? '\u25b2 Hide' : '\u25bc Reveal';
     };
   })(idx));
 
-  // Actions
-  var actions = document.createElement('div');
-  actions.className = 'card-actions';
-
-  if (score) {
-    var badge = document.createElement('span');
-    badge.className = 'score-badge';
-    badge.id = 'badge-' + idx;
-    badge.textContent = score === 'correct' ? '\u2705' : score === 'partial' ? '\u26a0\ufe0f' : '\u274c';
-    actions.appendChild(badge);
-  }
-
-  var tryBtn = document.createElement('button');
-  tryBtn.className = 'try-btn' + (isOpen ? ' open' : '');
-  tryBtn.id = 'trybtn-' + idx;
-  tryBtn.textContent = isOpen ? '\u25b2 Hide' : '\u25bc Try';
-  tryBtn.addEventListener('click', (function(capturedFI) {
-    return function(e) { e.stopPropagation(); toggleExpand(capturedFI); };
-  })(fi));
-  actions.appendChild(tryBtn);
-
   header.appendChild(termEl);
-  header.appendChild(clearBtn);
-  header.appendChild(actions);
+  header.appendChild(revealBtn);
   card.appendChild(header);
 
-  // ── Answer area ──
-  var area = document.createElement('div');
-  area.className = 'answer-area' + (isOpen ? ' open' : '');
-  area.id = 'area-' + idx;
-
-  var ta = document.createElement('textarea');
-  ta.id = 'ta-' + idx;
-  ta.placeholder = 'Type your definition here\u2026';
-  ta.value = ans;
-  ta.addEventListener('input', (function(capturedIdx) {
-    return function() { saveAnswer(capturedIdx, this.value); };
-  })(idx));
-
-  var hint = document.createElement('div');
-  hint.className = 'answer-hint';
-
-  var hintLeft = document.createElement('span');
-  hintLeft.textContent = 'textarea will disappear unless with info';
-
-  var hintRight = document.createElement('span');
-  hintRight.className = 'char-count';
-  hintRight.id = 'chars-' + idx;
-  if (ans) hintRight.textContent = ans.length + ' chars';
-
-  hint.appendChild(hintLeft);
-  hint.appendChild(hintRight);
-  area.appendChild(ta);
-  area.appendChild(hint);
-  card.appendChild(area);
-
-  // Hover-reveal tooltip (shown when checkbox is hovered)
-  var tip = document.createElement('div');
-  tip.className = 'def-tip';
-  tip.textContent = row.definition;
-  card.appendChild(tip);
+  // Definition (hidden by default, shown on reveal)
+  var defEl = document.createElement('div');
+  defEl.className = 'card-definition';
+  defEl.textContent = row.definition;
+  card.appendChild(defEl);
 
   // ── Click card to toggle hard marker ──
   card.addEventListener('click', (function(capturedIdx) {
@@ -791,29 +658,6 @@ function buildCard(row, fi) {
   })(idx));
 
   return card;
-}
-
-// ── EXPAND / COLLAPSE ──
-function toggleExpand(fi) {
-  var row = filteredVocab[fi];
-  var idx = row.idx;
-  expanded[idx] = !expanded[idx];
-
-  var area   = document.getElementById('area-' + idx);
-  var tryBtn = document.getElementById('trybtn-' + idx);
-  if (!area || !tryBtn) return;
-
-  if (expanded[idx]) {
-    area.classList.add('open');
-    tryBtn.classList.add('open');
-    tryBtn.textContent = '\u25b2 Hide';
-    var ta = document.getElementById('ta-' + idx);
-    if (ta) setTimeout(function() { ta.focus(); }, 40);
-  } else {
-    area.classList.remove('open');
-    tryBtn.classList.remove('open');
-    tryBtn.textContent = '\u25bc Try';
-  }
 }
 
 // ── PRACTICE MODAL ──
@@ -836,16 +680,6 @@ function openPracticeModal() {
 function closePracticeModal() {
   savePracAnswer();
   document.getElementById('practiceOverlay').classList.remove('open');
-  // Sync answers back into inline textareas
-  pracVocabIndices.forEach(function(fi) {
-    var idx = filteredVocab[fi].idx;
-    var ta = document.getElementById('ta-' + idx);
-    if (ta && userAnswers[idx] !== undefined) {
-      ta.value = userAnswers[idx];
-      var cc = document.getElementById('chars-' + idx);
-      if (cc) cc.textContent = userAnswers[idx].length ? userAnswers[idx].length + ' chars' : '';
-    }
-  });
 }
 
 function savePracAnswer() {
@@ -903,13 +737,6 @@ document.getElementById('pracTextarea').addEventListener('input', function() {
   var cc = document.getElementById('pracCharCount');
   cc.textContent = this.value.length ? this.value.length + ' chars' : '';
 });
-
-// ── SAVE ANSWER ──
-function saveAnswer(idx, val) {
-  userAnswers[idx] = val;
-  var cc = document.getElementById('chars-' + idx);
-  if (cc) cc.textContent = val.length ? val.length + ' chars' : '';
-}
 
 // ── WORD MATCH ──
 var STOP_WORDS = ['a','an','the','is','it','of','to','in','for','on','and','or','that','this','with','as','by','from','are','was','were','be','been','being','have','has','had','do','does','did','will','would','could','should','can','may','might','not','no','but','if','at','its','your','you','we','they','them','their','our','what','which','who','how','when','where','than','then','also','just','about','into','over','after','before','between','through','during','under','within'];
@@ -1231,7 +1058,7 @@ function readFile(file) {
       allVocab = parseVocabCsv(e.target.result);
       userAnswers = {};
       scores = {};
-      expanded = {};
+
 
       if (allVocab.length === 0) {
         setUploadStatus('\u26a0\ufe0f No vocabulary entries found \u2014 check file format (needs "Term: Definition" lines).');
@@ -1243,7 +1070,6 @@ function readFile(file) {
       // Show control bar, cards area, and export button
       document.getElementById('controlBar').classList.add('active');
       document.getElementById('cardsArea').classList.add('active');
-      if (tooltipOn) document.getElementById('cardsArea').classList.add('tooltip-on');
       document.getElementById('exportAllBtn').style.display = '';
 
       // Collapse upload zone
@@ -1259,14 +1085,6 @@ function readFile(file) {
 
 function setUploadStatus(msg) {
   document.getElementById('uploadStatus').textContent = msg;
-}
-
-// ── HOVER-REVEAL TOGGLE ──
-function setTooltipMode(on) {
-  tooltipOn = on;
-  document.getElementById('cardsArea').classList.toggle('tooltip-on', on);
-  document.getElementById('tipTrack').classList.toggle('on', on);
-  document.getElementById('tipKnob').classList.toggle('on', on);
 }
 
 // ── GOOGLE SHEETS ──
@@ -1431,7 +1249,6 @@ function onGSheetSelect() {
   // Show control bar and cards
   document.getElementById('controlBar').classList.add('active');
   document.getElementById('cardsArea').classList.add('active');
-  if (tooltipOn) document.getElementById('cardsArea').classList.add('tooltip-on');
   document.getElementById('exportAllBtn').style.display = '';
 
   // Hide upload zone but keep Google Sheets controls visible
@@ -1455,17 +1272,6 @@ document.addEventListener('keydown', function(e) {
   }
 
   if (e.key === 'Escape') {
-    // If a textarea is focused, clear it for re-typing practice
-    if (document.activeElement && document.activeElement.tagName === 'TEXTAREA') {
-      document.activeElement.value = '';
-      var id = document.activeElement.id; // e.g. "ta-3"
-      if (id && id.indexOf('ta-') === 0) {
-        var idx = parseInt(id.slice(3));
-        saveAnswer(idx, '');
-      }
-      e.preventDefault();
-      return;
-    }
     closeModal();
   }
 });
