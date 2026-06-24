@@ -477,12 +477,6 @@
           <option value="">Sign in first</option>
         </select>
       </div>
-      <div class="setup-row">
-        <label>Section</label>
-        <select id="gSectionSelect" disabled onchange="onGSectionSelect()">
-          <option value="">Select sheet first</option>
-        </select>
-      </div>
       <div class="g-status" id="gStatus"></div>
       <div class="g-hint">Sheet format: <strong>Term: Definition</strong> (one per cell/line). Single-letter lines become section headers — same as local CSV format.<br><strong>Open All</strong> allows hover to auto-check/uncheck the mastered checkbox (for exporting unchecked items — intelligent flashcard).</div>
     </div>
@@ -493,9 +487,6 @@
 <div class="control-bar" id="controlBar">
   <div class="ctrl-inner">
     <input type="text" id="searchInput" placeholder="&#128269; Search terms or definitions…" oninput="filterAndRender()">
-    <select id="sectionSel" onchange="filterAndRender()" style="display:none">
-      <option value="">All sections</option>
-    </select>
     <button class="btn outline sm" id="darkModeBtn" onclick="toggleDarkMode()">&#9790; Dark</button>
     <select id="filterSel" onchange="filterAndRender()" style="display:none">
       <option value="all">All cards</option>
@@ -596,8 +587,6 @@ var filteredVocab = [];  // current view
 var userAnswers  = {};   // idx -> string
 var scores       = {};   // idx -> 'correct'|'partial'|'wrong'
 var expanded     = {};   // idx -> bool
-var sections     = [];   // ordered list of section keys
-var sectionContexts = {}; // section -> [context strings] (sandwich "whole" lines)
 var modalFI      = -1;   // current filteredVocab index in modal
 var modalCB      = null; // the checkbox element that opened the modal
 var tooltipOn    = true;
@@ -621,9 +610,6 @@ if (darkModeOn) applyDarkMode();
 function parseVocabCsv(text) {
   var lines = text.split('\n');
   var vocab = [];
-  var sec = '';
-  var secs = [];
-  var ctxs = {}; // section -> [context lines]
 
   lines.forEach(function(line) {
     line = line.trim();
@@ -634,47 +620,26 @@ function parseVocabCsv(text) {
       line = line.slice(1, -1).replace(/""/g, '"');
     }
 
-    // Sandwich context line: starts with "> "
-    if (line.indexOf('> ') === 0) {
-      var ctx = line.slice(2).trim();
-      if (ctx) {
-        if (!ctxs[sec]) ctxs[sec] = [];
-        ctxs[sec].push(ctx);
-      }
-      return;
-    }
-
     // Find first ': ' separator
     var sep = line.indexOf(': ');
-    if (sep < 0) {
-      // No separator — treat as section header if short / single symbol
-      if (line.length <= 3) {
-        sec = line;
-        if (secs.indexOf(sec) < 0) secs.push(sec);
-      }
-      return;
-    }
+    if (sep < 0) return;
 
     var term = line.slice(0, sep).trim();
     var def  = line.slice(sep + 2).trim();
     if (term && def) {
-      vocab.push({ term: term, definition: def, section: sec, idx: vocab.length });
+      vocab.push({ term: term, definition: def, idx: vocab.length });
     }
   });
 
-  sections = secs;
-  sectionContexts = ctxs;
   return vocab;
 }
 
 // ── FILTER ──
 function filterAndRender() {
   var q   = document.getElementById('searchInput').value.trim().toLowerCase();
-  var sec = document.getElementById('sectionSel').value;
   var f   = document.getElementById('filterSel').value;
 
   filteredVocab = allVocab.filter(function(v) {
-    if (sec && v.section !== sec) return false;
     if (q && v.term.toLowerCase().indexOf(q) < 0 &&
              v.definition.toLowerCase().indexOf(q) < 0) return false;
     var s = scores[v.idx];
@@ -704,47 +669,11 @@ function renderCards() {
     return;
   }
 
-  var lastSec = null;
-
   filteredVocab.forEach(function(row, fi) {
-    // Section divider — also append sandwich context for previous section
-    if (row.section !== lastSec) {
-      // Append sandwich "whole" for the section we just finished
-      if (lastSec !== null) appendSandwichContext(container, lastSec);
-
-      if (row.section) {
-        var hdr = document.createElement('div');
-        hdr.className = 'section-divider';
-        hdr.textContent = 'Section ' + row.section;
-        container.appendChild(hdr);
-      }
-      lastSec = row.section;
-    }
-
     container.appendChild(buildCard(row, fi));
   });
 
-  // Append sandwich context for the last section
-  if (lastSec !== null) appendSandwichContext(container, lastSec);
-
   updateScorePills();
-}
-
-function appendSandwichContext(container, sec) {
-  var ctxList = sectionContexts[sec];
-  if (!ctxList || ctxList.length === 0) return;
-  ctxList.forEach(function(ctx) {
-    var wrapper = document.createElement('div');
-    wrapper.className = 'sandwich-context';
-    var label = document.createElement('div');
-    label.className = 'sandwich-label';
-    label.textContent = 'Context \u2014 Whole';
-    var body = document.createElement('div');
-    body.textContent = ctx;
-    wrapper.appendChild(label);
-    wrapper.appendChild(body);
-    container.appendChild(wrapper);
-  });
 }
 
 function buildCard(row, fi) {
@@ -1270,14 +1199,8 @@ function exportUnmastered() {
     alert('All cards are mastered! Nothing to export.');
     return;
   }
-  // Build CSV grouped by section
   var lines = [];
-  var lastSec = null;
   unmastered.forEach(function(v) {
-    if (v.section && v.section !== lastSec) {
-      lines.push(v.section);
-      lastSec = v.section;
-    }
     var entry = v.term + ': ' + v.definition;
     if (entry.indexOf(',') >= 0) entry = '"' + entry.replace(/"/g, '""') + '"';
     lines.push(entry);
@@ -1330,17 +1253,6 @@ function readFile(file) {
         return;
       }
 
-      // Populate section dropdown
-      var sel = document.getElementById('sectionSel');
-      sel.innerHTML = '<option value="">All sections (' + allVocab.length + ' terms)</option>';
-      sections.forEach(function(s) {
-        var count = allVocab.filter(function(v) { return v.section === s; }).length;
-        var opt = document.createElement('option');
-        opt.value = s;
-        opt.textContent = 'Section ' + s + ' (' + count + ')';
-        sel.appendChild(opt);
-      });
-
       setUploadStatus('\u2705 Loaded ' + allVocab.length + ' terms from ' + file.name);
 
       // Show control bar, cards area, and export button
@@ -1379,8 +1291,6 @@ var GDRIVE_SCOPES = 'https://www.googleapis.com/auth/drive.readonly https://www.
 var gdriveAccessToken = null;
 var gdriveTokenClient = null;
 var gdriveWorkbook = null;
-var gdriveAllRows = []; // [{term, definition, section}]
-var gdriveSections = [];
 
 function setGStatus(msg) { document.getElementById('gStatus').textContent = msg; }
 
@@ -1423,10 +1333,6 @@ function gdriveSignIn() {
     document.getElementById('gSearchBtn').disabled = true;
     document.getElementById('gSheetSelect').innerHTML = '<option value="">Sign in first</option>';
     document.getElementById('gSheetSelect').disabled = true;
-    document.getElementById('gSectionSelect').innerHTML = '<option value="">Select sheet first</option>';
-    document.getElementById('gSectionSelect').disabled = true;
-    gdriveAllRows = [];
-    gdriveSections = [];
     setGStatus('Signed out');
     return;
   }
@@ -1529,58 +1435,13 @@ function onGSheetSelect() {
     return;
   }
 
-  // Populate section dropdown in the Google setup area
-  var secSel = document.getElementById('gSectionSelect');
-  secSel.innerHTML = '<option value="">All sections (' + vocab.length + ' terms)</option>';
-  sections.forEach(function(s) {
-    var count = vocab.filter(function(v) { return v.section === s; }).length;
-    var opt = document.createElement('option');
-    opt.value = s;
-    opt.textContent = 'Section ' + s + ' (' + count + ')';
-    secSel.appendChild(opt);
-  });
-  secSel.disabled = false;
-
-  // Store parsed vocab for section filtering
-  gdriveAllRows = vocab;
-  gdriveSections = sections.slice();
-
-  setGStatus(vocab.length + ' terms loaded from sheet "' + sheetName + '"');
-
-  // Auto-load all
-  onGSectionSelect();
-}
-
-function onGSectionSelect() {
-  var sec = document.getElementById('gSectionSelect').value;
-  var vocabToLoad = sec
-    ? gdriveAllRows.filter(function(r) { return r.section === sec; })
-    : gdriveAllRows.slice();
-
-  if (vocabToLoad.length === 0) {
-    setGStatus('No terms found in this section');
-    return;
-  }
-
-  // Re-index and load into the drill
-  allVocab = vocabToLoad.map(function(v, i) {
-    return { term: v.term, definition: v.definition, section: v.section, idx: i };
-  });
+  // Load into the drill
+  allVocab = vocab;
   userAnswers = {};
   scores = {};
   expanded = {};
-  sections = gdriveSections;
 
-  // Populate the main section dropdown
-  var sel = document.getElementById('sectionSel');
-  sel.innerHTML = '<option value="">All sections (' + allVocab.length + ' terms)</option>';
-  sections.forEach(function(s) {
-    var count = allVocab.filter(function(v) { return v.section === s; }).length;
-    var opt = document.createElement('option');
-    opt.value = s;
-    opt.textContent = 'Section ' + s + ' (' + count + ')';
-    sel.appendChild(opt);
-  });
+  setGStatus(vocab.length + ' terms loaded from sheet "' + sheetName + '"');
 
   // Show control bar and cards
   document.getElementById('controlBar').classList.add('active');
