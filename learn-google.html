@@ -431,21 +431,14 @@
       <span class="practice-counter" id="pracCounter">1 / 10</span>
       <button id="pracNext" onclick="pracNavigate(1)">Next &rarr;</button>
     </div>
-    <div class="practice-card-term" id="pracTerm"></div>
+    <div class="practice-card-term" id="pracTerm" onclick="togglePracReveal()" style="cursor:pointer;"></div>
     <div class="practice-card-def" id="pracDef"></div>
     <textarea class="practice-textarea" id="pracTextarea" placeholder="Type your definition&#8230;"></textarea>
     <div class="practice-hint">
-      <span>&larr; &rarr; arrow keys to navigate &middot; Esc to close</span>
+      <span>&larr; &rarr; arrow keys to navigate &middot; Esc to close &middot; click term to reveal answer</span>
       <span class="char-count" id="pracCharCount"></span>
     </div>
-    <div style="margin-top:12px;display:flex;align-items:center;justify-content:space-between;">
-      <div class="tip-toggle" onclick="togglePracReveal()" title="Show or hide the definition">
-        <span>Reveal answer</span>
-        <div class="tip-switch">
-          <div class="tip-track" id="pracTipTrack"></div>
-          <div class="tip-knob" id="pracTipKnob"></div>
-        </div>
-      </div>
+    <div style="margin-top:12px;text-align:right;">
       <button class="btn outline" style="font-size:12px;padding:6px 14px;" onclick="savePracAnswer();closePracticeModal();exportAll()">&#128203; Export All</button>
     </div>
   </div>
@@ -671,7 +664,6 @@ function openPracticeModal() {
   });
   if (pracVocabIndices.length === 0) return;
   pracCurrent = 0;
-  syncPracRevealUI();
   renderPracCard();
   document.getElementById('practiceOverlay').classList.add('open');
   setTimeout(function() { document.getElementById('pracTextarea').focus(); }, 60);
@@ -689,18 +681,9 @@ function savePracAnswer() {
   userAnswers[idx] = document.getElementById('pracTextarea').value;
 }
 
-var pracRevealOn = false; // separate toggle for practice modal
-
 function togglePracReveal() {
-  pracRevealOn = !pracRevealOn;
-  document.getElementById('pracTipTrack').classList.toggle('on', pracRevealOn);
-  document.getElementById('pracTipKnob').classList.toggle('on', pracRevealOn);
-  document.getElementById('pracDef').style.display = pracRevealOn ? '' : 'none';
-}
-
-function syncPracRevealUI() {
-  document.getElementById('pracTipTrack').classList.toggle('on', pracRevealOn);
-  document.getElementById('pracTipKnob').classList.toggle('on', pracRevealOn);
+  var defEl = document.getElementById('pracDef');
+  defEl.style.display = defEl.style.display === 'none' ? '' : 'none';
 }
 
 function renderPracCard() {
@@ -710,7 +693,7 @@ function renderPracCard() {
   document.getElementById('pracTerm').textContent = row.term || '';
   var defEl = document.getElementById('pracDef');
   defEl.textContent = row.definition || '';
-  defEl.style.display = pracRevealOn ? '' : 'none';
+  defEl.style.display = 'none';
   document.getElementById('pracCounter').textContent = (pracCurrent + 1) + ' / ' + pracVocabIndices.length;
   document.getElementById('pracTextarea').value = userAnswers[idx] || '';
   var cc = document.getElementById('pracCharCount');
