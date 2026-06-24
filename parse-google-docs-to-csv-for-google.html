@@ -131,7 +131,8 @@ Abstraction: To take a relatively complex system and simplify it
     <h3>3. Copy CSV</h3>
     <textarea id="outputText" rows="10" readonly></textarea>
     <div class="btn-row">
-      <button class="btn green" onclick="copyOutput()">Copy to Clipboard</button>
+      <button class="btn green" onclick="copyForSheets()">Copy for Google Sheets</button>
+      <button class="btn outline" onclick="copyOutput()">Copy CSV</button>
       <button class="btn outline" onclick="downloadCsv()">Download .csv</button>
       <span class="status" id="copyStatus"></span>
     </div>
@@ -220,20 +221,15 @@ function showPreview(termCount, sectionCount, contextCount) {
   if (contextCount > 0) stats += '<span>' + contextCount + ' context lines</span>';
   document.getElementById('statsRow').innerHTML = stats;
 
-  var html = '<table class="preview-table"><tr><th>#</th><th>Section</th><th>Term</th><th>Definition</th></tr>';
+  var html = '<table class="preview-table"><tr><th>#</th><th>Term</th><th>Definition</th></tr>';
   var n = 0;
 
   for (var i = 0; i < parsedLines.length; i++) {
     var p = parsedLines[i];
-    if (p.type === 'header') {
-      html += '<tr class="row-header"><td></td><td colspan="3">Section ' + esc(p.section) + '</td></tr>';
-    } else if (p.type === 'context') {
-      html += '<tr class="row-context"><td></td><td class="col-section">' + esc(p.section) + '</td><td colspan="2">' + esc(p.raw) + '</td></tr>';
-    } else {
+    if (p.type === 'term') {
       n++;
       html += '<tr>' +
         '<td style="color:#aaa">' + n + '</td>' +
-        '<td class="col-section">' + esc(p.section) + '</td>' +
         '<td class="col-term">' + esc(p.term) + '</td>' +
         '<td class="col-def">' + esc(p.definition) + '</td>' +
         '</tr>';
@@ -259,6 +255,22 @@ function showOutput() {
   }
 
   document.getElementById('outputText').value = csvLines.join('\n');
+}
+
+function copyForSheets() {
+  var rows = [];
+  for (var i = 0; i < parsedLines.length; i++) {
+    var p = parsedLines[i];
+    if (p.type === 'term') {
+      rows.push(p.term + '\t' + p.definition);
+    }
+  }
+  if (!rows.length) return;
+  navigator.clipboard.writeText(rows.join('\n')).then(function() {
+    setStatus('copyStatus', 'Copied! Paste into Google Sheets.');
+  }).catch(function() {
+    setStatus('copyStatus', 'Copy failed.', true);
+  });
 }
 
 function copyOutput() {
