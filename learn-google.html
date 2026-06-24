@@ -450,8 +450,7 @@
     <div class="upload-icon">&#128196;</div>
     <div class="upload-label">Drop your CSV here, or click to browse</div>
     <div class="upload-hint">
-      Format: <strong>Term: Definition</strong> (one per line)<br>
-      Works with Google Takeout / Quizlet exports — single-letter lines become section headers
+      Format: <strong>Term, Definition</strong> (two columns) or <strong>Term: Definition</strong> (one column)
     </div>
     <div class="upload-status" id="uploadStatus"></div>
     <input type="file" id="fileInput" accept=".csv,.txt" onchange="onFileInput(event)">
@@ -478,7 +477,7 @@
         </select>
       </div>
       <div class="g-status" id="gStatus"></div>
-      <div class="g-hint">Sheet format: <strong>Term: Definition</strong> (one per cell/line). Single-letter lines become section headers — same as local CSV format.<br><strong>Open All</strong> allows hover to auto-check/uncheck the mastered checkbox (for exporting unchecked items — intelligent flashcard).</div>
+      <div class="g-hint">Sheet format: <strong>Term, Definition</strong> (two columns) or <strong>Term: Definition</strong> (one column).<br><strong>Open All</strong> allows hover to auto-check/uncheck the mastered checkbox (for exporting unchecked items — intelligent flashcard).</div>
     </div>
   </div>
 </div>
@@ -607,6 +606,24 @@ function applyDarkMode() {
 if (darkModeOn) applyDarkMode();
 
 // ── CSV PARSING ──
+function parseCsvRow(line) {
+  var cells = [], current = '', inQuotes = false;
+  for (var i = 0; i < line.length; i++) {
+    var ch = line[i];
+    if (inQuotes) {
+      if (ch === '"' && line[i + 1] === '"') { current += '"'; i++; }
+      else if (ch === '"') { inQuotes = false; }
+      else { current += ch; }
+    } else {
+      if (ch === '"') { inQuotes = true; }
+      else if (ch === ',') { cells.push(current.trim()); current = ''; }
+      else { current += ch; }
+    }
+  }
+  cells.push(current.trim());
+  return cells;
+}
+
 function parseVocabCsv(text) {
   var lines = text.split('\n');
   var vocab = [];
@@ -615,17 +632,20 @@ function parseVocabCsv(text) {
     line = line.trim();
     if (!line) return;
 
-    // Unescape CSV-quoted field
-    if (line.charAt(0) === '"' && line.charAt(line.length - 1) === '"') {
-      line = line.slice(1, -1).replace(/""/g, '"');
+    var cells = parseCsvRow(line);
+
+    // Two-column CSV: Term, Definition
+    if (cells.length >= 2 && cells[0] && cells[1]) {
+      vocab.push({ term: cells[0], definition: cells[1], idx: vocab.length });
+      return;
     }
 
-    // Find first ': ' separator
-    var sep = line.indexOf(': ');
+    // Fallback: single cell with "Term: Definition"
+    var raw = cells[0] || '';
+    var sep = raw.indexOf(': ');
     if (sep < 0) return;
-
-    var term = line.slice(0, sep).trim();
-    var def  = line.slice(sep + 2).trim();
+    var term = raw.slice(0, sep).trim();
+    var def  = raw.slice(sep + 2).trim();
     if (term && def) {
       vocab.push({ term: term, definition: def, idx: vocab.length });
     }
