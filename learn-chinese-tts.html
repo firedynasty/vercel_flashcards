@@ -1402,7 +1402,7 @@ function onSheetSelect() {
     // Row with only column A
     if (colA && !colB && !colC) {
       // Check if it looks like a scene/section header
-      if (/^(Scene|Chapter|Part|Section|Lesson|Unit)\s/i.test(colA)) {
+      if (/^(Scene|Chapter|Part|Section|Lesson|Unit|Genesis|Exodus|Leviticus|Numbers|Deuteronomy|Joshua|Judges|Ruth|Samuel|Kings|Chronicles|Ezra|Nehemiah|Esther|Job|Psalm|Psalms|Proverbs|Ecclesiastes|Song|Isaiah|Jeremiah|Lamentations|Ezekiel|Daniel|Hosea|Joel|Amos|Obadiah|Jonah|Micah|Nahum|Habakkuk|Zephaniah|Haggai|Zechariah|Malachi|Matthew|Mark|Luke|John|Acts|Romans|Corinthians|Galatians|Ephesians|Philippians|Colossians|Thessalonians|Timothy|Titus|Philemon|Hebrews|James|Peter|Jude|Revelation|Verse)\s/i.test(colA)) {
         currentLesson = colA;
         allRows.push({
           lesson: currentLesson,
@@ -1746,7 +1746,7 @@ function loadCsvText(text, fileName) {
     if (!colA && !colB && !colC) continue;
 
     if (colA && !colB && !colC) {
-      if (/^(Scene|Chapter|Part|Section|Lesson|Unit)\s/i.test(colA)) {
+      if (/^(Scene|Chapter|Part|Section|Lesson|Unit|Genesis|Exodus|Leviticus|Numbers|Deuteronomy|Joshua|Judges|Ruth|Samuel|Kings|Chronicles|Ezra|Nehemiah|Esther|Job|Psalm|Psalms|Proverbs|Ecclesiastes|Song|Isaiah|Jeremiah|Lamentations|Ezekiel|Daniel|Hosea|Joel|Amos|Obadiah|Jonah|Micah|Nahum|Habakkuk|Zephaniah|Haggai|Zechariah|Malachi|Matthew|Mark|Luke|John|Acts|Romans|Corinthians|Galatians|Ephesians|Philippians|Colossians|Thessalonians|Timothy|Titus|Philemon|Hebrews|James|Peter|Jude|Revelation|Verse)\s/i.test(colA)) {
         currentLesson = colA;
         allRows.push({ lesson: currentLesson, chinese: '', romanization: '', english: '', sectionHeader: colA, contextLine: '' });
       } else {
@@ -2145,7 +2145,7 @@ function loadSheetByName(name) {
     if (!colA && !colB && !colC) continue;
 
     if (colA && !colB && !colC) {
-      if (/^(Scene|Chapter|Part|Section|Lesson|Unit)\s/i.test(colA)) {
+      if (/^(Scene|Chapter|Part|Section|Lesson|Unit|Genesis|Exodus|Leviticus|Numbers|Deuteronomy|Joshua|Judges|Ruth|Samuel|Kings|Chronicles|Ezra|Nehemiah|Esther|Job|Psalm|Psalms|Proverbs|Ecclesiastes|Song|Isaiah|Jeremiah|Lamentations|Ezekiel|Daniel|Hosea|Joel|Amos|Obadiah|Jonah|Micah|Nahum|Habakkuk|Zephaniah|Haggai|Zechariah|Malachi|Matthew|Mark|Luke|John|Acts|Romans|Corinthians|Galatians|Ephesians|Philippians|Colossians|Thessalonians|Timothy|Titus|Philemon|Hebrews|James|Peter|Jude|Revelation|Verse)\s/i.test(colA)) {
         currentLesson = colA;
         allRows.push({ lesson: currentLesson, chinese: '', romanization: '', english: '', sectionHeader: colA, contextLine: '' });
       } else {
@@ -2225,16 +2225,16 @@ function toggleTableView() {
 function renderTableView() {
   var container = document.getElementById('tableViewInner');
 
-  // Filter to only vocab rows (skip section headers and context lines)
-  var vocabRows = [];
+  // Show ALL rows: section headers, sentences, and vocab
+  var displayRows = [];
   filteredRows.forEach(function(row, origIdx) {
-    if (row.chinese && !row.sectionHeader && !row.contextLine) {
-      vocabRows.push({ row: row, idx: origIdx });
+    if (row.sectionHeader || row.chinese || row.contextLine) {
+      displayRows.push({ row: row, idx: origIdx });
     }
   });
 
-  if (vocabRows.length === 0) {
-    container.innerHTML = '<p style="text-align:center;color:#888;padding:40px;">No vocabulary data loaded</p>';
+  if (displayRows.length === 0) {
+    container.innerHTML = '<p style="text-align:center;color:#888;padding:40px;">No data loaded</p>';
     return;
   }
 
@@ -2247,14 +2247,33 @@ function renderTableView() {
   html += '<th style="width:40%;">English</th>';
   html += '</tr></thead><tbody>';
 
-  vocabRows.forEach(function(item, n) {
-    html += '<tr data-row-idx="' + item.idx + '">';
-    html += '<td>' + (n + 1) + '</td>';
-    html += '<td><button class="tbl-play-btn" onclick="tblSpeak(' + item.idx + ', this)" title="Play TTS">&#9654;</button></td>';
-    html += '<td class="tbl-chinese">' + escHtml(item.row.chinese) + '</td>';
-    html += '<td class="tbl-rom">' + escHtml(item.row.romanization || '') + '</td>';
-    html += '<td>' + escHtml(item.row.english || '') + '</td>';
-    html += '</tr>';
+  displayRows.forEach(function(item, n) {
+    var isHeader = !!item.row.sectionHeader;
+    var isCtx = !!item.row.contextLine;
+    var hasCJK = isCtx && /[\u4e00-\u9fff\u3400-\u4dbf]/.test(item.row.contextLine);
+
+    if (isHeader) {
+      html += '<tr style="background:#e0e7ff;"><td>' + (n + 1) + '</td><td></td>';
+      html += '<td colspan="3" style="font-size:13px;font-weight:700;color:#2563eb;letter-spacing:1px;">' + escHtml(item.row.sectionHeader) + '</td></tr>';
+    } else if (isCtx && hasCJK) {
+      html += '<tr style="background:#fefce8;" data-row-idx="' + item.idx + '">';
+      html += '<td>' + (n + 1) + '</td>';
+      html += '<td><button class="tbl-play-btn" onclick="tblSpeak(' + item.idx + ', this)" title="Play TTS">&#9654;</button></td>';
+      html += '<td class="tbl-chinese">' + escHtml(item.row.contextLine) + '</td>';
+      html += '<td class="tbl-rom" style="font-size:11px;color:#92400e;">sentence</td>';
+      html += '<td></td></tr>';
+    } else if (isCtx) {
+      html += '<tr style="background:#f0f4ff;" data-row-idx="' + item.idx + '"><td>' + (n + 1) + '</td><td></td>';
+      html += '<td colspan="3" style="font-size:13px;color:#1d4ed8;font-style:italic;">' + escHtml(item.row.contextLine) + '</td></tr>';
+    } else {
+      html += '<tr data-row-idx="' + item.idx + '">';
+      html += '<td>' + (n + 1) + '</td>';
+      html += '<td><button class="tbl-play-btn" onclick="tblSpeak(' + item.idx + ', this)" title="Play TTS">&#9654;</button></td>';
+      html += '<td class="tbl-chinese">' + escHtml(item.row.chinese) + '</td>';
+      html += '<td class="tbl-rom">' + escHtml(item.row.romanization || '') + '</td>';
+      html += '<td>' + escHtml(item.row.english || '') + '</td>';
+      html += '</tr>';
+    }
   });
 
   html += '</tbody></table>';
@@ -2285,12 +2304,14 @@ function tblSpeak(idx, btnEl) {
   });
 
   var row = filteredRows[idx];
-  if (!row || !row.chinese) return;
+  if (!row) return;
+  var text = row.chinese || row.contextLine || '';
+  if (!text) return;
 
   btnEl.classList.add('speaking');
-  copyToClipboard(row.chinese);
+  copyToClipboard(text);
 
-  speakText(row.chinese, function() {
+  speakText(text, function() {
     btnEl.classList.remove('speaking');
   });
 }
