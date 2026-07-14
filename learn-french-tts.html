@@ -6,6 +6,9 @@
 <title>French Vocab Reader</title>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css">
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
@@ -301,6 +304,47 @@
     background: #2563eb; border: none; cursor: pointer;
   }
 
+  /* ── TABLE VIEW ── */
+  #tableViewContainer { display: none; padding-top: 50px; }
+  #tableViewContainer.active { display: block; }
+  #tableViewContainer table.dataTable { width: 100% !important; border-collapse: collapse; }
+  #tableViewContainer table.dataTable thead th {
+    background: #f1f5f9; color: #334155; font-size: 13px; font-weight: 700;
+    padding: 10px 12px; border-bottom: 2px solid #cbd5e1;
+  }
+  #tableViewContainer table.dataTable tbody td {
+    padding: 10px 12px; border-bottom: 1px solid #e2e8f0;
+    font-size: 14px; vertical-align: middle;
+  }
+  #tableViewContainer table.dataTable tbody tr:nth-child(odd) { background: #f8fafc; }
+  #tableViewContainer table.dataTable tbody tr:hover { background: #eff6ff; }
+  .tbl-chinese { font-size: 20px !important; font-weight: 600; }
+  .tbl-rom { font-size: 12px; color: #888; font-style: italic; }
+  .tbl-play-btn {
+    border: none; border-radius: 50%; width: 34px; height: 34px;
+    background: #2563eb; color: white; font-size: 16px;
+    cursor: pointer; transition: background 0.15s; flex-shrink: 0;
+  }
+  .tbl-play-btn:hover { background: #1d4ed8; }
+  .tbl-play-btn.speaking { background: #16a34a; }
+  .dataTables_wrapper .dataTables_length,
+  .dataTables_wrapper .dataTables_filter,
+  .dataTables_wrapper .dataTables_info,
+  .dataTables_wrapper .dataTables_paginate { font-size: 12px; color: #555; margin: 8px 0; }
+  .dataTables_wrapper .dataTables_filter input {
+    border: 1px solid #ddd; border-radius: 6px; padding: 5px 10px; font-size: 13px;
+  }
+  .dataTables_wrapper .dataTables_paginate .paginate_button {
+    border: 1px solid #ddd; border-radius: 4px; padding: 4px 10px; margin: 0 2px;
+    cursor: pointer; font-size: 12px;
+  }
+  .dataTables_wrapper .dataTables_paginate .paginate_button.current {
+    background: #2563eb !important; color: white !important; border-color: #2563eb;
+  }
+  .dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+    background: #eff6ff !important; border-color: #93c5fd;
+  }
+
   /* ── LOADING SPINNER ── */
   .loading-dot {
     display: inline-block; width: 8px; height: 8px; border-radius: 50%;
@@ -455,11 +499,18 @@
         </div>
       </div>
       <div class="sep"></div>
+      <span class="toggle-chip" id="toggleTableView" onclick="toggleTableView()">Table</span>
+      <div class="sep"></div>
       <button class="btn outline" style="font-size:11px;padding:4px 10px;" onclick="exportAll()">&#128203; Export All</button>
     </div>
 
     <!-- Lines container -->
     <div id="linesContainer"></div>
+
+    <!-- Table view container -->
+    <div id="tableViewContainer">
+      <div id="tableViewInner"></div>
+    </div>
   </div>
 </div>
 
@@ -474,6 +525,8 @@ let gdriveWorkbook = null;
 
 let allRows = [];
 let filteredRows = [];
+let tableViewOn = false;
+let dataTableInstance = null;
 let ttsEngine = 'browser';
 let ttsRate = 1;
 let autoAdvance = false;
@@ -928,6 +981,9 @@ function renderLyrics() {
 
     container.appendChild(card);
   });
+
+  // Refresh table view if active
+  if (tableViewOn) renderTableView();
 }
 
 // ── GOOGLE SHEETS ──
@@ -1347,6 +1403,128 @@ document.getElementById('folderInput').addEventListener('change', function() {
     toggleSetup();
   }
 });
+
+// ── COPY TO CLIPBOARD ──
+function copyToClipboard(text) {
+  navigator.clipboard.writeText(text).catch(function() {});
+}
+
+// ── TABLE VIEW ──
+function toggleTableView() {
+  tableViewOn = !tableViewOn;
+  document.getElementById('toggleTableView').className = 'toggle-chip' + (tableViewOn ? ' on' : '');
+
+  var linesContainer = document.getElementById('linesContainer');
+  var tableContainer = document.getElementById('tableViewContainer');
+
+  if (tableViewOn) {
+    linesContainer.style.display = 'none';
+    tableContainer.classList.add('active');
+    renderTableView();
+  } else {
+    linesContainer.style.display = '';
+    tableContainer.classList.remove('active');
+    if (dataTableInstance) {
+      dataTableInstance.destroy();
+      dataTableInstance = null;
+    }
+    document.getElementById('tableViewInner').innerHTML = '';
+  }
+}
+
+function renderTableView() {
+  var container = document.getElementById('tableViewInner');
+
+  var displayRows = [];
+  filteredRows.forEach(function(row, origIdx) {
+    if (row.sectionHeader || row.french || row.contextLine) {
+      displayRows.push({ row: row, idx: origIdx });
+    }
+  });
+
+  if (displayRows.length === 0) {
+    container.innerHTML = '<p style="text-align:center;color:#888;padding:40px;">No data loaded</p>';
+    return;
+  }
+
+  var html = '<table id="vocabDataTable" class="display" style="width:100%">';
+  html += '<thead><tr>';
+  html += '<th style="width:5%;">#</th>';
+  html += '<th style="width:5%;">Play</th>';
+  html += '<th style="width:30%;">French</th>';
+  html += '<th style="width:20%;">Pronunciation</th>';
+  html += '<th style="width:40%;">English</th>';
+  html += '</tr></thead><tbody>';
+
+  displayRows.forEach(function(item, n) {
+    var isHeader = !!item.row.sectionHeader;
+    var isCtx = !!item.row.contextLine;
+    var isFrench = isCtx && /[àâæçéèêëîïôœùûüÿÀÂÆÇÉÈÊËÎÏÔŒÙÛÜŸ]/.test(item.row.contextLine);
+
+    if (isHeader) {
+      html += '<tr style="background:#e0e7ff;"><td>' + (n + 1) + '</td><td></td>';
+      html += '<td style="font-size:13px;font-weight:700;color:#2563eb;letter-spacing:1px;">' + escHtml(item.row.sectionHeader) + '</td>';
+      html += '<td></td><td></td></tr>';
+    } else if (isCtx) {
+      html += '<tr style="background:' + (isFrench ? '#fefce8' : '#f0f4ff') + ';" data-row-idx="' + item.idx + '">';
+      html += '<td>' + (n + 1) + '</td>';
+      if (isFrench) {
+        html += '<td><button class="tbl-play-btn" onclick="tblSpeak(' + item.idx + ', this)" title="Play TTS">&#9654;</button></td>';
+      } else {
+        html += '<td></td>';
+      }
+      html += '<td style="font-size:' + (isFrench ? '16px;font-weight:600' : '13px;color:#1d4ed8;font-style:italic') + ';">' + escHtml(item.row.contextLine) + '</td>';
+      html += '<td>' + (isFrench ? '<span class="tbl-rom" style="font-size:11px;color:#92400e;">sentence</span>' : '') + '</td><td></td></tr>';
+    } else {
+      html += '<tr data-row-idx="' + item.idx + '">';
+      html += '<td>' + (n + 1) + '</td>';
+      html += '<td><button class="tbl-play-btn" onclick="tblSpeak(' + item.idx + ', this)" title="Play TTS">&#9654;</button></td>';
+      html += '<td class="tbl-chinese">' + escHtml(item.row.french) + '</td>';
+      html += '<td class="tbl-rom">' + escHtml(item.row.romanization || '') + '</td>';
+      html += '<td>' + escHtml(item.row.english || '') + '</td>';
+      html += '</tr>';
+    }
+  });
+
+  html += '</tbody></table>';
+  container.innerHTML = html;
+
+  $.fn.dataTable.ext.errMode = 'none';
+
+  if (dataTableInstance) {
+    dataTableInstance.destroy();
+    dataTableInstance = null;
+  }
+  dataTableInstance = $('#vocabDataTable').DataTable({
+    pageLength: 50,
+    lengthMenu: [25, 50, 100, 200],
+    order: [],
+    language: {
+      search: 'Filter:',
+      lengthMenu: 'Show _MENU_ rows',
+      info: 'Showing _START_ to _END_ of _TOTAL_ entries',
+    }
+  });
+}
+
+function tblSpeak(idx, btnEl) {
+  stopSpeaking();
+  document.querySelectorAll('.tbl-play-btn.speaking').forEach(function(el) {
+    el.classList.remove('speaking');
+  });
+
+  var row = filteredRows[idx];
+  if (!row) return;
+  var text = row.french || row.contextLine || '';
+  if (!text) return;
+
+  btnEl.classList.add('speaking');
+  copyToClipboard(text);
+
+  speakText(text, function() {
+    btnEl.classList.remove('speaking');
+  });
+}
 
 // ── INIT ──
 loadApiKey();
