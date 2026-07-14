@@ -2254,7 +2254,8 @@ function renderTableView() {
 
     if (isHeader) {
       html += '<tr style="background:#e0e7ff;"><td>' + (n + 1) + '</td><td></td>';
-      html += '<td colspan="3" style="font-size:13px;font-weight:700;color:#2563eb;letter-spacing:1px;">' + escHtml(item.row.sectionHeader) + '</td></tr>';
+      html += '<td style="font-size:13px;font-weight:700;color:#2563eb;letter-spacing:1px;">' + escHtml(item.row.sectionHeader) + '</td>';
+      html += '<td></td><td></td></tr>';
     } else if (isCtx && hasCJK) {
       html += '<tr style="background:#fefce8;" data-row-idx="' + item.idx + '">';
       html += '<td>' + (n + 1) + '</td>';
@@ -2264,7 +2265,8 @@ function renderTableView() {
       html += '<td></td></tr>';
     } else if (isCtx) {
       html += '<tr style="background:#f0f4ff;" data-row-idx="' + item.idx + '"><td>' + (n + 1) + '</td><td></td>';
-      html += '<td colspan="3" style="font-size:13px;color:#1d4ed8;font-style:italic;">' + escHtml(item.row.contextLine) + '</td></tr>';
+      html += '<td style="font-size:13px;color:#1d4ed8;font-style:italic;">' + escHtml(item.row.contextLine) + '</td>';
+      html += '<td></td><td></td></tr>';
     } else {
       html += '<tr data-row-idx="' + item.idx + '">';
       html += '<td>' + (n + 1) + '</td>';
