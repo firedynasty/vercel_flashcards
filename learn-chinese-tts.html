@@ -6,6 +6,9 @@
 <title>Chinese Lyrics Reader</title>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css">
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
@@ -372,6 +375,47 @@
   }
   .practice-hint .char-count { font-weight: 600; color: #16a34a; }
 
+  /* ── TABLE VIEW ── */
+  #tableViewContainer { display: none; padding-top: 50px; }
+  #tableViewContainer.active { display: block; }
+  #tableViewContainer table.dataTable { width: 100% !important; border-collapse: collapse; }
+  #tableViewContainer table.dataTable thead th {
+    background: #f1f5f9; color: #334155; font-size: 13px; font-weight: 700;
+    padding: 10px 12px; border-bottom: 2px solid #cbd5e1;
+  }
+  #tableViewContainer table.dataTable tbody td {
+    padding: 10px 12px; border-bottom: 1px solid #e2e8f0;
+    font-size: 14px; vertical-align: middle;
+  }
+  #tableViewContainer table.dataTable tbody tr:nth-child(odd) { background: #f8fafc; }
+  #tableViewContainer table.dataTable tbody tr:hover { background: #eff6ff; }
+  .tbl-chinese { font-size: 20px !important; font-weight: 600; }
+  .tbl-rom { font-size: 12px; color: #888; font-style: italic; }
+  .tbl-play-btn {
+    border: none; border-radius: 50%; width: 34px; height: 34px;
+    background: #2563eb; color: white; font-size: 16px;
+    cursor: pointer; transition: background 0.15s; flex-shrink: 0;
+  }
+  .tbl-play-btn:hover { background: #1d4ed8; }
+  .tbl-play-btn.speaking { background: #16a34a; }
+  .dataTables_wrapper .dataTables_length,
+  .dataTables_wrapper .dataTables_filter,
+  .dataTables_wrapper .dataTables_info,
+  .dataTables_wrapper .dataTables_paginate { font-size: 12px; color: #555; margin: 8px 0; }
+  .dataTables_wrapper .dataTables_filter input {
+    border: 1px solid #ddd; border-radius: 6px; padding: 5px 10px; font-size: 13px;
+  }
+  .dataTables_wrapper .dataTables_paginate .paginate_button {
+    border: 1px solid #ddd; border-radius: 4px; padding: 4px 10px; margin: 0 2px;
+    cursor: pointer; font-size: 12px;
+  }
+  .dataTables_wrapper .dataTables_paginate .paginate_button.current {
+    background: #2563eb !important; color: white !important; border-color: #2563eb;
+  }
+  .dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+    background: #eff6ff !important; border-color: #93c5fd;
+  }
+
   /* ── LOADING SPINNER ── */
   .loading-dot {
     display: inline-block; width: 8px; height: 8px; border-radius: 50%;
@@ -561,6 +605,9 @@
         </div>
       </div>
       <div class="sep"></div>
+      <div class="sep"></div>
+      <span class="toggle-chip" id="toggleTableView" onclick="toggleTableView()">Table</span>
+      <div class="sep"></div>
       <button class="btn outline" style="font-size:11px;padding:4px 10px;" onclick="exportAll()">&#128203; Export All</button>
       <button class="try-btn" id="toggleAllTryBtn" onclick="openPracticeModal()">&#9660; Practice</button>
       <button class="try-btn" onclick="openPracticeModal(true)">&#9660; Randomize</button>
@@ -644,8 +691,13 @@
       </div>
     </div>
 
-    <!-- Lines container -->
+    <!-- Lines container (card view) -->
     <div id="linesContainer"></div>
+
+    <!-- Table view container -->
+    <div id="tableViewContainer">
+      <div id="tableViewInner"></div>
+    </div>
   </div>
 </div>
 
@@ -667,6 +719,9 @@ let ttsRate = 1;
 let autoAdvance = false;
 let currentSpeakingIndex = -1;
 let currentAudio = null; // for OpenAI playback
+
+let tableViewOn = false;
+let dataTableInstance = null;
 
 let showMeanings = localStorage.getItem('chineseTts_showMeanings') !== null ? localStorage.getItem('chineseTts_showMeanings') === 'true' : true;
 let showChinese = localStorage.getItem('chineseTts_showChinese') !== null ? localStorage.getItem('chineseTts_showChinese') === 'true' : true;
@@ -1181,6 +1236,9 @@ function renderLyrics() {
 
     container.appendChild(card);
   });
+
+  // Refresh table view if active
+  if (tableViewOn) renderTableView();
 }
 
 // ── GOOGLE SHEETS ──
@@ -2139,6 +2197,102 @@ async function initFromApi() {
   document.getElementById('sheetDropdown').value = selected;
   loadSheetByName(selected);
   toggleSetup(); // collapse the setup section
+}
+
+// ── TABLE VIEW ──
+function toggleTableView() {
+  tableViewOn = !tableViewOn;
+  document.getElementById('toggleTableView').className = 'toggle-chip' + (tableViewOn ? ' on' : '');
+
+  var linesContainer = document.getElementById('linesContainer');
+  var tableContainer = document.getElementById('tableViewContainer');
+
+  if (tableViewOn) {
+    linesContainer.style.display = 'none';
+    tableContainer.classList.add('active');
+    renderTableView();
+  } else {
+    linesContainer.style.display = '';
+    tableContainer.classList.remove('active');
+    if (dataTableInstance) {
+      dataTableInstance.destroy();
+      dataTableInstance = null;
+    }
+    document.getElementById('tableViewInner').innerHTML = '';
+  }
+}
+
+function renderTableView() {
+  var container = document.getElementById('tableViewInner');
+
+  // Filter to only vocab rows (skip section headers and context lines)
+  var vocabRows = [];
+  filteredRows.forEach(function(row, origIdx) {
+    if (row.chinese && !row.sectionHeader && !row.contextLine) {
+      vocabRows.push({ row: row, idx: origIdx });
+    }
+  });
+
+  if (vocabRows.length === 0) {
+    container.innerHTML = '<p style="text-align:center;color:#888;padding:40px;">No vocabulary data loaded</p>';
+    return;
+  }
+
+  var html = '<table id="vocabDataTable" class="display" style="width:100%">';
+  html += '<thead><tr>';
+  html += '<th style="width:5%;">#</th>';
+  html += '<th style="width:5%;">Play</th>';
+  html += '<th style="width:30%;">Chinese</th>';
+  html += '<th style="width:20%;">Romanization</th>';
+  html += '<th style="width:40%;">English</th>';
+  html += '</tr></thead><tbody>';
+
+  vocabRows.forEach(function(item, n) {
+    html += '<tr data-row-idx="' + item.idx + '">';
+    html += '<td>' + (n + 1) + '</td>';
+    html += '<td><button class="tbl-play-btn" onclick="tblSpeak(' + item.idx + ', this)" title="Play TTS">&#9654;</button></td>';
+    html += '<td class="tbl-chinese">' + escHtml(item.row.chinese) + '</td>';
+    html += '<td class="tbl-rom">' + escHtml(item.row.romanization || '') + '</td>';
+    html += '<td>' + escHtml(item.row.english || '') + '</td>';
+    html += '</tr>';
+  });
+
+  html += '</tbody></table>';
+  container.innerHTML = html;
+
+  // Initialize DataTable
+  if (dataTableInstance) {
+    dataTableInstance.destroy();
+    dataTableInstance = null;
+  }
+  dataTableInstance = $('#vocabDataTable').DataTable({
+    pageLength: 50,
+    lengthMenu: [25, 50, 100, 200],
+    order: [],
+    language: {
+      search: 'Filter:',
+      lengthMenu: 'Show _MENU_ rows',
+      info: 'Showing _START_ to _END_ of _TOTAL_ entries',
+    }
+  });
+}
+
+function tblSpeak(idx, btnEl) {
+  stopSpeaking();
+  // Clear all play button highlights
+  document.querySelectorAll('.tbl-play-btn.speaking').forEach(function(el) {
+    el.classList.remove('speaking');
+  });
+
+  var row = filteredRows[idx];
+  if (!row || !row.chinese) return;
+
+  btnEl.classList.add('speaking');
+  copyToClipboard(row.chinese);
+
+  speakText(row.chinese, function() {
+    btnEl.classList.remove('speaking');
+  });
 }
 
 // ── PRACTICE MODAL TEXTAREA LIVE SYNC ──
