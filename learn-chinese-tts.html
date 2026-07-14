@@ -2281,6 +2281,9 @@ function renderTableView() {
   html += '</tbody></table>';
   container.innerHTML = html;
 
+  // Suppress DataTables alert popups — log to console instead
+  $.fn.dataTable.ext.errMode = 'none';
+
   // Initialize DataTable
   if (dataTableInstance) {
     dataTableInstance.destroy();
