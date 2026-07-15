@@ -405,6 +405,97 @@
   body.dark-mode .dataTables_wrapper .dataTables_paginate { color: #ccc; }
   body.dark-mode .dataTables_wrapper .dataTables_filter input { background: #2a2a3e; border-color: #444; color: #e0e0e0; }
   body.dark-mode .dataTables_wrapper .dataTables_paginate .paginate_button { border-color: #444; color: #ccc; background: #2a2a3e; }
+
+  /* ── DECK VIEW (Mango-style swipe review) ── */
+  #deckViewContainer { display: none; max-width: 480px; margin: 0 auto; padding: 20px 20px 40px; }
+  #deckViewContainer.active { display: flex; flex-direction: column; }
+  .deck-progress-row {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 22px;
+  }
+  .deck-progress-track {
+    flex: 1; height: 5px; background: var(--rule, #DAD6CC); border-radius: 3px; overflow: hidden;
+  }
+  .deck-progress-fill { height: 100%; background: #C9A227; border-radius: 3px; transition: width .25s ease; }
+  .deck-progress-label { font-size: 12px; color: #888; white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+  .deck-stage {
+    position: relative; min-height: 300px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .deck-card {
+    position: absolute; width: 100%; max-width: 340px; height: 260px;
+    background: white; border-radius: 16px; border: 1px solid #e0e0db;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.06);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 28px; text-align: center; cursor: pointer;
+  }
+  .deck-card::before {
+    content: ''; position: absolute; top: 34px; left: 0; right: 0;
+    height: 1px; background: #e0e0db; opacity: .6;
+  }
+  .deck-card .deck-eyebrow {
+    position: absolute; top: 12px; left: 18px;
+    font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: #888;
+  }
+  .deck-card .deck-word {
+    font-weight: 700; font-size: 26px; line-height: 1.25; color: #1a1a1a;
+  }
+  .deck-card .deck-def {
+    font-size: 15px; color: #888; margin-top: 14px; line-height: 1.5; display: none;
+  }
+  .deck-card.flipped .deck-word { font-size: 18px; color: #888; font-weight: 400; }
+  .deck-card.flipped .deck-def { display: block; color: #1a1a1a; }
+  .deck-card .deck-flip-hint {
+    position: absolute; bottom: 14px; font-size: 11px; color: #888; opacity: .7;
+  }
+  .deck-card.flipped .deck-flip-hint { display: none; }
+
+  .deck-stamp {
+    position: absolute; top: 24px;
+    font-weight: 700; font-size: 20px; letter-spacing: .06em;
+    border: 3px solid; border-radius: 8px; padding: 4px 14px;
+    text-transform: uppercase; opacity: 0; pointer-events: none;
+  }
+  .deck-stamp.right { right: 26px; color: #16a34a; border-color: #16a34a; transform: rotate(-8deg); }
+  .deck-stamp.left { left: 26px; color: #4A5B7A; border-color: #4A5B7A; transform: rotate(8deg); }
+
+  .deck-controls {
+    display: flex; gap: 24px; margin-top: 22px; justify-content: center;
+  }
+  .deck-ctrl-btn {
+    width: 72px; height: 72px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 32px; font-weight: 700;
+    border: 3px solid; background: white; cursor: pointer;
+    font-family: inherit; transition: transform 0.1s, box-shadow 0.1s;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  }
+  .deck-ctrl-btn:active { transform: scale(0.92); }
+  .deck-ctrl-btn.miss { color: #dc2626; border-color: #fca5a5; }
+  .deck-ctrl-btn.miss:active { background: #fef2f2; box-shadow: 0 0 0 4px #fee2e2; }
+  .deck-ctrl-btn.correct { color: #16a34a; border-color: #86efac; }
+  .deck-ctrl-btn.correct:active { background: #f0fdf4; box-shadow: 0 0 0 4px #dcfce7; }
+  .deck-ctrl-btn:disabled { opacity: .35; cursor: default; }
+
+  .deck-done {
+    flex: 1; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; text-align: center; gap: 10px; min-height: 300px;
+  }
+  .deck-done .deck-done-big { font-weight: 700; font-size: 24px; }
+  .deck-done p { color: #888; font-size: 14px; margin: 0 0 10px; }
+
+  /* Dark mode for deck */
+  body.dark-mode .deck-card { background: #2a2a3e; border-color: #3a3a4e; box-shadow: 0 1px 2px rgba(0,0,0,0.15), 0 8px 24px rgba(0,0,0,0.25); }
+  body.dark-mode .deck-card::before { background: #3a3a4e; }
+  body.dark-mode .deck-card .deck-word { color: #e0e0e0; }
+  body.dark-mode .deck-card.flipped .deck-word { color: #999; }
+  body.dark-mode .deck-card.flipped .deck-def { color: #e0e0e0; }
+  body.dark-mode .deck-ctrl-btn { background: #2a2a3e; }
+  body.dark-mode .deck-ctrl-btn.miss { border-color: #7f1d1d; }
+  body.dark-mode .deck-ctrl-btn.miss:active { background: #2e1a1a; }
+  body.dark-mode .deck-ctrl-btn.correct { border-color: #166534; }
+  body.dark-mode .deck-ctrl-btn.correct:active { background: #1a2e1a; }
+  .hidden { display: none !important; }
 </style>
 </head>
 <body>
@@ -459,6 +550,7 @@
     <input type="text" id="searchInput" placeholder="&#128269; Search terms or definitions…" oninput="filterAndRender()">
     <button class="btn outline sm" id="darkModeBtn" onclick="toggleDarkMode()">&#9790; Dark</button>
     <span class="toggle-chip" id="toggleTableView" onclick="toggleTableView()">Table</span>
+    <span class="toggle-chip" id="toggleDeckView" onclick="toggleDeckView()">Deck</span>
     <select id="filterSel" onchange="filterAndRender()" style="display:none">
       <option value="all">All cards</option>
       <option value="unanswered">Unanswered</option>
@@ -510,6 +602,33 @@
   <div id="tableViewInner"></div>
 </div>
 
+<!-- ── DECK VIEW (Mango-style swipe review) ── -->
+<div id="deckViewContainer">
+  <div class="deck-progress-row">
+    <div class="deck-progress-track"><div class="deck-progress-fill" id="deckProgressFill"></div></div>
+    <div class="deck-progress-label" id="deckProgressLabel">0 / 0</div>
+  </div>
+  <div class="deck-stage" id="deckStage">
+    <div class="deck-stamp right" id="deckStampRight">Got it</div>
+    <div class="deck-stamp left" id="deckStampLeft">Again</div>
+    <div class="deck-card" id="deckCard">
+      <span class="deck-eyebrow" id="deckEyebrow">1 of 1</span>
+      <span class="deck-word" id="deckWordText">word</span>
+      <span class="deck-def" id="deckDefText">definition</span>
+      <span class="deck-flip-hint">tap to reveal</span>
+    </div>
+  </div>
+  <div class="deck-controls">
+    <button class="deck-ctrl-btn miss" id="deckMissBtn">&#10007;</button>
+    <button class="deck-ctrl-btn correct" id="deckKnowBtn">&#10003;</button>
+  </div>
+  <div class="deck-done hidden" id="deckDoneScreen">
+    <div class="deck-done-big">Deck cleared!</div>
+    <p id="deckDoneStats"></p>
+    <button class="btn primary" id="deckRestartBtn" style="padding:12px 20px;">Review again</button>
+  </div>
+</div>
+
 <!-- ── COMPARISON MODAL ── -->
 <div class="modal-overlay" id="modalOverlay" onclick="onOverlayClick(event)">
   <div class="modal-box" onclick="event.stopPropagation()">
@@ -554,6 +673,12 @@ var hardSet      = new Set();
 var darkModeOn   = localStorage.getItem('darkMode') === 'true';
 var tableViewOn  = false;
 var dataTableInstance = null;
+var deckViewOn   = false;
+var deckQueue    = [];
+var deckTotal    = 0;
+var deckCleared  = 0;
+var deckCurrent  = null;
+var deckFlipped  = false;
 
 // ── DARK MODE ──
 function toggleDarkMode() {
@@ -1327,8 +1452,15 @@ function toggleTableView() {
 
   var cardsArea = document.getElementById('cardsArea');
   var tableContainer = document.getElementById('tableViewContainer');
+  var deckContainer = document.getElementById('deckViewContainer');
 
   if (tableViewOn) {
+    // Turn off deck view if it's on
+    if (deckViewOn) {
+      deckViewOn = false;
+      document.getElementById('toggleDeckView').className = 'toggle-chip';
+      deckContainer.classList.remove('active');
+    }
     cardsArea.style.display = 'none';
     tableContainer.classList.add('active');
     renderTableView();
@@ -1388,6 +1520,141 @@ function renderTableView() {
   });
 }
 
+// ── DECK VIEW (Mango-style swipe review) ──
+function toggleDeckView() {
+  deckViewOn = !deckViewOn;
+  document.getElementById('toggleDeckView').className = 'toggle-chip' + (deckViewOn ? ' on' : '');
+
+  var cardsArea = document.getElementById('cardsArea');
+  var tableContainer = document.getElementById('tableViewContainer');
+  var deckContainer = document.getElementById('deckViewContainer');
+
+  if (deckViewOn) {
+    // Turn off table view if it's on
+    if (tableViewOn) {
+      tableViewOn = false;
+      document.getElementById('toggleTableView').className = 'toggle-chip';
+      tableContainer.classList.remove('active');
+      if (dataTableInstance) { dataTableInstance.destroy(); dataTableInstance = null; }
+      document.getElementById('tableViewInner').innerHTML = '';
+    }
+    cardsArea.style.display = 'none';
+    deckContainer.classList.add('active');
+    startDeckSession();
+  } else {
+    cardsArea.style.display = '';
+    deckContainer.classList.remove('active');
+  }
+}
+
+function shuffleArray(arr) {
+  var a = arr.slice();
+  for (var i = a.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+  }
+  return a;
+}
+
+function startDeckSession() {
+  if (filteredVocab.length === 0) return;
+  deckQueue = shuffleArray(filteredVocab.map(function(_, i) { return i; }));
+  deckTotal = deckQueue.length;
+  deckCleared = 0;
+  deckFlipped = false;
+
+  // Show review UI, hide done screen
+  document.getElementById('deckStage').style.display = '';
+  document.querySelector('.deck-controls').style.display = '';
+  document.querySelector('.deck-progress-row').style.display = '';
+  document.getElementById('deckDoneScreen').classList.add('hidden');
+
+  deckNextCard();
+}
+
+function deckUpdateProgress() {
+  document.getElementById('deckProgressLabel').textContent = deckCleared + ' / ' + deckTotal;
+  var pct = deckTotal ? (deckCleared / deckTotal) * 100 : 0;
+  document.getElementById('deckProgressFill').style.width = pct + '%';
+}
+
+function deckNextCard() {
+  deckFlipped = false;
+  var cardEl = document.getElementById('deckCard');
+  cardEl.classList.remove('flipped');
+  cardEl.style.transform = '';
+  cardEl.style.opacity = '';
+  cardEl.style.transition = 'none';
+
+  if (deckQueue.length === 0) {
+    deckCurrent = null;
+    deckUpdateProgress();
+    deckFinish();
+    return;
+  }
+  deckCurrent = deckQueue.shift();
+  var item = filteredVocab[deckCurrent];
+  document.getElementById('deckWordText').textContent = item.term;
+  document.getElementById('deckDefText').textContent = item.definition;
+  document.getElementById('deckEyebrow').textContent = 'in queue: ' + (deckQueue.length + 1);
+  deckUpdateProgress();
+}
+
+function deckFinish() {
+  document.getElementById('deckStage').style.display = 'none';
+  document.querySelector('.deck-controls').style.display = 'none';
+  document.querySelector('.deck-progress-row').style.display = 'none';
+  var doneEl = document.getElementById('deckDoneScreen');
+  doneEl.classList.remove('hidden');
+  document.getElementById('deckDoneStats').textContent =
+    'You cleared all ' + deckTotal + ' words in this deck.';
+}
+
+function deckFlipCard() {
+  deckFlipped = !deckFlipped;
+  document.getElementById('deckCard').classList.toggle('flipped', deckFlipped);
+}
+
+function deckGrade(correct) {
+  if (deckCurrent === null) return;
+  if (!correct) {
+    deckQueue.push(deckCurrent); // recycle to end
+  } else {
+    deckCleared++;
+  }
+  deckFlashStamp(correct);
+  deckAnimateOut(correct, function() { deckNextCard(); });
+}
+
+function deckFlashStamp(correct) {
+  var el = document.getElementById(correct ? 'deckStampRight' : 'deckStampLeft');
+  el.style.transition = 'none';
+  el.style.opacity = '1';
+  requestAnimationFrame(function() {
+    el.style.transition = 'opacity .4s ease';
+    el.style.opacity = '0';
+  });
+}
+
+function deckAnimateOut(correct, cb) {
+  var cardEl = document.getElementById('deckCard');
+  cardEl.style.transition = 'transform .25s ease, opacity .25s ease';
+  cardEl.style.transform = 'translateX(' + (correct ? '120%' : '-120%') + ') rotate(' + (correct ? 10 : -10) + 'deg)';
+  cardEl.style.opacity = '0';
+  setTimeout(function() {
+    cardEl.style.transition = 'none';
+    cb();
+  }, 220);
+}
+
+// Deck card tap to flip
+document.getElementById('deckCard').addEventListener('click', function() { deckFlipCard(); });
+
+// Deck button handlers
+document.getElementById('deckMissBtn').addEventListener('click', function() { deckGrade(false); });
+document.getElementById('deckKnowBtn').addEventListener('click', function() { deckGrade(true); });
+document.getElementById('deckRestartBtn').addEventListener('click', function() { startDeckSession(); });
+
 // ── KEYBOARD ──
 document.addEventListener('keydown', function(e) {
   var pracOpen = document.getElementById('practiceOverlay').classList.contains('open');
@@ -1397,6 +1664,14 @@ document.addEventListener('keydown', function(e) {
     if (e.key === 'ArrowLeft') { e.preventDefault(); pracNavigate(-1); return; }
     if (e.key === 'ArrowRight') { e.preventDefault(); pracNavigate(1); return; }
     if (e.key === 'Escape') { e.preventDefault(); closePracticeModal(); return; }
+    return;
+  }
+
+  // Deck view keys
+  if (deckViewOn && deckCurrent !== null) {
+    if (e.key === 'ArrowLeft') { e.preventDefault(); deckGrade(false); return; }
+    if (e.key === 'ArrowRight') { e.preventDefault(); deckGrade(true); return; }
+    if (e.key === ' ') { e.preventDefault(); deckFlipCard(); return; }
     return;
   }
 
