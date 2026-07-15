@@ -625,6 +625,9 @@
   <div class="deck-done hidden" id="deckDoneScreen">
     <div class="deck-done-big">Deck cleared!</div>
     <p id="deckDoneStats"></p>
+    <p id="deckMissedStats" style="font-size:13px; color:#dc2626;"></p>
+    <button class="btn primary" id="deckSaveSheetBtn" style="padding:12px 20px; display:none; background:#16a34a;" onclick="deckSaveMissedToSheet()">Save missed to Google Sheet</button>
+    <div id="deckSaveStatus" style="font-size:12px; color:#888; margin-top:6px; min-height:18px;"></div>
     <button class="btn primary" id="deckRestartBtn" style="padding:12px 20px;">Review again</button>
   </div>
 </div>
@@ -679,6 +682,7 @@ var deckTotal    = 0;
 var deckCleared  = 0;
 var deckCurrent  = null;
 var deckFlipped  = false;
+var deckMissedSet = new Set();
 
 // ── DARK MODE ──
 function toggleDarkMode() {
@@ -1269,11 +1273,13 @@ function setUploadStatus(msg) {
 
 // ── GOOGLE SHEETS ──
 var GDRIVE_CLIENT_ID = '1095683227908-7ro25k16mprkf408i3lf583gti8v759b.apps.googleusercontent.com';
-var GDRIVE_SCOPES = 'https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/spreadsheets.readonly';
+var GDRIVE_SCOPES = 'https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/spreadsheets';
 
 var gdriveAccessToken = null;
 var gdriveTokenClient = null;
 var gdriveWorkbook = null;
+var gdriveSpreadsheetId = null;
+var gdriveCurrentSheetName = null;
 
 function setGStatus(msg) { document.getElementById('gStatus').textContent = msg; }
 
@@ -1350,6 +1356,7 @@ async function gdriveSearch() {
 }
 
 async function gdriveLoadSpreadsheet(fileId, fileName) {
+  gdriveSpreadsheetId = fileId;
   try {
     var exportMime = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
     var resp = await fetch('https://www.googleapis.com/drive/v3/files/' + fileId + '/export?mimeType=' + encodeURIComponent(exportMime), {
@@ -1404,6 +1411,7 @@ function gdriveParseCsv(text) {
 function onGSheetSelect() {
   var sheetName = document.getElementById('gSheetSelect').value;
   if (!sheetName || !gdriveWorkbook) return;
+  gdriveCurrentSheetName = sheetName;
 
   var sheet = gdriveWorkbook.Sheets[sheetName];
   // Export as single-column CSV text and feed through the existing parser
@@ -1562,6 +1570,7 @@ function startDeckSession() {
   deckTotal = deckQueue.length;
   deckCleared = 0;
   deckFlipped = false;
+  deckMissedSet = new Set();
 
   // Show review UI, hide done screen
   document.getElementById('deckStage').style.display = '';
@@ -1608,6 +1617,23 @@ function deckFinish() {
   doneEl.classList.remove('hidden');
   document.getElementById('deckDoneStats').textContent =
     'You cleared all ' + deckTotal + ' words in this deck.';
+
+  // Show missed stats and save button
+  var missedEl = document.getElementById('deckMissedStats');
+  var saveBtn = document.getElementById('deckSaveSheetBtn');
+  document.getElementById('deckSaveStatus').textContent = '';
+  if (deckMissedSet.size > 0) {
+    missedEl.textContent = deckMissedSet.size + ' word(s) you missed at least once.';
+    // Only show save button if loaded from Google Sheets
+    if (gdriveSpreadsheetId && gdriveAccessToken) {
+      saveBtn.style.display = '';
+    } else {
+      saveBtn.style.display = 'none';
+    }
+  } else {
+    missedEl.textContent = 'Perfect run — no misses!';
+    saveBtn.style.display = 'none';
+  }
 }
 
 function deckFlipCard() {
@@ -1619,6 +1645,7 @@ function deckGrade(correct) {
   if (deckCurrent === null) return;
   if (!correct) {
     deckQueue.push(deckCurrent); // recycle to end
+    deckMissedSet.add(deckCurrent);
   } else {
     deckCleared++;
   }
@@ -1654,6 +1681,79 @@ document.getElementById('deckCard').addEventListener('click', function() { deckF
 document.getElementById('deckMissBtn').addEventListener('click', function() { deckGrade(false); });
 document.getElementById('deckKnowBtn').addEventListener('click', function() { deckGrade(true); });
 document.getElementById('deckRestartBtn').addEventListener('click', function() { startDeckSession(); });
+
+// ── SAVE MISSED TO GOOGLE SHEET ──
+async function deckSaveMissedToSheet() {
+  if (!gdriveSpreadsheetId || !gdriveAccessToken || deckMissedSet.size === 0) return;
+
+  var statusEl = document.getElementById('deckSaveStatus');
+  var saveBtn = document.getElementById('deckSaveSheetBtn');
+  statusEl.textContent = 'Creating new sheet...';
+  saveBtn.disabled = true;
+
+  // Build new sheet name: originalSheetName_date_time
+  var now = new Date();
+  var pad = function(n) { return n < 10 ? '0' + n : '' + n; };
+  var dateStr = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate())
+    + '_' + pad(now.getHours()) + pad(now.getMinutes());
+  var baseName = gdriveCurrentSheetName || 'missed';
+  var newSheetName = baseName + '_' + dateStr;
+
+  // Collect missed vocab
+  var missedRows = [];
+  var sortedMissed = Array.from(deckMissedSet).sort(function(a, b) { return a - b; });
+  sortedMissed.forEach(function(fi) {
+    var item = filteredVocab[fi];
+    if (item) missedRows.push([item.term, item.definition]);
+  });
+
+  try {
+    // Step 1: Create the new sheet tab
+    var addResp = await fetch('https://sheets.googleapis.com/v4/spreadsheets/' + gdriveSpreadsheetId + ':batchUpdate', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + gdriveAccessToken,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        requests: [{
+          addSheet: {
+            properties: { title: newSheetName }
+          }
+        }]
+      })
+    });
+    if (!addResp.ok) {
+      var errData = await addResp.json();
+      throw new Error(errData.error ? errData.error.message : 'Failed to create sheet');
+    }
+
+    statusEl.textContent = 'Writing ' + missedRows.length + ' terms...';
+
+    // Step 2: Write the missed terms to the new sheet
+    var writeResp = await fetch('https://sheets.googleapis.com/v4/spreadsheets/' + gdriveSpreadsheetId
+      + '/values/' + encodeURIComponent(newSheetName) + '!A1?valueInputOption=RAW', {
+      method: 'PUT',
+      headers: {
+        'Authorization': 'Bearer ' + gdriveAccessToken,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        range: newSheetName + '!A1',
+        majorDimension: 'ROWS',
+        values: missedRows
+      })
+    });
+    if (!writeResp.ok) throw new Error('Failed to write data');
+
+    statusEl.textContent = 'Saved ' + missedRows.length + ' missed terms to "' + newSheetName + '"';
+    saveBtn.textContent = 'Saved!';
+    saveBtn.style.background = '#888';
+  } catch (err) {
+    statusEl.textContent = 'Error: ' + err.message;
+    saveBtn.disabled = false;
+  }
+}
 
 // ── KEYBOARD ──
 document.addEventListener('keydown', function(e) {
