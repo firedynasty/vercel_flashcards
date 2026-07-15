@@ -622,12 +622,21 @@
     <button class="deck-ctrl-btn miss" id="deckMissBtn">&#10007;</button>
     <button class="deck-ctrl-btn correct" id="deckKnowBtn">&#10003;</button>
   </div>
+  <div style="text-align:center; margin-top:14px;">
+    <span id="deckMissedCount" style="font-size:12px; color:#dc2626; display:none;">0 missed</span>
+    <span id="deckRemainingCount" style="font-size:12px; color:#888; margin-left:10px; display:none;">0 remaining</span>
+  </div>
+  <div id="deckSaveArea" style="text-align:center; margin-top:8px; display:none;">
+    <button class="btn primary" id="deckSaveMissedBtn" style="padding:10px 18px; font-size:13px; background:#16a34a; display:none;" onclick="deckSaveMissedToSheet('missed')">Save missed only</button>
+    <button class="btn primary" id="deckSaveBothBtn" style="padding:10px 18px; font-size:13px; background:#2563eb; margin-left:8px; display:none;" onclick="deckSaveMissedToSheet('both')">Save missed + remaining</button>
+    <div id="deckSaveStatus" style="font-size:12px; color:#888; margin-top:6px; min-height:18px;"></div>
+  </div>
   <div class="deck-done hidden" id="deckDoneScreen">
     <div class="deck-done-big">Deck cleared!</div>
     <p id="deckDoneStats"></p>
     <p id="deckMissedStats" style="font-size:13px; color:#dc2626;"></p>
-    <button class="btn primary" id="deckSaveSheetBtn" style="padding:12px 20px; display:none; background:#16a34a;" onclick="deckSaveMissedToSheet()">Save missed to Google Sheet</button>
-    <div id="deckSaveStatus" style="font-size:12px; color:#888; margin-top:6px; min-height:18px;"></div>
+    <button class="btn primary" id="deckDoneSaveBtn" style="padding:12px 20px; display:none; background:#16a34a;" onclick="deckSaveMissedToSheet('missed')">Save missed to Google Sheet</button>
+    <div id="deckDoneSaveStatus" style="font-size:12px; color:#888; margin-top:6px; min-height:18px;"></div>
     <button class="btn primary" id="deckRestartBtn" style="padding:12px 20px;">Review again</button>
   </div>
 </div>
@@ -1578,6 +1587,18 @@ function startDeckSession() {
   document.querySelector('.deck-progress-row').style.display = '';
   document.getElementById('deckDoneScreen').classList.add('hidden');
 
+  // Reset save buttons
+  document.getElementById('deckSaveArea').style.display = 'none';
+  document.getElementById('deckSaveStatus').textContent = '';
+  var saveMissedBtn = document.getElementById('deckSaveMissedBtn');
+  var saveBothBtn = document.getElementById('deckSaveBothBtn');
+  saveMissedBtn.textContent = 'Save missed only';
+  saveMissedBtn.style.background = '#16a34a';
+  saveMissedBtn.disabled = false;
+  saveBothBtn.textContent = 'Save missed + remaining';
+  saveBothBtn.style.background = '#2563eb';
+  saveBothBtn.disabled = false;
+
   deckNextCard();
 }
 
@@ -1618,21 +1639,65 @@ function deckFinish() {
   document.getElementById('deckDoneStats').textContent =
     'You cleared all ' + deckTotal + ' words in this deck.';
 
-  // Show missed stats and save button
+  // Hide mid-review save area
+  document.getElementById('deckSaveArea').style.display = 'none';
+  document.getElementById('deckMissedCount').style.display = 'none';
+  document.getElementById('deckRemainingCount').style.display = 'none';
+
+  // Show missed stats and save button on done screen
   var missedEl = document.getElementById('deckMissedStats');
-  var saveBtn = document.getElementById('deckSaveSheetBtn');
-  document.getElementById('deckSaveStatus').textContent = '';
+  var saveBtn = document.getElementById('deckDoneSaveBtn');
+  document.getElementById('deckDoneSaveStatus').textContent = '';
   if (deckMissedSet.size > 0) {
     missedEl.textContent = deckMissedSet.size + ' word(s) you missed at least once.';
-    // Only show save button if loaded from Google Sheets
     if (gdriveSpreadsheetId && gdriveAccessToken) {
       saveBtn.style.display = '';
+      saveBtn.textContent = 'Save missed to Google Sheet';
+      saveBtn.style.background = '#16a34a';
+      saveBtn.disabled = false;
     } else {
       saveBtn.style.display = 'none';
     }
   } else {
     missedEl.textContent = 'Perfect run — no misses!';
     saveBtn.style.display = 'none';
+  }
+}
+
+function deckUpdateSaveButtons() {
+  var hasMissed = deckMissedSet.size > 0;
+  var hasRemaining = deckQueue.length > 0;
+  var hasSheets = gdriveSpreadsheetId && gdriveAccessToken;
+
+  // Missed count label
+  var missedCountEl = document.getElementById('deckMissedCount');
+  if (hasMissed) {
+    missedCountEl.style.display = '';
+    missedCountEl.textContent = deckMissedSet.size + ' missed';
+  } else {
+    missedCountEl.style.display = 'none';
+  }
+
+  // Remaining count label
+  var remainingEl = document.getElementById('deckRemainingCount');
+  if (hasRemaining) {
+    remainingEl.style.display = '';
+    remainingEl.textContent = deckQueue.length + ' remaining';
+  } else {
+    remainingEl.style.display = 'none';
+  }
+
+  // Save area and buttons (only if loaded from Google Sheets)
+  var saveArea = document.getElementById('deckSaveArea');
+  var saveMissedBtn = document.getElementById('deckSaveMissedBtn');
+  var saveBothBtn = document.getElementById('deckSaveBothBtn');
+
+  if (hasSheets && hasMissed) {
+    saveArea.style.display = '';
+    saveMissedBtn.style.display = '';
+    saveBothBtn.style.display = (hasMissed && hasRemaining) ? '' : 'none';
+  } else {
+    saveArea.style.display = 'none';
   }
 }
 
@@ -1650,7 +1715,10 @@ function deckGrade(correct) {
     deckCleared++;
   }
   deckFlashStamp(correct);
-  deckAnimateOut(correct, function() { deckNextCard(); });
+  deckAnimateOut(correct, function() {
+    deckNextCard();
+    deckUpdateSaveButtons();
+  });
 }
 
 function deckFlashStamp(correct) {
@@ -1683,13 +1751,24 @@ document.getElementById('deckKnowBtn').addEventListener('click', function() { de
 document.getElementById('deckRestartBtn').addEventListener('click', function() { startDeckSession(); });
 
 // ── SAVE MISSED TO GOOGLE SHEET ──
-async function deckSaveMissedToSheet() {
+async function deckSaveMissedToSheet(mode) {
+  // mode: 'missed' = missed only, 'both' = missed + remaining in queue
   if (!gdriveSpreadsheetId || !gdriveAccessToken || deckMissedSet.size === 0) return;
 
   var statusEl = document.getElementById('deckSaveStatus');
-  var saveBtn = document.getElementById('deckSaveSheetBtn');
-  statusEl.textContent = 'Creating new sheet...';
-  saveBtn.disabled = true;
+  var doneSaveStatus = document.getElementById('deckDoneSaveStatus');
+  var activeStatus = doneSaveStatus && !document.getElementById('deckDoneScreen').classList.contains('hidden')
+    ? doneSaveStatus : statusEl;
+
+  activeStatus.textContent = 'Creating new sheet...';
+
+  // Disable all save buttons while saving
+  var allSaveBtns = [
+    document.getElementById('deckSaveMissedBtn'),
+    document.getElementById('deckSaveBothBtn'),
+    document.getElementById('deckDoneSaveBtn')
+  ];
+  allSaveBtns.forEach(function(b) { if (b) b.disabled = true; });
 
   // Build new sheet name: originalSheetName_date_time
   var now = new Date();
@@ -1697,15 +1776,31 @@ async function deckSaveMissedToSheet() {
   var dateStr = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate())
     + '_' + pad(now.getHours()) + pad(now.getMinutes());
   var baseName = gdriveCurrentSheetName || 'missed';
-  var newSheetName = baseName + '_' + dateStr;
+  var suffix = mode === 'both' ? '_missed_remaining' : '_missed';
+  var newSheetName = baseName + suffix + '_' + dateStr;
 
-  // Collect missed vocab
-  var missedRows = [];
+  // Collect rows to save
+  var rows = [];
+  var added = new Set();
+
+  // Add missed cards
   var sortedMissed = Array.from(deckMissedSet).sort(function(a, b) { return a - b; });
   sortedMissed.forEach(function(fi) {
     var item = filteredVocab[fi];
-    if (item) missedRows.push([item.term, item.definition]);
+    if (item) { rows.push([item.term, item.definition]); added.add(fi); }
   });
+
+  // Add remaining queue cards if mode is 'both'
+  if (mode === 'both') {
+    deckQueue.forEach(function(fi) {
+      if (!added.has(fi)) {
+        var item = filteredVocab[fi];
+        if (item) { rows.push([item.term, item.definition]); added.add(fi); }
+      }
+    });
+  }
+
+  var label = mode === 'both' ? 'missed + remaining' : 'missed';
 
   try {
     // Step 1: Create the new sheet tab
@@ -1728,9 +1823,9 @@ async function deckSaveMissedToSheet() {
       throw new Error(errData.error ? errData.error.message : 'Failed to create sheet');
     }
 
-    statusEl.textContent = 'Writing ' + missedRows.length + ' terms...';
+    activeStatus.textContent = 'Writing ' + rows.length + ' terms...';
 
-    // Step 2: Write the missed terms to the new sheet
+    // Step 2: Write the terms to the new sheet
     var writeResp = await fetch('https://sheets.googleapis.com/v4/spreadsheets/' + gdriveSpreadsheetId
       + '/values/' + encodeURIComponent(newSheetName) + '!A1?valueInputOption=RAW', {
       method: 'PUT',
@@ -1741,17 +1836,18 @@ async function deckSaveMissedToSheet() {
       body: JSON.stringify({
         range: newSheetName + '!A1',
         majorDimension: 'ROWS',
-        values: missedRows
+        values: rows
       })
     });
     if (!writeResp.ok) throw new Error('Failed to write data');
 
-    statusEl.textContent = 'Saved ' + missedRows.length + ' missed terms to "' + newSheetName + '"';
-    saveBtn.textContent = 'Saved!';
-    saveBtn.style.background = '#888';
+    activeStatus.textContent = 'Saved ' + rows.length + ' ' + label + ' terms to "' + newSheetName + '"';
+    allSaveBtns.forEach(function(b) {
+      if (b) { b.textContent = 'Saved!'; b.style.background = '#888'; }
+    });
   } catch (err) {
-    statusEl.textContent = 'Error: ' + err.message;
-    saveBtn.disabled = false;
+    activeStatus.textContent = 'Error: ' + err.message;
+    allSaveBtns.forEach(function(b) { if (b) b.disabled = false; });
   }
 }
 
