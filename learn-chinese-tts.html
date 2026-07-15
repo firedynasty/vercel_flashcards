@@ -428,6 +428,45 @@
     0%, 80%, 100% { transform: scale(0); }
     40% { transform: scale(1); }
   }
+
+  /* ── DECK VIEW ── */
+  #deckViewContainer { display: none; max-width: 480px; margin: 0 auto; padding: 20px 20px 40px; }
+  #deckViewContainer.active { display: flex; flex-direction: column; }
+  .deck-progress-row { display: flex; align-items: center; gap: 10px; margin-bottom: 22px; }
+  .deck-progress-track { flex: 1; height: 5px; background: #DAD6CC; border-radius: 3px; overflow: hidden; }
+  .deck-progress-fill { height: 100%; background: #C9A227; border-radius: 3px; transition: width .25s ease; }
+  .deck-progress-label { font-size: 12px; color: #888; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .deck-stage { position: relative; min-height: 300px; display: flex; align-items: center; justify-content: center; }
+  .deck-card {
+    position: absolute; width: 100%; max-width: 340px; min-height: 260px;
+    background: white; border-radius: 16px; border: 1px solid #e0e0db;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.06);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 28px; text-align: center; cursor: pointer;
+  }
+  .deck-card .deck-eyebrow { position: absolute; top: 12px; left: 18px; font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: #888; }
+  .deck-card .deck-word { font-weight: 700; font-size: 26px; line-height: 1.25; color: #1a1a1a; }
+  .deck-card .deck-rom { font-size: 13px; color: #888; font-style: italic; margin-top: 6px; display: none; }
+  .deck-card .deck-def { font-size: 15px; color: #888; margin-top: 14px; line-height: 1.5; display: none; }
+  .deck-card.flipped .deck-word { font-size: 20px; color: #888; font-weight: 400; }
+  .deck-card.flipped .deck-rom { display: block; }
+  .deck-card.flipped .deck-def { display: block; color: #1a1a1a; }
+  .deck-card .deck-flip-hint { position: absolute; bottom: 14px; font-size: 11px; color: #888; opacity: .7; }
+  .deck-card.flipped .deck-flip-hint { display: none; }
+  .deck-stamp { position: absolute; top: 24px; font-weight: 700; font-size: 20px; letter-spacing: .06em; border: 3px solid; border-radius: 8px; padding: 4px 14px; text-transform: uppercase; opacity: 0; pointer-events: none; }
+  .deck-stamp.right { right: 26px; color: #16a34a; border-color: #16a34a; transform: rotate(-8deg); }
+  .deck-stamp.left { left: 26px; color: #4A5B7A; border-color: #4A5B7A; transform: rotate(8deg); }
+  .deck-controls { display: flex; gap: 24px; margin-top: 22px; justify-content: center; }
+  .deck-ctrl-btn { width: 72px; height: 72px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: 700; border: 3px solid; background: white; cursor: pointer; font-family: inherit; transition: transform 0.1s, box-shadow 0.1s; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+  .deck-ctrl-btn:active { transform: scale(0.92); }
+  .deck-ctrl-btn.miss { color: #dc2626; border-color: #fca5a5; }
+  .deck-ctrl-btn.miss:active { background: #fef2f2; box-shadow: 0 0 0 4px #fee2e2; }
+  .deck-ctrl-btn.correct { color: #16a34a; border-color: #86efac; }
+  .deck-ctrl-btn.correct:active { background: #f0fdf4; box-shadow: 0 0 0 4px #dcfce7; }
+  .deck-done { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 10px; min-height: 300px; }
+  .deck-done .deck-done-big { font-weight: 700; font-size: 24px; }
+  .deck-done p { color: #888; font-size: 14px; margin: 0 0 10px; }
+  .deck-hidden { display: none !important; }
 </style>
 </head>
 <body>
@@ -607,6 +646,7 @@
       <div class="sep"></div>
       <div class="sep"></div>
       <span class="toggle-chip" id="toggleTableView" onclick="toggleTableView()">Table</span>
+      <span class="toggle-chip" id="toggleDeckView" onclick="toggleDeckView()">Deck</span>
       <a href="https://vercel-spanish-chinese.vercel.app/chinese-glosser" target="_blank" class="toggle-chip" style="text-decoration:none;background:#0EA5E9;color:white;border-color:#0EA5E9;">Glosser</a>
       <div class="sep"></div>
       <button class="btn outline" style="font-size:11px;padding:4px 10px;" onclick="exportAll()">&#128203; Export All</button>
@@ -699,17 +739,59 @@
     <div id="tableViewContainer">
       <div id="tableViewInner"></div>
     </div>
+
+    <!-- Deck view container -->
+    <div id="deckViewContainer">
+      <div class="deck-progress-row">
+        <div class="deck-progress-track"><div class="deck-progress-fill" id="deckProgressFill"></div></div>
+        <div class="deck-progress-label" id="deckProgressLabel">0 / 0</div>
+      </div>
+      <div class="deck-stage" id="deckStage">
+        <div class="deck-stamp right" id="deckStampRight">Got it</div>
+        <div class="deck-stamp left" id="deckStampLeft">Again</div>
+        <div class="deck-card" id="deckCard">
+          <span class="deck-eyebrow" id="deckEyebrow">1 of 1</span>
+          <span class="deck-word" id="deckWordText">word</span>
+          <span class="deck-rom" id="deckRomText"></span>
+          <span class="deck-def" id="deckDefText">definition</span>
+          <span class="deck-flip-hint">tap to reveal</span>
+        </div>
+      </div>
+      <div class="deck-controls">
+        <button class="deck-ctrl-btn miss" id="deckMissBtn">&#10007;</button>
+        <button class="deck-ctrl-btn correct" id="deckKnowBtn">&#10003;</button>
+      </div>
+      <div style="text-align:center; margin-top:14px;">
+        <span id="deckMissedCount" style="font-size:12px; color:#dc2626; display:none;">0 missed</span>
+        <span id="deckRemainingCount" style="font-size:12px; color:#888; margin-left:10px; display:none;">0 remaining</span>
+      </div>
+      <div id="deckSaveArea" style="text-align:center; margin-top:8px; display:none;">
+        <button class="btn outline" id="deckSaveMissedBtn" style="padding:10px 18px; font-size:13px; background:#16a34a; color:white; border-color:#16a34a; display:none;" onclick="deckSaveMissedToSheet('missed')">Save missed only</button>
+        <button class="btn outline" id="deckSaveBothBtn" style="padding:10px 18px; font-size:13px; background:#2563eb; color:white; border-color:#2563eb; margin-left:8px; display:none;" onclick="deckSaveMissedToSheet('both')">Save missed + remaining</button>
+        <div id="deckSaveStatus" style="font-size:12px; color:#888; margin-top:6px; min-height:18px;"></div>
+      </div>
+      <div class="deck-done deck-hidden" id="deckDoneScreen">
+        <div class="deck-done-big">Deck cleared!</div>
+        <p id="deckDoneStats"></p>
+        <p id="deckMissedStats" style="font-size:13px; color:#dc2626;"></p>
+        <button class="btn outline" id="deckDoneSaveBtn" style="padding:12px 20px; display:none; background:#16a34a; color:white; border-color:#16a34a;" onclick="deckSaveMissedToSheet('missed')">Save missed to Google Sheet</button>
+        <div id="deckDoneSaveStatus" style="font-size:12px; color:#888; margin-top:6px; min-height:18px;"></div>
+        <button class="btn outline" id="deckRestartBtn" style="padding:12px 20px;">Review again</button>
+      </div>
+    </div>
   </div>
 </div>
 
 <script>
 // ── STATE ──
 const GDRIVE_CLIENT_ID = '1095683227908-7ro25k16mprkf408i3lf583gti8v759b.apps.googleusercontent.com';
-const GDRIVE_SCOPES = 'https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/spreadsheets.readonly';
+const GDRIVE_SCOPES = 'https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/spreadsheets';
 
 let gdriveAccessToken = null;
 let gdriveTokenClient = null;
 let gdriveWorkbook = null;
+let gdriveSpreadsheetId = null;
+let gdriveCurrentSheetName = null;
 
 let allRows = [];
 let filteredRows = [];
@@ -723,6 +805,13 @@ let currentAudio = null; // for OpenAI playback
 
 let tableViewOn = false;
 let dataTableInstance = null;
+var deckViewOn = false;
+var deckQueue = [];
+var deckTotal = 0;
+var deckCleared = 0;
+var deckCurrent = null;
+var deckFlipped = false;
+var deckMissedSet = new Set();
 
 let showMeanings = localStorage.getItem('chineseTts_showMeanings') !== null ? localStorage.getItem('chineseTts_showMeanings') === 'true' : true;
 let showChinese = localStorage.getItem('chineseTts_showChinese') !== null ? localStorage.getItem('chineseTts_showChinese') === 'true' : true;
@@ -1324,6 +1413,7 @@ async function gdriveSearch() {
 }
 
 async function loadSpreadsheet(fileId, fileName) {
+  gdriveSpreadsheetId = fileId;
   try {
     var exportMime = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
     var resp = await fetch('https://www.googleapis.com/drive/v3/files/' + fileId + '/export?mimeType=' + encodeURIComponent(exportMime), {
@@ -1378,6 +1468,7 @@ function parseCsv(text) {
 function onSheetSelect() {
   var sheetName = document.getElementById('sheetSelect').value;
   if (!sheetName || !gdriveWorkbook) return;
+  gdriveCurrentSheetName = sheetName;
 
   var sheet = gdriveWorkbook.Sheets[sheetName];
   var csv = XLSX.utils.sheet_to_csv(sheet);
@@ -2209,6 +2300,7 @@ function toggleTableView() {
   var tableContainer = document.getElementById('tableViewContainer');
 
   if (tableViewOn) {
+    if (deckViewOn) { deckViewOn = false; document.getElementById('toggleDeckView').className = 'toggle-chip'; document.getElementById('deckViewContainer').classList.remove('active'); }
     linesContainer.style.display = 'none';
     tableContainer.classList.add('active');
     renderTableView();
@@ -2330,6 +2422,166 @@ document.getElementById('pracTextarea').addEventListener('input', function() {
   var cc = document.getElementById('pracCharCount');
   cc.textContent = this.value.length ? this.value.length + ' chars' : '';
 });
+
+
+// ── DECK VIEW ──
+function toggleDeckView() {
+  deckViewOn = !deckViewOn;
+  document.getElementById('toggleDeckView').className = 'toggle-chip' + (deckViewOn ? ' on' : '');
+  var linesContainer = document.getElementById('linesContainer');
+  var tableContainer = document.getElementById('tableViewContainer');
+  var deckContainer = document.getElementById('deckViewContainer');
+  if (deckViewOn) {
+    if (tableViewOn) {
+      tableViewOn = false;
+      document.getElementById('toggleTableView').className = 'toggle-chip';
+      tableContainer.classList.remove('active');
+      if (dataTableInstance) { dataTableInstance.destroy(); dataTableInstance = null; }
+      document.getElementById('tableViewInner').innerHTML = '';
+    }
+    linesContainer.style.display = 'none';
+    deckContainer.classList.add('active');
+    startDeckSession();
+  } else {
+    linesContainer.style.display = '';
+    deckContainer.classList.remove('active');
+  }
+}
+function shuffleDeckArray(arr) {
+  var a = arr.slice();
+  for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var tmp = a[i]; a[i] = a[j]; a[j] = tmp; }
+  return a;
+}
+function getDeckVocabIndices() {
+  var indices = [];
+  filteredRows.forEach(function(row, i) { if (row.chinese && !row.sectionHeader) indices.push(i); });
+  return indices;
+}
+function startDeckSession() {
+  var vocabIndices = getDeckVocabIndices();
+  if (vocabIndices.length === 0) return;
+  deckQueue = shuffleDeckArray(vocabIndices);
+  deckTotal = deckQueue.length;
+  deckCleared = 0; deckFlipped = false; deckMissedSet = new Set();
+  document.getElementById('deckStage').style.display = '';
+  document.querySelector('.deck-controls').style.display = '';
+  document.querySelector('.deck-progress-row').style.display = '';
+  document.getElementById('deckDoneScreen').classList.add('deck-hidden');
+  document.getElementById('deckSaveArea').style.display = 'none';
+  document.getElementById('deckSaveStatus').textContent = '';
+  var saveMissedBtn = document.getElementById('deckSaveMissedBtn');
+  var saveBothBtn = document.getElementById('deckSaveBothBtn');
+  saveMissedBtn.textContent = 'Save missed only'; saveMissedBtn.style.background = '#16a34a'; saveMissedBtn.disabled = false;
+  saveBothBtn.textContent = 'Save missed + remaining'; saveBothBtn.style.background = '#2563eb'; saveBothBtn.disabled = false;
+  deckNextCard();
+}
+function deckUpdateProgress() {
+  document.getElementById('deckProgressLabel').textContent = deckCleared + ' / ' + deckTotal;
+  var pct = deckTotal ? (deckCleared / deckTotal) * 100 : 0;
+  document.getElementById('deckProgressFill').style.width = pct + '%';
+}
+function deckNextCard() {
+  deckFlipped = false;
+  var cardEl = document.getElementById('deckCard');
+  cardEl.classList.remove('flipped'); cardEl.style.transform = ''; cardEl.style.opacity = ''; cardEl.style.transition = 'none';
+  if (deckQueue.length === 0) { deckCurrent = null; deckUpdateProgress(); deckFinish(); return; }
+  deckCurrent = deckQueue.shift();
+  var item = filteredRows[deckCurrent];
+  document.getElementById('deckWordText').textContent = item.chinese;
+  document.getElementById('deckRomText').textContent = item.romanization || '';
+  document.getElementById('deckDefText').textContent = item.english || '';
+  document.getElementById('deckEyebrow').textContent = 'in queue: ' + (deckQueue.length + 1);
+  deckUpdateProgress();
+}
+function deckFinish() {
+  document.getElementById('deckStage').style.display = 'none';
+  document.querySelector('.deck-controls').style.display = 'none';
+  document.querySelector('.deck-progress-row').style.display = 'none';
+  document.getElementById('deckSaveArea').style.display = 'none';
+  document.getElementById('deckMissedCount').style.display = 'none';
+  document.getElementById('deckRemainingCount').style.display = 'none';
+  var doneEl = document.getElementById('deckDoneScreen'); doneEl.classList.remove('deck-hidden');
+  document.getElementById('deckDoneStats').textContent = 'You cleared all ' + deckTotal + ' words in this deck.';
+  var missedEl = document.getElementById('deckMissedStats');
+  var saveBtn = document.getElementById('deckDoneSaveBtn');
+  document.getElementById('deckDoneSaveStatus').textContent = '';
+  if (deckMissedSet.size > 0) {
+    missedEl.textContent = deckMissedSet.size + ' word(s) you missed at least once.';
+    if (gdriveSpreadsheetId && gdriveAccessToken) { saveBtn.style.display = ''; saveBtn.textContent = 'Save missed to Google Sheet'; saveBtn.style.background = '#16a34a'; saveBtn.disabled = false; }
+    else { saveBtn.style.display = 'none'; }
+  } else { missedEl.textContent = 'Perfect run — no misses!'; saveBtn.style.display = 'none'; }
+}
+function deckUpdateSaveButtons() {
+  var hasMissed = deckMissedSet.size > 0, hasRemaining = deckQueue.length > 0, hasSheets = gdriveSpreadsheetId && gdriveAccessToken;
+  var missedCountEl = document.getElementById('deckMissedCount');
+  if (hasMissed) { missedCountEl.style.display = ''; missedCountEl.textContent = deckMissedSet.size + ' missed'; } else { missedCountEl.style.display = 'none'; }
+  var remainingEl = document.getElementById('deckRemainingCount');
+  if (hasRemaining) { remainingEl.style.display = ''; remainingEl.textContent = deckQueue.length + ' remaining'; } else { remainingEl.style.display = 'none'; }
+  var saveArea = document.getElementById('deckSaveArea'), saveMissedBtn = document.getElementById('deckSaveMissedBtn'), saveBothBtn = document.getElementById('deckSaveBothBtn');
+  if (hasSheets && hasMissed) { saveArea.style.display = ''; saveMissedBtn.style.display = ''; saveBothBtn.style.display = (hasMissed && hasRemaining) ? '' : 'none'; }
+  else { saveArea.style.display = 'none'; }
+}
+function deckFlipCard() { deckFlipped = !deckFlipped; document.getElementById('deckCard').classList.toggle('flipped', deckFlipped); }
+function deckGrade(correct) {
+  if (deckCurrent === null) return;
+  if (!correct) { deckQueue.push(deckCurrent); deckMissedSet.add(deckCurrent); } else { deckCleared++; }
+  deckFlashStamp(correct);
+  deckAnimateOut(correct, function() { deckNextCard(); deckUpdateSaveButtons(); });
+}
+function deckFlashStamp(correct) {
+  var el = document.getElementById(correct ? 'deckStampRight' : 'deckStampLeft');
+  el.style.transition = 'none'; el.style.opacity = '1';
+  requestAnimationFrame(function() { el.style.transition = 'opacity .4s ease'; el.style.opacity = '0'; });
+}
+function deckAnimateOut(correct, cb) {
+  var cardEl = document.getElementById('deckCard');
+  cardEl.style.transition = 'transform .25s ease, opacity .25s ease';
+  cardEl.style.transform = 'translateX(' + (correct ? '120%' : '-120%') + ') rotate(' + (correct ? 10 : -10) + 'deg)';
+  cardEl.style.opacity = '0';
+  setTimeout(function() { cardEl.style.transition = 'none'; cb(); }, 220);
+}
+document.getElementById('deckCard').addEventListener('click', function() { deckFlipCard(); });
+document.getElementById('deckMissBtn').addEventListener('click', function() { deckGrade(false); });
+document.getElementById('deckKnowBtn').addEventListener('click', function() { deckGrade(true); });
+document.getElementById('deckRestartBtn').addEventListener('click', function() { startDeckSession(); });
+async function deckSaveMissedToSheet(mode) {
+  if (!gdriveSpreadsheetId || !gdriveAccessToken || deckMissedSet.size === 0) return;
+  var statusEl = document.getElementById('deckSaveStatus');
+  var doneSaveStatus = document.getElementById('deckDoneSaveStatus');
+  var activeStatus = doneSaveStatus && !document.getElementById('deckDoneScreen').classList.contains('deck-hidden') ? doneSaveStatus : statusEl;
+  activeStatus.textContent = 'Creating new sheet...';
+  var allSaveBtns = [document.getElementById('deckSaveMissedBtn'), document.getElementById('deckSaveBothBtn'), document.getElementById('deckDoneSaveBtn')];
+  allSaveBtns.forEach(function(b) { if (b) b.disabled = true; });
+  var now = new Date();
+  var pad = function(n) { return n < 10 ? '0' + n : '' + n; };
+  var dateStr = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate()) + '_' + pad(now.getHours()) + pad(now.getMinutes());
+  var baseName = gdriveCurrentSheetName || 'missed';
+  var suffix = mode === 'both' ? '_missed_remaining' : '_missed';
+  var newSheetName = baseName + suffix + '_' + dateStr;
+  var rows = [], added = new Set();
+  var sortedMissed = Array.from(deckMissedSet).sort(function(a, b) { return a - b; });
+  sortedMissed.forEach(function(fi) { var item = filteredRows[fi]; if (item && item.chinese) { rows.push([item.chinese, item.romanization || '', item.english || '']); added.add(fi); } });
+  if (mode === 'both') { deckQueue.forEach(function(fi) { if (!added.has(fi)) { var item = filteredRows[fi]; if (item && item.chinese) { rows.push([item.chinese, item.romanization || '', item.english || '']); added.add(fi); } } }); }
+  var label = mode === 'both' ? 'missed + remaining' : 'missed';
+  try {
+    var addResp = await fetch('https://sheets.googleapis.com/v4/spreadsheets/' + gdriveSpreadsheetId + ':batchUpdate', {
+      method: 'POST', headers: { 'Authorization': 'Bearer ' + gdriveAccessToken, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ requests: [{ addSheet: { properties: { title: newSheetName } } }] })
+    });
+    if (!addResp.ok) { var errData = await addResp.json(); throw new Error(errData.error ? errData.error.message : 'Failed to create sheet'); }
+    activeStatus.textContent = 'Writing ' + rows.length + ' terms...';
+    var writeResp = await fetch('https://sheets.googleapis.com/v4/spreadsheets/' + gdriveSpreadsheetId + '/values/' + encodeURIComponent(newSheetName) + '!A1?valueInputOption=RAW', {
+      method: 'PUT', headers: { 'Authorization': 'Bearer ' + gdriveAccessToken, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ range: newSheetName + '!A1', majorDimension: 'ROWS', values: rows })
+    });
+    if (!writeResp.ok) throw new Error('Failed to write data');
+    activeStatus.textContent = 'Saved ' + rows.length + ' ' + label + ' terms to "' + newSheetName + '"';
+    allSaveBtns.forEach(function(b) { if (b) { b.textContent = 'Saved!'; b.style.background = '#888'; } });
+  } catch (err) {
+    activeStatus.textContent = 'Error: ' + err.message;
+    allSaveBtns.forEach(function(b) { if (b) b.disabled = false; });
+  }
+}
 
 // ── INIT ──
 loadApiKey();
