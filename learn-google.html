@@ -496,6 +496,14 @@
   body.dark-mode .deck-ctrl-btn.correct { border-color: #166534; }
   body.dark-mode .deck-ctrl-btn.correct:active { background: #1a2e1a; }
   .hidden { display: none !important; }
+
+  /* ── TABLE PLAY BUTTON ── */
+  .tbl-play-btn {
+    background: #2563eb; color: white; border: none; border-radius: 6px;
+    padding: 4px 8px; font-size: 12px; cursor: pointer; line-height: 1;
+  }
+  .tbl-play-btn:hover { background: #1d4ed8; }
+  .tbl-play-btn.speaking { background: #16a34a; }
 </style>
 </head>
 <body>
@@ -1503,14 +1511,16 @@ function renderTableView() {
 
   var html = '<table id="vocabDataTable" class="display" style="width:100%">';
   html += '<thead><tr>';
-  html += '<th style="width:5%;">#</th>';
-  html += '<th style="width:40%;">Term</th>';
-  html += '<th style="width:55%;">Definition</th>';
+  html += '<th style="width:4%;">#</th>';
+  html += '<th style="width:4%;"></th>';
+  html += '<th style="width:38%;">Term</th>';
+  html += '<th style="width:54%;">Definition</th>';
   html += '</tr></thead><tbody>';
 
   filteredVocab.forEach(function(row, n) {
     html += '<tr>';
     html += '<td>' + (n + 1) + '</td>';
+    html += '<td><button class="tbl-play-btn" onclick="tblSpeak(' + n + ', this)" title="Speak term">&#9654;</button></td>';
     html += '<td style="font-weight:600;">' + escHtml(row.term) + '</td>';
     html += '<td>' + escHtml(row.definition) + '</td>';
     html += '</tr>';
@@ -1536,6 +1546,31 @@ function renderTableView() {
       info: 'Showing _START_ to _END_ of _TOTAL_ entries',
     }
   });
+}
+
+// ── TTS ──
+function speakText(text) {
+  if (!text) return;
+  window.speechSynthesis.cancel();
+  var utterance = new SpeechSynthesisUtterance(text);
+  utterance.rate = 1;
+  window.speechSynthesis.speak(utterance);
+}
+
+function tblSpeak(n, btnEl) {
+  var row = filteredVocab[n];
+  if (!row) return;
+  // Clear previous speaking state
+  document.querySelectorAll('.tbl-play-btn.speaking').forEach(function(el) {
+    el.classList.remove('speaking');
+  });
+  window.speechSynthesis.cancel();
+  var utterance = new SpeechSynthesisUtterance(row.term);
+  utterance.rate = 1;
+  btnEl.classList.add('speaking');
+  utterance.onend = function() { btnEl.classList.remove('speaking'); };
+  utterance.onerror = function() { btnEl.classList.remove('speaking'); };
+  window.speechSynthesis.speak(utterance);
 }
 
 // ── DECK VIEW (Mango-style swipe review) ──

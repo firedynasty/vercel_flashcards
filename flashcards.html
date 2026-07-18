@@ -957,6 +957,7 @@
         <button class="paste-btn" id="folderFlatBtn" title="Load .txt or .md files" style="border: 2px dotted;">Load .txt File</button>
         <button class="paste-btn" id="todoListBtn" title="Open Todo List" style="border: 2px solid #0FC0F5; color: #0FC0F5;">Todo</button>
         <button class="paste-btn" id="crosswordRevealBtn" title="Open Crossword Reveal" style="border: 2px solid #2a4d8f; color: #2a4d8f;">Crossword</button>
+        <button class="paste-btn" id="googleParserBtn" title="Open Google Docs CSV Parser" style="border: 2px solid #f59e0b; color: #f59e0b;">Google Parser</button>
         <button class="paste-btn" id="learnMemorizeBtn" title="Open Memorize Verses" style="border: 2px solid #7c3aed; color: #7c3aed;">Memorize</button>
         <button class="paste-btn" id="learnChineseTtsBtn" title="Open Chinese Lyrics Reader" style="border: 2px solid #e11d48; color: #e11d48;">Chinese TTS</button>
         <button class="paste-btn" id="learnGoogleBtn" title="Open Learn Google" style="border: 2px solid #4285f4; color: #4285f4;">Learn-Google</button>
@@ -2413,6 +2414,10 @@ God loves the world
 
             document.getElementById('learnScriptureBtn').addEventListener('click', () => {
                 window.open('learn-scripture.html', '_blank');
+            });
+
+            document.getElementById('googleParserBtn').addEventListener('click', () => {
+                window.open('parse-google-docs-to-csv-for-google.html', '_blank');
             });
 
             document.getElementById('learnMemorizeBtn').addEventListener('click', () => {
