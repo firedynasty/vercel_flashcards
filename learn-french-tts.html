@@ -467,6 +467,17 @@
 
       <hr style="border:none;border-top:1px solid #eee;margin:12px 0;">
 
+      <!-- Paste CSV -->
+      <div style="font-size:12px;font-weight:600;color:#555;margin-bottom:6px;">Paste CSV</div>
+      <textarea id="pasteCsvInput" rows="6" style="width:100%;border:1px solid #ddd;border-radius:8px;padding:10px 14px;font-family:'SF Mono',Monaco,monospace;font-size:12px;line-height:1.6;resize:vertical;color:#333;" placeholder="Paste CSV content here (French,Pronunciation,English)&#10;bonjour,bɔ̃.ʒuʁ,hello"></textarea>
+      <div style="margin-top:6px;">
+        <button class="btn primary" onclick="loadPastedCsv()">Load CSV</button>
+        <span id="pasteCsvStatus" style="font-size:12px;color:#888;margin-left:8px;"></span>
+      </div>
+      <div class="hint">Copy from Numbers, Excel, a text file — anything that exports comma-separated rows. Quoted fields with commas are handled correctly.</div>
+
+      <hr style="border:none;border-top:1px solid #eee;margin:12px 0;">
+
       <!-- Google Sheets -->
       <div style="font-size:12px;font-weight:600;color:#555;margin-bottom:6px;">Google Sheets</div>
       <div class="setup-row">
@@ -1222,7 +1233,7 @@ function parseSheetRows(rows) {
     if (!colA && !colB && !colC) continue;
 
     if (colA && !colB && !colC) {
-      if (/^(Scene|Chapter|Part|Section|Lesson|Unit)\s/i.test(colA)) {
+      if (/^(Dialogue|Scene|Chapter|Part|Section|Lesson|Unit)\s/i.test(colA)) {
         currentLesson = colA;
         allRows.push({ lesson: currentLesson, french: '', romanization: '', english: '', sectionHeader: colA, contextLine: '' });
       } else {
@@ -1352,6 +1363,14 @@ function toggleVideos() {
   videosHidden = !videosHidden;
   document.getElementById('videoBody').style.display = videosHidden ? 'none' : 'flex';
   document.getElementById('videoArrow').textContent = videosHidden ? '\u25ba' : '\u25bc';
+}
+
+function loadPastedCsv() {
+  var raw = document.getElementById('pasteCsvInput').value.trim();
+  var statusEl = document.getElementById('pasteCsvStatus');
+  if (!raw) { statusEl.textContent = 'Paste some CSV first.'; return; }
+  loadCsvText(raw, 'pasted-csv');
+  statusEl.textContent = 'Loaded.';
 }
 
 function loadCsvText(text, fileName) {
