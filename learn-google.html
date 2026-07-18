@@ -627,15 +627,15 @@
     <span id="deckRemainingCount" style="font-size:12px; color:#888; margin-left:10px; display:none;">0 remaining</span>
   </div>
   <div id="deckSaveArea" style="text-align:center; margin-top:8px; display:none;">
-    <button class="btn primary" id="deckSaveMissedBtn" style="padding:10px 18px; font-size:13px; background:#16a34a; display:none;" onclick="deckSaveMissedToSheet('missed')">Save missed only</button>
-    <button class="btn primary" id="deckSaveBothBtn" style="padding:10px 18px; font-size:13px; background:#2563eb; margin-left:8px; display:none;" onclick="deckSaveMissedToSheet('both')">Save missed + remaining</button>
+    <button class="btn primary" id="deckSaveMissedBtn" style="padding:10px 18px; font-size:13px; background:#16a34a; display:none;" onclick="deckSaveMissedToSheet('missed')">Download missed CSV</button>
+    <button class="btn primary" id="deckSaveBothBtn" style="padding:10px 18px; font-size:13px; background:#2563eb; margin-left:8px; display:none;" onclick="deckSaveMissedToSheet('both')">Download missed + remaining</button>
     <div id="deckSaveStatus" style="font-size:12px; color:#888; margin-top:6px; min-height:18px;"></div>
   </div>
   <div class="deck-done hidden" id="deckDoneScreen">
     <div class="deck-done-big">Deck cleared!</div>
     <p id="deckDoneStats"></p>
     <p id="deckMissedStats" style="font-size:13px; color:#dc2626;"></p>
-    <button class="btn primary" id="deckDoneSaveBtn" style="padding:12px 20px; display:none; background:#16a34a;" onclick="deckSaveMissedToSheet('missed')">Save missed to Google Sheet</button>
+    <button class="btn primary" id="deckDoneSaveBtn" style="padding:12px 20px; display:none; background:#16a34a;" onclick="deckSaveMissedToSheet('missed')">Download missed CSV</button>
     <div id="deckDoneSaveStatus" style="font-size:12px; color:#888; margin-top:6px; min-height:18px;"></div>
     <button class="btn primary" id="deckRestartBtn" style="padding:12px 20px;">Review again</button>
   </div>
@@ -1206,18 +1206,19 @@ function exportHard() {
     alert('No cards marked as hard yet. Click on any card to highlight it purple.');
     return;
   }
-  var lines = ['Term\tDefinition'];
+  function csvEsc(s) { s = String(s); return (s.indexOf(',') >= 0 || s.indexOf('"') >= 0 || s.indexOf('\n') >= 0) ? '"' + s.replace(/"/g, '""') + '"' : s; }
+  var lines = ['Term,Definition'];
   var sorted = Array.from(hardSet).sort(function(a, b) { return a - b; });
   sorted.forEach(function(idx) {
     var v = allVocab[idx];
-    if (v) lines.push(v.term + '\t' + v.definition);
+    if (v) lines.push([v.term, v.definition].map(csvEsc).join(','));
   });
-  var tsv = lines.join('\n');
-  navigator.clipboard.writeText(tsv).then(function() {
-    alert('Copied ' + (lines.length - 1) + ' hard cards as tab-separated text!\nPaste directly into Google Sheets.');
-  }).catch(function() {
-    prompt('Copy this (tab-separated, paste into Google Sheets):', tsv);
-  });
+  var blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  var now = new Date(); var pad = function(n) { return n < 10 ? '0' + n : '' + n; };
+  a.href = url; a.download = 'hard_cards_' + now.getFullYear() + '-' + pad(now.getMonth()+1) + '-' + pad(now.getDate()) + '.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
 }
 
 // ── FILE LOADING ──
@@ -1592,10 +1593,10 @@ function startDeckSession() {
   document.getElementById('deckSaveStatus').textContent = '';
   var saveMissedBtn = document.getElementById('deckSaveMissedBtn');
   var saveBothBtn = document.getElementById('deckSaveBothBtn');
-  saveMissedBtn.textContent = 'Save missed only';
+  saveMissedBtn.textContent = 'Download missed CSV';
   saveMissedBtn.style.background = '#16a34a';
   saveMissedBtn.disabled = false;
-  saveBothBtn.textContent = 'Save missed + remaining';
+  saveBothBtn.textContent = 'Download missed + remaining';
   saveBothBtn.style.background = '#2563eb';
   saveBothBtn.disabled = false;
 
@@ -1650,14 +1651,10 @@ function deckFinish() {
   document.getElementById('deckDoneSaveStatus').textContent = '';
   if (deckMissedSet.size > 0) {
     missedEl.textContent = deckMissedSet.size + ' word(s) you missed at least once.';
-    if (gdriveSpreadsheetId && gdriveAccessToken) {
-      saveBtn.style.display = '';
-      saveBtn.textContent = 'Save missed to Google Sheet';
-      saveBtn.style.background = '#16a34a';
-      saveBtn.disabled = false;
-    } else {
-      saveBtn.style.display = 'none';
-    }
+    saveBtn.style.display = '';
+    saveBtn.textContent = 'Download missed CSV';
+    saveBtn.style.background = '#16a34a';
+    saveBtn.disabled = false;
   } else {
     missedEl.textContent = 'Perfect run — no misses!';
     saveBtn.style.display = 'none';
@@ -1667,7 +1664,6 @@ function deckFinish() {
 function deckUpdateSaveButtons() {
   var hasMissed = deckMissedSet.size > 0;
   var hasRemaining = deckQueue.length > 0;
-  var hasSheets = gdriveSpreadsheetId && gdriveAccessToken;
 
   // Missed count label
   var missedCountEl = document.getElementById('deckMissedCount');
@@ -1687,15 +1683,14 @@ function deckUpdateSaveButtons() {
     remainingEl.style.display = 'none';
   }
 
-  // Save area and buttons (only if loaded from Google Sheets)
   var saveArea = document.getElementById('deckSaveArea');
   var saveMissedBtn = document.getElementById('deckSaveMissedBtn');
   var saveBothBtn = document.getElementById('deckSaveBothBtn');
 
-  if (hasSheets && hasMissed) {
+  if (hasMissed) {
     saveArea.style.display = '';
     saveMissedBtn.style.display = '';
-    saveBothBtn.style.display = (hasMissed && hasRemaining) ? '' : 'none';
+    saveBothBtn.style.display = hasRemaining ? '' : 'none';
   } else {
     saveArea.style.display = 'none';
   }
@@ -1751,104 +1746,28 @@ document.getElementById('deckKnowBtn').addEventListener('click', function() { de
 document.getElementById('deckRestartBtn').addEventListener('click', function() { startDeckSession(); });
 
 // ── SAVE MISSED TO GOOGLE SHEET ──
-async function deckSaveMissedToSheet(mode) {
-  // mode: 'missed' = missed only, 'both' = missed + remaining in queue
-  if (!gdriveSpreadsheetId || !gdriveAccessToken || deckMissedSet.size === 0) return;
-
-  var statusEl = document.getElementById('deckSaveStatus');
-  var doneSaveStatus = document.getElementById('deckDoneSaveStatus');
-  var activeStatus = doneSaveStatus && !document.getElementById('deckDoneScreen').classList.contains('hidden')
-    ? doneSaveStatus : statusEl;
-
-  activeStatus.textContent = 'Creating new sheet...';
-
-  // Disable all save buttons while saving
-  var allSaveBtns = [
-    document.getElementById('deckSaveMissedBtn'),
-    document.getElementById('deckSaveBothBtn'),
-    document.getElementById('deckDoneSaveBtn')
-  ];
-  allSaveBtns.forEach(function(b) { if (b) b.disabled = true; });
-
-  // Build new sheet name: originalSheetName_date_time
-  var now = new Date();
-  var pad = function(n) { return n < 10 ? '0' + n : '' + n; };
-  var dateStr = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate())
-    + '_' + pad(now.getHours()) + pad(now.getMinutes());
-  var baseName = gdriveCurrentSheetName || 'missed';
-  var suffix = mode === 'both' ? '_missed_remaining' : '_missed';
-  var newSheetName = baseName + suffix + '_' + dateStr;
-
-  // Collect rows to save
-  var rows = [];
-  var added = new Set();
-
-  // Add missed cards
+function deckSaveMissedToSheet(mode) {
+  if (deckMissedSet.size === 0) return;
+  var csvRows = [], added = new Set();
   var sortedMissed = Array.from(deckMissedSet).sort(function(a, b) { return a - b; });
   sortedMissed.forEach(function(fi) {
     var item = filteredVocab[fi];
-    if (item) { rows.push([item.term, item.definition]); added.add(fi); }
+    if (item) { csvRows.push([item.term, item.definition]); added.add(fi); }
   });
-
-  // Add remaining queue cards if mode is 'both'
   if (mode === 'both') {
     deckQueue.forEach(function(fi) {
-      if (!added.has(fi)) {
-        var item = filteredVocab[fi];
-        if (item) { rows.push([item.term, item.definition]); added.add(fi); }
-      }
+      if (!added.has(fi)) { var item = filteredVocab[fi]; if (item) { csvRows.push([item.term, item.definition]); added.add(fi); } }
     });
   }
-
-  var label = mode === 'both' ? 'missed + remaining' : 'missed';
-
-  try {
-    // Step 1: Create the new sheet tab
-    var addResp = await fetch('https://sheets.googleapis.com/v4/spreadsheets/' + gdriveSpreadsheetId + ':batchUpdate', {
-      method: 'POST',
-      headers: {
-        'Authorization': 'Bearer ' + gdriveAccessToken,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        requests: [{
-          addSheet: {
-            properties: { title: newSheetName }
-          }
-        }]
-      })
-    });
-    if (!addResp.ok) {
-      var errData = await addResp.json();
-      throw new Error(errData.error ? errData.error.message : 'Failed to create sheet');
-    }
-
-    activeStatus.textContent = 'Writing ' + rows.length + ' terms...';
-
-    // Step 2: Write the terms to the new sheet
-    var writeResp = await fetch('https://sheets.googleapis.com/v4/spreadsheets/' + gdriveSpreadsheetId
-      + '/values/' + encodeURIComponent(newSheetName) + '!A1?valueInputOption=RAW', {
-      method: 'PUT',
-      headers: {
-        'Authorization': 'Bearer ' + gdriveAccessToken,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        range: newSheetName + '!A1',
-        majorDimension: 'ROWS',
-        values: rows
-      })
-    });
-    if (!writeResp.ok) throw new Error('Failed to write data');
-
-    activeStatus.textContent = 'Saved ' + rows.length + ' ' + label + ' terms to "' + newSheetName + '"';
-    allSaveBtns.forEach(function(b) {
-      if (b) { b.textContent = 'Saved!'; b.style.background = '#888'; }
-    });
-  } catch (err) {
-    activeStatus.textContent = 'Error: ' + err.message;
-    allSaveBtns.forEach(function(b) { if (b) b.disabled = false; });
-  }
+  function csvEsc(s) { s = String(s); return (s.indexOf(',') >= 0 || s.indexOf('"') >= 0 || s.indexOf('\n') >= 0) ? '"' + s.replace(/"/g, '""') + '"' : s; }
+  var lines = ['Term,Definition'];
+  csvRows.forEach(function(r) { lines.push(r.map(csvEsc).join(',')); });
+  var blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  var now = new Date(); var pad = function(n) { return n < 10 ? '0' + n : '' + n; };
+  a.href = url; a.download = 'deck_' + (mode === 'both' ? 'missed_remaining' : 'missed') + '_' + now.getFullYear() + '-' + pad(now.getMonth()+1) + '-' + pad(now.getDate()) + '.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
 }
 
 // ── KEYBOARD ──
