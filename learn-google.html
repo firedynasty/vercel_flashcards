@@ -745,6 +745,8 @@ function parseCsvRow(line) {
 }
 
 function parseVocabCsv(text) {
+  // Normalize line endings: \r\n → \n, lone \r → \n
+  text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
   var lines = text.split('\n');
   var vocab = [];
 

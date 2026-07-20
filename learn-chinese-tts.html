@@ -1155,8 +1155,6 @@ function setAutoAdvance(val) {
 
 // ── RENDER LYRICS ──
 function renderLyrics() {
-  console.log('[renderLyrics] filteredRows.length:', filteredRows.length);
-  if (filteredRows.length > 0) console.log('[renderLyrics] first 3 rows:', filteredRows.slice(0, 3));
   var area = document.getElementById('lyricsArea');
   if (filteredRows.length === 0) {
     area.classList.remove('active');
@@ -1839,13 +1837,8 @@ function toggleVideos() {
 }
 
 function loadCsvText(text, fileName) {
-  console.log('[loadCsvText] called from:', fileName);
-  console.log('[loadCsvText] text length:', text.length);
-  console.log('[loadCsvText] first 200 chars:', JSON.stringify(text.slice(0, 200)));
   var rows = parseCsv(text);
-  console.log('[loadCsvText] parseCsv returned', rows.length, 'rows');
-  if (rows.length > 0) console.log('[loadCsvText] row[0]:', rows[0], '  row[1]:', rows[1]);
-  if (rows.length < 2) { setStatus('CSV is empty'); console.warn('[loadCsvText] EARLY EXIT: rows.length < 2'); return false; }
+  if (rows.length < 2) { setStatus('CSV is empty'); return false; }
 
   allRows = [];
   var currentLesson = '';
@@ -1869,14 +1862,10 @@ function loadCsvText(text, fileName) {
     }
   }
 
-  console.log('[loadCsvText] allRows.length:', allRows.length);
-  console.log('[loadCsvText] sample allRows[0..2]:', allRows.slice(0, 3));
-
   var lessons = [], seen = {};
   allRows.forEach(function(row) {
     if (row.lesson && !seen[row.lesson]) { seen[row.lesson] = true; lessons.push(row.lesson); }
   });
-  console.log('[loadCsvText] lessons found:', lessons);
   var lessonSel = document.getElementById('lessonSelect');
   lessonSel.innerHTML = '<option value="">-- all lessons --</option>';
   lessons.forEach(function(l) {
@@ -1951,16 +1940,13 @@ function loadPastedCsv() {
   var raw = document.getElementById('pasteCsvInput').value.trim();
   var statusEl = document.getElementById('pasteCsvStatus');
   if (!raw) { statusEl.textContent = 'Paste some CSV first.'; return; }
-  console.log('[loadPastedCsv] raw length:', raw.length);
-  console.log('[loadPastedCsv] first line:', JSON.stringify(raw.split('\n')[0]));
-  console.log('[loadPastedCsv] line count:', raw.split('\n').length);
   var ok = loadCsvText(raw, 'pasted-csv');
   if (ok) {
     statusEl.textContent = 'Loaded.';
     var section = document.getElementById('setupSection');
     if (!section.classList.contains('collapsed')) toggleSetup();
   } else {
-    statusEl.textContent = 'Error: could not parse CSV (check console).';
+    statusEl.textContent = 'Error: could not parse CSV.';
   }
 }
 

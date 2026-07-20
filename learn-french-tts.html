@@ -1197,6 +1197,8 @@ async function loadSpreadsheet(fileId, fileName) {
 }
 
 function parseCsv(text) {
+  // Normalize line endings: \r\n → \n, lone \r → \n
+  text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
   var result = [];
   var current = '', cells = [], inQuotes = false;
   for (var i = 0; i < text.length; i++) {
@@ -1208,10 +1210,9 @@ function parseCsv(text) {
     } else {
       if (ch === '"') { inQuotes = true; }
       else if (ch === ',') { cells.push(current); current = ''; }
-      else if (ch === '\n' || (ch === '\r' && text[i+1] === '\n')) {
+      else if (ch === '\n') {
         cells.push(current); result.push(cells);
         cells = []; current = '';
-        if (ch === '\r') i++;
       } else { current += ch; }
     }
   }
@@ -1369,13 +1370,19 @@ function loadPastedCsv() {
   var raw = document.getElementById('pasteCsvInput').value.trim();
   var statusEl = document.getElementById('pasteCsvStatus');
   if (!raw) { statusEl.textContent = 'Paste some CSV first.'; return; }
-  loadCsvText(raw, 'pasted-csv');
-  statusEl.textContent = 'Loaded.';
+  var ok = loadCsvText(raw, 'pasted-csv');
+  if (ok) {
+    statusEl.textContent = 'Loaded.';
+    var section = document.getElementById('setupSection');
+    if (!section.classList.contains('collapsed')) toggleSetup();
+  } else {
+    statusEl.textContent = 'Error: could not parse CSV.';
+  }
 }
 
 function loadCsvText(text, fileName) {
   var rows = parseCsv(text);
-  if (rows.length < 2) { setStatus('CSV is empty'); return; }
+  if (rows.length < 2) { setStatus('CSV is empty'); return false; }
 
   parseSheetRows(rows);
   populateLessons();
@@ -1384,6 +1391,7 @@ function loadCsvText(text, fileName) {
   expanded = {};
   setStatus('Loaded ' + allRows.length + ' lines from ' + fileName);
   onLessonSelect();
+  return true;
 }
 
 function loadVideos(videoFiles) {
