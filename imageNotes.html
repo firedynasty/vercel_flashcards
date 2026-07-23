@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Image Notes</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100vh;
+            height: 100dvh;
+            overflow: hidden;
+            overscroll-behavior: none;
+        }
+
+        body {
+            font-family: "Microsoft YaHei", "PingFang SC", system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            padding: 10px;
+            gap: 10px;
+            touch-action: manipulation;
+        }
+
+        /* Toolbar */
+        .toolbar {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .toolbar .title {
+            font-size: 0.95rem;
+            color: #a8d8ea;
+            font-weight: 600;
+            margin-right: 4px;
+        }
+
+        .tool-btn {
+            min-height: 40px;
+            padding: 8px 16px;
+            border: 2px solid rgba(255, 255, 255, 0.25);
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .tool-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .tool-btn.active {
+            background: #3B82F6;
+            border-color: #3B82F6;
+        }
+
+        #loadImgBtn {
+            border-color: #f97316;
+            color: #f97316;
+        }
+
+        #loadImgBtn:hover {
+            background: rgba(249, 115, 22, 0.15);
+        }
+
+        .stroke-control {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #a8d8ea;
+            font-size: 0.9rem;
+            min-height: 40px;
+        }
+
+        input[type="range"] {
+            width: 90px;
+            height: 24px;
+        }
+
+        /* Reference image area */
+        .image-area {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        #imgPlaceholder {
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 0.85rem;
+            padding: 6px 12px;
+            border: 1px dashed rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+        }
+
+        #refImg {
+            max-width: 100%;
+            max-height: 35vh;
+            border-radius: 10px;
+            object-fit: contain;
+            cursor: pointer;
+            transition: max-height 0.25s ease;
+        }
+
+        #refImg.expanded {
+            max-height: 75vh;
+        }
+
+        .img-caption {
+            font-size: 0.75rem;
+            color: #a8d8ea;
+            margin-top: 4px;
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* Canvas area fills remaining viewport */
+        .canvas-wrapper {
+            flex: 1;
+            min-height: 0;
+            position: relative;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            align-self: stretch;
+        }
+
+        canvas {
+            display: block;
+            background: #fff;
+            touch-action: none;
+        }
+
+        #gridCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            opacity: 0.35;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="toolbar">
+        <span class="title">Image Notes</span>
+        <button class="tool-btn" id="loadImgBtn">Load Image</button>
+        <button class="tool-btn" id="clearBtn">Clear</button>
+        <button class="tool-btn" id="darkBtn">Dark</button>
+        <button class="tool-btn active" id="gridBtn">Grid</button>
+        <div class="stroke-control">
+            <label for="strokeSize">Stroke:</label>
+            <input type="range" id="strokeSize" min="2" max="20" value="2">
+        </div>
+    </div>
+
+    <div class="image-area" id="imageArea">
+        <div id="imgPlaceholder">Load a reference image (e.g. a YouTube screenshot)</div>
+        <img id="refImg" style="display:none" alt="Reference image">
+        <div class="img-caption" id="imgCaption"></div>
+    </div>
+
+    <div class="canvas-wrapper" id="canvasWrapper">
+        <canvas id="drawCanvas"></canvas>
+        <canvas id="gridCanvas"></canvas>
+    </div>
+
+    <input type="file" id="fileInput" accept="image/*" style="display:none">
+
+    <script>
+        const canvas = document.getElementById('drawCanvas');
+        const ctx = canvas.getContext('2d');
+        const gridCanvas = document.getElementById('gridCanvas');
+        const gridCtx = gridCanvas.getContext('2d');
+        const wrapper = document.getElementById('canvasWrapper');
+        const refImg = document.getElementById('refImg');
+        const imgCaption = document.getElementById('imgCaption');
+        const imgPlaceholder = document.getElementById('imgPlaceholder');
+        const fileInput = document.getElementById('fileInput');
+        const gridBtn = document.getElementById('gridBtn');
+        const darkBtn = document.getElementById('darkBtn');
+
+        let isDrawing = false;
+        let lastX = 0;
+        let lastY = 0;
+        let strokeSizeValue = 2;
+        let showGrid = true;
+        let isDark = false;
+        let imgURL = null;
+        let cssW = 0;
+        let cssH = 0;
+        const GRID_STEP = 25;
+
+        // Size both canvases to fill the wrapper, preserving existing drawing.
+        // Canvas backing store is scaled by devicePixelRatio for crisp lines on mobile.
+        function resizeCanvas() {
+            const w = wrapper.clientWidth;
+            const h = wrapper.clientHeight;
+            if (w === 0 || h === 0) return;
+
+            const temp = document.createElement('canvas');
+            temp.width = canvas.width;
+            temp.height = canvas.height;
+            temp.getContext('2d').drawImage(canvas, 0, 0);
+
+            const dpr = window.devicePixelRatio || 1;
+            cssW = w;
+            cssH = h;
+            [canvas, gridCanvas].forEach(c => {
+                c.width = Math.round(w * dpr);
+                c.height = Math.round(h * dpr);
+                c.style.width = w + 'px';
+                c.style.height = h + 'px';
+            });
+
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.strokeStyle = isDark ? '#fff' : '#000';
+            ctx.lineWidth = strokeSizeValue;
+            gridCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+            if (temp.width > 0 && temp.height > 0) {
+                ctx.save();
+                ctx.setTransform(1, 0, 0, 1, 0, 0);
+                ctx.drawImage(temp, 0, 0, canvas.width, canvas.height);
+                ctx.restore();
+            }
+
+            drawGrid();
+        }
+
+        // Graph-paper grid (coords are in CSS px thanks to the dpr transform)
+        function drawGrid() {
+            gridCtx.clearRect(0, 0, cssW, cssH);
+            if (!showGrid) return;
+
+            gridCtx.strokeStyle = isDark ? '#6b7280' : '#bbb';
+            gridCtx.lineWidth = 1;
+            gridCtx.beginPath();
+            for (let x = GRID_STEP + 0.5; x < cssW; x += GRID_STEP) {
+                gridCtx.moveTo(x, 0);
+                gridCtx.lineTo(x, cssH);
+            }
+            for (let y = GRID_STEP + 0.5; y < cssH; y += GRID_STEP) {
+                gridCtx.moveTo(0, y);
+                gridCtx.lineTo(cssW, y);
+            }
+            gridCtx.stroke();
+            gridCtx.strokeRect(0.5, 0.5, cssW - 1, cssH - 1);
+        }
+
+        function getPos(e) {
+            const rect = canvas.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            return { x: clientX - rect.left, y: clientY - rect.top };
+        }
+
+        function startDrawing(e) {
+            e.preventDefault();
+            isDrawing = true;
+            const pos = getPos(e);
+            lastX = pos.x;
+            lastY = pos.y;
+        }
+
+        function draw(e) {
+            if (!isDrawing) return;
+            e.preventDefault();
+            const pos = getPos(e);
+            ctx.beginPath();
+            ctx.moveTo(lastX, lastY);
+            ctx.lineTo(pos.x, pos.y);
+            ctx.stroke();
+            lastX = pos.x;
+            lastY = pos.y;
+        }
+
+        function stopDrawing() {
+            isDrawing = false;
+        }
+
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', draw);
+        window.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('touchstart', startDrawing, { passive: false });
+        canvas.addEventListener('touchmove', draw, { passive: false });
+        canvas.addEventListener('touchend', stopDrawing);
+        canvas.addEventListener('touchcancel', stopDrawing);
+
+        // Toolbar
+        document.getElementById('clearBtn').addEventListener('click', () => {
+            ctx.clearRect(0, 0, cssW, cssH);
+        });
+
+        darkBtn.addEventListener('click', () => {
+            isDark = !isDark;
+            canvas.style.background = isDark ? '#374151' : '#fff';
+            ctx.strokeStyle = isDark ? '#fff' : '#000';
+            darkBtn.textContent = isDark ? 'Light' : 'Dark';
+            darkBtn.classList.toggle('active', isDark);
+            drawGrid();
+        });
+
+        gridBtn.addEventListener('click', () => {
+            showGrid = !showGrid;
+            gridBtn.classList.toggle('active', showGrid);
+            drawGrid();
+        });
+
+        document.getElementById('strokeSize').addEventListener('input', (e) => {
+            strokeSizeValue = e.target.value;
+            ctx.lineWidth = strokeSizeValue;
+        });
+
+        // Image loading
+        document.getElementById('loadImgBtn').addEventListener('click', () => fileInput.click());
+
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            if (imgURL) URL.revokeObjectURL(imgURL);
+            imgURL = URL.createObjectURL(file);
+            refImg.src = imgURL;
+            imgCaption.textContent = file.name;
+            e.target.value = '';
+        });
+
+        refImg.addEventListener('load', () => {
+            imgPlaceholder.style.display = 'none';
+            refImg.style.display = '';
+            resizeCanvas();
+        });
+
+        // Tap image to expand/shrink; canvas refills the freed space
+        refImg.addEventListener('click', () => {
+            refImg.classList.toggle('expanded');
+            setTimeout(resizeCanvas, 300);
+        });
+
+        window.addEventListener('resize', resizeCanvas);
+        window.addEventListener('orientationchange', () => setTimeout(resizeCanvas, 100));
+
+        resizeCanvas();
+    </script>
+</body>
+</html>

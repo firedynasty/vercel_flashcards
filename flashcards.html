@@ -968,6 +968,7 @@
 
         <button class="paste-btn" id="learnScriptureBtn" title="Open Learn Scripture" style="border: 2px solid #92400e; color: #92400e;">Learn Scripture</button>
         <button class="paste-btn" id="musicBtn" title="Open Music" style="border: 2px solid #16a34a; color: #16a34a;">Music</button>
+        <button class="paste-btn" id="imageNotesBtn" title="Open Image Notes" style="border: 2px solid #f97316; color: #f97316;">Image Notes</button>
 
         <!-- Input Section -->
         <div class="input-section" id="inputSection">
@@ -2178,6 +2179,20 @@ God loves the world
             ctx.clearRect(0, 0, canvas.width, canvas.height);
         }
 
+        // resizeCanvas is called by toggleGrid(); only resizes if the window
+        // size actually changed so reopening the canvas doesn't wipe drawings.
+        function resizeCanvas() {
+            if (!canvas) return;
+            const size = Math.min(window.innerWidth - 40, 400);
+            if (canvas.width === size) return;
+            canvas.width = gridCanvas.width = size;
+            canvas.height = gridCanvas.height = size;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.lineWidth = strokeSizeValue;
+            ctx.strokeStyle = isDarkMode ? '#fff' : '#000';
+        }
+
         function toggleGrid() {
             const container = document.querySelector('.canvas-container');
             const btn = document.getElementById('gridToggleBtn');
@@ -2434,6 +2449,10 @@ God loves the world
 
             document.getElementById('musicBtn').addEventListener('click', () => {
                 window.open('music.html', '_blank');
+            });
+
+            document.getElementById('imageNotesBtn').addEventListener('click', () => {
+                window.open('imageNotes.html', '_blank');
             });
 
             document.getElementById('folderFlatInput').addEventListener('change', async function() {
