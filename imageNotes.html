@@ -136,10 +136,12 @@
         }
 
         /* Canvas area: tall so you can scroll down and keep writing.
-           svh keeps the height stable when the mobile URL bar hides/shows. */
+           svh keeps the height stable when the mobile URL bar hides/shows.
+           Side margins leave a touch strip for scrolling while in Draw mode. */
         .canvas-wrapper {
             height: 150vh;
             height: 150svh;
+            margin: 0 30px;
             flex-shrink: 0;
             position: relative;
             border-radius: 12px;
