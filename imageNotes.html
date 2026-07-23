@@ -12,9 +12,8 @@
         }
 
         html, body {
-            height: 100vh;
-            height: 100dvh;
-            overflow: hidden;
+            min-height: 100vh;
+            min-height: 100dvh;
             overscroll-behavior: none;
         }
 
@@ -29,14 +28,21 @@
             touch-action: manipulation;
         }
 
-        /* Toolbar */
+        /* Toolbar - pinned to top while scrolling */
         .toolbar {
+            position: sticky;
+            top: 0;
+            z-index: 10;
             display: flex;
             gap: 8px;
             align-items: center;
             flex-wrap: wrap;
             justify-content: center;
             flex-shrink: 0;
+            background: rgba(22, 33, 62, 0.95);
+            backdrop-filter: blur(8px);
+            padding: 6px;
+            border-radius: 12px;
         }
 
         .toolbar .title {
@@ -129,15 +135,16 @@
             white-space: nowrap;
         }
 
-        /* Canvas area fills remaining viewport */
+        /* Canvas area: tall so you can scroll down and keep writing.
+           svh keeps the height stable when the mobile URL bar hides/shows. */
         .canvas-wrapper {
-            flex: 1;
-            min-height: 0;
+            height: 150vh;
+            height: 150svh;
+            flex-shrink: 0;
             position: relative;
             border-radius: 12px;
             overflow: hidden;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-            align-self: stretch;
         }
 
         canvas {
@@ -163,6 +170,7 @@
         <button class="tool-btn" id="clearBtn">Clear</button>
         <button class="tool-btn" id="darkBtn">Dark</button>
         <button class="tool-btn active" id="gridBtn">Grid</button>
+        <button class="tool-btn" id="scrollBtn" title="Toggle between drawing and one-finger scrolling">Scroll</button>
         <div class="stroke-control">
             <label for="strokeSize">Stroke:</label>
             <input type="range" id="strokeSize" min="2" max="20" value="2">
@@ -201,24 +209,28 @@
         let strokeSizeValue = 2;
         let showGrid = true;
         let isDark = false;
+        let scrollMode = false;
         let imgURL = null;
         let cssW = 0;
         let cssH = 0;
         const GRID_STEP = 25;
 
         // Size both canvases to fill the wrapper, preserving existing drawing.
-        // Canvas backing store is scaled by devicePixelRatio for crisp lines on mobile.
+        // Canvas backing store is scaled by devicePixelRatio (capped at 2 to
+        // bound memory on high-DPI phones) for crisp lines on mobile.
         function resizeCanvas() {
             const w = wrapper.clientWidth;
             const h = wrapper.clientHeight;
             if (w === 0 || h === 0) return;
+            // Nothing to do if size is unchanged (setting canvas width clears it)
+            if (canvas.style.width === w + 'px' && canvas.style.height === h + 'px') return;
 
             const temp = document.createElement('canvas');
             temp.width = canvas.width;
             temp.height = canvas.height;
             temp.getContext('2d').drawImage(canvas, 0, 0);
 
-            const dpr = window.devicePixelRatio || 1;
+            const dpr = Math.min(window.devicePixelRatio || 1, 2);
             cssW = w;
             cssH = h;
             [canvas, gridCanvas].forEach(c => {
@@ -273,6 +285,7 @@
         }
 
         function startDrawing(e) {
+            if (scrollMode) return; // let the browser scroll
             e.preventDefault();
             isDrawing = true;
             const pos = getPos(e);
@@ -281,7 +294,7 @@
         }
 
         function draw(e) {
-            if (!isDrawing) return;
+            if (!isDrawing || scrollMode) return;
             e.preventDefault();
             const pos = getPos(e);
             ctx.beginPath();
@@ -324,6 +337,16 @@
             drawGrid();
         });
 
+        // Scroll mode: canvas stops capturing touches so one finger scrolls the page
+        const scrollBtn = document.getElementById('scrollBtn');
+        scrollBtn.addEventListener('click', () => {
+            scrollMode = !scrollMode;
+            isDrawing = false;
+            canvas.style.touchAction = scrollMode ? 'pan-y' : 'none';
+            scrollBtn.textContent = scrollMode ? 'Draw' : 'Scroll';
+            scrollBtn.classList.toggle('active', scrollMode);
+        });
+
         document.getElementById('strokeSize').addEventListener('input', (e) => {
             strokeSizeValue = e.target.value;
             ctx.lineWidth = strokeSizeValue;
@@ -348,10 +371,9 @@
             resizeCanvas();
         });
 
-        // Tap image to expand/shrink; canvas refills the freed space
+        // Tap image to expand/shrink
         refImg.addEventListener('click', () => {
             refImg.classList.toggle('expanded');
-            setTimeout(resizeCanvas, 300);
         });
 
         window.addEventListener('resize', resizeCanvas);
