@@ -584,6 +584,15 @@
         <button class="deck-ctrl-btn miss" id="deckMissBtn">&#10007;</button>
         <button class="deck-ctrl-btn correct" id="deckKnowBtn">&#10003;</button>
       </div>
+      <div id="deckKeyHints" style="text-align:center; margin-top:10px;">
+        <span style="font-size:11px; color:#999; letter-spacing:.2px;">
+          <span style="border:1px solid #d1d5db; border-radius:4px; padding:1px 6px; font-family:monospace; color:#666;">Enter</span> flip
+          &nbsp;&middot;&nbsp;
+          <span style="border:1px solid #d1d5db; border-radius:4px; padding:1px 6px; font-family:monospace; color:#666;">O</span> didn&#8217;t
+          &nbsp;&middot;&nbsp;
+          <span style="border:1px solid #d1d5db; border-radius:4px; padding:1px 6px; font-family:monospace; color:#666;">P</span> got it
+        </span>
+      </div>
       <div style="text-align:center; margin-top:14px;">
         <span id="deckMissedCount" style="font-size:12px; color:#dc2626; display:none;">0 missed</span>
         <span id="deckRemainingCount" style="font-size:12px; color:#888; margin-left:10px; display:none;">0 remaining</span>
@@ -1683,14 +1692,26 @@ function getDeckVocabIndices() {
   });
   return indices;
 }
+function dedupeDeckIndices(indices) {
+  var seen = {};
+  return indices.filter(function(i) {
+    var row = filteredRows[i];
+    var text = row.french || row.contextLine || '';
+    var key = text.split(' ').join('');
+    if (!key || seen[key]) return false; // skip duplicate glossed words / repeated sentences
+    seen[key] = true;
+    return true;
+  });
+}
 function startDeckSession() {
-  var vocabIndices = getDeckVocabIndices();
+  var vocabIndices = dedupeDeckIndices(getDeckVocabIndices());
   if (vocabIndices.length === 0) return;
   deckQueue = shuffleDeckArray(vocabIndices);
   deckTotal = deckQueue.length;
   deckCleared = 0; deckFlipped = false; deckMissedSet = new Set();
   document.getElementById('deckStage').style.display = '';
   document.querySelector('.deck-controls').style.display = '';
+  document.getElementById('deckKeyHints').style.display = '';
   document.querySelector('.deck-progress-row').style.display = '';
   document.getElementById('deckDoneScreen').classList.add('deck-hidden');
   document.getElementById('deckSaveArea').style.display = 'none';
@@ -1730,6 +1751,7 @@ function deckNextCard() {
 function deckFinish() {
   document.getElementById('deckStage').style.display = 'none';
   document.querySelector('.deck-controls').style.display = 'none';
+  document.getElementById('deckKeyHints').style.display = 'none';
   document.querySelector('.deck-progress-row').style.display = 'none';
   document.getElementById('deckSaveArea').style.display = 'none';
   document.getElementById('deckMissedCount').style.display = 'none';
@@ -1776,6 +1798,21 @@ function deckAnimateOut(correct, cb) {
 document.getElementById('deckCard').addEventListener('click', function() { deckFlipCard(); });
 document.getElementById('deckMissBtn').addEventListener('click', function() { deckGrade(false); });
 document.getElementById('deckKnowBtn').addEventListener('click', function() { deckGrade(true); });
+// ── DECK KEYBOARD SHORTCUTS: Enter = flip, O = didn't know (✗), P = got it (✓) ──
+document.addEventListener('keydown', function(e) {
+  if (!deckViewOn || deckCurrent === null) return;
+  var overlay = document.getElementById('practiceOverlay');
+  if (overlay && overlay.classList.contains('open')) return;
+  if (e.target.matches('input, textarea, select')) return;
+  var key = e.key.toLowerCase();
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    deckFlipCard();
+  } else if ((key === 'o' || key === 'p') && !e.repeat) {
+    e.preventDefault();
+    deckGrade(key === 'p');
+  }
+});
 document.getElementById('deckRestartBtn').addEventListener('click', function() { startDeckSession(); });
 function deckSaveMissedToSheet(mode) {
   if (deckMissedSet.size === 0) return;
