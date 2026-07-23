@@ -73,6 +73,11 @@
             border-color: #3B82F6;
         }
 
+        .tool-btn:disabled {
+            opacity: 0.4;
+            cursor: default;
+        }
+
         #loadImgBtn {
             border-color: #f97316;
             color: #f97316;
@@ -167,12 +172,13 @@
 <body>
 
     <div class="toolbar">
-        <span class="title">Image Notes</span>
+        <span class="title">N</span>
         <button class="tool-btn" id="loadImgBtn">Load Image</button>
         <button class="tool-btn" id="clearBtn">Clear</button>
         <button class="tool-btn" id="darkBtn">Dark</button>
         <button class="tool-btn active" id="gridBtn">Grid</button>
         <button class="tool-btn" id="scrollBtn" title="Toggle between drawing and one-finger scrolling">Scroll</button>
+        <button class="tool-btn" id="undoBtn" title="Undo last stroke (Ctrl+Z)" disabled>Undo</button>
         <div class="stroke-control">
             <label for="strokeSize">Stroke:</label>
             <input type="range" id="strokeSize" min="2" max="20" value="2">
@@ -204,6 +210,7 @@
         const fileInput = document.getElementById('fileInput');
         const gridBtn = document.getElementById('gridBtn');
         const darkBtn = document.getElementById('darkBtn');
+        const undoBtn = document.getElementById('undoBtn');
 
         let isDrawing = false;
         let lastX = 0;
@@ -213,6 +220,9 @@
         let isDark = false;
         let scrollMode = false;
         let imgURL = null;
+        let strokes = [];        // completed strokes, for undo
+        let currentStroke = null;
+        const MAX_HISTORY = 100;
         let cssW = 0;
         let cssH = 0;
         const GRID_STEP = 25;
@@ -293,6 +303,12 @@
             const pos = getPos(e);
             lastX = pos.x;
             lastY = pos.y;
+            currentStroke = { color: ctx.strokeStyle, width: ctx.lineWidth, points: [{ x: pos.x, y: pos.y }] };
+            // Draw a dot immediately so single taps are visible
+            ctx.beginPath();
+            ctx.arc(pos.x, pos.y, ctx.lineWidth / 2, 0, Math.PI * 2);
+            ctx.fillStyle = ctx.strokeStyle;
+            ctx.fill();
         }
 
         function draw(e) {
@@ -305,10 +321,54 @@
             ctx.stroke();
             lastX = pos.x;
             lastY = pos.y;
+            if (currentStroke) currentStroke.points.push({ x: pos.x, y: pos.y });
         }
 
         function stopDrawing() {
+            if (!isDrawing) return;
             isDrawing = false;
+            if (currentStroke) {
+                strokes.push(currentStroke);
+                if (strokes.length > MAX_HISTORY) strokes.shift();
+                currentStroke = null;
+                updateUndoBtn();
+            }
+        }
+
+        // Undo: replay all remaining strokes from scratch
+        function replayStroke(s) {
+            ctx.strokeStyle = s.color;
+            ctx.fillStyle = s.color;
+            ctx.lineWidth = s.width;
+            if (s.points.length === 1) {
+                ctx.beginPath();
+                ctx.arc(s.points[0].x, s.points[0].y, s.width / 2, 0, Math.PI * 2);
+                ctx.fill();
+                return;
+            }
+            ctx.beginPath();
+            ctx.moveTo(s.points[0].x, s.points[0].y);
+            for (let i = 1; i < s.points.length; i++) ctx.lineTo(s.points[i].x, s.points[i].y);
+            ctx.stroke();
+        }
+
+        function redrawAll() {
+            ctx.clearRect(0, 0, cssW, cssH);
+            strokes.forEach(replayStroke);
+            // Restore current pen settings for the next stroke
+            ctx.strokeStyle = isDark ? '#fff' : '#000';
+            ctx.lineWidth = strokeSizeValue;
+        }
+
+        function undo() {
+            if (!strokes.length) return;
+            strokes.pop();
+            redrawAll();
+            updateUndoBtn();
+        }
+
+        function updateUndoBtn() {
+            undoBtn.disabled = strokes.length === 0;
         }
 
         canvas.addEventListener('mousedown', startDrawing);
@@ -321,7 +381,19 @@
 
         // Toolbar
         document.getElementById('clearBtn').addEventListener('click', () => {
+            strokes = [];
             ctx.clearRect(0, 0, cssW, cssH);
+            updateUndoBtn();
+        });
+
+        undoBtn.addEventListener('click', undo);
+
+        // Ctrl+Z / Cmd+Z for undo on desktop keyboards
+        document.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+                e.preventDefault();
+                undo();
+            }
         });
 
         darkBtn.addEventListener('click', () => {
