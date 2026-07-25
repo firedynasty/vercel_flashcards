@@ -953,6 +953,7 @@
             <button class="big-rating-btn big-rating-3" id="bigRate3Btn">3 Mastered</button>
         </div>
 
+        <button class="paste-btn" id="pasteToOutlineBtn" title="Open Paste → Outline" style="border: 2px solid #7a5c2e; color: #7a5c2e;">Paste → Outline</button>
         <input type="file" id="folderFlatInput" accept=".txt,.md" multiple style="display:none">
         <button class="paste-btn" id="folderFlatBtn" title="Load .txt or .md files" style="border: 2px dotted;">Load .txt File</button>
         <button class="paste-btn" id="todoListBtn" title="Open Todo List" style="border: 2px solid #0FC0F5; color: #0FC0F5;">Todo</button>
@@ -2401,6 +2402,10 @@ God loves the world
                 document.getElementById('folderFlatInput').click();
             });
 
+
+            document.getElementById('pasteToOutlineBtn').addEventListener('click', () => {
+                window.open('pasteToOutline.html', '_blank');
+            });
 
             document.getElementById('learnFrenchTtsBtn').addEventListener('click', () => {
                 window.open('learn-french-tts.html', '_blank');

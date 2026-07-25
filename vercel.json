@@ -28,6 +28,8 @@
     { "source": "/todo-list", "destination": "/todo-list.html" },
     { "source": "/crossword-reveal.html", "destination": "/crossword_reveal.html" },
     { "source": "/crossword-reveal", "destination": "/crossword_reveal.html" },
+    { "source": "/pasteToOutline.html", "destination": "/pasteToOutline.html" },
+    { "source": "/pasteToOutline", "destination": "/pasteToOutline.html" },
     { "source": "/(.*)", "destination": "/flashcards.html" }
   ]
 }
