@@ -125,6 +125,8 @@
       <div class="hint">WSJ-style reported news — what moved, claims + backing</div>
       <label><input type="radio" name="mode" value="seeking-alpha"> seeking alpha</label>
       <div class="hint">opinion pieces — author position, speculation, grades</div>
+      <label><input type="radio" name="mode" value="reddit"> reddit</label>
+      <div class="hint">comment threads — strips u/ names, nests replies by indentation</div>
     </fieldset>
     <div class="opts">
       <label><input type="checkbox" id="cleanup" value="1">
@@ -544,6 +546,53 @@ function normalizeTranscript(text) {
 }
 
 // ============================================================
+// Reddit comment-thread parser
+// ============================================================
+// Paste format: optional post text, optional "---COMMENTS---" line, then
+// comments as "u/name: text" with replies indented under their parent.
+// Lines without a u/ prefix continue the current comment. Usernames are
+// dropped; indentation becomes tree depth.
+const REDDIT_COMMENT_RE = /^(\s*)u\/[\w-]+:\s*(.*)$/;
+const REDDIT_SEP_RE = /^---COMMENTS---\s*$/m;
+
+function buildRedditTree(text) {
+  let post = '', commentsText = text;
+  const sep = REDDIT_SEP_RE.exec(text);
+  if (sep) {
+    post = text.slice(0, sep.index).trim();
+    commentsText = text.slice(sep.index + sep[0].length);
+  }
+  const roots = [];
+  let postNode = null;
+  if (post) {
+    const postText = post.split('\n').map(l => l.trim()).filter(l => l).join(' ');
+    if (postText) {
+      postNode = new Node(postText);
+      roots.push(postNode);
+    }
+  }
+  const stack = []; // [{indent, node}]
+  for (const rawLine of commentsText.split('\n')) {
+    if (!rawLine.trim()) continue;
+    const m = REDDIT_COMMENT_RE.exec(rawLine);
+    if (m) {
+      const indent = m[1].length;
+      const node = new Node(m[2].trim());
+      while (stack.length && stack[stack.length-1].indent >= indent) stack.pop();
+      const parent = stack.length ? stack[stack.length-1].node : postNode;
+      if (parent) parent.children.push(node); else roots.push(node);
+      stack.push({ indent, node });
+    } else {
+      const cont = rawLine.trim();
+      const target = stack.length ? stack[stack.length-1].node : postNode;
+      if (target) target.text = target.text ? target.text + ' ' + cont : cont;
+      else roots.push(new Node(cont));
+    }
+  }
+  return roots;
+}
+
+// ============================================================
 // Input processing
 // ============================================================
 const GUT_START_RE = /\*\*\*\s*START OF (?:THE|THIS) PROJECT GUTENBERG[^\n]*/i;
@@ -734,12 +783,14 @@ function processInput() {
   if (!text) { document.getElementById('input-err').textContent = 'Paste some text first.'; return; }
   document.getElementById('input-err').textContent = '';
 
-  if (document.getElementById('decaps').checked && isMostlyCaps(text)) {
+  const mode = document.querySelector('input[name=mode]:checked').value;
+  const cleanup = document.getElementById('cleanup').checked;
+
+  // de-caps joins all lines, which would destroy reddit indentation — skip it there
+  if (mode !== 'reddit' && document.getElementById('decaps').checked && isMostlyCaps(text)) {
     text = normalizeTranscript(text);
   }
 
-  const mode = document.querySelector('input[name=mode]:checked').value;
-  const cleanup = document.getElementById('cleanup').checked;
   const paras = paragraphsFromText(text, cleanup);
   if (!paras.length) { document.getElementById('input-err').textContent = 'No paragraphs found.'; return; }
 
@@ -749,34 +800,42 @@ function processInput() {
     title = head.join(' ') + (head.length === 8 ? '\u2026' : '');
   }
 
-  const tagFn = (mode === 'theology' || mode === 'general') ? tagSentence : econTagSentence;
-  const chunks = mode === 'general' ? splitChapters(paras) : [[null, paras]];
-
   const sections = [];
-  const mdAll = [];
+  let md = '', coverage = null, nInserted = 0;
   let totalNodes=0, maxd=0, totalUnplaced=0;
   const totalTags = {};
-
-  for (const [ctitle, cparas] of chunks) {
-    const roots = outlineChapter(cparas, tagFn);
-    mdAll.push(renderMarkdown(ctitle || title, roots));
-    const { nNodes, maxd: d, tags, nProvisional } = chapterStats(roots);
-    totalNodes += nNodes;
-    maxd = Math.max(maxd, d);
-    totalUnplaced += nProvisional;
-    for (const [k,v] of Object.entries(tags)) totalTags[k] = (totalTags[k]||0)+v;
-    sections.push({ title: ctitle, roots });
-  }
-
-  const source = paras.join('\n\n');
-  const md = mdAll.join('\n');
-  const { coverage, inserted } = verifyChapter(md, source);
-  const nInserted = counterSum(inserted);
-
   let panel = null;
-  if (mode === 'economy' || mode === 'seeking-alpha') {
-    const sents = paras.flatMap(p => splitSentences(p));
-    panel = econStructure(sents, mode);
+
+  if (mode === 'reddit') {
+    const roots = buildRedditTree(text);
+    md = renderMarkdown(title, roots);
+    const st = chapterStats(roots);
+    totalNodes = st.nNodes; maxd = st.maxd; totalUnplaced = st.nProvisional;
+    Object.assign(totalTags, st.tags);
+    sections.push({ title: null, roots });
+  } else {
+    const tagFn = (mode === 'theology' || mode === 'general') ? tagSentence : econTagSentence;
+    const chunks = mode === 'general' ? splitChapters(paras) : [[null, paras]];
+    const mdAll = [];
+    for (const [ctitle, cparas] of chunks) {
+      const roots = outlineChapter(cparas, tagFn);
+      mdAll.push(renderMarkdown(ctitle || title, roots));
+      const { nNodes, maxd: d, tags, nProvisional } = chapterStats(roots);
+      totalNodes += nNodes;
+      maxd = Math.max(maxd, d);
+      totalUnplaced += nProvisional;
+      for (const [k,v] of Object.entries(tags)) totalTags[k] = (totalTags[k]||0)+v;
+      sections.push({ title: ctitle, roots });
+    }
+    const source = paras.join('\n\n');
+    md = mdAll.join('\n');
+    const ver = verifyChapter(md, source);
+    coverage = ver.coverage;
+    nInserted = counterSum(ver.inserted);
+    if (mode === 'economy' || mode === 'seeking-alpha') {
+      const sents = paras.flatMap(p => splitSentences(p));
+      panel = econStructure(sents, mode);
+    }
   }
 
   // ---- render ----
@@ -787,8 +846,8 @@ function processInput() {
   // stats bar
   const tagParts = Object.entries(totalTags).sort().map(([k,v]) => `<span>${escHtml(k)} <b>${v}</b></span>`).join('');
   document.getElementById('out-stats').innerHTML =
-    `<span>coverage <b>${Math.round(coverage*10000)/100}%</b></span>` +
-    `<span>insertions <b>${nInserted}</b></span>` +
+    `<span>coverage <b>${coverage == null ? '\u2014' : Math.round(coverage*10000)/100 + '%'}</b></span>` +
+    `<span>insertions <b>${coverage == null ? '\u2014' : nInserted}</b></span>` +
     `<span>nodes <b>${totalNodes}</b></span>` +
     `<span>max depth <b>${maxd}</b></span>` +
     `<span>unplaced <b>${totalUnplaced}</b></span>` +
