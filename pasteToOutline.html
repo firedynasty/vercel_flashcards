@@ -50,10 +50,11 @@
            font-family:monospace; font-size:12px; color:var(--dim);
            display:flex; gap:16px; flex-wrap:wrap; }
   .stats b { color:var(--ink); }
+  #view-outline { --fz:1; }
   #view-outline main { max-width:900px; margin:0 auto; padding:18px 128px 80px; }
   ul.tree, ul.tree ul { list-style:none; margin:0; padding-left:26px; }
   ul.tree { padding-left:0; }
-  ul.tree li { position:relative; margin:4px 0; line-height:1.5; }
+  ul.tree li { position:relative; margin:4px 0; line-height:1.5; font-size:calc(16px * var(--fz)); }
   ul.tree li::before { content:""; position:absolute; left:-16px; top:.72em;
                        width:5px; height:5px; border-radius:50%; background:#b9b2a2; }
   ul.tree li.has-kids > .caret { cursor:pointer; position:absolute;
@@ -97,8 +98,8 @@
   .psec:last-child { border-bottom:none; }
   .psec h3 { font-size:13px; color:var(--accent); margin:0 0 4px; }
   .psec ul { margin:0; padding-left:20px; }
-  .psec li { font-size:13.5px; line-height:1.5; margin:3px 0; }
-  .psec p { font-size:13.5px; margin:2px 0; }
+  .psec li { font-size:calc(13.5px * var(--fz)); line-height:1.5; margin:3px 0; }
+  .psec p { font-size:calc(13.5px * var(--fz)); margin:2px 0; }
   .dim { color:var(--dim); }
   .mini { font-family:monospace; font-size:11px; color:var(--dim); }
   .chain { font-family:monospace; font-size:12px; }
@@ -129,6 +130,9 @@
       <label><input type="checkbox" id="cleanup" value="1">
         clean up hard line breaks</label>
       <div class="hint">for text pasted from a PDF or Project Gutenberg</div>
+      <label><input type="checkbox" id="decaps" value="1">
+        de-capitalize ALL-CAPS transcript</label>
+      <div class="hint">YouTube/podcast transcripts — fixes SHOUTING, strips [0:00] timestamps and &gt;&gt; speaker markers (proper nouns stay lowercase)</div>
     </div>
   </div>
   <div class="row">
@@ -144,6 +148,9 @@
 <div id="view-outline" style="display:none">
   <nav>
     <button class="link back-btn">← new paste</button>
+    <button class="link rerun-decaps">↺ re-outline w/ de-caps</button>
+    <button class="link" id="fz-dec">A−</button>
+    <button class="link" id="fz-inc">A+</button>
     <div class="mid">
       <h1 id="out-title"></h1>
       <div class="sub" id="out-sub"></div>
@@ -160,6 +167,7 @@
   </main>
   <footer>
     <button class="link back-btn">← new paste</button>
+    <button class="link rerun-decaps">↺ re-outline w/ de-caps</button>
     <button id="to-top" type="button" class="link">↑ top</button>
     <div class="mid" id="out-footer-title"></div>
   </footer>
@@ -511,6 +519,31 @@ function chapterStats(roots) {
 }
 
 // ============================================================
+// ALL-CAPS transcript normalization
+// ============================================================
+function isMostlyCaps(text) {
+  const letters = text.match(/[a-z]/gi) || [];
+  if (letters.length < 50) return false;
+  const upper = (text.match(/[A-Z]/g) || []).length;
+  return upper / letters.length >= 0.8;
+}
+
+function normalizeTranscript(text) {
+  let t = text
+    .replace(/\[(?:\d{1,2}:)?\d{1,2}:\d{2}\]/g, ' ')  // [7:07] [1:23:45]
+    .replace(/>>/g, '\x02')                            // speaker-turn sentinel
+    .replace(/\s*\n\s*/g, ' ')                         // join hard line breaks
+    .replace(/\x02/g, '\n\n')                          // speaker turns become paragraphs
+    .replace(/ {2,}/g, ' ')
+    .trim()
+    .toLowerCase();
+  t = t.replace(/\bi\b/g, 'I');
+  t = t.replace(/(^|[.?!]["'“”’)\]]*\s+)([a-z"“'‘(])/g, (_, a, b) => a + b.toUpperCase());
+  t = t.replace(/(\n\n\s*)([a-z"“'‘(])/g, (_, a, b) => a + b.toUpperCase());
+  return t;
+}
+
+// ============================================================
 // Input processing
 // ============================================================
 const GUT_START_RE = /\*\*\*\s*START OF (?:THE|THIS) PROJECT GUTENBERG[^\n]*/i;
@@ -697,9 +730,13 @@ function renderSeekingAlphaPanel(panel) {
 // Main processing pipeline
 // ============================================================
 function processInput() {
-  const text = document.getElementById('paste-text').value.trim();
+  let text = document.getElementById('paste-text').value.trim();
   if (!text) { document.getElementById('input-err').textContent = 'Paste some text first.'; return; }
   document.getElementById('input-err').textContent = '';
+
+  if (document.getElementById('decaps').checked && isMostlyCaps(text)) {
+    text = normalizeTranscript(text);
+  }
 
   const mode = document.querySelector('input[name=mode]:checked').value;
   const cleanup = document.getElementById('cleanup').checked;
@@ -811,7 +848,24 @@ document.querySelectorAll('.back-btn').forEach(btn => {
   });
 });
 
+document.querySelectorAll('.rerun-decaps').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.getElementById('decaps').checked = true;
+    processInput();
+  });
+});
+
 document.getElementById('to-top').addEventListener('click', () => window.scrollTo({ top:0, behavior:'smooth' }));
+
+// font size controls (persisted)
+let fz = parseFloat(localStorage.getItem('pto-fz')) || 1;
+function applyFz() {
+  document.getElementById('view-outline').style.setProperty('--fz', fz);
+  localStorage.setItem('pto-fz', fz);
+}
+document.getElementById('fz-dec').addEventListener('click', () => { fz = Math.max(0.7, +(fz - 0.1).toFixed(2)); applyFz(); });
+document.getElementById('fz-inc').addEventListener('click', () => { fz = Math.min(2.0, +(fz + 0.1).toFixed(2)); applyFz(); });
+applyFz();
 
 document.addEventListener('keydown', function (e) {
   if (document.getElementById('view-outline').style.display === 'none') return;
