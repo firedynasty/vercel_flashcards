@@ -82,6 +82,8 @@
   .t-data          { background:#dcefee; color:#2c7a76; }
   .t-inference     { background:#fbe9d5; color:#b3641a; }
   .t-speculation   { background:#f7e2ee; color:#9a4a7a; }
+  #view-outline.no-tags .tag { display:none; }
+  #view-outline.no-tags .stat-tag { display:none; }
   .claim { font-weight:normal; }
   .keys { color:var(--dim); font-size:11px; margin-left:auto; }
   h2.sec { font-size:15px; color:var(--accent); margin:26px 0 6px;
@@ -151,6 +153,7 @@
   <nav>
     <button class="link back-btn">← new paste</button>
     <button class="link rerun-decaps">↺ re-outline w/ de-caps</button>
+    <button class="link" id="toggle-tags">hide tags</button>
     <button class="link" id="fz-dec">A−</button>
     <button class="link" id="fz-inc">A+</button>
     <div class="mid">
@@ -844,7 +847,7 @@ function processInput() {
   document.getElementById('out-footer-title').textContent = title;
 
   // stats bar
-  const tagParts = Object.entries(totalTags).sort().map(([k,v]) => `<span>${escHtml(k)} <b>${v}</b></span>`).join('');
+  const tagParts = Object.entries(totalTags).sort().map(([k,v]) => `<span class="stat-tag">${escHtml(k)} <b>${v}</b></span>`).join('');
   document.getElementById('out-stats').innerHTML =
     `<span>coverage <b>${coverage == null ? '\u2014' : Math.round(coverage*10000)/100 + '%'}</b></span>` +
     `<span>insertions <b>${coverage == null ? '\u2014' : nInserted}</b></span>` +
@@ -868,7 +871,8 @@ function processInput() {
   document.getElementById('out-tree').innerHTML = treeHtml;
 
   // raw markdown
-  document.getElementById('out-md').textContent = md;
+  lastMd = md;
+  document.getElementById('out-md').textContent = renderMd();
 
   // switch views
   document.getElementById('view-input').style.display = 'none';
@@ -885,6 +889,21 @@ function processInput() {
 // ============================================================
 // Event wiring
 // ============================================================
+// tag visibility (persisted) — lastMd/renderMd used by processInput too
+let lastMd = '';
+let showTags = localStorage.getItem('pto-tags') !== '0';
+function renderMd() {
+  return showTags ? lastMd : lastMd.replace(TAG_STRIP_RE, '').replace(/[ \t]+$/gm, '');
+}
+function applyTags() {
+  document.getElementById('view-outline').classList.toggle('no-tags', !showTags);
+  document.getElementById('toggle-tags').textContent = showTags ? 'hide tags' : 'show tags';
+  localStorage.setItem('pto-tags', showTags ? '1' : '0');
+  if (lastMd) document.getElementById('out-md').textContent = renderMd();
+}
+document.getElementById('toggle-tags').addEventListener('click', () => { showTags = !showTags; applyTags(); });
+applyTags();
+
 document.getElementById('btn-outline').addEventListener('click', processInput);
 
 document.getElementById('btn-paste-run').addEventListener('click', function () {
