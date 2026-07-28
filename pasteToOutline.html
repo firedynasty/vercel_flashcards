@@ -136,7 +136,7 @@
       <div class="hint">for text pasted from a PDF or Project Gutenberg</div>
       <label><input type="checkbox" id="decaps" value="1">
         de-capitalize ALL-CAPS transcript</label>
-      <div class="hint">YouTube/podcast transcripts — fixes SHOUTING, strips [0:00] timestamps and &gt;&gt; speaker markers (proper nouns stay lowercase)</div>
+      <div class="hint">YouTube/podcast transcripts — fixes SHOUTING, strips [0:00] timestamps and &gt;&gt; speaker markers (proper nouns stay lowercase) · r: speak highlighted text</div>
     </div>
   </div>
   <div class="row">
@@ -945,11 +945,50 @@ document.getElementById('fz-dec').addEventListener('click', () => { fz = Math.ma
 document.getElementById('fz-inc').addEventListener('click', () => { fz = Math.min(2.0, +(fz + 0.1).toFixed(2)); applyFz(); });
 applyFz();
 
+// ============================================================
+// Text-to-Speech (r = English)
+// ============================================================
+var ttsVoices = [];
+function ttsLoadVoices() { ttsVoices = speechSynthesis.getVoices(); }
+ttsLoadVoices();
+if (speechSynthesis.onvoiceschanged !== undefined) {
+  speechSynthesis.addEventListener('voiceschanged', ttsLoadVoices);
+}
+
+function ttsBestVoiceEN() {
+  var voices = ttsVoices.length ? ttsVoices : speechSynthesis.getVoices();
+  var bad = ['Eddy', 'Flo', 'Grandma', 'Grandpa'];
+  var notBad = function(v) { return !bad.some(function(b) { return v.name.includes(b); }); };
+  var has = function(v, tag) { return v.lang.toLowerCase().startsWith(tag.toLowerCase()); };
+  return (
+    voices.find(function(v) { return has(v, 'en') && v.name.includes('Google') && notBad(v); }) ||
+    voices.find(function(v) { return has(v, 'en-US') && (v.name.includes('Enhanced') || v.name.includes('Premium')) && notBad(v); }) ||
+    voices.find(function(v) { return has(v, 'en-US') && notBad(v); }) ||
+    voices.find(function(v) { return has(v, 'en') && notBad(v); }) ||
+    voices.find(function(v) { return has(v, 'en'); }) ||
+    null
+  );
+}
+
+function speakSelectionEN(text) {
+  speechSynthesis.cancel();
+  var utt = new SpeechSynthesisUtterance(text);
+  utt.lang = 'en-US';
+  var voice = ttsBestVoiceEN();
+  if (voice) utt.voice = voice;
+  speechSynthesis.speak(utt);
+}
+
 document.addEventListener('keydown', function (e) {
   if (document.getElementById('view-outline').style.display === 'none') return;
   if (e.key === 'x') {
     const anyOpen = document.querySelectorAll('li.has-kids:not(.collapsed)').length > 0;
     document.querySelectorAll('li.has-kids').forEach(li => li.classList.toggle('collapsed', anyOpen));
+  }
+  if (e.key === 'r' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+    var sel = window.getSelection();
+    var text = sel ? sel.toString().trim() : '';
+    if (text) { e.preventDefault(); speakSelectionEN(text); }
   }
 });
 </script>
