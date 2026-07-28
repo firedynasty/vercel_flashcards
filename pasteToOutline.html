@@ -57,11 +57,6 @@
   ul.tree li { position:relative; margin:4px 0; line-height:1.5; font-size:calc(16px * var(--fz)); }
   ul.tree li::before { content:""; position:absolute; left:-16px; top:.72em;
                        width:5px; height:5px; border-radius:50%; background:#b9b2a2; }
-  ul.tree li.has-kids > .caret { cursor:pointer; position:absolute;
-                                  left:-27px; top:.35em; font-size:10px;
-                                  color:#a39b88; user-select:none; transition:transform .12s; }
-  ul.tree li.collapsed > .caret { transform:rotate(-90deg); }
-  ul.tree li.collapsed > ul { display:none; }
   .tag { font-family:monospace; font-size:11px; padding:1px 6px;
          border-radius:9px; margin-left:6px; white-space:nowrap; }
   .t-evidence      { background:#e2efe0; color:#3c7a3c; }
@@ -85,7 +80,6 @@
   #view-outline.no-tags .tag { display:none; }
   #view-outline.no-tags .stat-tag { display:none; }
   .claim { font-weight:normal; }
-  .keys { color:var(--dim); font-size:11px; margin-left:auto; }
   h2.sec { font-size:15px; color:var(--accent); margin:26px 0 6px;
            border-bottom:1px solid var(--line); padding-bottom:4px; }
   .rawmd { margin-top:36px; font-size:13px; }
@@ -524,8 +518,25 @@ function chapterStats(roots) {
 }
 
 // ============================================================
-// ALL-CAPS transcript normalization
+// YouTube transcript timestamps / ALL-CAPS normalization
 // ============================================================
+// Match a line that contains only a timestamp
+const TS_LINE_RE = /^[ \t]*\[(?:\d{1,2}:)?\d{1,2}:\d{2}\][ \t]*$/gm;
+// Match any remaining inline timestamp (after line-only ones are gone)
+const TS_INLINE_RE = /\[(?:\d{1,2}:)?\d{1,2}:\d{2}\]/g;
+
+function stripTranscriptTimestamps(text) {
+  // Blanks out timestamp-only lines but keeps their newlines, so existing
+  // blank-line paragraph boundaries survive and the Kindle/Medium
+  // line-per-paragraph mode is not incorrectly triggered. Inline
+  // timestamps are stripped too; triple newlines collapse back to double.
+  return text
+    .replace(TS_LINE_RE, '')
+    .replace(TS_INLINE_RE, '')
+    .replace(/[ \t]{2,}/g, ' ')
+    .replace(/\n{3,}/g, '\n\n');
+}
+
 function isMostlyCaps(text) {
   const letters = text.match(/[a-z]/gi) || [];
   if (letters.length < 50) return false;
@@ -705,15 +716,13 @@ function splitChapters(paras) {
 // HTML rendering
 // ============================================================
 function renderNode(node) {
-  const hasKids = node.children.length > 0;
-  let h = `<li class="${hasKids?'has-kids':''}">`;
-  if (hasKids) h += `<span class="caret">\u25bc</span>`;
+  let h = `<li>`;
   if (node.tag) {
     h += `${escHtml(node.text)}<span class="tag t-${node.tag}">[${node.tag}]</span>`;
   } else {
     h += `<span class="claim">${escHtml(node.text)}</span>`;
   }
-  if (hasKids) {
+  if (node.children.length) {
     h += `<ul>${node.children.map(renderNode).join('')}</ul>`;
   }
   h += `</li>`;
@@ -789,6 +798,8 @@ function processInput() {
   const mode = document.querySelector('input[name=mode]:checked').value;
   const cleanup = document.getElementById('cleanup').checked;
 
+  // timestamp/tidy subs would destroy reddit indentation — skip them there
+  if (mode !== 'reddit') text = stripTranscriptTimestamps(text);
   // de-caps joins all lines, which would destroy reddit indentation — skip it there
   if (mode !== 'reddit' && document.getElementById('decaps').checked && isMostlyCaps(text)) {
     text = normalizeTranscript(text);
@@ -854,8 +865,7 @@ function processInput() {
     `<span>nodes <b>${totalNodes}</b></span>` +
     `<span>max depth <b>${maxd}</b></span>` +
     `<span>unplaced <b>${totalUnplaced}</b></span>` +
-    tagParts +
-    `<span class="keys">x collapse all</span>`;
+    tagParts;
 
   // panel
   if (panel && mode === 'economy') document.getElementById('out-panel').innerHTML = renderEconomyPanel(panel);
@@ -877,11 +887,6 @@ function processInput() {
   // switch views
   document.getElementById('view-input').style.display = 'none';
   document.getElementById('view-outline').style.display = '';
-
-  // wire up tree interactions
-  document.querySelectorAll('.caret').forEach(c => {
-    c.addEventListener('click', () => c.parentElement.classList.toggle('collapsed'));
-  });
 
   window.scrollTo(0, 0);
 }
@@ -981,10 +986,6 @@ function speakSelectionEN(text) {
 
 document.addEventListener('keydown', function (e) {
   if (document.getElementById('view-outline').style.display === 'none') return;
-  if (e.key === 'x') {
-    const anyOpen = document.querySelectorAll('li.has-kids:not(.collapsed)').length > 0;
-    document.querySelectorAll('li.has-kids').forEach(li => li.classList.toggle('collapsed', anyOpen));
-  }
   if (e.key === 'r' && !e.metaKey && !e.ctrlKey && !e.altKey) {
     var sel = window.getSelection();
     var text = sel ? sel.toString().trim() : '';
