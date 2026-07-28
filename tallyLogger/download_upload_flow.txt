@@ -1,0 +1,26 @@
+so download is I get the json from dropbox
+
+that is created from the app
+
+
+and reverse is upload.py which I get the opposite 
+
+
+so from csv to json 
+
+and json to csv 
+
+
+                                                                                                                                         
+  - python upload_tally.py → converts tally_log.csv to JSON and overwrites dropbox:/vercel/tally-log.json with exactly that content. Nothing is   
+  merged or kept from the remote.                                                                                                                 
+  - python upload_tally.py --merge → optional escape hatch: unions the remote into your CSV first (that's the run you saw catch the 16:57:30 entry
+   you'd logged from your phone).                                                                                                                 
+  - -n → convert only, no upload.                                                                                                                 
+                                                                                                                                                  
+  The conversion and merge logic are already verified against your live file (read-only). The only thing left untested is the upload itself — same
+   rclone copyto command the download script used successfully, just in the other direction. If you want to see it run for real:                  
+                                                                                                                                                  
+  python upload_tally.py --merge                                                                                                                  
+                                                                                                                                                  
+  That's safe to run right now even as-is — it would just rewrite the remote with your current 5 entries plus nothing lost. 

@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Tally Logger</title>
+<style>
+  :root {
+    --ink: #1c1b19;
+    --paper: #f7f5f0;
+    --line: #d8d3c8;
+    --mark: #8a5a3b;
+    --mark-dark: #6e4429;
+    --muted: #8a8578;
+    --good: #3f6b4a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--paper);
+    background-image:
+      repeating-linear-gradient(0deg, rgba(0,0,0,0.015) 0px, rgba(0,0,0,0.015) 1px, transparent 1px, transparent 28px);
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+    color: var(--ink);
+    padding: 24px;
+  }
+  .card {
+    width: 100%;
+    max-width: 460px;
+    background: #fffdf9;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    box-shadow: 0 1px 0 rgba(0,0,0,0.03), 0 8px 24px rgba(0,0,0,0.04);
+    overflow: hidden;
+  }
+  .header {
+    padding: 20px 24px 16px;
+    border-bottom: 1px dashed var(--line);
+  }
+  .header h1 {
+    margin: 0;
+    font-size: 16px;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    font-weight: 700;
+  }
+  .header input {
+    margin-top: 8px;
+    width: 100%;
+    font-family: inherit;
+    font-size: 13px;
+    border: none;
+    border-bottom: 1px solid var(--line);
+    background: transparent;
+    padding: 4px 0;
+    color: var(--ink);
+  }
+  .header input:focus { outline: none; border-bottom-color: var(--mark); }
+  .header input::placeholder { color: var(--muted); }
+
+  .tally-area {
+    padding: 24px;
+    min-height: 90px;
+  }
+  .marks {
+    line-height: 2.1;
+    font-size: 20px;
+    letter-spacing: 2px;
+    word-break: break-all;
+    color: var(--mark-dark);
+  }
+  .marks .group { margin-right: 10px; display: inline-block; }
+  .empty-hint {
+    color: var(--muted);
+    font-size: 13px;
+    font-style: italic;
+  }
+
+  .count-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 0 24px 20px;
+  }
+  .count-row .today {
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .count-row .total {
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .count-row .num {
+    font-size: 15px;
+    color: var(--ink);
+    font-weight: 700;
+  }
+
+  .btn-row {
+    display: flex;
+    gap: 10px;
+    padding: 0 24px 24px;
+  }
+  button {
+    font-family: inherit;
+    cursor: pointer;
+    border-radius: 6px;
+    border: 1px solid var(--line);
+  }
+  .log-btn {
+    flex: 1;
+    padding: 16px;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    background: var(--mark);
+    color: #fff8f0;
+    border: none;
+    transition: transform 0.05s ease, background 0.15s ease;
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .log-btn:hover { background: var(--mark-dark); }
+  .log-btn:active { transform: scale(0.98); }
+  .undo-btn {
+    padding: 16px 14px;
+    background: transparent;
+    color: var(--muted);
+    font-size: 13px;
+  }
+  .undo-btn:hover { color: var(--ink); border-color: var(--ink); }
+
+  .footer {
+    border-top: 1px dashed var(--line);
+    padding: 14px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .file-btn {
+    background: transparent;
+    padding: 6px 10px;
+    font-size: 12px;
+    color: var(--ink);
+  }
+  .file-btn:hover { border-color: var(--ink); }
+  .file-btn.connected { color: var(--good); border-color: var(--good); }
+  .status { display: flex; align-items: center; gap: 6px; }
+  .dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--muted);
+  }
+  .dot.on { background: var(--good); }
+  .status-text { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(10px);
+    background: var(--ink);
+    color: var(--paper);
+    padding: 10px 16px;
+    border-radius: 6px;
+    font-size: 12px;
+    opacity: 0;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div class="header">
+    <h1>Tally Logger</h1>
+    <input id="labelInput" type="text" placeholder="what are you tracking? (optional label)" />
+  </div>
+
+  <div class="tally-area">
+    <div id="marks" class="marks"><span class="empty-hint">Hit "Log it" to start — each click is one timestamped row.</span></div>
+  </div>
+
+  <div class="count-row">
+    <div class="today">Today: <span class="num" id="todayCount">0</span></div>
+    <div class="total">All time: <span class="num" id="totalCount">0</span></div>
+  </div>
+
+  <div class="btn-row">
+    <button class="log-btn" id="logBtn">Log it</button>
+    <button class="undo-btn" id="undoBtn" title="Remove last entry">Undo</button>
+  </div>
+
+  <div class="footer">
+    <div class="status">
+      <span class="dot" id="statusDot"></span>
+      <span class="status-text" id="statusText">Loading…</span>
+    </div>
+    <div style="display:flex; gap:6px;">
+      <button class="file-btn" id="dbxBtn">Dropbox</button>
+      <button class="file-btn" id="downloadBtn">Download .csv</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  const marksEl = document.getElementById('marks');
+  const todayCountEl = document.getElementById('todayCount');
+  const totalCountEl = document.getElementById('totalCount');
+  const logBtn = document.getElementById('logBtn');
+  const undoBtn = document.getElementById('undoBtn');
+  const dbxBtn = document.getElementById('dbxBtn');
+  const downloadBtn = document.getElementById('downloadBtn');
+  const statusDot = document.getElementById('statusDot');
+  const statusText = document.getElementById('statusText');
+  const labelInput = document.getElementById('labelInput');
+  const toast = document.getElementById('toast');
+
+  let entries = []; // { date, time, label }
+
+  // ── Dropbox sync (OAuth PKCE, same flow as famous-beats-maker_1.html) ──────
+  const DROPBOX_LOG_PATH = '/vercel/tally-log.json';
+  const isLocalhost = ['localhost', '127.0.0.1', ''].includes(window.location.hostname);
+  let dropboxAccessToken = null;
+
+  function generateCodeVerifier() {
+    const array = new Uint8Array(64);
+    crypto.getRandomValues(array);
+    return btoa(String.fromCharCode(...array))
+      .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+  async function generateCodeChallenge(verifier) {
+    const data = new TextEncoder().encode(verifier);
+    const digest = await crypto.subtle.digest('SHA-256', data);
+    return btoa(String.fromCharCode(...new Uint8Array(digest)))
+      .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+  async function fetchDropboxAppKey() {
+    if (isLocalhost) {
+      let key = localStorage.getItem('dropbox-app-key') || '';
+      if (!key) {
+        key = prompt('Enter your Dropbox App Key (saved to localStorage for localhost):') || '';
+        if (key) localStorage.setItem('dropbox-app-key', key);
+      }
+      return key;
+    }
+    try {
+      const res = await fetch('/api/dropbox-key');
+      const data = await res.json();
+      return data.key || '';
+    } catch { return ''; }
+  }
+
+  function setStatus(text, connected) {
+    statusText.textContent = text;
+    statusDot.classList.toggle('on', !!connected);
+  }
+  function updateDbxBtn() {
+    if (dropboxAccessToken) {
+      dbxBtn.textContent = '● Dropbox';
+      dbxBtn.classList.add('connected');
+      dbxBtn.title = 'Connected — click to sign out';
+    } else {
+      dbxBtn.textContent = 'Dropbox';
+      dbxBtn.classList.remove('connected');
+      dbxBtn.title = 'Sign in to Dropbox to sync your log across devices';
+    }
+  }
+
+  async function dbxSignIn() {
+    const appKey = await fetchDropboxAppKey();
+    if (!appKey) { showToast('Dropbox App Key not configured'); return; }
+    // Stash the working log so the OAuth redirect doesn't lose unsaved entries
+    sessionStorage.setItem('tally_logger_pending', JSON.stringify({
+      entries: entries,
+      label: labelInput.value.trim(),
+    }));
+    const verifier = generateCodeVerifier();
+    const challenge = await generateCodeChallenge(verifier);
+    sessionStorage.setItem('dropbox_code_verifier', verifier);
+    const redirectUri = window.location.origin + window.location.pathname;
+    window.location.href = 'https://www.dropbox.com/oauth2/authorize?client_id=' + appKey +
+      '&response_type=code&code_challenge=' + challenge +
+      '&code_challenge_method=S256&redirect_uri=' + encodeURIComponent(redirectUri) +
+      '&token_access_type=online';
+  }
+
+  async function dbxHandleOAuthRedirect() {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('code');
+    if (!code) return;
+    const verifier = sessionStorage.getItem('dropbox_code_verifier');
+    const appKey = await fetchDropboxAppKey();
+    if (!verifier || !appKey) return;
+    const redirectUri = window.location.origin + window.location.pathname;
+    try {
+      const res = await fetch('https://api.dropboxapi.com/oauth2/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          code: code, grant_type: 'authorization_code', client_id: appKey,
+          redirect_uri: redirectUri, code_verifier: verifier,
+        }).toString(),
+      });
+      const data = await res.json();
+      if (data.access_token) {
+        dropboxAccessToken = data.access_token;
+        sessionStorage.removeItem('dropbox_code_verifier');
+      } else {
+        console.error('Dropbox auth failed:', data);
+      }
+    } catch (err) { console.error('Dropbox auth error:', err); }
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }
+
+  async function dbxSignOut() {
+    if (dropboxAccessToken) {
+      try {
+        await fetch('https://api.dropboxapi.com/2/auth/token/revoke', {
+          method: 'POST',
+          headers: { Authorization: 'Bearer ' + dropboxAccessToken },
+        });
+      } catch { /* ignore */ }
+    }
+    dropboxAccessToken = null;
+    updateDbxBtn();
+    setStatus('Saved on this device — sign in to sync', false);
+  }
+
+  function dbxHandle401() {
+    dropboxAccessToken = null;
+    updateDbxBtn();
+    setStatus('Dropbox session expired — sign in again', false);
+  }
+
+  async function dropboxDownloadFile(path) {
+    if (!dropboxAccessToken) throw new Error('Not signed into Dropbox');
+    const response = await fetch('https://content.dropboxapi.com/2/files/download', {
+      method: 'POST',
+      headers: {
+        Authorization: 'Bearer ' + dropboxAccessToken,
+        'Dropbox-API-Arg': JSON.stringify({ path: path }),
+      },
+    });
+    if (response.status === 401) { dbxHandle401(); throw new Error('Dropbox session expired — sign in again'); }
+    if (!response.ok) throw new Error('Download failed (' + response.status + ')');
+    return await response.text();
+  }
+
+  async function dropboxUploadFile(path, content) {
+    if (!dropboxAccessToken) throw new Error('Not signed into Dropbox');
+    const response = await fetch('https://content.dropboxapi.com/2/files/upload', {
+      method: 'POST',
+      headers: {
+        Authorization: 'Bearer ' + dropboxAccessToken,
+        'Dropbox-API-Arg': JSON.stringify({ path: path, mode: { '.tag': 'overwrite' }, mute: true }),
+        'Content-Type': 'application/octet-stream',
+      },
+      body: content,
+    });
+    if (response.status === 401) { dbxHandle401(); throw new Error('Dropbox session expired — sign in again'); }
+    if (!response.ok) throw new Error('Upload failed (' + response.status + ')');
+    return true;
+  }
+
+  // ── Load / save ────────────────────────────────────────────────────────────
+  // The Dropbox file holds one JSON array of entries. Saves always rewrite the
+  // whole file; on "Log it" we first merge in the freshest remote copy so logs
+  // from other devices aren't lost (same append-safety pattern as famous beats).
+  function entryKey(e) { return e.date + '|' + e.time + '|' + (e.label || ''); }
+
+  function mergeEntries(a, b) {
+    const seen = new Set();
+    const merged = [];
+    a.concat(b).forEach(e => {
+      if (!e || !e.date || !e.time) return;
+      const k = entryKey(e);
+      if (seen.has(k)) return;
+      seen.add(k);
+      merged.push(e);
+    });
+    merged.sort((x, y) => (x.date + x.time).localeCompare(y.date + y.time));
+    return merged;
+  }
+
+  function saveLocal() {
+    localStorage.setItem('tally_log_entries', JSON.stringify(entries));
+  }
+
+  async function loadLog() {
+    if (dropboxAccessToken) {
+      try {
+        const data = JSON.parse(await dropboxDownloadFile(DROPBOX_LOG_PATH));
+        if (Array.isArray(data)) entries = mergeEntries(entries, data);
+        return 'Dropbox';
+      } catch (e) {
+        // First use: the file may not exist yet — fall through to local copy
+        console.warn('Dropbox load failed:', e.message);
+      }
+    }
+    try {
+      const local = JSON.parse(localStorage.getItem('tally_log_entries') || '[]');
+      if (Array.isArray(local)) entries = mergeEntries(entries, local);
+    } catch (e) { /* ignore */ }
+    return 'local';
+  }
+
+  async function saveLog({ mergeRemote }) {
+    saveLocal();
+    if (!dropboxAccessToken) return;
+    try {
+      if (mergeRemote) {
+        let remote = [];
+        try {
+          const data = JSON.parse(await dropboxDownloadFile(DROPBOX_LOG_PATH));
+          if (Array.isArray(data)) remote = data;
+        } catch (e) { /* file may not exist yet */ }
+        entries = mergeEntries(entries, remote);
+        saveLocal();
+      }
+      await dropboxUploadFile(DROPBOX_LOG_PATH, JSON.stringify(entries, null, 2));
+      setStatus('Dropbox · tally-log.json', true);
+    } catch (e) {
+      console.error('Dropbox save failed:', e);
+      showToast('Dropbox save failed — kept on this device');
+    }
+  }
+
+  // ── UI ─────────────────────────────────────────────────────────────────────
+  function todayStr() {
+    return new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
+  }
+
+  function showToast(msg) {
+    toast.textContent = msg;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 1600);
+  }
+
+  function render() {
+    const today = todayStr();
+    const todayEntries = entries.filter(e => e.date === today);
+    todayCountEl.textContent = todayEntries.length;
+    totalCountEl.textContent = entries.length;
+
+    if (todayEntries.length === 0) {
+      marksEl.innerHTML = '<span class="empty-hint">No entries yet today. Hit "Log it" to start.</span>';
+      return;
+    }
+    // tally marks in groups of 5: |||| with a slash through, rendered simply as groups
+    let html = '';
+    for (let i = 0; i < todayEntries.length; i += 5) {
+      const groupSize = Math.min(5, todayEntries.length - i);
+      let group = '|'.repeat(groupSize);
+      if (groupSize === 5) group = '<s>||||</s>|'; // strike-through look for a full group of 5
+      html += `<span class="group">${group}</span>`;
+    }
+    marksEl.innerHTML = html;
+  }
+
+  function toCSV() {
+    const header = 'date,time,label\n';
+    const rows = entries.map(e => `${e.date},${e.time},${(e.label || '').replace(/,/g, ';')}`).join('\n');
+    return header + rows + (entries.length ? '\n' : '');
+  }
+
+  let lastLogAt = 0;
+  async function logEntry() {
+    const now = Date.now();
+    if (now - lastLogAt < 400) return; // swallow accidental double-taps
+    lastLogAt = now;
+    const d = new Date(now);
+    entries.push({
+      date: todayStr(),
+      time: d.toTimeString().slice(0, 8),
+      label: labelInput.value.trim()
+    });
+    render();
+    await saveLog({ mergeRemote: true });
+    render(); // merge may have pulled in rows from other devices
+  }
+
+  async function undoEntry() {
+    if (!entries.length) return;
+    entries.pop();
+    render();
+    await saveLog({ mergeRemote: false }); // overwrite so the deletion sticks
+  }
+
+  function downloadCSV() {
+    const blob = new Blob([toCSV()], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'tally_log.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  logBtn.addEventListener('click', logEntry);
+  undoBtn.addEventListener('click', undoEntry);
+  dbxBtn.addEventListener('click', () => {
+    dropboxAccessToken ? dbxSignOut() : dbxSignIn();
+  });
+  downloadBtn.addEventListener('click', downloadCSV);
+
+  labelInput.addEventListener('input', () => {
+    localStorage.setItem('tally_log_label', labelInput.value.trim());
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      logEntry();
+    }
+  });
+
+  // ── Boot: OAuth redirect → restore stash → load (Dropbox when signed in → local) ──
+  (async function boot() {
+    labelInput.value = localStorage.getItem('tally_log_label') || '';
+    await dbxHandleOAuthRedirect();
+    updateDbxBtn();
+
+    // Restore the log stashed before an OAuth redirect
+    let pending = null;
+    try { pending = JSON.parse(sessionStorage.getItem('tally_logger_pending')); } catch (e) { /* ignore */ }
+    sessionStorage.removeItem('tally_logger_pending');
+    if (pending && Array.isArray(pending.entries)) entries = pending.entries;
+    if (pending && pending.label && !labelInput.value) labelInput.value = pending.label;
+
+    setStatus('Loading…', !!dropboxAccessToken);
+    const source = await loadLog();
+    render();
+    setStatus(
+      source === 'Dropbox' ? 'Dropbox · tally-log.json' : 'Saved on this device — sign in to sync',
+      !!dropboxAccessToken
+    );
+
+    // Came back from sign-in with unsaved entries — push them up now
+    if (pending && pending.entries && pending.entries.length && dropboxAccessToken) {
+      await saveLog({ mergeRemote: true });
+      render();
+      showToast('Log synced to Dropbox');
+    }
+  })();
+})();
+</script>
+
+</body>
+</html>
