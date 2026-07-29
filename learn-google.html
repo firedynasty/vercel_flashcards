@@ -1969,19 +1969,28 @@ async function dbxSignIn(pendingAction) {
   if (pendingAction) sessionStorage.setItem('dbx_pending', pendingAction);
   var v = dbxMakeVerifier();
   var c = await dbxMakeChallenge(v);
-  sessionStorage.setItem('dbx_verifier', v);
   var uri = window.location.origin + window.location.pathname;
-  window.location.href = 'https://www.dropbox.com/oauth2/authorize?client_id=' + key +
+  var authUrl = 'https://www.dropbox.com/oauth2/authorize?client_id=' + key +
     '&response_type=code&code_challenge=' + c +
     '&code_challenge_method=S256&redirect_uri=' + encodeURIComponent(uri) +
     '&token_access_type=online';
+  // Try popup first — keeps loaded vocab state intact
+  localStorage.setItem('dbx_verifier', v);
+  var popup = window.open(authUrl, 'dropbox_auth', 'width=520,height=680,scrollbars=yes,resizable=yes');
+  if (!popup) {
+    // Popup blocked — fall back to full-page redirect
+    localStorage.removeItem('dbx_verifier');
+    sessionStorage.setItem('dbx_verifier', v);
+    window.location.href = authUrl;
+  }
 }
 
 async function dbxHandleRedirect() {
   var params = new URLSearchParams(window.location.search);
   var code = params.get('code');
   if (!code) return;
-  var v = sessionStorage.getItem('dbx_verifier');
+  // Popup flow stores verifier in localStorage; fallback redirect uses sessionStorage
+  var v = localStorage.getItem('dbx_verifier') || sessionStorage.getItem('dbx_verifier');
   var key = await dbxGetAppKey();
   if (!v || !key) return;
   var uri = window.location.origin + window.location.pathname;
@@ -1991,9 +2000,25 @@ async function dbxHandleRedirect() {
       body: new URLSearchParams({ code: code, grant_type: 'authorization_code', client_id: key, redirect_uri: uri, code_verifier: v }).toString()
     });
     var d = await r.json();
-    if (d.access_token) { DBX_TOKEN = d.access_token; sessionStorage.removeItem('dbx_verifier'); }
-  } catch(e) { console.error('Dropbox auth:', e); }
-  window.history.replaceState({}, document.title, window.location.pathname);
+    localStorage.removeItem('dbx_verifier');
+    sessionStorage.removeItem('dbx_verifier');
+    if (d.access_token) {
+      if (window.opener && !window.opener.closed) {
+        // Popup flow: pass token to parent page and close
+        window.opener.postMessage({ dropboxToken: d.access_token }, window.location.origin);
+        window.close();
+        return;
+      }
+      // Fallback redirect flow: set token directly on this page
+      DBX_TOKEN = d.access_token;
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } else {
+      if (window.opener && !window.opener.closed) window.close();
+    }
+  } catch(e) {
+    console.error('Dropbox auth:', e);
+    if (window.opener && !window.opener.closed) window.close();
+  }
 }
 
 async function dbxDownload(path) {
@@ -2090,22 +2115,35 @@ document.getElementById('dbxPushBtn').addEventListener('click', async function()
   }
 });
 
-// Boot: handle OAuth redirect, then resume pending pull/push
+function dbxResumePending() {
+  var pending = sessionStorage.getItem('dbx_pending');
+  if (!pending) return;
+  sessionStorage.removeItem('dbx_pending');
+  if (pending.startsWith('pull:')) {
+    document.getElementById('dbxPullBucketNum').value = pending.slice(5);
+    document.getElementById('dbxPullBtn').click();
+  } else if (pending.startsWith('push:')) {
+    document.getElementById('dbxPushBucketNum').value = pending.slice(5);
+    document.getElementById('dbxPushBtn').click();
+  }
+}
+
+// Receive token from popup window
+window.addEventListener('message', function(event) {
+  if (event.origin !== window.location.origin) return;
+  if (event.data && event.data.dropboxToken) {
+    DBX_TOKEN = event.data.dropboxToken;
+    dbxSetAuthBtn();
+    dbxResumePending();
+  }
+});
+
+// Boot: handles popup window's redirect (sends token back) OR fallback full-page redirect
 (async function dbxBoot() {
   dbxPopulateBucketSelects();
-  await dbxHandleRedirect();
+  await dbxHandleRedirect(); // only does real work in the popup or after fallback redirect
   dbxSetAuthBtn();
-  var pending = sessionStorage.getItem('dbx_pending');
-  if (pending && DBX_TOKEN) {
-    sessionStorage.removeItem('dbx_pending');
-    if (pending.startsWith('pull:')) {
-      document.getElementById('dbxPullBucketNum').value = pending.slice(5);
-      document.getElementById('dbxPullBtn').click();
-    } else if (pending.startsWith('push:')) {
-      document.getElementById('dbxPushBucketNum').value = pending.slice(5);
-      document.getElementById('dbxPushBtn').click();
-    }
-  }
+  if (DBX_TOKEN) dbxResumePending(); // only reached on fallback redirect
 })();
 
 // ── KEYBOARD ──
