@@ -422,21 +422,29 @@
     position: relative; min-height: 300px;
     display: flex; align-items: center; justify-content: center;
   }
-  .deck-side-btn {
+  .deck-side-col {
     position: absolute; top: 50%; transform: translateY(-50%);
+    display: flex; flex-direction: column; gap: 14px;
+    align-items: center; z-index: 10;
+  }
+  .deck-side-col.left { left: 0; }
+  .deck-side-col.right { right: 0; }
+  .deck-side-btn {
     width: 44px; height: 44px; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
     font-size: 22px; font-weight: 700; cursor: pointer;
     border: 2px solid; background: white; font-family: inherit;
     box-shadow: 0 2px 8px rgba(0,0,0,0.08);
     transition: transform 0.1s, box-shadow 0.1s;
-    z-index: 10;
   }
-  .deck-side-btn:active { transform: translateY(-50%) scale(0.9); }
-  .deck-side-btn.miss  { left: 0;    color: #dc2626; border-color: #fca5a5; }
+  .deck-side-btn:active { transform: scale(0.9); }
+  .deck-side-btn.miss  { color: #dc2626; border-color: #fca5a5; }
   .deck-side-btn.miss:active  { background: #fef2f2; }
-  .deck-side-btn.correct { right: 0; color: #16a34a; border-color: #86efac; }
+  .deck-side-btn.correct { color: #16a34a; border-color: #86efac; }
   .deck-side-btn.correct:active { background: #f0fdf4; }
+  .deck-side-btn.reveal { color: #888; border-color: #ccc; font-size: 20px; }
+  .deck-side-btn.reveal:active { background: #f5f5f5; }
+  body.dark-mode .deck-side-btn.reveal { border-color: #555; color: #aaa; }
   .deck-side-btn:disabled { opacity: .35; cursor: default; }
   body.dark-mode .deck-side-btn { background: #2a2a3e; }
   body.dark-mode .deck-side-btn.miss { border-color: #7f1d1d; }
@@ -650,18 +658,21 @@
   <div class="deck-stage" id="deckStage">
     <div class="deck-stamp right" id="deckStampRight">Got it</div>
     <div class="deck-stamp left" id="deckStampLeft">Again</div>
-    <button class="deck-side-btn miss" onclick="deckGrade(false)">&#10007;</button>
-    <button class="deck-side-btn correct" onclick="deckGrade(true)">&#10003;</button>
+    <div class="deck-side-col left">
+      <button class="deck-side-btn correct">&#10003;</button>
+      <button class="deck-side-btn miss">&#10007;</button>
+    </div>
+    <div class="deck-side-col right">
+      <button class="deck-side-btn reveal" id="deckRevealBtn">&#8635;</button>
+      <button class="deck-side-btn correct">&#10003;</button>
+      <button class="deck-side-btn miss">&#10007;</button>
+    </div>
     <div class="deck-card" id="deckCard">
       <span class="deck-eyebrow" id="deckEyebrow">1 of 1</span>
       <span class="deck-word" id="deckWordText">word</span>
       <span class="deck-def" id="deckDefText">definition</span>
       <span class="deck-flip-hint">tap to reveal</span>
     </div>
-  </div>
-  <div class="deck-controls">
-    <button class="deck-ctrl-btn correct" id="deckKnowBtn">&#10003;</button>
-    <button class="deck-ctrl-btn miss" id="deckMissBtn">&#10007;</button>
   </div>
   <div style="display:flex; justify-content:center; gap:48px; margin-top:8px;">
     <span style="font-size:11px; color:#aaa;"><kbd style="background:#f0f0f0; border:1px solid #ccc; border-radius:3px; padding:1px 5px; font-size:10px; color:#555;">←</kbd> again</span>
@@ -672,16 +683,16 @@
     <span id="deckMissedCount" style="font-size:12px; color:#dc2626; display:none;">0 missed</span>
     <span id="deckRemainingCount" style="font-size:12px; color:#888; margin-left:10px; display:none;">0 remaining</span>
   </div>
-  <div id="deckSaveArea" style="display:none; flex-direction:column; align-items:center; gap:8px; margin-top:8px;">
-    <button class="btn primary" id="deckSaveMissedBtn" style="padding:10px 18px; font-size:13px; background:#16a34a; display:none; width:100%; max-width:280px;" onclick="deckSaveMissedToSheet('missed')">Download missed CSV</button>
-    <button class="btn primary" id="deckSaveBothBtn" style="padding:10px 18px; font-size:13px; background:#2563eb; display:none; width:100%; max-width:280px;" onclick="deckSaveMissedToSheet('both')">Download missed + remaining</button>
+  <div id="deckSaveArea" style="display:flex; flex-direction:column; align-items:center; gap:8px; margin-top:8px;">
+    <button class="btn primary" id="deckSaveMissedBtn" style="padding:10px 18px; font-size:13px; background:#16a34a; width:100%; max-width:280px;" onclick="deckSaveMissedToSheet('missed')">Copy missed CSV</button>
+    <button class="btn primary" id="deckSaveBothBtn" style="padding:10px 18px; font-size:13px; background:#2563eb; width:100%; max-width:280px;" onclick="deckSaveMissedToSheet('both')">Copy missed + remaining</button>
     <div id="deckSaveStatus" style="font-size:12px; color:#888; margin-top:6px; min-height:18px;"></div>
   </div>
   <div class="deck-done hidden" id="deckDoneScreen">
     <div class="deck-done-big">Deck cleared!</div>
     <p id="deckDoneStats"></p>
     <p id="deckMissedStats" style="font-size:13px; color:#dc2626;"></p>
-    <button class="btn primary" id="deckDoneSaveBtn" style="padding:12px 20px; display:none; background:#16a34a;" onclick="deckSaveMissedToSheet('missed')">Download missed CSV</button>
+    <button class="btn primary" id="deckDoneSaveBtn" style="padding:12px 20px; display:none; background:#16a34a;" onclick="deckSaveMissedToSheet('missed')">Copy missed CSV</button>
     <div id="deckDoneSaveStatus" style="font-size:12px; color:#888; margin-top:6px; min-height:18px;"></div>
     <button class="btn primary" id="deckRestartBtn" style="padding:12px 20px;">Review again</button>
   </div>
@@ -1688,19 +1699,17 @@ function startDeckSession() {
 
   // Show review UI, hide done screen
   document.getElementById('deckStage').style.display = '';
-  document.querySelector('.deck-controls').style.display = '';
   document.querySelector('.deck-progress-row').style.display = '';
   document.getElementById('deckDoneScreen').classList.add('hidden');
 
   // Reset save buttons
-  document.getElementById('deckSaveArea').style.display = 'none';
   document.getElementById('deckSaveStatus').textContent = '';
   var saveMissedBtn = document.getElementById('deckSaveMissedBtn');
   var saveBothBtn = document.getElementById('deckSaveBothBtn');
-  saveMissedBtn.textContent = 'Download missed CSV';
+  saveMissedBtn.textContent = 'Copy missed CSV';
   saveMissedBtn.style.background = '#16a34a';
   saveMissedBtn.disabled = false;
-  saveBothBtn.textContent = 'Download missed + remaining';
+  saveBothBtn.textContent = 'Copy missed + remaining';
   saveBothBtn.style.background = '#2563eb';
   saveBothBtn.disabled = false;
 
@@ -1737,15 +1746,14 @@ function deckNextCard() {
 
 function deckFinish() {
   document.getElementById('deckStage').style.display = 'none';
-  document.querySelector('.deck-controls').style.display = 'none';
   document.querySelector('.deck-progress-row').style.display = 'none';
   var doneEl = document.getElementById('deckDoneScreen');
   doneEl.classList.remove('hidden');
   document.getElementById('deckDoneStats').textContent =
     'You cleared all ' + deckTotal + ' words in this deck.';
 
-  // Hide mid-review save area
-  document.getElementById('deckSaveArea').style.display = 'none';
+  // Hide mid-review save area counts
+  document.getElementById('deckSaveArea').style.display = 'none'; // hide during done screen
   document.getElementById('deckMissedCount').style.display = 'none';
   document.getElementById('deckRemainingCount').style.display = 'none';
 
@@ -1756,7 +1764,7 @@ function deckFinish() {
   if (deckMissedSet.size > 0) {
     missedEl.textContent = deckMissedSet.size + ' word(s) you missed at least once.';
     saveBtn.style.display = '';
-    saveBtn.textContent = 'Download missed CSV';
+    saveBtn.textContent = 'Copy missed CSV';
     saveBtn.style.background = '#16a34a';
     saveBtn.disabled = false;
   } else {
@@ -1787,22 +1795,14 @@ function deckUpdateSaveButtons() {
     remainingEl.style.display = 'none';
   }
 
-  var saveArea = document.getElementById('deckSaveArea');
-  var saveMissedBtn = document.getElementById('deckSaveMissedBtn');
   var saveBothBtn = document.getElementById('deckSaveBothBtn');
-
-  if (hasMissed) {
-    saveArea.style.display = 'flex';
-    saveMissedBtn.style.display = '';
-    saveBothBtn.style.display = hasRemaining ? '' : 'none';
-  } else {
-    saveArea.style.display = 'none';
-  }
+  saveBothBtn.style.display = hasRemaining ? '' : 'none';
 }
 
 function deckFlipCard() {
-  deckFlipped = !deckFlipped;
-  document.getElementById('deckCard').classList.toggle('flipped', deckFlipped);
+  if (deckFlipped) return;
+  deckFlipped = true;
+  document.getElementById('deckCard').classList.add('flipped');
 }
 
 function deckGrade(correct) {
@@ -1844,9 +1844,16 @@ function deckAnimateOut(correct, cb) {
 // Deck card tap to flip
 document.getElementById('deckCard').addEventListener('click', function() { deckFlipCard(); });
 
+// Deck side buttons
+document.querySelectorAll('.deck-side-btn.correct').forEach(function(btn) {
+  btn.addEventListener('click', function() { deckGrade(true); });
+});
+document.querySelectorAll('.deck-side-btn.miss').forEach(function(btn) {
+  btn.addEventListener('click', function() { deckGrade(false); });
+});
+document.getElementById('deckRevealBtn').addEventListener('click', function() { deckFlipCard(); });
+
 // Deck button handlers
-document.getElementById('deckMissBtn').addEventListener('click', function() { deckGrade(false); });
-document.getElementById('deckKnowBtn').addEventListener('click', function() { deckGrade(true); });
 document.getElementById('deckRestartBtn').addEventListener('click', function() { startDeckSession(); });
 
 // ── SAVE MISSED TO GOOGLE SHEET ──
@@ -1864,14 +1871,16 @@ function deckSaveMissedToSheet(mode) {
     });
   }
   function csvEsc(s) { s = String(s); return (s.indexOf(',') >= 0 || s.indexOf('"') >= 0 || s.indexOf('\n') >= 0) ? '"' + s.replace(/"/g, '""') + '"' : s; }
-  var lines = ['Term,Definition'];
+  var lines = [];
   csvRows.forEach(function(r) { lines.push(r.map(csvEsc).join(',')); });
-  var blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
-  var url = URL.createObjectURL(blob);
-  var a = document.createElement('a');
-  var now = new Date(); var pad = function(n) { return n < 10 ? '0' + n : '' + n; };
-  a.href = url; a.download = 'deck_' + (mode === 'both' ? 'missed_remaining' : 'missed') + '_' + now.getFullYear() + '-' + pad(now.getMonth()+1) + '-' + pad(now.getDate()) + '.csv';
-  document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+  var csv = lines.join('\n');
+  var statusEl = document.getElementById('deckSaveStatus');
+  navigator.clipboard.writeText(csv).then(function() {
+    statusEl.textContent = '\u2705 Copied ' + csvRows.length + ' term' + (csvRows.length === 1 ? '' : 's') + ' to clipboard';
+    setTimeout(function() { statusEl.textContent = ''; }, 3000);
+  }).catch(function() {
+    statusEl.textContent = 'Copy failed — try a different browser';
+  });
 }
 
 // ── KEYBOARD ──
