@@ -67,7 +67,7 @@
   .t-concession    { background:#f5dddd; color:#a03a3a; }
   .t-consequence   { background:#dfe3f5; color:#3a4aa0; }
   .t-contrast      { background:#fbe9d5; color:#b3641a; }
-  .t-restatement   { background:#eceae4; color:#6b675c; }
+  .t-restatement   { display:none; }
   .t-price-move    { background:#dff0d8; color:#3c763d; }
   .t-cause         { background:#f7e8d4; color:#a05a16; }
   .t-source-named  { background:#ddeaf5; color:#2e6da4; }
@@ -82,7 +82,7 @@
   .claim { font-weight:normal; }
   h2.sec { font-size:15px; color:var(--accent); margin:26px 0 6px;
            border-bottom:1px solid var(--line); padding-bottom:4px; }
-  .rawmd { margin-top:36px; font-size:13px; }
+  .rawmd { display:none; }
   .rawmd summary { cursor:pointer; color:var(--accent); }
   .rawmd pre { font-family:monospace; font-size:12px; line-height:1.5;
                white-space:pre-wrap; background:#fff;
@@ -147,6 +147,7 @@
   <nav>
     <button class="link back-btn">← new paste</button>
     <button class="link rerun-decaps">↺ re-outline w/ de-caps</button>
+    <button class="link" id="btn-orig">original text</button>
     <button class="link" id="toggle-tags">hide tags</button>
     <button class="link" id="fz-dec">A−</button>
     <button class="link" id="fz-inc">A+</button>
@@ -794,6 +795,7 @@ function processInput() {
   let text = document.getElementById('paste-text').value.trim();
   if (!text) { document.getElementById('input-err').textContent = 'Paste some text first.'; return; }
   document.getElementById('input-err').textContent = '';
+  lastRawText = text;
 
   const mode = document.querySelector('input[name=mode]:checked').value;
   const cleanup = document.getElementById('cleanup').checked;
@@ -852,6 +854,10 @@ function processInput() {
     }
   }
 
+  // ---- store for "original text" tab ----
+  lastParas = paras;
+  lastOrigTitle = title;
+
   // ---- render ----
   document.getElementById('out-title').textContent = title;
   document.getElementById('out-sub').textContent = mode + ' mode · verbatim · nothing stored';
@@ -896,6 +902,9 @@ function processInput() {
 // ============================================================
 // tag visibility (persisted) — lastMd/renderMd used by processInput too
 let lastMd = '';
+let lastParas = [];
+let lastRawText = '';
+let lastOrigTitle = '';
 let showTags = localStorage.getItem('pto-tags') !== '0';
 function renderMd() {
   return showTags ? lastMd : lastMd.replace(TAG_STRIP_RE, '').replace(/[ \t]+$/gm, '');
@@ -949,6 +958,30 @@ function applyFz() {
 document.getElementById('fz-dec').addEventListener('click', () => { fz = Math.max(0.7, +(fz - 0.1).toFixed(2)); applyFz(); });
 document.getElementById('fz-inc').addEventListener('click', () => { fz = Math.min(2.0, +(fz + 0.1).toFixed(2)); applyFz(); });
 applyFz();
+
+// ============================================================
+// Original-text new tab
+// ============================================================
+document.getElementById('btn-orig').addEventListener('click', function () {
+  if (!lastRawText) return;
+  const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const parasHtml = lastRawText.split(/\n/).map(l => `<p>${esc(l)}</p>`).join('\n');
+  const html = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+<title>${esc(lastOrigTitle)} — original</title>
+<style>
+  body { font-family: Georgia, 'Times New Roman', serif; background:#faf8f3;
+         color:#2b2b2b; margin:0; padding:40px 20px 80px; }
+  main { max-width:720px; margin:0 auto; }
+  h1 { font-size:20px; margin:0 0 28px; color:#7a5c2e; }
+  p { font-size:16px; line-height:1.8; margin:0 0 1.3em; }
+</style></head><body><main>
+<h1>${esc(lastOrigTitle)}</h1>
+${parasHtml}
+</main></body></html>`;
+  const tab = window.open('', '_blank');
+  tab.document.write(html);
+  tab.document.close();
+});
 
 // ============================================================
 // Text-to-Speech (r = English)
