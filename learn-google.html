@@ -565,6 +565,14 @@
     <div style="font-size:11px;color:#aaa;margin-top:4px;line-height:1.4;">Copy from Numbers, Excel, a text file — Term, Definition format.</div>
   </div>
 
+  <!-- Dropbox bucket pull -->
+  <div style="margin:8px 0 0; padding:10px 14px; border:1px solid #e0e0e0; border-radius:10px; background:white; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+    <button id="dbxAuthBtn" style="font-size:11px; padding:4px 10px; border-radius:6px; border:1px solid #ccc; background:#f5f5f3; color:#555; cursor:pointer; font-family:inherit; font-weight:600; white-space:nowrap;">Dropbox</button>
+    <select id="dbxPullBucketNum" style="padding:5px 7px; border:1px solid #ddd; border-radius:6px; font-size:12px; font-family:inherit; background:white;"></select>
+    <button id="dbxPullBtn" style="font-size:12px; padding:5px 12px; border-radius:6px; border:1px solid #2563eb; background:#eff6ff; color:#2563eb; cursor:pointer; font-family:inherit; font-weight:600; white-space:nowrap;">↓ Load bucket</button>
+    <span id="dbxPullStatus" style="font-size:11px; color:#888;"></span>
+  </div>
+
   <div class="or-divider" id="orDivider">— OR —</div>
 
   <!-- Google Sheets Setup -->
@@ -686,6 +694,11 @@
   <div id="deckSaveArea" style="display:flex; flex-direction:column; align-items:center; gap:8px; margin-top:8px;">
     <button class="btn primary" id="deckSaveMissedBtn" style="padding:10px 18px; font-size:13px; background:#16a34a; width:100%; max-width:280px;" onclick="deckSaveMissedToSheet('missed')">Copy missed CSV</button>
     <button class="btn primary" id="deckSaveBothBtn" style="padding:10px 18px; font-size:13px; background:#2563eb; width:100%; max-width:280px;" onclick="deckSaveMissedToSheet('both')">Copy missed + remaining</button>
+    <div style="display:flex; gap:6px; width:100%; max-width:280px;">
+      <select id="dbxPushBucketNum" style="padding:8px 7px; border:1px solid #ddd; border-radius:6px; font-size:12px; font-family:inherit; background:white; min-width:96px;"></select>
+      <button id="dbxPushBtn" style="flex:1; padding:10px 10px; font-size:13px; background:#0061fe; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:600; font-family:inherit; white-space:nowrap;">↑ Push</button>
+    </div>
+    <div id="dbxPushStatus" style="font-size:12px; color:#888; min-height:18px;"></div>
     <div id="deckSaveStatus" style="font-size:12px; color:#888; margin-top:6px; min-height:18px;"></div>
     <textarea id="deckCsvTextarea" style="width:100%; max-width:280px; height:120px; font-size:11px; font-family:monospace; border:1px solid #ddd; border-radius:6px; padding:6px; box-sizing:border-box; resize:vertical;" readonly></textarea>
   </div>
@@ -1909,6 +1922,191 @@ function deckSaveMissedToSheet(mode) {
     statusEl.textContent = 'Tap and select all in the box below to copy';
   });
 }
+
+// ── DROPBOX BUCKET PUSH / PULL ──
+var DBX_TOKEN = null;
+
+function dbxBucketPath(n) { return '/buckets' + n + '.txt'; }
+
+function dbxSetAuthBtn() {
+  var btn = document.getElementById('dbxAuthBtn');
+  if (!btn) return;
+  if (DBX_TOKEN) {
+    btn.textContent = '● Dropbox';
+    btn.style.color = '#0061fe';
+    btn.style.borderColor = '#0061fe';
+    btn.title = 'Connected — click to sign out';
+  } else {
+    btn.textContent = 'Dropbox';
+    btn.style.color = '#555';
+    btn.style.borderColor = '#ccc';
+    btn.title = 'Sign in to Dropbox';
+  }
+}
+
+async function dbxGetAppKey() {
+  if (['localhost', '127.0.0.1'].includes(window.location.hostname)) {
+    var k = localStorage.getItem('dropbox-app-key') || '';
+    if (!k) { k = prompt('Dropbox App Key:') || ''; if (k) localStorage.setItem('dropbox-app-key', k); }
+    return k;
+  }
+  try { var r = await fetch('/api/dropbox-key'); return (await r.json()).key || ''; } catch(e) { return ''; }
+}
+
+function dbxMakeVerifier() {
+  var a = new Uint8Array(64); crypto.getRandomValues(a);
+  return btoa(String.fromCharCode.apply(null, a)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+
+async function dbxMakeChallenge(v) {
+  var d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(v));
+  return btoa(String.fromCharCode.apply(null, new Uint8Array(d))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+
+async function dbxSignIn(pendingAction) {
+  var key = await dbxGetAppKey();
+  if (!key) { alert('Dropbox App Key not configured'); return; }
+  if (pendingAction) sessionStorage.setItem('dbx_pending', pendingAction);
+  var v = dbxMakeVerifier();
+  var c = await dbxMakeChallenge(v);
+  sessionStorage.setItem('dbx_verifier', v);
+  var uri = window.location.origin + window.location.pathname;
+  window.location.href = 'https://www.dropbox.com/oauth2/authorize?client_id=' + key +
+    '&response_type=code&code_challenge=' + c +
+    '&code_challenge_method=S256&redirect_uri=' + encodeURIComponent(uri) +
+    '&token_access_type=online';
+}
+
+async function dbxHandleRedirect() {
+  var params = new URLSearchParams(window.location.search);
+  var code = params.get('code');
+  if (!code) return;
+  var v = sessionStorage.getItem('dbx_verifier');
+  var key = await dbxGetAppKey();
+  if (!v || !key) return;
+  var uri = window.location.origin + window.location.pathname;
+  try {
+    var r = await fetch('https://api.dropboxapi.com/oauth2/token', {
+      method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ code: code, grant_type: 'authorization_code', client_id: key, redirect_uri: uri, code_verifier: v }).toString()
+    });
+    var d = await r.json();
+    if (d.access_token) { DBX_TOKEN = d.access_token; sessionStorage.removeItem('dbx_verifier'); }
+  } catch(e) { console.error('Dropbox auth:', e); }
+  window.history.replaceState({}, document.title, window.location.pathname);
+}
+
+async function dbxDownload(path) {
+  var r = await fetch('https://content.dropboxapi.com/2/files/download', {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + DBX_TOKEN, 'Dropbox-API-Arg': JSON.stringify({ path: path }) }
+  });
+  if (r.status === 401) { DBX_TOKEN = null; dbxSetAuthBtn(); throw new Error('Session expired — sign in again'); }
+  if (r.status === 409) throw new Error('File not found in Dropbox');
+  if (!r.ok) throw new Error('Download failed (' + r.status + ')');
+  return await r.text();
+}
+
+async function dbxUpload(path, content) {
+  var r = await fetch('https://content.dropboxapi.com/2/files/upload', {
+    method: 'POST',
+    headers: {
+      Authorization: 'Bearer ' + DBX_TOKEN,
+      'Dropbox-API-Arg': JSON.stringify({ path: path, mode: { '.tag': 'overwrite' }, mute: true }),
+      'Content-Type': 'application/octet-stream'
+    },
+    body: content
+  });
+  if (r.status === 401) { DBX_TOKEN = null; dbxSetAuthBtn(); throw new Error('Session expired — sign in again'); }
+  if (!r.ok) throw new Error('Upload failed (' + r.status + ')');
+}
+
+function dbxPopulateBucketSelects() {
+  ['dbxPullBucketNum', 'dbxPushBucketNum'].forEach(function(id) {
+    var sel = document.getElementById(id);
+    if (!sel) return;
+    sel.innerHTML = '';
+    for (var i = 1; i <= 10; i++) {
+      var opt = document.createElement('option');
+      opt.value = i; opt.textContent = 'Bucket ' + i;
+      sel.appendChild(opt);
+    }
+  });
+}
+
+document.getElementById('dbxAuthBtn').addEventListener('click', function() {
+  if (DBX_TOKEN) {
+    try { fetch('https://api.dropboxapi.com/2/auth/token/revoke', { method: 'POST', headers: { Authorization: 'Bearer ' + DBX_TOKEN } }); } catch(e) {}
+    DBX_TOKEN = null; dbxSetAuthBtn();
+  } else {
+    dbxSignIn('');
+  }
+});
+
+document.getElementById('dbxPullBtn').addEventListener('click', async function() {
+  var n = document.getElementById('dbxPullBucketNum').value;
+  var statusEl = document.getElementById('dbxPullStatus');
+  if (!DBX_TOKEN) { statusEl.textContent = 'Signing in…'; await dbxSignIn('pull:' + n); return; }
+  var btn = this;
+  btn.disabled = true; btn.textContent = 'Loading…'; statusEl.textContent = '';
+  try {
+    var text = await dbxDownload(dbxBucketPath(n));
+    document.getElementById('pasteCsvInput').value = text;
+    loadPastedCsv();
+    statusEl.textContent = '✅ Loaded bucket ' + n;
+    setTimeout(function() { statusEl.textContent = ''; }, 2500);
+  } catch(e) {
+    statusEl.textContent = '❌ ' + e.message;
+  } finally {
+    btn.disabled = false; btn.textContent = '↓ Load bucket';
+  }
+});
+
+document.getElementById('dbxPushBtn').addEventListener('click', async function() {
+  var n = document.getElementById('dbxPushBucketNum').value;
+  var statusEl = document.getElementById('dbxPushStatus');
+  // Build CSV of missed + remaining (same logic as deckSaveMissedToSheet('both'))
+  var csvRows = [], added = new Set();
+  Array.from(deckMissedSet).sort(function(a, b) { return a - b; }).forEach(function(fi) {
+    var item = filteredVocab[fi]; if (item) { csvRows.push([item.term, item.definition]); added.add(fi); }
+  });
+  deckQueue.forEach(function(fi) {
+    if (!added.has(fi)) { var item = filteredVocab[fi]; if (item) { csvRows.push([item.term, item.definition]); added.add(fi); } }
+  });
+  if (csvRows.length === 0) { statusEl.textContent = 'Nothing to push — no missed or remaining cards.'; return; }
+  function csvEsc(s) { s = String(s); return (s.indexOf(',') >= 0 || s.indexOf('"') >= 0 || s.indexOf('\n') >= 0) ? '"' + s.replace(/"/g, '""') + '"' : s; }
+  var csv = csvRows.map(function(r) { return r.map(csvEsc).join(','); }).join('\n');
+  if (!DBX_TOKEN) { statusEl.textContent = 'Signing in…'; await dbxSignIn('push:' + n); return; }
+  var btn = this;
+  btn.disabled = true; btn.textContent = 'Pushing…'; statusEl.textContent = '';
+  try {
+    await dbxUpload(dbxBucketPath(n), csv);
+    statusEl.textContent = '✅ Pushed ' + csvRows.length + ' terms → bucket ' + n;
+    setTimeout(function() { statusEl.textContent = ''; }, 3000);
+  } catch(e) {
+    statusEl.textContent = '❌ ' + e.message;
+  } finally {
+    btn.disabled = false; btn.textContent = '↑ Push';
+  }
+});
+
+// Boot: handle OAuth redirect, then resume pending pull/push
+(async function dbxBoot() {
+  dbxPopulateBucketSelects();
+  await dbxHandleRedirect();
+  dbxSetAuthBtn();
+  var pending = sessionStorage.getItem('dbx_pending');
+  if (pending && DBX_TOKEN) {
+    sessionStorage.removeItem('dbx_pending');
+    if (pending.startsWith('pull:')) {
+      document.getElementById('dbxPullBucketNum').value = pending.slice(5);
+      document.getElementById('dbxPullBtn').click();
+    } else if (pending.startsWith('push:')) {
+      document.getElementById('dbxPushBucketNum').value = pending.slice(5);
+      document.getElementById('dbxPushBtn').click();
+    }
+  }
+})();
 
 // ── KEYBOARD ──
 document.addEventListener('keydown', function(e) {
