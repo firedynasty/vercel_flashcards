@@ -1859,7 +1859,8 @@ document.getElementById('deckRestartBtn').addEventListener('click', function() {
 
 // ── SAVE MISSED TO GOOGLE SHEET ──
 function deckSaveMissedToSheet(mode) {
-  if (deckMissedSet.size === 0) return;
+  if (mode === 'missed' && deckMissedSet.size === 0) return;
+  if (mode === 'both' && deckMissedSet.size === 0 && deckQueue.length === 0) return;
   var csvRows = [], added = new Set();
   var sortedMissed = Array.from(deckMissedSet).sort(function(a, b) { return a - b; });
   sortedMissed.forEach(function(fi) {
