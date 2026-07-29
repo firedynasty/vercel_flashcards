@@ -456,13 +456,18 @@
   .deck-stamp { position: absolute; top: 24px; font-weight: 700; font-size: 20px; letter-spacing: .06em; border: 3px solid; border-radius: 8px; padding: 4px 14px; text-transform: uppercase; opacity: 0; pointer-events: none; }
   .deck-stamp.right { right: 26px; color: #16a34a; border-color: #16a34a; transform: rotate(-8deg); }
   .deck-stamp.left { left: 26px; color: #4A5B7A; border-color: #4A5B7A; transform: rotate(8deg); }
-  .deck-controls { display: flex; gap: 24px; margin-top: 22px; justify-content: center; }
-  .deck-ctrl-btn { width: 72px; height: 72px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: 700; border: 3px solid; background: white; cursor: pointer; font-family: inherit; transition: transform 0.1s, box-shadow 0.1s; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
-  .deck-ctrl-btn:active { transform: scale(0.92); }
-  .deck-ctrl-btn.miss { color: #dc2626; border-color: #fca5a5; }
-  .deck-ctrl-btn.miss:active { background: #fef2f2; box-shadow: 0 0 0 4px #fee2e2; }
-  .deck-ctrl-btn.correct { color: #16a34a; border-color: #86efac; }
-  .deck-ctrl-btn.correct:active { background: #f0fdf4; box-shadow: 0 0 0 4px #dcfce7; }
+  .deck-side-col { position: absolute; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 14px; align-items: center; z-index: 10; }
+  .deck-side-col.left { left: 0; }
+  .deck-side-col.right { right: 0; }
+  .deck-side-btn { width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 700; cursor: pointer; border: 2px solid; background: white; font-family: inherit; box-shadow: 0 2px 8px rgba(0,0,0,0.08); transition: transform 0.1s, box-shadow 0.1s; }
+  .deck-side-btn:active { transform: scale(0.9); }
+  .deck-side-btn.miss { color: #dc2626; border-color: #fca5a5; }
+  .deck-side-btn.miss:active { background: #fef2f2; }
+  .deck-side-btn.correct { color: #16a34a; border-color: #86efac; }
+  .deck-side-btn.correct:active { background: #f0fdf4; }
+  .deck-side-btn.reveal { color: #888; border-color: #ccc; font-size: 20px; }
+  .deck-side-btn.reveal:active { background: #f5f5f5; }
+  .deck-side-btn:disabled { opacity: .35; cursor: default; }
   .deck-done { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 10px; min-height: 300px; }
   .deck-done .deck-done-big { font-weight: 700; font-size: 24px; }
   .deck-done p { color: #888; font-size: 14px; margin: 0 0 10px; }
@@ -482,10 +487,6 @@
 
   <!-- Setup Section -->
   <div class="setup-section" id="setupSection">
-    <div class="setup-header" onclick="toggleSetup()">
-      <span>Setup</span>
-      <span class="toggle-arrow" id="setupArrow">&#9660;</span>
-    </div>
     <div class="setup-body">
 
       <!-- Dialect Toggle -->
@@ -550,61 +551,43 @@
       </div>
       <div class="hint">Picks the first .csv, .txt (;delimited), or .xlsx and all .mp4 files from the top level of the folder.</div>
 
-      <hr style="border:none;border-top:1px solid #eee;margin:12px 0;">
-
-      <!-- Paste CSV -->
-      <div style="font-size:12px;font-weight:600;color:#555;margin-bottom:6px;">Paste CSV</div>
-      <textarea id="pasteCsvInput" rows="6" style="width:100%;border:1px solid #ddd;border-radius:8px;padding:10px 14px;font-family:'SF Mono',Monaco,monospace;font-size:12px;line-height:1.6;resize:vertical;color:#333;" placeholder="Paste CSV content here (Chinese,Pinyin,English)&#10;一,yī,one&#10;五,wǔ,five&#10;魚,yú,fish"></textarea>
-      <div style="margin-top:6px;">
-        <button class="btn primary" onclick="loadPastedCsv()">Load CSV</button>
-        <span id="pasteCsvStatus" style="font-size:12px;color:#888;margin-left:8px;"></span>
-      </div>
-      <div class="hint">Copy from Numbers, Excel, a text file — anything that exports comma-separated rows. Quoted fields with commas are handled correctly.</div>
-
-      <hr style="border:none;border-top:1px solid #eee;margin:12px 0;">
-
-      <!-- Google Sheets -->
-      <div style="font-size:12px;font-weight:600;color:#555;margin-bottom:6px;">Google Sheets</div>
-      <div class="setup-row">
-        <button class="btn google" id="authBtn" onclick="gdriveSignIn()">Sign In</button>
-        <input type="text" id="searchInput" placeholder="Spreadsheet name..." value="chinese">
-        <button class="btn primary" id="searchBtn" onclick="gdriveSearch()" disabled>Load</button>
-      </div>
-      <div class="setup-row">
-        <label>Sheet</label>
-        <select id="sheetSelect" disabled onchange="onSheetSelect()">
-          <option value="">Sign in first</option>
-        </select>
-      </div>
       <div class="setup-row">
         <label>Lesson</label>
         <select id="lessonSelect" disabled onchange="onLessonSelect()">
-          <option value="">Select sheet first</option>
+          <option value="">Load CSV first</option>
         </select>
       </div>
       <div class="status" id="status"></div>
-      <div class="hint">Sheet format: Chinese | Pinyin | English (3 columns, header row). Section headers (e.g. "Verse 1") in column A with B+C empty.</div>
-
-      <hr style="border:none;border-top:1px solid #eee;margin:12px 0;">
-
-      <!-- Paste from Sheets -->
-      <div style="font-size:12px;font-weight:600;color:#555;margin-bottom:6px;">Paste from Google Sheets</div>
-      <textarea id="pasteSheetInput" rows="8" style="width:100%;border:1px solid #ddd;border-radius:8px;padding:10px 14px;font-family:'SF Mono',Monaco,monospace;font-size:12px;line-height:1.6;resize:vertical;color:#333;" placeholder="Select rows in Google Sheets, copy (Cmd+C), then paste here...
-一	yī	one
-五	wǔ	five
-魚	yú	fish"></textarea>
-      <div class="setup-row" style="margin-top:8px;align-items:center;">
-        <label style="font-size:12px;color:#555;">Rows</label>
-        <input type="number" id="pasteRowFrom" min="1" value="1" style="width:60px;padding:4px 8px;border:1px solid #ddd;border-radius:6px;font-size:12px;">
-        <span style="font-size:12px;color:#888;">to</span>
-        <input type="number" id="pasteRowTo" min="1" value="" style="width:60px;padding:4px 8px;border:1px solid #ddd;border-radius:6px;font-size:12px;" placeholder="end">
-        <button class="btn primary" onclick="loadPastedSheet()">Load Range</button>
-        <button class="btn outline" onclick="loadPastedSheet(true)">Load All</button>
-        <span id="pasteRowCount" style="font-size:11px;color:#888;"></span>
-      </div>
-      <div class="hint">Paste tab-separated data from Google Sheets. Use row range to load a subset (e.g. rows 25-45). First row auto-detected as header.</div>
-      <div class="status" id="pasteStatus"></div>
+      <!-- hidden stubs to avoid JS errors from Google Sheets code -->
+      <select id="sheetSelect" style="display:none"></select>
+      <input id="searchInput" style="display:none">
+      <button id="searchBtn" style="display:none"></button>
+      <button id="authBtn" style="display:none"></button>
+      <div id="pasteStatus" style="display:none"></div>
+      <textarea id="pasteSheetInput" style="display:none"></textarea>
+      <input id="pasteRowFrom" style="display:none">
+      <input id="pasteRowTo" style="display:none">
+      <span id="pasteRowCount" style="display:none"></span>
     </div>
+  </div>
+
+  <!-- Paste CSV (always visible) -->
+  <div style="margin:8px 0 0; padding:12px 16px; border:1px solid #e0e0e0; border-radius:10px; background:white;">
+    <div style="font-size:12px;font-weight:600;color:#555;margin-bottom:6px;">Paste CSV</div>
+    <textarea id="pasteCsvInput" rows="5" style="width:100%;border:1px solid #ddd;border-radius:8px;padding:10px 14px;font-family:'SF Mono',Monaco,monospace;font-size:12px;line-height:1.6;resize:vertical;color:#333;" placeholder="Paste CSV content here (Chinese,Pinyin,English)&#10;一,yī,one&#10;五,wǔ,five&#10;魚,yú,fish"></textarea>
+    <div style="margin-top:6px;">
+      <button class="btn primary" onclick="loadPastedCsv()">Load CSV</button>
+      <button class="btn outline" onclick="pasteFromClipboard()">Paste from clipboard</button>
+      <span id="pasteCsvStatus" style="font-size:12px;color:#888;margin-left:8px;"></span>
+    </div>
+  </div>
+
+  <!-- Dropbox bucket pull -->
+  <div style="margin:8px 0 0; padding:10px 14px; border:1px solid #e0e0e0; border-radius:10px; background:white; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+    <button id="dbxAuthBtn" style="font-size:11px; padding:4px 10px; border-radius:6px; border:1px solid #ccc; background:#f5f5f3; color:#555; cursor:pointer; font-family:inherit; font-weight:600; white-space:nowrap;">Dropbox</button>
+    <select id="dbxPullBucketNum" style="padding:5px 7px; border:1px solid #ddd; border-radius:6px; font-size:12px; font-family:inherit; background:white;"></select>
+    <button id="dbxPullBtn" style="font-size:12px; padding:5px 12px; border-radius:6px; border:1px solid #2563eb; background:#eff6ff; color:#2563eb; cursor:pointer; font-family:inherit; font-weight:600; white-space:nowrap;">&#8595; Load bucket</button>
+    <span id="dbxPullStatus" style="font-size:11px; color:#888;"></span>
   </div>
 
   <!-- Video Section (from folder drop) -->
@@ -760,6 +743,15 @@
       <div class="deck-stage" id="deckStage">
         <div class="deck-stamp right" id="deckStampRight">Got it</div>
         <div class="deck-stamp left" id="deckStampLeft">Again</div>
+        <div class="deck-side-col left">
+          <button class="deck-side-btn correct">&#10003;</button>
+          <button class="deck-side-btn miss">&#10007;</button>
+        </div>
+        <div class="deck-side-col right">
+          <button class="deck-side-btn reveal" id="deckRevealBtn">&#8635;</button>
+          <button class="deck-side-btn correct">&#10003;</button>
+          <button class="deck-side-btn miss">&#10007;</button>
+        </div>
         <div class="deck-card" id="deckCard">
           <span class="deck-eyebrow" id="deckEyebrow">1 of 1</span>
           <span class="deck-word" id="deckWordText">word</span>
@@ -768,35 +760,33 @@
           <span class="deck-flip-hint">tap to reveal</span>
         </div>
       </div>
-      <div class="deck-controls">
-        <button class="deck-ctrl-btn miss" id="deckMissBtn">&#10007;</button>
-        <button class="deck-ctrl-btn correct" id="deckKnowBtn">&#10003;</button>
-      </div>
-      <div id="deckKeyHints" style="text-align:center; margin-top:10px;">
-        <span style="font-size:11px; color:#999; letter-spacing:.2px;">
-          <span style="border:1px solid #d1d5db; border-radius:4px; padding:1px 6px; font-family:monospace; color:#666;">Enter</span> flip
-          &nbsp;&middot;&nbsp;
-          <span style="border:1px solid #d1d5db; border-radius:4px; padding:1px 6px; font-family:monospace; color:#666;">O</span> didn&#8217;t
-          &nbsp;&middot;&nbsp;
-          <span style="border:1px solid #d1d5db; border-radius:4px; padding:1px 6px; font-family:monospace; color:#666;">P</span> got it
-        </span>
+      <div style="display:flex; justify-content:center; gap:48px; margin-top:8px;">
+        <span style="font-size:11px; color:#aaa;"><kbd style="background:#f0f0f0; border:1px solid #ccc; border-radius:3px; padding:1px 5px; font-size:10px; color:#555;">&#8592;</kbd> again</span>
+        <span style="font-size:11px; color:#aaa;"><kbd style="background:#f0f0f0; border:1px solid #ccc; border-radius:3px; padding:1px 5px; font-size:10px; color:#555;">&#8593;</kbd> flip</span>
+        <span style="font-size:11px; color:#aaa;"><kbd style="background:#f0f0f0; border:1px solid #ccc; border-radius:3px; padding:1px 5px; font-size:10px; color:#555;">&#8594;</kbd> got it</span>
       </div>
       <div style="text-align:center; margin-top:14px;">
         <span id="deckMissedCount" style="font-size:12px; color:#dc2626; display:none;">0 missed</span>
         <span id="deckRemainingCount" style="font-size:12px; color:#888; margin-left:10px; display:none;">0 remaining</span>
       </div>
-      <div id="deckSaveArea" style="text-align:center; margin-top:8px; display:none;">
-        <button class="btn outline" id="deckSaveMissedBtn" style="padding:10px 18px; font-size:13px; background:#16a34a; color:white; border-color:#16a34a; display:none;" onclick="deckSaveMissedToSheet('missed')">Download missed CSV</button>
-        <button class="btn outline" id="deckSaveBothBtn" style="padding:10px 18px; font-size:13px; background:#2563eb; color:white; border-color:#2563eb; margin-left:8px; display:none;" onclick="deckSaveMissedToSheet('both')">Download missed + remaining</button>
+      <div id="deckSaveArea" style="display:flex; flex-direction:column; align-items:center; gap:8px; margin-top:8px;">
+        <button class="btn primary" id="deckSaveMissedBtn" style="padding:10px 18px; font-size:13px; background:#16a34a; width:100%; max-width:280px;" onclick="deckSaveMissedToSheet('missed')">Copy missed CSV</button>
+        <button class="btn primary" id="deckSaveBothBtn" style="padding:10px 18px; font-size:13px; background:#2563eb; width:100%; max-width:280px;" onclick="deckSaveMissedToSheet('both')">Copy missed + remaining</button>
+        <div style="display:flex; gap:6px; width:100%; max-width:280px;">
+          <select id="dbxPushBucketNum" style="padding:8px 7px; border:1px solid #ddd; border-radius:6px; font-size:12px; font-family:inherit; background:white; min-width:96px;"></select>
+          <button id="dbxPushBtn" style="flex:1; padding:10px 10px; font-size:13px; background:#0061fe; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:600; font-family:inherit; white-space:nowrap;">&#8593; Push</button>
+        </div>
+        <div id="dbxPushStatus" style="font-size:12px; color:#888; min-height:18px;"></div>
         <div id="deckSaveStatus" style="font-size:12px; color:#888; margin-top:6px; min-height:18px;"></div>
+        <textarea id="deckCsvTextarea" style="width:100%; max-width:280px; height:120px; font-size:11px; font-family:monospace; border:1px solid #ddd; border-radius:6px; padding:6px; box-sizing:border-box; resize:vertical;" readonly></textarea>
       </div>
       <div class="deck-done deck-hidden" id="deckDoneScreen">
         <div class="deck-done-big">Deck cleared!</div>
         <p id="deckDoneStats"></p>
         <p id="deckMissedStats" style="font-size:13px; color:#dc2626;"></p>
-        <button class="btn outline" id="deckDoneSaveBtn" style="padding:12px 20px; display:none; background:#16a34a; color:white; border-color:#16a34a;" onclick="deckSaveMissedToSheet('missed')">Download missed CSV</button>
+        <button class="btn primary" id="deckDoneSaveBtn" style="padding:12px 20px; display:none; background:#16a34a;" onclick="deckSaveMissedToSheet('missed')">Copy missed CSV</button>
         <div id="deckDoneSaveStatus" style="font-size:12px; color:#888; margin-top:6px; min-height:18px;"></div>
-        <button class="btn outline" id="deckRestartBtn" style="padding:12px 20px;">Review again</button>
+        <button class="btn primary" id="deckRestartBtn" style="padding:12px 20px;">Review again</button>
       </div>
     </div>
   </div>
@@ -1945,6 +1935,17 @@ function loadPastedSheet(loadAll) {
   document.getElementById('pasteStatus').className = 'status';
 }
 
+function pasteFromClipboard() {
+  var statusEl = document.getElementById('pasteCsvStatus');
+  navigator.clipboard.readText().then(function(text) {
+    if (!text.trim()) { statusEl.textContent = 'Clipboard is empty.'; return; }
+    document.getElementById('pasteCsvInput').value = text;
+    loadPastedCsv();
+  }).catch(function() {
+    statusEl.textContent = 'Clipboard access denied — paste manually.';
+  });
+}
+
 function loadPastedCsv() {
   var raw = document.getElementById('pasteCsvInput').value.trim();
   var statusEl = document.getElementById('pasteCsvStatus');
@@ -1954,6 +1955,7 @@ function loadPastedCsv() {
     statusEl.textContent = 'Loaded.';
     var section = document.getElementById('setupSection');
     if (!section.classList.contains('collapsed')) toggleSetup();
+    if (!deckViewOn) toggleDeckView();
   } else {
     statusEl.textContent = 'Error: could not parse CSV.';
   }
@@ -2516,16 +2518,13 @@ function startDeckSession() {
   deckTotal = deckQueue.length;
   deckCleared = 0; deckFlipped = false; deckMissedSet = new Set();
   document.getElementById('deckStage').style.display = '';
-  document.querySelector('.deck-controls').style.display = '';
-  document.getElementById('deckKeyHints').style.display = '';
   document.querySelector('.deck-progress-row').style.display = '';
   document.getElementById('deckDoneScreen').classList.add('deck-hidden');
-  document.getElementById('deckSaveArea').style.display = 'none';
   document.getElementById('deckSaveStatus').textContent = '';
   var saveMissedBtn = document.getElementById('deckSaveMissedBtn');
   var saveBothBtn = document.getElementById('deckSaveBothBtn');
-  saveMissedBtn.textContent = 'Download missed CSV'; saveMissedBtn.style.background = '#16a34a'; saveMissedBtn.disabled = false;
-  saveBothBtn.textContent = 'Download missed + remaining'; saveBothBtn.style.background = '#2563eb'; saveBothBtn.disabled = false;
+  saveMissedBtn.textContent = 'Copy missed CSV'; saveMissedBtn.style.background = '#16a34a'; saveMissedBtn.disabled = false;
+  saveBothBtn.textContent = 'Copy missed + remaining'; saveBothBtn.style.background = '#2563eb'; saveBothBtn.disabled = false;
   deckNextCard();
 }
 function deckUpdateProgress() {
@@ -2558,8 +2557,6 @@ function deckNextCard() {
 }
 function deckFinish() {
   document.getElementById('deckStage').style.display = 'none';
-  document.querySelector('.deck-controls').style.display = 'none';
-  document.getElementById('deckKeyHints').style.display = 'none';
   document.querySelector('.deck-progress-row').style.display = 'none';
   document.getElementById('deckSaveArea').style.display = 'none';
   document.getElementById('deckMissedCount').style.display = 'none';
@@ -2571,7 +2568,7 @@ function deckFinish() {
   document.getElementById('deckDoneSaveStatus').textContent = '';
   if (deckMissedSet.size > 0) {
     missedEl.textContent = deckMissedSet.size + ' word(s) you missed at least once.';
-    saveBtn.style.display = ''; saveBtn.textContent = 'Download missed CSV'; saveBtn.style.background = '#16a34a'; saveBtn.disabled = false;
+    saveBtn.style.display = ''; saveBtn.textContent = 'Copy missed CSV'; saveBtn.style.background = '#16a34a'; saveBtn.disabled = false;
   } else { missedEl.textContent = 'Perfect run — no misses!'; saveBtn.style.display = 'none'; }
 }
 function deckUpdateSaveButtons() {
@@ -2580,11 +2577,13 @@ function deckUpdateSaveButtons() {
   if (hasMissed) { missedCountEl.style.display = ''; missedCountEl.textContent = deckMissedSet.size + ' missed'; } else { missedCountEl.style.display = 'none'; }
   var remainingEl = document.getElementById('deckRemainingCount');
   if (hasRemaining) { remainingEl.style.display = ''; remainingEl.textContent = deckQueue.length + ' remaining'; } else { remainingEl.style.display = 'none'; }
-  var saveArea = document.getElementById('deckSaveArea'), saveMissedBtn = document.getElementById('deckSaveMissedBtn'), saveBothBtn = document.getElementById('deckSaveBothBtn');
-  if (hasMissed) { saveArea.style.display = ''; saveMissedBtn.style.display = ''; saveBothBtn.style.display = hasRemaining ? '' : 'none'; }
-  else { saveArea.style.display = 'none'; }
+  document.getElementById('deckSaveBothBtn').style.display = hasRemaining ? '' : 'none';
 }
-function deckFlipCard() { deckFlipped = !deckFlipped; document.getElementById('deckCard').classList.toggle('flipped', deckFlipped); }
+function deckFlipCard() {
+  if (deckFlipped) return;
+  deckFlipped = true;
+  document.getElementById('deckCard').classList.add('flipped');
+}
 function deckGrade(correct) {
   if (deckCurrent === null) return;
   if (!correct) { deckQueue.push(deckCurrent); deckMissedSet.add(deckCurrent); } else { deckCleared++; }
@@ -2604,25 +2603,26 @@ function deckAnimateOut(correct, cb) {
   setTimeout(function() { cardEl.style.transition = 'none'; cb(); }, 220);
 }
 document.getElementById('deckCard').addEventListener('click', function() { deckFlipCard(); });
-document.getElementById('deckMissBtn').addEventListener('click', function() { deckGrade(false); });
-document.getElementById('deckKnowBtn').addEventListener('click', function() { deckGrade(true); });
-// ── DECK KEYBOARD SHORTCUTS: Enter = flip, O = didn't know (✗), P = got it (✓) ──
+document.querySelectorAll('.deck-side-btn.correct').forEach(function(btn) {
+  btn.addEventListener('click', function() { deckGrade(true); });
+});
+document.querySelectorAll('.deck-side-btn.miss').forEach(function(btn) {
+  btn.addEventListener('click', function() { deckGrade(false); });
+});
+document.getElementById('deckRevealBtn').addEventListener('click', function() { deckFlipCard(); });
+document.getElementById('deckRestartBtn').addEventListener('click', function() { startDeckSession(); });
+// ── DECK KEYBOARD SHORTCUTS: ← again, ↑/Space flip, → got it ──
 document.addEventListener('keydown', function(e) {
   if (!deckViewOn || deckCurrent === null) return;
   if (document.getElementById('practiceOverlay').classList.contains('open')) return;
   if (e.target.matches('input, textarea, select')) return;
-  var key = e.key.toLowerCase();
-  if (e.key === 'Enter') {
-    e.preventDefault();
-    deckFlipCard();
-  } else if ((key === 'o' || key === 'p') && !e.repeat) {
-    e.preventDefault();
-    deckGrade(key === 'p');
-  }
+  if (e.key === 'ArrowLeft') { e.preventDefault(); deckGrade(false); }
+  else if (e.key === 'ArrowRight') { e.preventDefault(); deckGrade(true); }
+  else if (e.key === 'ArrowUp' || e.key === ' ') { e.preventDefault(); deckFlipCard(); }
 });
-document.getElementById('deckRestartBtn').addEventListener('click', function() { startDeckSession(); });
 function deckSaveMissedToSheet(mode) {
-  if (deckMissedSet.size === 0) return;
+  if (mode === 'missed' && deckMissedSet.size === 0) return;
+  if (mode === 'both' && deckMissedSet.size === 0 && deckQueue.length === 0 && deckCurrent === null) return;
   var csvRows = [], added = new Set();
   var sortedMissed = Array.from(deckMissedSet).sort(function(a, b) { return a - b; });
   sortedMissed.forEach(function(fi) {
@@ -2642,20 +2642,319 @@ function deckSaveMissedToSheet(mode) {
         }
       }
     });
+    if (deckCurrent !== null && !added.has(deckCurrent)) {
+      var item = filteredRows[deckCurrent];
+      if (item && (item.chinese || item.contextLine)) {
+        csvRows.push([item.chinese || item.contextLine, item.romanization || '', item.english || '']);
+        added.add(deckCurrent);
+      }
+    }
   }
   function csvEsc(s) { s = String(s); return (s.indexOf(',') >= 0 || s.indexOf('"') >= 0 || s.indexOf('\n') >= 0) ? '"' + s.replace(/"/g, '""') + '"' : s; }
   var lines = ['Chinese,Romanization,English'];
   csvRows.forEach(function(r) { lines.push(r.map(csvEsc).join(',')); });
-  var blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
-  var url = URL.createObjectURL(blob);
-  var a = document.createElement('a');
-  var now = new Date();
-  var pad = function(n) { return n < 10 ? '0' + n : '' + n; };
-  var dateStr = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate());
-  a.href = url; a.download = 'deck_' + (mode === 'both' ? 'missed_remaining' : 'missed') + '_' + dateStr + '.csv';
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  var csv = lines.join('\n');
+  var statusEl = document.getElementById('deckSaveStatus');
+  var textarea = document.getElementById('deckCsvTextarea');
+  textarea.value = csv;
+  navigator.clipboard.writeText(csv).then(function() {
+    statusEl.textContent = '\u2705 Copied ' + csvRows.length + ' term' + (csvRows.length === 1 ? '' : 's') + ' to clipboard';
+    setTimeout(function() { statusEl.textContent = ''; }, 3000);
+  }).catch(function() {
+    statusEl.textContent = 'Tap and select all in the box below to copy';
+  });
 }
+
+// ── TTS SELECTION TOOLTIP ──
+var TTS_TOOLTIP_LANGS = [
+  { key: 'A', label: '粵', lang: 'zh-HK', title: 'Cantonese' },
+  { key: 'M', label: '普', lang: 'zh-CN', title: 'Mandarin'  },
+  { key: 'E', label: 'En', lang: 'en-US', title: 'English'   },
+  { key: 'P', label: 'Es', lang: 'es-ES', title: 'Spanish'   },
+  { key: 'K', label: '한', lang: 'ko-KR', title: 'Korean'    },
+  { key: 'F', label: 'Fr', lang: 'fr-FR', title: 'French'    },
+];
+var TTS_TOOLTIP_STORAGE = 'chineseTts-tooltip-visible';
+var ttsTooltipEl = null;
+var ttsSettingsPanelOpen = false;
+
+function ttsTooltipGetVisible() {
+  try { return JSON.parse(localStorage.getItem(TTS_TOOLTIP_STORAGE)) || {}; } catch(e) { return {}; }
+}
+function ttsTooltipIsVisible(key) {
+  var v = ttsTooltipGetVisible(); return !(key in v) || v[key];
+}
+function ttsTooltipToggleLang(key) {
+  var v = ttsTooltipGetVisible(); v[key] = !ttsTooltipIsVisible(key);
+  try { localStorage.setItem(TTS_TOOLTIP_STORAGE, JSON.stringify(v)); } catch(e) {}
+  ttsTooltipRenderSettings();
+}
+function ttsTooltipSetAll(visible) {
+  var v = {}; TTS_TOOLTIP_LANGS.forEach(function(l) { v[l.key] = visible; });
+  try { localStorage.setItem(TTS_TOOLTIP_STORAGE, JSON.stringify(v)); } catch(e) {}
+  ttsTooltipRenderSettings();
+}
+
+function ttsTooltipSpeakText(text, lang) {
+  window.speechSynthesis.cancel();
+  var utt = new SpeechSynthesisUtterance(text);
+  utt.lang = lang;
+  utt.rate = lang.startsWith('zh') ? 0.8 : (lang.startsWith('es') || lang.startsWith('fr')) ? 0.9 : 1;
+  var voices = window.speechSynthesis.getVoices();
+  if (voices.length > 0) {
+    var v = voices.find(function(vv) { return vv.lang === lang && vv.name.includes('Google'); });
+    if (!v) v = voices.find(function(vv) { return vv.lang === lang && (vv.name.includes('Enhanced') || vv.name.includes('Premium')); });
+    if (!v) v = voices.find(function(vv) { return vv.lang === lang; });
+    if (!v && lang === 'zh-HK') v = voices.find(function(vv) { return vv.lang.startsWith('yue'); });
+    if (!v && lang.startsWith('zh')) v = voices.find(function(vv) { return vv.lang.startsWith('zh'); });
+    if (v) utt.voice = v;
+  }
+  window.speechSynthesis.speak(utt);
+}
+
+function ttsTooltipRemove() {
+  if (ttsTooltipEl) { ttsTooltipEl.remove(); ttsTooltipEl = null; }
+  ttsSettingsPanelOpen = false;
+}
+
+function ttsTooltipRenderSettings() {
+  if (!ttsTooltipEl) return;
+  var panel = ttsTooltipEl.querySelector('#tts-tooltip-settings');
+  if (!panel) return;
+  var allVisible = TTS_TOOLTIP_LANGS.every(function(l) { return ttsTooltipIsVisible(l.key); });
+  var html = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">' +
+    '<span style="color:#7ec8e3;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;">TTS Buttons</span>' +
+    '<button id="tts-settings-close" style="background:none;border:none;color:#888;font-size:16px;cursor:pointer;">&times;</button>' +
+    '</div>' +
+    '<button id="tts-settings-all" style="display:block;width:100%;margin-bottom:8px;padding:4px 0;background:none;border:1px solid #444;border-radius:5px;color:#aaa;font-size:11px;cursor:pointer;text-align:center;">' +
+    (allVisible ? 'Deselect All' : 'Select All') + '</button>';
+  TTS_TOOLTIP_LANGS.forEach(function(l) {
+    html += '<label style="display:flex;align-items:center;gap:8px;padding:5px 0;cursor:pointer;color:#ddd;font-size:13px;">' +
+      '<input type="checkbox" data-key="' + l.key + '"' + (ttsTooltipIsVisible(l.key) ? ' checked' : '') + ' style="cursor:pointer;accent-color:#7ec8e3;">' +
+      l.label + ' \u2014 ' + l.title + '</label>';
+  });
+  panel.innerHTML = html;
+  panel.style.display = ttsSettingsPanelOpen ? 'block' : 'none';
+  panel.querySelector('#tts-settings-close').addEventListener('mousedown', function(e) {
+    e.preventDefault(); ttsSettingsPanelOpen = false; panel.style.display = 'none';
+  });
+  panel.querySelector('#tts-settings-all').addEventListener('mousedown', function(e) {
+    e.preventDefault(); ttsTooltipSetAll(!allVisible);
+  });
+  panel.querySelectorAll('input[type="checkbox"]').forEach(function(cb) {
+    cb.addEventListener('change', function() { ttsTooltipToggleLang(cb.dataset.key); });
+  });
+}
+
+function ttsTooltipShow(x, y, text) {
+  ttsTooltipRemove();
+  var el = document.createElement('div');
+  el.id = 'bible-tts-tooltip';
+  el.style.cssText = 'position:fixed;left:' + Math.min(x, window.innerWidth - 240) + 'px;top:' + Math.max(y - 52, 8) + 'px;z-index:99999;display:flex;align-items:center;gap:4px;background:#1a1a2e;border:1px solid #7ec8e3;border-radius:8px;padding:4px 6px;box-shadow:0 4px 16px rgba(0,0,0,.5);white-space:nowrap;';
+  var inner = '';
+  TTS_TOOLTIP_LANGS.forEach(function(l) {
+    if (!ttsTooltipIsVisible(l.key)) return;
+    inner += '<button data-lang="' + l.lang + '" title="' + l.title + '" class="tts-tt-btn" style="border:none;border-radius:6px;cursor:pointer;padding:4px 8px;font-size:12px;font-weight:700;background:#2a2a4a;color:#eee;">' + l.label + '</button>';
+  });
+  inner += '<button id="tts-tt-gear" title="Choose visible languages" style="border:none;background:none;color:#888;cursor:pointer;font-size:13px;padding:4px;">&#9881;</button>';
+  inner += '<div id="tts-tooltip-settings" style="position:absolute;top:100%;left:0;margin-top:6px;background:#1a1a2e;border:1px solid #7ec8e3;border-radius:10px;padding:12px 14px;box-shadow:0 8px 28px rgba(0,0,0,.6);min-width:190px;z-index:1;display:none;"></div>';
+  el.innerHTML = inner;
+  document.body.appendChild(el);
+  ttsTooltipEl = el;
+  el.querySelectorAll('.tts-tt-btn').forEach(function(btn) {
+    btn.addEventListener('mousedown', function(e) { e.preventDefault(); ttsTooltipSpeakText(text, btn.dataset.lang); ttsTooltipRemove(); });
+    btn.addEventListener('mouseenter', function() { btn.style.background = '#7ec8e3'; btn.style.color = '#000'; });
+    btn.addEventListener('mouseleave', function() { btn.style.background = '#2a2a4a'; btn.style.color = '#eee'; });
+  });
+  el.querySelector('#tts-tt-gear').addEventListener('mousedown', function(e) {
+    e.preventDefault(); e.stopPropagation(); ttsSettingsPanelOpen = !ttsSettingsPanelOpen; ttsTooltipRenderSettings();
+  });
+  ttsTooltipRenderSettings();
+}
+
+document.addEventListener('mouseup', function(e) {
+  if (e.target.closest && e.target.closest('#bible-tts-tooltip')) return;
+  setTimeout(function() {
+    var sel = window.getSelection();
+    var text = sel ? sel.toString().trim() : '';
+    if (!text) { ttsTooltipRemove(); return; }
+    ttsTooltipShow(e.clientX, e.clientY, text);
+  }, 10);
+});
+document.addEventListener('mousedown', function(e) {
+  if (e.target.closest && e.target.closest('#bible-tts-tooltip')) return;
+  ttsTooltipRemove();
+});
+
+// ── DROPBOX BUCKET PUSH / PULL ──
+var DBX_TOKEN = null;
+
+function dbxBucketPath(n) { return '/flashcards/vercel/buckets' + n + '.txt'; }
+
+function dbxSetAuthBtn() {
+  var btn = document.getElementById('dbxAuthBtn');
+  if (!btn) return;
+  if (DBX_TOKEN) {
+    btn.textContent = '● Dropbox'; btn.style.color = '#0061fe'; btn.style.borderColor = '#0061fe'; btn.title = 'Connected — click to sign out';
+  } else {
+    btn.textContent = 'Dropbox'; btn.style.color = '#555'; btn.style.borderColor = '#ccc'; btn.title = 'Sign in to Dropbox';
+  }
+}
+
+async function dbxGetAppKey() {
+  if (['localhost', '127.0.0.1'].includes(window.location.hostname)) {
+    var k = localStorage.getItem('dropbox-app-key') || '';
+    if (!k) { k = prompt('Dropbox App Key:') || ''; if (k) localStorage.setItem('dropbox-app-key', k); }
+    return k;
+  }
+  try { var r = await fetch('/api/dropbox-key'); return (await r.json()).key || ''; } catch(e) { return ''; }
+}
+
+function dbxMakeVerifier() {
+  var a = new Uint8Array(64); crypto.getRandomValues(a);
+  return btoa(String.fromCharCode.apply(null, a)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+
+async function dbxMakeChallenge(v) {
+  var d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(v));
+  return btoa(String.fromCharCode.apply(null, new Uint8Array(d))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+
+async function dbxSignIn(pendingAction) {
+  var key = await dbxGetAppKey();
+  if (!key) { alert('Dropbox App Key not configured'); return; }
+  if (pendingAction) sessionStorage.setItem('dbx_pending', pendingAction);
+  var v = dbxMakeVerifier();
+  var c = await dbxMakeChallenge(v);
+  var uri = window.location.origin + window.location.pathname;
+  var authUrl = 'https://www.dropbox.com/oauth2/authorize?client_id=' + key +
+    '&response_type=code&code_challenge=' + c + '&code_challenge_method=S256&redirect_uri=' + encodeURIComponent(uri) + '&token_access_type=online';
+  localStorage.setItem('dbx_verifier', v);
+  var popup = window.open(authUrl, 'dropbox_auth', 'width=520,height=680,scrollbars=yes,resizable=yes');
+  if (!popup) {
+    localStorage.removeItem('dbx_verifier'); sessionStorage.setItem('dbx_verifier', v);
+    window.location.href = authUrl;
+  }
+}
+
+async function dbxHandleRedirect() {
+  var params = new URLSearchParams(window.location.search);
+  var code = params.get('code');
+  if (!code) return;
+  var v = localStorage.getItem('dbx_verifier') || sessionStorage.getItem('dbx_verifier');
+  var key = await dbxGetAppKey();
+  if (!v || !key) return;
+  var uri = window.location.origin + window.location.pathname;
+  try {
+    var r = await fetch('https://api.dropboxapi.com/oauth2/token', {
+      method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ code: code, grant_type: 'authorization_code', client_id: key, redirect_uri: uri, code_verifier: v }).toString()
+    });
+    var d = await r.json();
+    localStorage.removeItem('dbx_verifier'); sessionStorage.removeItem('dbx_verifier');
+    if (d.access_token) {
+      if (window.opener && !window.opener.closed) { window.opener.postMessage({ dropboxToken: d.access_token }, window.location.origin); window.close(); return; }
+      DBX_TOKEN = d.access_token; window.history.replaceState({}, document.title, window.location.pathname);
+    } else { if (window.opener && !window.opener.closed) window.close(); }
+  } catch(e) { console.error('Dropbox auth:', e); if (window.opener && !window.opener.closed) window.close(); }
+}
+
+async function dbxDownload(path) {
+  var r = await fetch('https://content.dropboxapi.com/2/files/download', {
+    method: 'POST', headers: { Authorization: 'Bearer ' + DBX_TOKEN, 'Dropbox-API-Arg': JSON.stringify({ path: path }) }
+  });
+  if (r.status === 401) { DBX_TOKEN = null; dbxSetAuthBtn(); throw new Error('Session expired — sign in again'); }
+  if (r.status === 409) throw new Error('File not found in Dropbox');
+  if (!r.ok) throw new Error('Download failed (' + r.status + ')');
+  return await r.text();
+}
+
+async function dbxUpload(path, content) {
+  var r = await fetch('https://content.dropboxapi.com/2/files/upload', {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + DBX_TOKEN, 'Dropbox-API-Arg': JSON.stringify({ path: path, mode: { '.tag': 'overwrite' }, mute: true }), 'Content-Type': 'application/octet-stream' },
+    body: content
+  });
+  if (r.status === 401) { DBX_TOKEN = null; dbxSetAuthBtn(); throw new Error('Session expired — sign in again'); }
+  if (!r.ok) throw new Error('Upload failed (' + r.status + ')');
+}
+
+function dbxPopulateBucketSelects() {
+  ['dbxPullBucketNum', 'dbxPushBucketNum'].forEach(function(id) {
+    var sel = document.getElementById(id); if (!sel) return;
+    sel.innerHTML = '';
+    for (var i = 1; i <= 10; i++) { var opt = document.createElement('option'); opt.value = i; opt.textContent = 'Bucket ' + i; sel.appendChild(opt); }
+  });
+}
+
+document.getElementById('dbxAuthBtn').addEventListener('click', function() {
+  if (DBX_TOKEN) {
+    try { fetch('https://api.dropboxapi.com/2/auth/token/revoke', { method: 'POST', headers: { Authorization: 'Bearer ' + DBX_TOKEN } }); } catch(e) {}
+    DBX_TOKEN = null; dbxSetAuthBtn();
+  } else { dbxSignIn(''); }
+});
+
+document.getElementById('dbxPullBtn').addEventListener('click', async function() {
+  var n = document.getElementById('dbxPullBucketNum').value;
+  var statusEl = document.getElementById('dbxPullStatus');
+  if (!DBX_TOKEN) { statusEl.textContent = 'Signing in\u2026'; await dbxSignIn('pull:' + n); return; }
+  var btn = this; btn.disabled = true; btn.textContent = 'Loading\u2026'; statusEl.textContent = '';
+  try {
+    var text = await dbxDownload(dbxBucketPath(n));
+    document.getElementById('pasteCsvInput').value = text;
+    loadPastedCsv();
+    statusEl.textContent = '\u2705 Loaded bucket ' + n;
+    setTimeout(function() { statusEl.textContent = ''; }, 2500);
+  } catch(e) { statusEl.textContent = '\u274c ' + e.message; }
+  finally { btn.disabled = false; btn.textContent = '\u2193 Load bucket'; }
+});
+
+document.getElementById('dbxPushBtn').addEventListener('click', async function() {
+  var n = document.getElementById('dbxPushBucketNum').value;
+  var statusEl = document.getElementById('dbxPushStatus');
+  var csvRows = [], added = new Set();
+  Array.from(deckMissedSet).sort(function(a,b){return a-b;}).forEach(function(fi) {
+    var item = filteredRows[fi]; if (item && (item.chinese || item.contextLine)) { csvRows.push([item.chinese || item.contextLine, item.romanization || '', item.english || '']); added.add(fi); }
+  });
+  deckQueue.forEach(function(fi) {
+    if (!added.has(fi)) { var item = filteredRows[fi]; if (item && (item.chinese || item.contextLine)) { csvRows.push([item.chinese || item.contextLine, item.romanization || '', item.english || '']); added.add(fi); } }
+  });
+  if (deckCurrent !== null && !added.has(deckCurrent)) {
+    var item = filteredRows[deckCurrent]; if (item && (item.chinese || item.contextLine)) { csvRows.push([item.chinese || item.contextLine, item.romanization || '', item.english || '']); added.add(deckCurrent); }
+  }
+  if (csvRows.length === 0) { statusEl.textContent = 'Nothing to push \u2014 no missed or remaining cards.'; return; }
+  function csvEsc(s) { s = String(s); return (s.indexOf(',') >= 0 || s.indexOf('"') >= 0 || s.indexOf('\n') >= 0) ? '"' + s.replace(/"/g, '""') + '"' : s; }
+  var lines = ['Chinese,Romanization,English'];
+  csvRows.forEach(function(r) { lines.push(r.map(csvEsc).join(',')); });
+  var csv = lines.join('\n');
+  if (!DBX_TOKEN) { statusEl.textContent = 'Signing in\u2026'; await dbxSignIn('push:' + n); return; }
+  var btn = this; btn.disabled = true; btn.textContent = 'Pushing\u2026'; statusEl.textContent = '';
+  try {
+    await dbxUpload(dbxBucketPath(n), csv);
+    statusEl.textContent = '\u2705 Pushed ' + csvRows.length + ' terms \u2192 bucket ' + n;
+    setTimeout(function() { statusEl.textContent = ''; }, 3000);
+  } catch(e) { statusEl.textContent = '\u274c ' + e.message; }
+  finally { btn.disabled = false; btn.textContent = '\u2191 Push'; }
+});
+
+function dbxResumePending() {
+  var pending = sessionStorage.getItem('dbx_pending'); if (!pending) return;
+  sessionStorage.removeItem('dbx_pending');
+  if (pending.startsWith('pull:')) { document.getElementById('dbxPullBucketNum').value = pending.slice(5); document.getElementById('dbxPullBtn').click(); }
+  else if (pending.startsWith('push:')) { document.getElementById('dbxPushBucketNum').value = pending.slice(5); document.getElementById('dbxPushBtn').click(); }
+}
+
+window.addEventListener('message', function(event) {
+  if (event.origin !== window.location.origin) return;
+  if (event.data && event.data.dropboxToken) { DBX_TOKEN = event.data.dropboxToken; dbxSetAuthBtn(); dbxResumePending(); }
+});
+
+(async function dbxBoot() {
+  dbxPopulateBucketSelects();
+  await dbxHandleRedirect();
+  dbxSetAuthBtn();
+  if (DBX_TOKEN) dbxResumePending();
+})();
 
 // ── INIT ──
 loadApiKey();

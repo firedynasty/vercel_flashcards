@@ -1896,7 +1896,7 @@ document.getElementById('deckRestartBtn').addEventListener('click', function() {
 // ── SAVE MISSED TO GOOGLE SHEET ──
 function deckSaveMissedToSheet(mode) {
   if (mode === 'missed' && deckMissedSet.size === 0) return;
-  if (mode === 'both' && deckMissedSet.size === 0 && deckQueue.length === 0) return;
+  if (mode === 'both' && deckMissedSet.size === 0 && deckQueue.length === 0 && deckCurrent === null) return;
   var csvRows = [], added = new Set();
   var sortedMissed = Array.from(deckMissedSet).sort(function(a, b) { return a - b; });
   sortedMissed.forEach(function(fi) {
@@ -1907,6 +1907,9 @@ function deckSaveMissedToSheet(mode) {
     deckQueue.forEach(function(fi) {
       if (!added.has(fi)) { var item = filteredVocab[fi]; if (item) { csvRows.push([item.term, item.definition]); added.add(fi); } }
     });
+    if (deckCurrent !== null && !added.has(deckCurrent)) {
+      var item = filteredVocab[deckCurrent]; if (item) { csvRows.push([item.term, item.definition]); added.add(deckCurrent); }
+    }
   }
   function csvEsc(s) { s = String(s); return (s.indexOf(',') >= 0 || s.indexOf('"') >= 0 || s.indexOf('\n') >= 0) ? '"' + s.replace(/"/g, '""') + '"' : s; }
   var lines = [];
@@ -2098,6 +2101,9 @@ document.getElementById('dbxPushBtn').addEventListener('click', async function()
   deckQueue.forEach(function(fi) {
     if (!added.has(fi)) { var item = filteredVocab[fi]; if (item) { csvRows.push([item.term, item.definition]); added.add(fi); } }
   });
+  if (deckCurrent !== null && !added.has(deckCurrent)) {
+    var item = filteredVocab[deckCurrent]; if (item) { csvRows.push([item.term, item.definition]); added.add(deckCurrent); }
+  }
   if (csvRows.length === 0) { statusEl.textContent = 'Nothing to push — no missed or remaining cards.'; return; }
   function csvEsc(s) { s = String(s); return (s.indexOf(',') >= 0 || s.indexOf('"') >= 0 || s.indexOf('\n') >= 0) ? '"' + s.replace(/"/g, '""') + '"' : s; }
   var csv = csvRows.map(function(r) { return r.map(csvEsc).join(','); }).join('\n');
