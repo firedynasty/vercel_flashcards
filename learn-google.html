@@ -687,7 +687,7 @@
     <button class="btn primary" id="deckSaveMissedBtn" style="padding:10px 18px; font-size:13px; background:#16a34a; width:100%; max-width:280px;" onclick="deckSaveMissedToSheet('missed')">Copy missed CSV</button>
     <button class="btn primary" id="deckSaveBothBtn" style="padding:10px 18px; font-size:13px; background:#2563eb; width:100%; max-width:280px;" onclick="deckSaveMissedToSheet('both')">Copy missed + remaining</button>
     <div id="deckSaveStatus" style="font-size:12px; color:#888; margin-top:6px; min-height:18px;"></div>
-    <textarea id="deckCsvTextarea" style="display:none; width:100%; max-width:280px; height:120px; font-size:11px; font-family:monospace; border:1px solid #ddd; border-radius:6px; padding:6px; box-sizing:border-box; resize:vertical;" readonly></textarea>
+    <textarea id="deckCsvTextarea" style="width:100%; max-width:280px; height:120px; font-size:11px; font-family:monospace; border:1px solid #ddd; border-radius:6px; padding:6px; box-sizing:border-box; resize:vertical;" readonly></textarea>
   </div>
   <div class="deck-done hidden" id="deckDoneScreen">
     <div class="deck-done-big">Deck cleared!</div>
@@ -1878,7 +1878,6 @@ function deckSaveMissedToSheet(mode) {
   var statusEl = document.getElementById('deckSaveStatus');
   var textarea = document.getElementById('deckCsvTextarea');
   textarea.value = csv;
-  textarea.style.display = '';
   navigator.clipboard.writeText(csv).then(function() {
     statusEl.textContent = '\u2705 Copied ' + csvRows.length + ' term' + (csvRows.length === 1 ? '' : 's') + ' to clipboard';
     setTimeout(function() { statusEl.textContent = ''; }, 3000);
