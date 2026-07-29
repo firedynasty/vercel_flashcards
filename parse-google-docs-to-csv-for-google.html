@@ -243,18 +243,26 @@ function showPreview(termCount, sectionCount, contextCount) {
   document.getElementById('previewTable').innerHTML = html;
 }
 
+function csvField(s) {
+  // Wrap in quotes if field contains comma, quote, or newline
+  if (s.indexOf(',') >= 0 || s.indexOf('"') >= 0 || s.indexOf('\n') >= 0) {
+    return '"' + s.replace(/"/g, '""') + '"';
+  }
+  return s;
+}
+
 function showOutput() {
   document.getElementById('outputSection').style.display = '';
 
   var csvLines = [];
   for (var i = 0; i < parsedLines.length; i++) {
     var p = parsedLines[i];
-    var line = p.raw;
-    // Wrap in quotes if it contains commas or quotes
-    if (line.indexOf(',') >= 0 || line.indexOf('"') >= 0) {
-      line = '"' + line.replace(/"/g, '""') + '"';
+    if (p.type === 'term') {
+      csvLines.push(csvField(p.term) + ',' + csvField(p.definition));
+    } else {
+      // headers and context: emit as single quoted field
+      csvLines.push(csvField(p.raw));
     }
-    csvLines.push(line);
   }
 
   document.getElementById('outputText').value = csvLines.join('\n');

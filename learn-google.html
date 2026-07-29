@@ -532,6 +532,7 @@
     <textarea id="pasteCsvInput" rows="5" style="width:100%;border:1px solid #ddd;border-radius:8px;padding:10px 14px;font-family:'SF Mono',Monaco,monospace;font-size:12px;line-height:1.6;resize:vertical;color:#333;" placeholder="Paste CSV content here (Term, Definition)&#10;hello,bonjour&#10;thank you,merci"></textarea>
     <div style="margin-top:6px;">
       <button class="btn primary" onclick="loadPastedCsv()">Load CSV</button>
+      <button class="btn outline" onclick="pasteFromClipboard()">Paste from clipboard</button>
       <span id="pasteCsvStatus" style="font-size:12px;color:#888;margin-left:8px;"></span>
     </div>
     <div style="font-size:11px;color:#aaa;margin-top:4px;line-height:1.4;">Copy from Numbers, Excel, a text file — Term, Definition format.</div>
@@ -540,10 +541,10 @@
   <div class="or-divider" id="orDivider">— OR —</div>
 
   <!-- Google Sheets Setup -->
-  <div class="setup-section" id="setupSection">
+  <div class="setup-section collapsed" id="setupSection">
     <div class="setup-header" onclick="toggleSetup()">
       <span>Load from Google Sheets</span>
-      <span class="toggle-arrow" id="setupArrow">&#9660;</span>
+      <span class="toggle-arrow" id="setupArrow">&#9658;</span>
     </div>
     <div class="setup-body">
       <div class="setup-row">
@@ -640,6 +641,11 @@
   <div class="deck-controls">
     <button class="deck-ctrl-btn miss" id="deckMissBtn">&#10007;</button>
     <button class="deck-ctrl-btn correct" id="deckKnowBtn">&#10003;</button>
+  </div>
+  <div style="display:flex; justify-content:center; gap:48px; margin-top:8px;">
+    <span style="font-size:11px; color:#aaa;"><kbd style="background:#f0f0f0; border:1px solid #ccc; border-radius:3px; padding:1px 5px; font-size:10px; color:#555;">←</kbd> again</span>
+    <span style="font-size:11px; color:#aaa;"><kbd style="background:#f0f0f0; border:1px solid #ccc; border-radius:3px; padding:1px 5px; font-size:10px; color:#555;">↑</kbd> flip</span>
+    <span style="font-size:11px; color:#aaa;"><kbd style="background:#f0f0f0; border:1px solid #ccc; border-radius:3px; padding:1px 5px; font-size:10px; color:#555;">→</kbd> got it</span>
   </div>
   <div style="text-align:center; margin-top:14px;">
     <span id="deckMissedCount" style="font-size:12px; color:#dc2626; display:none;">0 missed</span>
@@ -1243,6 +1249,17 @@ function exportHard() {
 }
 
 // ── FILE LOADING ──
+function pasteFromClipboard() {
+  var statusEl = document.getElementById('pasteCsvStatus');
+  navigator.clipboard.readText().then(function(text) {
+    if (!text.trim()) { statusEl.textContent = 'Clipboard is empty.'; return; }
+    document.getElementById('pasteCsvInput').value = text;
+    loadPastedCsv();
+  }).catch(function() {
+    statusEl.textContent = 'Clipboard access denied — paste manually.';
+  });
+}
+
 function loadPastedCsv() {
   var raw = document.getElementById('pasteCsvInput').value.trim();
   var statusEl = document.getElementById('pasteCsvStatus');
@@ -1852,7 +1869,7 @@ document.addEventListener('keydown', function(e) {
   if (deckViewOn && deckCurrent !== null) {
     if (e.key === 'ArrowLeft') { e.preventDefault(); deckGrade(false); return; }
     if (e.key === 'ArrowRight') { e.preventDefault(); deckGrade(true); return; }
-    if (e.key === ' ') { e.preventDefault(); deckFlipCard(); return; }
+    if (e.key === ' ' || e.key === 'ArrowUp') { e.preventDefault(); deckFlipCard(); return; }
     return;
   }
 
