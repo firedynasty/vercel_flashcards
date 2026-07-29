@@ -1308,6 +1308,7 @@ function loadPastedCsv() {
     document.getElementById('exportAllBtn').style.display = '';
     document.getElementById('uploadZone').style.display = 'none';
     filterAndRender();
+    activateDeckView();
   } catch(err) { statusEl.textContent = 'Parse error: ' + err.message; }
 }
 
@@ -1655,6 +1656,28 @@ function tblSpeak(n, btnEl) {
 }
 
 // ── DECK VIEW (Mango-style swipe review) ──
+function activateDeckView() {
+  if (!deckViewOn) {
+    deckViewOn = true;
+    document.getElementById('toggleDeckView').className = 'toggle-chip on';
+    var cardsArea = document.getElementById('cardsArea');
+    var tableContainer = document.getElementById('tableViewContainer');
+    var deckContainer = document.getElementById('deckViewContainer');
+    if (tableViewOn) {
+      tableViewOn = false;
+      document.getElementById('toggleTableView').className = 'toggle-chip';
+      tableContainer.classList.remove('active');
+      if (dataTableInstance) { dataTableInstance.destroy(); dataTableInstance = null; }
+      document.getElementById('tableViewInner').innerHTML = '';
+    }
+    cardsArea.style.display = 'none';
+    deckContainer.classList.add('active');
+    startDeckSession();
+  } else {
+    startDeckSession();
+  }
+}
+
 function toggleDeckView() {
   deckViewOn = !deckViewOn;
   document.getElementById('toggleDeckView').className = 'toggle-chip' + (deckViewOn ? ' on' : '');
