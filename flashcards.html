@@ -954,6 +954,7 @@
         </div>
 
         <button class="paste-btn" id="pasteToOutlineBtn" title="Open Paste → Outline" style="border: 2px solid #7a5c2e; color: #7a5c2e;">Paste → Outline</button>
+        <button class="paste-btn" id="tallyLoggerBtn" title="Open Tally Logger" style="border: 2px solid #3f6b4a; color: #3f6b4a;">Tally Logger</button>
         <input type="file" id="folderFlatInput" accept=".txt,.md" multiple style="display:none">
         <button class="paste-btn" id="folderFlatBtn" title="Load .txt or .md files" style="border: 2px dotted;">Load .txt File</button>
         <button class="paste-btn" id="todoListBtn" title="Open Todo List" style="border: 2px solid #0FC0F5; color: #0FC0F5;">Todo</button>
@@ -2405,6 +2406,10 @@ God loves the world
 
             document.getElementById('pasteToOutlineBtn').addEventListener('click', () => {
                 window.open('pasteToOutline.html', '_blank');
+            });
+
+            document.getElementById('tallyLoggerBtn').addEventListener('click', () => {
+                window.open('tallyLogger/index.html', '_blank');
             });
 
             document.getElementById('learnFrenchTtsBtn').addEventListener('click', () => {
