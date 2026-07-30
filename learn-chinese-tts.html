@@ -33,7 +33,6 @@
     background: white;
     overflow: hidden;
   }
-  .setup-section.collapsed .setup-body { display: none; }
   .setup-header {
     display: flex; align-items: center; justify-content: space-between;
     padding: 10px 16px; background: #f5f5f5; cursor: pointer; user-select: none;
@@ -94,10 +93,6 @@
   .lyrics-info {
     display: flex; align-items: center; justify-content: space-between;
     margin-bottom: 14px; flex-wrap: wrap; gap: 8px;
-  }
-  .lyrics-info .lesson-tag {
-    font-size: 11px; font-weight: 700; letter-spacing: 2px;
-    text-transform: uppercase; color: #2563eb;
   }
   .lyrics-info .count { font-size: 12px; color: #888; }
 
@@ -175,16 +170,6 @@
   }
   .tooltip-on .vocab-card:hover .def-tip { display: block; }
 
-  /* ── CLICK-TO-REVEAL (per-card) ── */
-  .vocab-card.revealed .english.hidden { display: block; }
-  .vocab-card.revealed .romanization.hidden { display: block; }
-  .vocab-card.revealed { background-color: #f0fdf4; border-color: #bbf7d0; }
-
-  /* ── MARK AS HARD ── */
-  .vocab-card.hard { background-color: #f3e8ff; border-color: #c4b5fd; }
-  .vocab-card.hard:hover { background-color: #ede5ff; }
-  .vocab-card.hard.revealed { background-color: #ede9fe; border-color: #a78bfa; }
-
   /* ── HOVER-REVEAL SLIDER ── */
   .tip-toggle {
     display: flex; align-items: center; gap: 6px;
@@ -206,37 +191,6 @@
     box-shadow: 0 1px 3px rgba(0,0,0,0.3);
   }
   .tip-knob.on { left: 21px; }
-
-  /* ── ANSWER AREA (inline on vocab cards) ── */
-  .answer-area {
-    display: none;
-    padding: 8px 0 0;
-    border-top: 1px dashed #e5e7eb;
-    margin-top: 8px;
-  }
-  .answer-area.open { display: block; }
-  .answer-area textarea {
-    width: 100%; min-height: 50px;
-    border: 1px solid #ddd; border-radius: 8px;
-    padding: 8px 12px; font-family: inherit; font-size: 13px;
-    line-height: 1.55; resize: vertical; color: #333;
-  }
-  .answer-area textarea:focus { outline: none; border-color: #2563eb; }
-  .answer-area textarea::placeholder { color: #c0c0c0; }
-  .answer-hint {
-    margin-top: 4px; font-size: 11px; color: #b0b0b0;
-    display: flex; justify-content: space-between;
-  }
-  .char-count { font-weight: 600; color: #16a34a; }
-  .try-btn {
-    font-size: 11px; padding: 3px 10px; border-radius: 10px;
-    border: 1px solid #d0d0d0; background: #f5f5f3; color: #555;
-    cursor: pointer; font-weight: 600; font-family: inherit;
-    transition: background 0.15s, border-color 0.15s, color 0.15s;
-    white-space: nowrap;
-  }
-  .try-btn:hover { background: #e0e7ff; border-color: #a5b4fc; color: #4338ca; }
-  .try-btn.open  { background: #dbeafe; border-color: #93c5fd; color: #1d4ed8; }
 
   /* ── STICKY BAR ── */
   .sticky-bar {
@@ -317,63 +271,6 @@
     width: 14px; height: 14px; border-radius: 50%;
     background: #2563eb; border: none; cursor: pointer;
   }
-
-  /* ── PRACTICE MODAL ── */
-  .practice-overlay {
-    display: none; position: fixed; inset: 0; z-index: 2000;
-    background: rgba(0,0,0,0.7); align-items: center; justify-content: center;
-  }
-  .practice-overlay.open { display: flex; }
-  .practice-modal {
-    background: white; border-radius: 16px; width: 95%; max-width: 600px;
-    padding: 28px 28px 20px; position: relative;
-    box-shadow: 0 16px 50px rgba(0,0,0,0.35);
-  }
-  .practice-close {
-    position: absolute; top: 12px; right: 16px; border: none; background: none;
-    font-size: 24px; cursor: pointer; color: #999; line-height: 1;
-  }
-  .practice-close:hover { color: #333; }
-  .practice-nav {
-    display: flex; align-items: center; justify-content: space-between;
-    margin-bottom: 16px;
-  }
-  .practice-nav button {
-    border: none; border-radius: 8px; padding: 8px 18px;
-    font-size: 14px; font-weight: 600; cursor: pointer;
-    background: #e5e7eb; color: #333; transition: background 0.15s;
-  }
-  .practice-nav button:hover { background: #d1d5db; }
-  .practice-nav button:disabled { opacity: 0.3; cursor: not-allowed; }
-  .practice-counter {
-    font-size: 13px; font-weight: 700; color: #555;
-  }
-  .practice-card-chinese {
-    font-size: 32px; font-weight: 700; text-align: center;
-    margin-bottom: 8px; cursor: pointer; color: #1a1a1a;
-  }
-  .practice-card-chinese:hover { color: #2563eb; }
-  .practice-card-rom {
-    font-size: 15px; color: #888; font-style: italic; text-align: center;
-    margin-bottom: 6px;
-  }
-  .practice-card-eng {
-    font-size: 15px; color: #15803d; background: #f0fdf4;
-    border: 1px solid #bbf7d0; border-radius: 8px; padding: 10px 14px;
-    text-align: center; margin-bottom: 14px;
-  }
-  .practice-textarea {
-    width: 100%; min-height: 80px; border: 2px solid #ddd; border-radius: 10px;
-    padding: 12px 14px; font-family: inherit; font-size: 15px;
-    line-height: 1.55; resize: vertical; color: #333;
-  }
-  .practice-textarea:focus { outline: none; border-color: #2563eb; }
-  .practice-textarea::placeholder { color: #c0c0c0; }
-  .practice-hint {
-    margin-top: 6px; font-size: 11px; color: #aaa;
-    display: flex; justify-content: space-between;
-  }
-  .practice-hint .char-count { font-weight: 600; color: #16a34a; }
 
   /* ── TABLE VIEW ── */
   #tableViewContainer { display: none; padding-top: 50px; }
@@ -507,7 +404,7 @@
       <!-- OpenAI Voice Picker -->
       <div class="setup-row" id="openaiVoiceRow" style="display:none;">
         <label>Voice</label>
-        <select id="openaiVoiceSelect">
+        <select id="openaiVoiceSelect" onchange="localStorage.setItem('chineseTts_openaiVoice', this.value)">
           <option value="alloy">Alloy</option>
           <option value="echo">Echo</option>
           <option value="fable">Fable</option>
@@ -527,7 +424,7 @@
         </div>
         <div class="setup-row" id="elevenVoiceRow">
           <label>Voice</label>
-          <select id="elevenVoiceSelect">
+          <select id="elevenVoiceSelect" onchange="localStorage.setItem('chineseTts_elevenVoice', this.value)">
             <option value="pNInz6obpgDQGcFmaJgB">Adam (deep, warm)</option>
             <option value="ErXwobaYiN019PkySvjV">Antoni (calm)</option>
             <option value="VR6AewLTigWG4xSOukaG">Arnold (strong)</option>
@@ -551,33 +448,27 @@
       </div>
       <div class="hint">Picks the first .csv, .txt (;delimited), or .xlsx and all .mp4 files from the top level of the folder.</div>
 
-      <div class="setup-row">
-        <label>Lesson</label>
-        <select id="lessonSelect" disabled onchange="onLessonSelect()">
-          <option value="">Load CSV first</option>
-        </select>
-      </div>
       <div class="status" id="status"></div>
       <!-- hidden stubs to avoid JS errors from Google Sheets code -->
       <select id="sheetSelect" style="display:none"></select>
       <input id="searchInput" style="display:none">
       <button id="searchBtn" style="display:none"></button>
       <button id="authBtn" style="display:none"></button>
-      <div id="pasteStatus" style="display:none"></div>
-      <textarea id="pasteSheetInput" style="display:none"></textarea>
-      <input id="pasteRowFrom" style="display:none">
-      <input id="pasteRowTo" style="display:none">
-      <span id="pasteRowCount" style="display:none"></span>
     </div>
   </div>
 
   <!-- Paste CSV (always visible) -->
   <div style="margin:8px 0 0; padding:12px 16px; border:1px solid #e0e0e0; border-radius:10px; background:white;">
     <div style="font-size:12px;font-weight:600;color:#555;margin-bottom:6px;">Paste CSV</div>
+    <div style="display:flex;gap:16px;align-items:center;margin-bottom:6px;font-size:12px;color:#555;flex-wrap:wrap;">
+      <label style="cursor:pointer;display:flex;align-items:center;gap:4px;"><input type="radio" name="csvColMode" value="3" checked> 3 columns <span style="color:#999;">(language, pronunciation, definition)</span></label>
+      <label style="cursor:pointer;display:flex;align-items:center;gap:4px;"><input type="radio" name="csvColMode" value="2"> 2 columns <span style="color:#999;">(language, definition)</span></label>
+    </div>
     <textarea id="pasteCsvInput" rows="5" style="width:100%;border:1px solid #ddd;border-radius:8px;padding:10px 14px;font-family:'SF Mono',Monaco,monospace;font-size:12px;line-height:1.6;resize:vertical;color:#333;" placeholder="Paste CSV content here (Chinese,Pinyin,English)&#10;一,yī,one&#10;五,wǔ,five&#10;魚,yú,fish"></textarea>
     <div style="margin-top:6px;">
       <button class="btn primary" onclick="loadPastedCsv()">Load CSV</button>
       <button class="btn outline" onclick="pasteFromClipboard()">Paste from clipboard</button>
+      <button class="btn outline" onclick="pasteFromSheets()">Paste from Sheets</button>
       <span id="pasteCsvStatus" style="font-size:12px;color:#888;margin-left:8px;"></span>
     </div>
   </div>
@@ -603,7 +494,6 @@
   <!-- Lyrics Area -->
   <div class="lyrics-area" id="lyricsArea">
     <div class="lyrics-info">
-      <span class="lesson-tag" id="lessonTag"></span>
       <span class="count" id="countLabel"></span>
     </div>
 
@@ -622,13 +512,16 @@
       </select>
       <button onclick="document.getElementById('learnModal').style.display='flex'" style="font-size:12px;font-weight:700;width:22px;height:22px;border-radius:50%;border:1px solid #aaa;background:white;color:#555;cursor:pointer;" title="Learning approach guide">?</button>
       <div class="sep"></div>
-      <span class="toggle-chip on" id="toggleChinese" onclick="toggleSetting('chinese')">Chin</span>
-      <span class="toggle-chip on" id="toggleRomanization" onclick="toggleSetting('romanization')">Pin</span>
-      <span class="toggle-chip on" id="toggleMeaning" onclick="toggleSetting('meanings')">Eng</span>
-      <span class="toggle-chip on" id="toggleSentences" onclick="toggleSetting('sentences')">Sent</span>
-      <div class="sep"></div>
-      <label style="font-size:12px;font-weight:600;cursor:pointer;"><input type="radio" name="dialectBar" value="mandarin" checked onchange="setDialect('mandarin')"> Mandarin</label>
-      <label style="font-size:12px;font-weight:600;cursor:pointer;"><input type="radio" name="dialectBar" value="cantonese" onchange="setDialect('cantonese')"> Cantonese</label>
+      <select id="ttsLangSelect" onchange="setTtsLang(this.value)" title="TTS playback language" style="font-size:12px;padding:3px 6px;">
+        <option value="zh-CN">Mandarin</option>
+        <option value="zh-HK">Cantonese</option>
+        <option value="en-US">English</option>
+        <option value="es-ES">Spanish</option>
+        <option value="ko-KR">Korean</option>
+        <option value="fr-FR">French</option>
+        <option value="el-GR">Greek</option>
+        <option value="he-IL">Hebrew</option>
+      </select>
       <div class="sep"></div>
       <div class="tip-toggle" onclick="setTooltipMode(!tooltipOn)" title="Hover any card to reveal its English meaning">
         <span>Reveal on hover</span>
@@ -642,24 +535,6 @@
       <span class="toggle-chip" id="toggleTableView" onclick="toggleTableView()">Table</span>
       <span class="toggle-chip" id="toggleDeckView" onclick="toggleDeckView()">Deck</span>
       <a href="https://vercel-spanish-chinese.vercel.app/chinese-glosser" target="_blank" class="toggle-chip" style="text-decoration:none;background:#0EA5E9;color:white;border-color:#0EA5E9;">Glosser</a>
-      <div class="sep"></div>
-      <button class="btn outline" style="font-size:11px;padding:4px 10px;" onclick="exportAll()">&#128203; Export All</button>
-      <button class="try-btn" id="toggleAllTryBtn" onclick="openPracticeModal()">&#9660; Practice</button>
-      <button class="try-btn" onclick="openPracticeModal(true)">&#9660; Randomize</button>
-      <button class="btn outline" style="font-size:11px;padding:4px 10px;background:#f3e8ff;border-color:#c4b5fd;" onclick="exportHard()">&#128203; Export Hard</button>
-    </div>
-
-    <!-- Export compare modal -->
-    <div id="exportModal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.55);align-items:center;justify-content:center;" onclick="if(event.target===this)this.style.display='none'">
-      <div style="background:white;border-radius:14px;max-width:720px;width:95%;max-height:85vh;overflow-y:auto;padding:24px 28px;box-shadow:0 12px 40px rgba(0,0,0,0.3);position:relative;">
-        <button onclick="document.getElementById('exportModal').style.display='none'" style="position:absolute;top:12px;right:14px;border:none;background:none;font-size:22px;cursor:pointer;color:#999;">&times;</button>
-        <h3 style="margin:0 0 16px;font-size:17px;color:#1a1a1a;">Compare Your Answers</h3>
-        <div id="exportModalBody" style="font-size:13px;"></div>
-        <div style="margin-top:16px;display:flex;gap:10px;justify-content:flex-end;">
-          <button onclick="copyExportText()" class="btn outline" style="font-size:12px;padding:6px 14px;">Copy for AI Grading</button>
-          <button onclick="document.getElementById('exportModal').style.display='none'" class="btn outline" style="font-size:12px;padding:6px 14px;">Close</button>
-        </div>
-      </div>
     </div>
 
     <!-- Learning approach modal -->
@@ -676,9 +551,8 @@
             <p style="font-size:12px;line-height:1.6;color:#1e40af;margin:0;">
               Focus on pinyin + tones. Skip characters at first. Use TTS, listen and repeat. Train your ear before your eyes.
             </p>
-            <div style="margin-top:10px;font-size:11px;color:#3b82f6;font-weight:600;">Suggested settings:</div>
+            <div style="margin-top:10px;font-size:11px;color:#3b82f6;font-weight:600;">Tip:</div>
             <div style="font-size:11px;color:#555;line-height:1.6;margin-top:2px;">
-              Chin <strong>OFF</strong> &middot; Pin <strong>ON</strong> &middot; Eng <strong>ON</strong> &middot; Sent <strong>ON</strong><br>
               Reveal on hover for self-testing
             </div>
           </div>
@@ -687,10 +561,9 @@
             <p style="font-size:12px;line-height:1.6;color:#78350f;margin:0;">
               Focus on characters. Each one is its own memorization project (~2,000-3,000 to read a newspaper). Attach sounds to shapes you recognize.
             </p>
-            <div style="margin-top:10px;font-size:11px;color:#d97706;font-weight:600;">Suggested settings:</div>
+            <div style="margin-top:10px;font-size:11px;color:#d97706;font-weight:600;">Tip:</div>
             <div style="font-size:11px;color:#555;line-height:1.6;margin-top:2px;">
-              Chin <strong>ON</strong> &middot; Pin <strong>OFF</strong> &middot; Eng <strong>ON</strong> &middot; Sent <strong>ON</strong><br>
-              Use answer area to practice writing
+              Use the Deck view to self-test
             </div>
           </div>
         </div>
@@ -700,29 +573,6 @@
         <p style="font-size:11px;line-height:1.55;color:#999;margin:8px 0 0;">
           Clicking any card or sentence automatically copies the Chinese text to your clipboard &mdash; paste into <strong>translate.google.com</strong> to hear it read aloud.
         </p>
-      </div>
-    </div>
-
-    <!-- Practice modal -->
-    <div class="practice-overlay" id="practiceOverlay" onclick="if(event.target===this)closePracticeModal()">
-      <div class="practice-modal">
-        <button class="practice-close" onclick="closePracticeModal()">&times;</button>
-        <div class="practice-nav">
-          <button id="pracPrev" onclick="pracNavigate(-1)">&larr; Prev</button>
-          <span class="practice-counter" id="pracCounter">1 / 10</span>
-          <button id="pracNext" onclick="pracNavigate(1)">Next &rarr;</button>
-        </div>
-        <div class="practice-card-chinese" id="pracChinese" onclick="speakPracCard()"></div>
-        <div class="practice-card-rom" id="pracRom"></div>
-        <div class="practice-card-eng" id="pracEng"></div>
-        <textarea class="practice-textarea" id="pracTextarea" placeholder="Type your answer&#8230;"></textarea>
-        <div class="practice-hint">
-          <span>&larr; &rarr; arrow keys to navigate &middot; Esc to close</span>
-          <span class="char-count" id="pracCharCount"></span>
-        </div>
-        <div style="margin-top:12px;text-align:right;">
-          <button class="btn outline" style="font-size:12px;padding:6px 14px;" onclick="savePracAnswer();closePracticeModal();exportAll()">&#128203; Export All</button>
-        </div>
       </div>
     </div>
 
@@ -805,9 +655,9 @@ let gdriveCurrentSheetName = null;
 
 let allRows = [];
 let filteredRows = [];
-var hardSet = new Set();
 let ttsEngine = 'browser'; // 'browser' or 'openai'
 let dialect = 'mandarin'; // 'mandarin' or 'cantonese'
+var ttsLang = localStorage.getItem('chineseTts_ttsLang') || 'zh-CN'; // browser TTS playback language
 let ttsRate = 1;
 let autoAdvance = false;
 let currentSpeakingIndex = -1;
@@ -823,14 +673,7 @@ var deckCurrent = null;
 var deckFlipped = false;
 var deckMissedSet = new Set();
 
-let showMeanings = localStorage.getItem('chineseTts_showMeanings') !== null ? localStorage.getItem('chineseTts_showMeanings') === 'true' : true;
-let showChinese = localStorage.getItem('chineseTts_showChinese') !== null ? localStorage.getItem('chineseTts_showChinese') === 'true' : true;
-let showRomanization = localStorage.getItem('chineseTts_showRomanization') !== null ? localStorage.getItem('chineseTts_showRomanization') === 'true' : true;
-let showSentences = localStorage.getItem('chineseTts_showSentences') !== null ? localStorage.getItem('chineseTts_showSentences') === 'true' : true;
 let tooltipOn = false;
-let userAnswers = {};  // index -> string
-let expanded = {};     // index -> bool
-let allExpanded = false;
 
 // ── OPENAI API KEY (localStorage) ──
 function getApiKey() {
@@ -864,19 +707,24 @@ function getElevenLabsKey() {
   return localStorage.getItem('elevenlabs_api_key') || '';
 }
 
-// ── DIALECT ──
+// ── DIALECT / TTS LANGUAGE ──
 function setDialect(d) {
-  dialect = d;
-  document.getElementById('dialectMandarin').className = d === 'mandarin' ? 'active' : '';
-  document.getElementById('dialectCantonese').className = d === 'cantonese' ? 'active' : '';
-  // Sync sticky bar radio buttons
-  var radios = document.querySelectorAll('input[name="dialectBar"]');
-  radios.forEach(function(r) { r.checked = r.value === d; });
+  setTtsLang(d === 'cantonese' ? 'zh-HK' : 'zh-CN');
+}
+function setTtsLang(lang) {
+  ttsLang = lang;
+  dialect = lang === 'zh-HK' ? 'cantonese' : 'mandarin';
+  try { localStorage.setItem('chineseTts_ttsLang', lang); } catch(e) {}
+  var sel = document.getElementById('ttsLangSelect');
+  if (sel) sel.value = lang;
+  document.getElementById('dialectMandarin').className = lang === 'zh-CN' ? 'active' : '';
+  document.getElementById('dialectCantonese').className = lang === 'zh-HK' ? 'active' : '';
 }
 
 // ── TTS ENGINE ──
 function setTtsEngine(engine) {
   ttsEngine = engine;
+  try { localStorage.setItem('chineseTts_ttsEngine', engine); } catch(e) {}
   document.getElementById('ttsToggleBrowser').className = engine === 'browser' ? 'active' : '';
   document.getElementById('ttsToggleOpenai').className = engine === 'openai' ? 'active' : '';
   document.getElementById('ttsToggleEleven').className = engine === 'elevenlabs' ? 'active' : '';
@@ -906,7 +754,7 @@ function speakText(text, onEnd) {
 
 function speakBrowser(text, onEnd) {
   var utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = dialect === 'cantonese' ? 'zh-HK' : 'zh-CN';
+  utterance.lang = ttsLang;
   utterance.rate = ttsRate;
   utterance.onend = function() { if (onEnd) onEnd(); };
   speechSynthesis.speak(utterance);
@@ -1006,43 +854,6 @@ function stopSpeaking() {
   }
 }
 
-// ── EXPAND / COLLAPSE ANSWER ──
-function toggleExpand(i) {
-  expanded[i] = !expanded[i];
-  var area = document.getElementById('area-' + i);
-  if (!area) return;
-
-  var tryBtn = document.getElementById('trybtn-' + i);
-  if (expanded[i]) {
-    area.classList.add('open');
-    if (tryBtn) { tryBtn.classList.add('open'); tryBtn.textContent = '\u25b2 Hide'; }
-    var ta = document.getElementById('ta-' + i);
-    if (ta) setTimeout(function() { ta.focus(); }, 40);
-  } else {
-    area.classList.remove('open');
-    if (tryBtn) { tryBtn.classList.remove('open'); tryBtn.textContent = '\u270e Answer'; }
-  }
-}
-
-// ── TOGGLE ALL EXPAND ──
-function toggleAllExpand() {
-  allExpanded = !allExpanded;
-  var btn = document.getElementById('toggleAllTryBtn');
-  btn.textContent = allExpanded ? '\u25b2 Close All' : '\u25bc Open All';
-  btn.classList.toggle('open', allExpanded);
-
-  filteredRows.forEach(function(row, i) {
-    expanded[i] = allExpanded;
-    var area = document.getElementById('area-' + i);
-    var tryBtn = document.getElementById('trybtn-' + i);
-    if (area) area.classList.toggle('open', allExpanded);
-    if (tryBtn) {
-      tryBtn.classList.toggle('open', allExpanded);
-      tryBtn.textContent = allExpanded ? '\u25b2 Hide' : '\u270e Answer';
-    }
-  });
-}
-
 // ── SPEAK LINE (click on line) ──
 function copyToClipboard(text) {
   navigator.clipboard.writeText(text).catch(function() {});
@@ -1111,19 +922,6 @@ function clearHighlight() {
   });
 }
 
-// ── TOGGLE SETTINGS ──
-function toggleSetting(key) {
-  if (key === 'meanings') showMeanings = !showMeanings;
-  if (key === 'chinese') showChinese = !showChinese;
-  if (key === 'romanization') showRomanization = !showRomanization;
-  if (key === 'sentences') showSentences = !showSentences;
-  localStorage.setItem('chineseTts_showMeanings', showMeanings);
-  localStorage.setItem('chineseTts_showChinese', showChinese);
-  localStorage.setItem('chineseTts_showRomanization', showRomanization);
-  localStorage.setItem('chineseTts_showSentences', showSentences);
-  renderLyrics();
-}
-
 // ── AUTO ADVANCE ──
 function setAutoAdvance(val) {
   autoAdvance = val;
@@ -1162,15 +960,7 @@ function renderLyrics() {
   area.classList.add('active');
   document.getElementById('stickyBar').classList.add('active');
 
-  var lesson = document.getElementById('lessonSelect').value || 'All Lessons';
-  document.getElementById('lessonTag').textContent = lesson;
   document.getElementById('countLabel').textContent = filteredRows.length + ' lines';
-
-  // Update toggle chips
-  document.getElementById('toggleMeaning').className = 'toggle-chip' + (showMeanings ? ' on' : '');
-  document.getElementById('toggleChinese').className = 'toggle-chip' + (showChinese ? ' on' : '');
-  document.getElementById('toggleRomanization').className = 'toggle-chip' + (showRomanization ? ' on' : '');
-  document.getElementById('toggleSentences').className = 'toggle-chip' + (showSentences ? ' on' : '');
 
   var container = document.getElementById('linesContainer');
   container.innerHTML = '';
@@ -1189,7 +979,6 @@ function renderLyrics() {
 
     // Context/sentence line
     if (row.contextLine) {
-      if (!showSentences) return; // hidden by toggle
       var ctx = document.createElement('div');
       ctx.className = 'context-line' + (row.isRepeat ? ' repeat' : '');
       ctx.id = 'card-' + i;
@@ -1219,110 +1008,39 @@ function renderLyrics() {
 
     wordNum++;
     var card = document.createElement('div');
-    card.className = 'vocab-card' + (hardSet.has(i) ? ' hard' : '');
+    card.className = 'vocab-card';
     card.id = 'card-' + i;
-
-    // Click the card area to toggle hard marker (except on chinese text or textarea)
-    card.onclick = (function(capturedI) {
-      return function(e) {
-        if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'BUTTON') return;
-        if (e.target.classList.contains('chinese')) return; // handled separately
-        this.classList.toggle('hard');
-        if (hardSet.has(capturedI)) { hardSet.delete(capturedI); } else { hardSet.add(capturedI); }
-        updateHardCount();
-      };
-    })(i);
-
-    // Top row: num + answer button
-    var topRow = document.createElement('div');
-    topRow.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;';
 
     var num = document.createElement('div');
     num.className = 'num';
-    num.style.marginBottom = '0';
     num.textContent = '#' + wordNum;
-    topRow.appendChild(num);
+    card.appendChild(num);
 
-    var tryBtn = document.createElement('button');
-    tryBtn.className = 'try-btn' + (expanded[i] ? ' open' : '');
-    tryBtn.id = 'trybtn-' + i;
-    tryBtn.textContent = expanded[i] ? '\u25b2 Hide' : '\u270e Answer';
-    tryBtn.addEventListener('click', (function(capturedI) {
-      return function(e) { e.stopPropagation(); toggleExpand(capturedI); };
+    var cn = document.createElement('div');
+    cn.className = 'chinese';
+    cn.textContent = row.chinese;
+    // Click on Chinese character speaks it
+    cn.addEventListener('click', (function(capturedI) {
+      return function(e) {
+        e.stopPropagation();
+        speakLine(capturedI);
+      };
     })(i));
-    topRow.appendChild(tryBtn);
-    card.appendChild(topRow);
-
-    if (showChinese) {
-      var cn = document.createElement('div');
-      cn.className = 'chinese';
-      cn.textContent = row.chinese;
-      // Click on Chinese character speaks it
-      cn.addEventListener('click', (function(capturedI) {
-        return function(e) {
-          e.stopPropagation();
-          speakLine(capturedI);
-        };
-      })(i));
-      card.appendChild(cn);
-    }
+    card.appendChild(cn);
 
     if (row.romanization) {
       var rom = document.createElement('div');
-      rom.className = 'romanization' + (showRomanization ? '' : ' hidden');
+      rom.className = 'romanization';
       rom.textContent = row.romanization;
       card.appendChild(rom);
     }
 
     if (row.english) {
       var en = document.createElement('div');
-      en.className = 'english' + (showMeanings ? '' : ' hidden');
+      en.className = 'english';
       en.textContent = row.english;
       card.appendChild(en);
     }
-
-    // Answer area
-    var area = document.createElement('div');
-    area.className = 'answer-area' + (expanded[i] ? ' open' : '');
-    area.id = 'area-' + i;
-
-    var ta = document.createElement('textarea');
-    ta.id = 'ta-' + i;
-    ta.placeholder = 'Type your answer\u2026';
-    ta.value = userAnswers[i] || '';
-    ta.addEventListener('input', (function(capturedI) {
-      return function() {
-        userAnswers[capturedI] = this.value;
-        var cc = document.getElementById('chars-' + capturedI);
-        if (cc) cc.textContent = this.value.length ? this.value.length + ' chars' : '';
-      };
-    })(i));
-    ta.addEventListener('click', function(e) { e.stopPropagation(); });
-
-    var hint = document.createElement('div');
-    hint.className = 'answer-hint';
-    var hintLeft = document.createElement('span');
-    hintLeft.textContent = 'Type your translation or notes';
-    var hintRight = document.createElement('span');
-    hintRight.className = 'char-count';
-    hintRight.id = 'chars-' + i;
-    if (userAnswers[i]) hintRight.textContent = userAnswers[i].length + ' chars';
-    hint.appendChild(hintLeft);
-    hint.appendChild(hintRight);
-
-    area.appendChild(ta);
-    area.appendChild(hint);
-    card.appendChild(area);
-
-    // When Open All is active, hover auto-focuses textarea
-    card.addEventListener('mouseenter', (function(capturedI) {
-      return function() {
-        if (allExpanded) {
-          var t = document.getElementById('ta-' + capturedI);
-          if (t) t.focus();
-        }
-      };
-    })(i));
 
     // Hover-reveal tooltip
     var tip = document.createElement('div');
@@ -1343,13 +1061,6 @@ function renderLyrics() {
 
 // ── GOOGLE SHEETS ──
 function setStatus(msg) { document.getElementById('status').textContent = msg; }
-
-function toggleSetup() {
-  var section = document.getElementById('setupSection');
-  var arrow = document.getElementById('setupArrow');
-  section.classList.toggle('collapsed');
-  arrow.textContent = section.classList.contains('collapsed') ? '\u25ba' : '\u25bc';
-}
 
 function gdriveInitClient() {
   if (window.google && window.google.accounts) {
@@ -1383,8 +1094,6 @@ function gdriveSignIn() {
     document.getElementById('searchBtn').disabled = true;
     document.getElementById('sheetSelect').innerHTML = '<option value="">Sign in first</option>';
     document.getElementById('sheetSelect').disabled = true;
-    document.getElementById('lessonSelect').innerHTML = '<option value="">Select sheet first</option>';
-    document.getElementById('lessonSelect').disabled = true;
     document.getElementById('lyricsArea').classList.remove('active');
     document.getElementById('stickyBar').classList.remove('active');
     allRows = [];
@@ -1492,7 +1201,6 @@ function onSheetSelect() {
   //   - "Scene X — ..." = section header
   //   - Everything else = context/sentence line
   allRows = [];
-  var currentLesson = '';
   for (var i = 1; i < rows.length; i++) {
     var r = rows[i];
     var colA = (r[0] || '').trim();
@@ -1506,9 +1214,7 @@ function onSheetSelect() {
     if (colA && !colB && !colC) {
       // Check if it looks like a scene/section header
       if (/^(Dialogue|Scene|Chapter|Part|Section|Lesson|Unit|Genesis|Exodus|Leviticus|Numbers|Deuteronomy|Joshua|Judges|Ruth|Samuel|Kings|Chronicles|Ezra|Nehemiah|Esther|Job|Psalm|Psalms|Proverbs|Ecclesiastes|Song|Isaiah|Jeremiah|Lamentations|Ezekiel|Daniel|Hosea|Joel|Amos|Obadiah|Jonah|Micah|Nahum|Habakkuk|Zephaniah|Haggai|Zechariah|Malachi|Matthew|Mark|Luke|John|Acts|Romans|Corinthians|Galatians|Ephesians|Philippians|Colossians|Thessalonians|Timothy|Titus|Philemon|Hebrews|James|Peter|Jude|Revelation|Verse)\s/i.test(colA)) {
-        currentLesson = colA;
         allRows.push({
-          lesson: currentLesson,
           chinese: '',
           romanization: '',
           english: '',
@@ -1518,7 +1224,6 @@ function onSheetSelect() {
       } else {
         // Context/sentence line
         allRows.push({
-          lesson: currentLesson,
           chinese: '',
           romanization: '',
           english: '',
@@ -1528,7 +1233,6 @@ function onSheetSelect() {
       }
     } else {
       allRows.push({
-        lesson: currentLesson,
         chinese: colA,
         romanization: colB,
         english: colC,
@@ -1538,22 +1242,8 @@ function onSheetSelect() {
     }
   }
 
-  var lessons = [], seen = {};
-  allRows.forEach(function(row) {
-    if (row.lesson && !seen[row.lesson]) { seen[row.lesson] = true; lessons.push(row.lesson); }
-  });
-
-  var lessonSel = document.getElementById('lessonSelect');
-  lessonSel.innerHTML = '<option value="">-- all lessons --</option>';
-  lessons.forEach(function(l) {
-    var opt = document.createElement('option');
-    opt.value = l;
-    opt.textContent = l + ' (' + allRows.filter(function(r) { return r.lesson === l; }).length + ')';
-    lessonSel.appendChild(opt);
-  });
-  lessonSel.disabled = false;
-  setStatus(allRows.length + ' lines, ' + lessons.length + ' lesson(s)');
-  onLessonSelect();
+  setStatus(allRows.length + ' lines');
+  refreshRows();
 }
 
 // Insert a repeat of the sentence pair (English + Chinese) after vocab words
@@ -1582,8 +1272,8 @@ function insertSentenceRepeats(rows) {
 
       if (hasVocab) {
         // Repeat the English + Chinese pair
-        result.push({ lesson: engRow.lesson, chinese: '', romanization: '', english: '', sectionHeader: '', contextLine: engRow.contextLine, isRepeat: true });
-        result.push({ lesson: chnRow.lesson, chinese: '', romanization: '', english: '', sectionHeader: '', contextLine: chnRow.contextLine, isRepeat: true });
+        result.push({ chinese: '', romanization: '', english: '', sectionHeader: '', contextLine: engRow.contextLine, isRepeat: true });
+        result.push({ chinese: '', romanization: '', english: '', sectionHeader: '', contextLine: chnRow.contextLine, isRepeat: true });
       }
       i = k;
     } else {
@@ -1594,10 +1284,8 @@ function insertSentenceRepeats(rows) {
   return result;
 }
 
-function onLessonSelect() {
-  var lesson = document.getElementById('lessonSelect').value;
-  filteredRows = lesson ? allRows.filter(function(r) { return r.lesson === lesson; }) : allRows.slice();
-  filteredRows = insertSentenceRepeats(filteredRows);
+function refreshRows() {
+  filteredRows = insertSentenceRepeats(allRows.slice());
   renderLyrics();
 }
 
@@ -1614,218 +1302,6 @@ function setTooltipMode(on) {
   document.getElementById('tipKnob').classList.toggle('on', on);
 }
 
-// ── EXPORT ALL FOR AI GRADING ──
-var _exportAnswered = [];
-
-function exportAll() {
-  _exportAnswered = [];
-  filteredRows.forEach(function(row, i) {
-    if (row.sectionHeader || row.contextLine) return;
-    if (userAnswers[i] && userAnswers[i].trim()) {
-      _exportAnswered.push({ row: row, answer: userAnswers[i].trim(), idx: i });
-    }
-  });
-
-  if (_exportAnswered.length === 0) {
-    alert('No answered cards yet. Click on a card (not the character) to open the answer area and type your translation.');
-    return;
-  }
-
-  var html = '<table style="width:100%;border-collapse:collapse;font-size:13px;">';
-  html += '<thead><tr style="background:#f1f5f9;text-align:left;">';
-  html += '<th style="padding:8px 10px;border-bottom:2px solid #cbd5e1;width:5%;">#</th>';
-  html += '<th style="padding:8px 10px;border-bottom:2px solid #cbd5e1;width:25%;">Chinese</th>';
-  html += '<th style="padding:8px 10px;border-bottom:2px solid #cbd5e1;width:35%;">Your Answer</th>';
-  html += '<th style="padding:8px 10px;border-bottom:2px solid #cbd5e1;width:35%;">Correct Answer</th>';
-  html += '</tr></thead><tbody>';
-
-  _exportAnswered.forEach(function(item, n) {
-    var bg = n % 2 === 0 ? '#fff' : '#f8fafc';
-    html += '<tr style="background:' + bg + ';">';
-    html += '<td style="padding:7px 10px;border-bottom:1px solid #e2e8f0;color:#64748b;">' + (n + 1) + '</td>';
-    html += '<td style="padding:7px 10px;border-bottom:1px solid #e2e8f0;font-weight:600;">' + escHtml(item.row.chinese) + (item.row.romanization ? '<br><span style="font-weight:400;font-size:11px;color:#6b7280;font-style:italic;">' + escHtml(item.row.romanization) + '</span>' : '') + '</td>';
-    html += '<td style="padding:7px 10px;border-bottom:1px solid #e2e8f0;color:#1e40af;">' + escHtml(item.answer) + '</td>';
-    html += '<td style="padding:7px 10px;border-bottom:1px solid #e2e8f0;color:#15803d;">' + escHtml(item.row.english) + '</td>';
-    html += '</tr>';
-  });
-
-  html += '</tbody></table>';
-  html += '<p style="margin-top:12px;color:#64748b;font-size:11px;">' + _exportAnswered.length + ' answered items</p>';
-
-  document.getElementById('exportModalBody').innerHTML = html;
-  document.getElementById('exportModal').style.display = 'flex';
-}
-
-async function copyExportText() {
-  var lines = [
-    'Grade my Chinese vocabulary translations. Be lenient \u2014 grade on whether I understand the meaning, not exact wording.',
-    '',
-    'For each item, rate as:',
-    '\u2705 Correct \u2014 captures the key meaning',
-    '\u26a0\ufe0f Partial \u2014 partially correct, misses some points',
-    '\u274c Wrong \u2014 misses the point',
-    '',
-    'Format your response as:',
-    '#N: [Chinese] \u2192 \u2705/\u26a0\ufe0f/\u274c \u2014 [one-line note]',
-    '',
-    'Then give an Overall Score (X/' + _exportAnswered.length + ') and a brief summary.',
-    '',
-    '---',
-    'VOCABULARY TEST (' + _exportAnswered.length + ' items):',
-    ''
-  ];
-
-  _exportAnswered.forEach(function(item, n) {
-    lines.push('#' + (n + 1) + ' Chinese: ' + item.row.chinese + (item.row.romanization ? ' (' + item.row.romanization + ')' : ''));
-    lines.push('My Answer: ' + item.answer);
-    lines.push('Correct: ' + item.row.english);
-    lines.push('');
-  });
-
-  var text = lines.join('\n');
-  try {
-    await navigator.clipboard.writeText(text);
-    alert('Copied ' + _exportAnswered.length + ' items! Paste into Claude or ChatGPT for grading.');
-  } catch(e) {
-    prompt('Copy this grading prompt:', text);
-  }
-}
-
-// ── EXPORT HARD ──
-function updateHardCount() {
-  var btn = document.querySelector('[onclick="exportHard()"]');
-  if (btn) btn.textContent = '\uD83D\uDCCB Export Hard' + (hardSet.size ? ' (' + hardSet.size + ')' : '');
-}
-
-function exportHard() {
-  if (hardSet.size === 0) {
-    alert('No cards marked as hard yet. Click on any card to mark it purple.');
-    return;
-  }
-  function csvEsc(s) { s = String(s); return (s.indexOf(',') >= 0 || s.indexOf('"') >= 0 || s.indexOf('\n') >= 0) ? '"' + s.replace(/"/g, '""') + '"' : s; }
-  var lines = ['Chinese,Romanization,English'];
-  var sorted = Array.from(hardSet).sort(function(a, b) { return a - b; });
-  sorted.forEach(function(idx) {
-    var row = filteredRows[idx];
-    if (row && row.chinese) lines.push([row.chinese, row.romanization || '', row.english || ''].map(csvEsc).join(','));
-  });
-  var blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
-  var url = URL.createObjectURL(blob);
-  var a = document.createElement('a');
-  var now = new Date();
-  var pad = function(n) { return n < 10 ? '0' + n : '' + n; };
-  a.href = url; a.download = 'hard_cards_' + now.getFullYear() + '-' + pad(now.getMonth()+1) + '-' + pad(now.getDate()) + '.csv';
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
-
-// ── PRACTICE MODAL ──
-var pracVocabIndices = [];
-var pracCurrent = 0;
-
-function openPracticeModal(shuffle) {
-  pracVocabIndices = [];
-  filteredRows.forEach(function(row, i) {
-    if (row.chinese && !row.sectionHeader && !row.contextLine) {
-      pracVocabIndices.push(i);
-    }
-  });
-  if (pracVocabIndices.length === 0) return;
-  if (shuffle) {
-    for (var i = pracVocabIndices.length - 1; i > 0; i--) {
-      var j = Math.floor(Math.random() * (i + 1));
-      var tmp = pracVocabIndices[i];
-      pracVocabIndices[i] = pracVocabIndices[j];
-      pracVocabIndices[j] = tmp;
-    }
-  }
-  pracCurrent = 0;
-  renderPracCard();
-  document.getElementById('practiceOverlay').classList.add('open');
-  setTimeout(function() { document.getElementById('pracTextarea').focus(); }, 60);
-}
-
-function closePracticeModal() {
-  savePracAnswer();
-  document.getElementById('practiceOverlay').classList.remove('open');
-  pracVocabIndices.forEach(function(idx) {
-    var ta = document.getElementById('ta-' + idx);
-    if (ta && userAnswers[idx] !== undefined) {
-      ta.value = userAnswers[idx];
-      var cc = document.getElementById('chars-' + idx);
-      if (cc) cc.textContent = userAnswers[idx].length ? userAnswers[idx].length + ' chars' : '';
-    }
-  });
-}
-
-function savePracAnswer() {
-  var idx = pracVocabIndices[pracCurrent];
-  if (idx === undefined) return;
-  var val = document.getElementById('pracTextarea').value;
-  userAnswers[idx] = val;
-}
-
-function renderPracCard() {
-  var idx = pracVocabIndices[pracCurrent];
-  var row = filteredRows[idx];
-  var cn = document.getElementById('pracChinese');
-  var rom = document.getElementById('pracRom');
-  var eng = document.getElementById('pracEng');
-  cn.textContent = row.chinese || '';
-  cn.style.display = showChinese ? '' : 'none';
-  rom.textContent = row.romanization || '';
-  rom.style.display = showRomanization ? '' : 'none';
-  eng.textContent = row.english || '';
-  eng.style.display = showMeanings ? '' : 'none';
-  document.getElementById('pracCounter').textContent = (pracCurrent + 1) + ' / ' + pracVocabIndices.length;
-  document.getElementById('pracTextarea').value = userAnswers[idx] || '';
-  var cc = document.getElementById('pracCharCount');
-  var len = (userAnswers[idx] || '').length;
-  cc.textContent = len ? len + ' chars' : '';
-  document.getElementById('pracPrev').disabled = pracCurrent === 0;
-  document.getElementById('pracNext').disabled = pracCurrent === pracVocabIndices.length - 1;
-}
-
-function pracNavigate(dir) {
-  savePracAnswer();
-  var next = pracCurrent + dir;
-  if (next < 0 || next >= pracVocabIndices.length) return;
-  pracCurrent = next;
-  renderPracCard();
-  document.getElementById('pracTextarea').focus();
-}
-
-function speakPracCard() {
-  var idx = pracVocabIndices[pracCurrent];
-  if (idx === undefined) return;
-  var row = filteredRows[idx];
-  if (row.chinese) speakText(row.chinese);
-}
-
-// ── SPACEBAR TO CLICK HOVERED CARD ──
-document.addEventListener('keydown', function(e) {
-  var modalOpen = document.getElementById('practiceOverlay').classList.contains('open');
-
-  if (modalOpen) {
-    if (e.key === 'ArrowLeft') { e.preventDefault(); pracNavigate(-1); return; }
-    if (e.key === 'ArrowRight') { e.preventDefault(); pracNavigate(1); return; }
-    if (e.key === 'Escape') { e.preventDefault(); closePracticeModal(); return; }
-    return;
-  }
-
-  if (e.code === 'Space' && !e.target.matches('input, textarea, select')) {
-    e.preventDefault();
-    var hovered = document.querySelector('.vocab-card:hover');
-    if (hovered) hovered.click();
-  }
-  if (e.key === 'Escape' && e.target.matches('textarea')) {
-    var ta = e.target;
-    ta.value = '';
-    var idMatch = ta.id.match(/^ta-(\d+)$/);
-    if (idMatch) userAnswers[parseInt(idMatch[1])] = '';
-  }
-});
-
 // ── DROP FOLDER ──
 let videosHidden = false;
 
@@ -1835,12 +1311,12 @@ function toggleVideos() {
   document.getElementById('videoArrow').textContent = videosHidden ? '\u25ba' : '\u25bc';
 }
 
-function loadCsvText(text, fileName) {
+function loadCsvText(text, fileName, forceColMode) {
+  var mode = forceColMode || csvColMode;
   var rows = parseCsv(text);
   if (rows.length < 2) { setStatus('CSV is empty'); return false; }
 
   allRows = [];
-  var currentLesson = '';
   for (var i = 1; i < rows.length; i++) {
     var r = rows[i];
     var colA = (r[0] || '').trim();
@@ -1851,88 +1327,33 @@ function loadCsvText(text, fileName) {
 
     if (colA && !colB && !colC) {
       if (/^(Dialogue|Scene|Chapter|Part|Section|Lesson|Unit|Genesis|Exodus|Leviticus|Numbers|Deuteronomy|Joshua|Judges|Ruth|Samuel|Kings|Chronicles|Ezra|Nehemiah|Esther|Job|Psalm|Psalms|Proverbs|Ecclesiastes|Song|Isaiah|Jeremiah|Lamentations|Ezekiel|Daniel|Hosea|Joel|Amos|Obadiah|Jonah|Micah|Nahum|Habakkuk|Zephaniah|Haggai|Zechariah|Malachi|Matthew|Mark|Luke|John|Acts|Romans|Corinthians|Galatians|Ephesians|Philippians|Colossians|Thessalonians|Timothy|Titus|Philemon|Hebrews|James|Peter|Jude|Revelation|Verse)\s/i.test(colA)) {
-        currentLesson = colA;
-        allRows.push({ lesson: currentLesson, chinese: '', romanization: '', english: '', sectionHeader: colA, contextLine: '' });
+        allRows.push({ chinese: '', romanization: '', english: '', sectionHeader: colA, contextLine: '' });
       } else {
-        allRows.push({ lesson: currentLesson, chinese: '', romanization: '', english: '', sectionHeader: '', contextLine: colA });
+        allRows.push({ chinese: '', romanization: '', english: '', sectionHeader: '', contextLine: colA });
       }
     } else {
-      allRows.push({ lesson: currentLesson, chinese: colA, romanization: colB, english: colC, sectionHeader: '', contextLine: '' });
+      var rom = mode === 2 ? '' : colB;
+      var eng = mode === 2 ? colB : colC;
+      allRows.push({ chinese: colA, romanization: rom, english: eng, sectionHeader: '', contextLine: '' });
     }
   }
 
-  var lessons = [], seen = {};
-  allRows.forEach(function(row) {
-    if (row.lesson && !seen[row.lesson]) { seen[row.lesson] = true; lessons.push(row.lesson); }
-  });
-  var lessonSel = document.getElementById('lessonSelect');
-  lessonSel.innerHTML = '<option value="">-- all lessons --</option>';
-  lessons.forEach(function(l) {
-    var opt = document.createElement('option');
-    opt.value = l;
-    opt.textContent = l + ' (' + allRows.filter(function(r) { return r.lesson === l; }).length + ')';
-    lessonSel.appendChild(opt);
-  });
-  lessonSel.disabled = false;
 
-  userAnswers = {};
-  expanded = {};
   setStatus('Loaded ' + allRows.length + ' lines from ' + fileName);
-  onLessonSelect();
+  refreshRows();
   return true;
 }
 
-// ── PASTE FROM SHEETS ──
-document.getElementById('pasteSheetInput').addEventListener('paste', function() {
-  setTimeout(function() {
-    var raw = document.getElementById('pasteSheetInput').value.trim();
-    if (!raw) return;
-    var lines = raw.split('\n').filter(function(l) { return l.trim(); });
-    // Count data rows (skip header if detected)
-    var first = lines[0].split('\t');
-    var hasHeader = first.length >= 3 && /^(chinese|hanzi|character)/i.test(first[0].trim());
-    var dataCount = hasHeader ? lines.length - 1 : lines.length;
-    document.getElementById('pasteRowCount').textContent = dataCount + ' rows detected';
-    document.getElementById('pasteRowTo').placeholder = dataCount;
-  }, 50);
-});
-
-function loadPastedSheet(loadAll) {
-  var raw = document.getElementById('pasteSheetInput').value.trim();
-  if (!raw) {
-    document.getElementById('pasteStatus').textContent = 'Paste some data first.';
-    document.getElementById('pasteStatus').className = 'status error';
-    return;
-  }
-
-  var lines = raw.split('\n').filter(function(l) { return l.trim(); });
-  if (lines.length === 0) return;
-
-  // Detect header row
-  var first = lines[0].split('\t');
-  var hasHeader = first.length >= 3 && /^(chinese|hanzi|character)/i.test(first[0].trim());
-  var headerLine = hasHeader ? lines[0] : 'Chinese\tPinyin\tEnglish';
-  var dataLines = hasHeader ? lines.slice(1) : lines;
-
-  if (!loadAll) {
-    var from = parseInt(document.getElementById('pasteRowFrom').value) || 1;
-    var toVal = document.getElementById('pasteRowTo').value.trim();
-    var to = toVal ? parseInt(toVal) : dataLines.length;
-    from = Math.max(1, Math.min(from, dataLines.length));
-    to = Math.max(from, Math.min(to, dataLines.length));
-    dataLines = dataLines.slice(from - 1, to);
-  }
-
-  // Convert tab-separated to CSV
-  var csvLines = [tabToCsv(headerLine)];
-  for (var i = 0; i < dataLines.length; i++) {
-    csvLines.push(tabToCsv(dataLines[i]));
-  }
-
-  var csvText = csvLines.join('\n');
-  loadCsvText(csvText, 'pasted-sheet');
-  document.getElementById('pasteStatus').textContent = 'Loaded ' + dataLines.length + ' rows.';
-  document.getElementById('pasteStatus').className = 'status';
+// ── PASTE FROM GOOGLE SHEETS (tab-separated clipboard) ──
+function pasteFromSheets() {
+  var statusEl = document.getElementById('pasteCsvStatus');
+  navigator.clipboard.readText().then(function(text) {
+    if (!text.trim()) { statusEl.textContent = 'Clipboard is empty.'; return; }
+    document.getElementById('pasteCsvInput').value = text;
+    loadPastedCsv(); // tab-separated Sheets data is auto-converted in loadPastedCsv
+  }).catch(function() {
+    statusEl.textContent = 'Clipboard access denied — paste into the box and click Load CSV.';
+  });
 }
 
 function pasteFromClipboard() {
@@ -1946,15 +1367,31 @@ function pasteFromClipboard() {
   });
 }
 
+// ── CSV COLUMN MODE (paste path): 3 = language,pronunciation,definition · 2 = language,definition ──
+var csvColMode = parseInt(localStorage.getItem('chineseTts_csvColMode') || '3', 10);
+function updateCsvPlaceholder() {
+  document.getElementById('pasteCsvInput').placeholder = csvColMode === 2
+    ? 'Paste CSV content here (Chinese,English)\n一,one\n五,five\n魚,fish'
+    : 'Paste CSV content here (Chinese,Pinyin,English)\n一,yī,one\n五,wǔ,five\n魚,fish';
+}
+document.querySelectorAll('input[name="csvColMode"]').forEach(function(r) {
+  r.checked = parseInt(r.value, 10) === csvColMode;
+  r.addEventListener('change', function() {
+    csvColMode = parseInt(this.value, 10);
+    localStorage.setItem('chineseTts_csvColMode', String(csvColMode));
+    updateCsvPlaceholder();
+  });
+});
+updateCsvPlaceholder();
+
 function loadPastedCsv() {
   var raw = document.getElementById('pasteCsvInput').value.trim();
   var statusEl = document.getElementById('pasteCsvStatus');
   if (!raw) { statusEl.textContent = 'Paste some CSV first.'; return; }
+  if (raw.indexOf('\t') >= 0) raw = raw.split('\n').map(tabToCsv).join('\n'); // Google Sheets copies are tab-separated
   var ok = loadCsvText(raw, 'pasted-csv');
   if (ok) {
     statusEl.textContent = 'Loaded.';
-    var section = document.getElementById('setupSection');
-    if (!section.classList.contains('collapsed')) toggleSetup();
     if (!deckViewOn) toggleDeckView();
   } else {
     statusEl.textContent = 'Error: could not parse CSV.';
@@ -2110,7 +1547,6 @@ document.getElementById('folderInput').addEventListener('change', function() {
       if (wb.SheetNames.length === 1) {
         sel.value = wb.SheetNames[0];
         onSheetSelect();
-        toggleSetup();
       } else {
         setStatus('Loaded "' + xlsxFile.name + '" — ' + wb.SheetNames.length + ' sheet(s). Pick a sheet.');
       }
@@ -2137,20 +1573,17 @@ document.getElementById('folderInput').addEventListener('change', function() {
         function esc(s) { return s.indexOf(',') >= 0 ? '"' + s.replace(/"/g, '""') + '"' : s; }
         csvLines.push(esc(chinese) + ',' + esc(roman) + ',' + esc(english));
       });
-      loadCsvText(csvLines.join('\n'), txtFile.name);
-      toggleSetup();
+      loadCsvText(csvLines.join('\n'), txtFile.name, 3); // TXT converter always emits 3 cols
     };
     reader.readAsText(txtFile);
   } else if (csvFile) {
     var reader = new FileReader();
     reader.onload = function(e) {
       loadCsvText(e.target.result, csvFile.name);
-      toggleSetup();
     };
     reader.readAsText(csvFile);
   } else {
     setStatus('No data file found — loaded ' + mp4Files.length + ' video(s) only');
-    toggleSetup();
   }
 });
 
@@ -2178,7 +1611,6 @@ document.getElementById('fileInput').addEventListener('change', function() {
       if (wb.SheetNames.length === 1) {
         sel.value = wb.SheetNames[0];
         onSheetSelect();
-        toggleSetup();
       } else {
         setStatus('Loaded "' + file.name + '" — ' + wb.SheetNames.length + ' sheet(s). Pick a sheet.');
       }
@@ -2216,8 +1648,7 @@ document.getElementById('fileInput').addEventListener('change', function() {
         function esc(s) { return s.indexOf(',') >= 0 ? '"' + s.replace(/"/g, '""') + '"' : s; }
         csvLines.push(esc(chinese) + ',' + esc(roman) + ',' + esc(english));
       });
-      loadCsvText(csvLines.join('\n'), file.name);
-      toggleSetup();
+      loadCsvText(csvLines.join('\n'), file.name, 3); // TXT converter always emits 3 cols
     };
     reader.readAsText(file);
   } else {
@@ -2225,7 +1656,6 @@ document.getElementById('fileInput').addEventListener('change', function() {
     var reader = new FileReader();
     reader.onload = function(e) {
       loadCsvText(e.target.result, file.name);
-      toggleSetup();
     };
     reader.readAsText(file);
   }
@@ -2267,7 +1697,6 @@ function loadSheetByName(name) {
 
   // Parse CSV-style rows (same logic as loadCsvText / onSheetSelect)
   allRows = [];
-  var currentLesson = '';
   for (var i = 1; i < rows.length; i++) {
     var colA = (rows[i][0] || '').trim();
     var colB = (rows[i][1] || '').trim();
@@ -2277,34 +1706,18 @@ function loadSheetByName(name) {
 
     if (colA && !colB && !colC) {
       if (/^(Dialogue|Scene|Chapter|Part|Section|Lesson|Unit|Genesis|Exodus|Leviticus|Numbers|Deuteronomy|Joshua|Judges|Ruth|Samuel|Kings|Chronicles|Ezra|Nehemiah|Esther|Job|Psalm|Psalms|Proverbs|Ecclesiastes|Song|Isaiah|Jeremiah|Lamentations|Ezekiel|Daniel|Hosea|Joel|Amos|Obadiah|Jonah|Micah|Nahum|Habakkuk|Zephaniah|Haggai|Zechariah|Malachi|Matthew|Mark|Luke|John|Acts|Romans|Corinthians|Galatians|Ephesians|Philippians|Colossians|Thessalonians|Timothy|Titus|Philemon|Hebrews|James|Peter|Jude|Revelation|Verse)\s/i.test(colA)) {
-        currentLesson = colA;
-        allRows.push({ lesson: currentLesson, chinese: '', romanization: '', english: '', sectionHeader: colA, contextLine: '' });
+        allRows.push({ chinese: '', romanization: '', english: '', sectionHeader: colA, contextLine: '' });
       } else {
-        allRows.push({ lesson: currentLesson, chinese: '', romanization: '', english: '', sectionHeader: '', contextLine: colA });
+        allRows.push({ chinese: '', romanization: '', english: '', sectionHeader: '', contextLine: colA });
       }
     } else {
-      allRows.push({ lesson: currentLesson, chinese: colA, romanization: colB, english: colC, sectionHeader: '', contextLine: '' });
+      allRows.push({ chinese: colA, romanization: colB, english: colC, sectionHeader: '', contextLine: '' });
     }
   }
 
-  var lessons = [], seen = {};
-  allRows.forEach(function(row) {
-    if (row.lesson && !seen[row.lesson]) { seen[row.lesson] = true; lessons.push(row.lesson); }
-  });
-  var lessonSel = document.getElementById('lessonSelect');
-  lessonSel.innerHTML = '<option value="">-- all lessons --</option>';
-  lessons.forEach(function(l) {
-    var opt = document.createElement('option');
-    opt.value = l;
-    opt.textContent = l + ' (' + allRows.filter(function(r) { return r.lesson === l; }).length + ')';
-    lessonSel.appendChild(opt);
-  });
-  lessonSel.disabled = false;
 
-  userAnswers = {};
-  expanded = {};
   setStatus('Loaded ' + allRows.length + ' lines from "' + name + '"');
-  onLessonSelect();
+  refreshRows();
 }
 
 function onSheetDropdownChange(name) {
@@ -2327,7 +1740,6 @@ async function initFromApi() {
   var selected = match || names[0];
   document.getElementById('sheetDropdown').value = selected;
   loadSheetByName(selected);
-  toggleSetup(); // collapse the setup section
 }
 
 // ── TABLE VIEW ──
@@ -2452,16 +1864,6 @@ function tblSpeak(idx, btnEl) {
     btnEl.classList.remove('speaking');
   });
 }
-
-// ── PRACTICE MODAL TEXTAREA LIVE SYNC ──
-document.getElementById('pracTextarea').addEventListener('input', function() {
-  var idx = pracVocabIndices[pracCurrent];
-  if (idx === undefined) return;
-  userAnswers[idx] = this.value;
-  var cc = document.getElementById('pracCharCount');
-  cc.textContent = this.value.length ? this.value.length + ' chars' : '';
-});
-
 
 // ── DECK VIEW ──
 function toggleDeckView() {
@@ -2614,7 +2016,6 @@ document.getElementById('deckRestartBtn').addEventListener('click', function() {
 // ── DECK KEYBOARD SHORTCUTS: ← again, ↑/Space flip, → got it ──
 document.addEventListener('keydown', function(e) {
   if (!deckViewOn || deckCurrent === null) return;
-  if (document.getElementById('practiceOverlay').classList.contains('open')) return;
   if (e.target.matches('input, textarea, select')) return;
   if (e.key === 'ArrowLeft') { e.preventDefault(); deckGrade(false); }
   else if (e.key === 'ArrowRight') { e.preventDefault(); deckGrade(true); }
@@ -2673,6 +2074,8 @@ var TTS_TOOLTIP_LANGS = [
   { key: 'P', label: 'Es', lang: 'es-ES', title: 'Spanish'   },
   { key: 'K', label: '한', lang: 'ko-KR', title: 'Korean'    },
   { key: 'F', label: 'Fr', lang: 'fr-FR', title: 'French'    },
+  { key: 'G', label: 'Ελ', lang: 'el-GR', title: 'Greek'     },
+  { key: 'H', label: 'עב', lang: 'he-IL', title: 'Hebrew'    },
 ];
 var TTS_TOOLTIP_STORAGE = 'chineseTts-tooltip-visible';
 var ttsTooltipEl = null;
@@ -2707,6 +2110,7 @@ function ttsTooltipSpeakText(text, lang) {
     if (!v) v = voices.find(function(vv) { return vv.lang === lang; });
     if (!v && lang === 'zh-HK') v = voices.find(function(vv) { return vv.lang.startsWith('yue'); });
     if (!v && lang.startsWith('zh')) v = voices.find(function(vv) { return vv.lang.startsWith('zh'); });
+    if (!v) v = voices.find(function(vv) { return vv.lang.split('-')[0] === lang.split('-')[0]; });
     if (v) utt.voice = v;
   }
   window.speechSynthesis.speak(utt);
@@ -2902,6 +2306,8 @@ document.getElementById('dbxPullBtn').addEventListener('click', async function()
   try {
     var text = await dbxDownload(dbxBucketPath(n));
     document.getElementById('pasteCsvInput').value = text;
+    var r3 = document.querySelector('input[name="csvColMode"][value="3"]');
+    if (r3 && !r3.checked) r3.click(); // buckets are always written 3-col
     loadPastedCsv();
     statusEl.textContent = '\u2705 Loaded bucket ' + n;
     setTimeout(function() { statusEl.textContent = ''; }, 2500);
@@ -2958,6 +2364,10 @@ window.addEventListener('message', function(event) {
 
 // ── INIT ──
 loadApiKey();
+setTtsEngine(localStorage.getItem('chineseTts_ttsEngine') || 'browser');
+var _ov = localStorage.getItem('chineseTts_openaiVoice'); if (_ov) document.getElementById('openaiVoiceSelect').value = _ov;
+var _ev = localStorage.getItem('chineseTts_elevenVoice'); if (_ev) document.getElementById('elevenVoiceSelect').value = _ev;
+setTtsLang(ttsLang); // sync language select + dialect buttons with saved pref
 initFromApi();
 </script>
 </body>
