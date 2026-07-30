@@ -448,12 +448,25 @@
       </div>
       <div class="hint">Picks the first .csv, .txt (;delimited), or .xlsx and all .mp4 files from the top level of the folder.</div>
 
+      <hr style="border:none;border-top:1px solid #eee;margin:12px 0;">
+
+      <!-- Google Sheets -->
+      <div style="font-size:12px;font-weight:600;color:#555;margin-bottom:6px;">Google Sheets</div>
+      <div class="setup-row">
+        <button class="btn google" id="authBtn" onclick="gdriveSignIn()">Sign In</button>
+        <input type="text" id="searchInput" placeholder="Spreadsheet name..." value="chinese">
+        <button class="btn primary" id="searchBtn" onclick="gdriveSearch()" disabled>Load</button>
+      </div>
+      <div class="setup-row">
+        <label>Sheet</label>
+        <select id="sheetSelect" disabled onchange="onSheetSelect()">
+          <option value="">Sign in first</option>
+        </select>
+      </div>
       <div class="status" id="status"></div>
-      <!-- hidden stubs to avoid JS errors from Google Sheets code -->
-      <select id="sheetSelect" style="display:none"></select>
-      <input id="searchInput" style="display:none">
-      <button id="searchBtn" style="display:none"></button>
-      <button id="authBtn" style="display:none"></button>
+      <div class="hint">Sheet format: auto-detects 2 columns (term, definition) or 3 columns (term, pronunciation, definition).</div>
+      <!-- hidden stub for lessonSelect (referenced in shared JS) -->
+      <select id="lessonSelect" style="display:none"></select>
     </div>
   </div>
 
@@ -1094,8 +1107,6 @@ function gdriveSignIn() {
     document.getElementById('searchBtn').disabled = true;
     document.getElementById('sheetSelect').innerHTML = '<option value="">Sign in first</option>';
     document.getElementById('sheetSelect').disabled = true;
-    document.getElementById('lyricsArea').classList.remove('active');
-    document.getElementById('stickyBar').classList.remove('active');
     allRows = [];
     filteredRows = [];
     setStatus('Signed out');
@@ -1185,6 +1196,14 @@ function parseCsv(text) {
   return result;
 }
 
+function detectSheetCols(rows) {
+  // Scan first 10 data rows (skip header row 0); if any has a non-empty 3rd column → 3-col
+  for (var i = 1; i < Math.min(rows.length, 11); i++) {
+    if ((rows[i][2] || '').trim()) return 3;
+  }
+  return 2;
+}
+
 function onSheetSelect() {
   var sheetName = document.getElementById('sheetSelect').value;
   if (!sheetName || !gdriveWorkbook) return;
@@ -1196,10 +1215,9 @@ function onSheetSelect() {
 
   if (rows.length < 2) { setStatus('Sheet is empty'); return; }
 
-  // Sheet format: Chinese (A) | Pinyin (B) | English (C)
-  // Rows with only column A and B+C empty:
-  //   - "Scene X — ..." = section header
-  //   - Everything else = context/sentence line
+  // Auto-detect 2 vs 3 columns
+  var detectedCols = detectSheetCols(rows);
+
   allRows = [];
   for (var i = 1; i < rows.length; i++) {
     var r = rows[i];
@@ -1207,42 +1225,22 @@ function onSheetSelect() {
     var colB = (r[1] || '').trim();
     var colC = (r[2] || '').trim();
 
-    // Skip fully empty rows
     if (!colA && !colB && !colC) continue;
 
-    // Row with only column A
     if (colA && !colB && !colC) {
-      // Check if it looks like a scene/section header
       if (/^(Dialogue|Scene|Chapter|Part|Section|Lesson|Unit|Genesis|Exodus|Leviticus|Numbers|Deuteronomy|Joshua|Judges|Ruth|Samuel|Kings|Chronicles|Ezra|Nehemiah|Esther|Job|Psalm|Psalms|Proverbs|Ecclesiastes|Song|Isaiah|Jeremiah|Lamentations|Ezekiel|Daniel|Hosea|Joel|Amos|Obadiah|Jonah|Micah|Nahum|Habakkuk|Zephaniah|Haggai|Zechariah|Malachi|Matthew|Mark|Luke|John|Acts|Romans|Corinthians|Galatians|Ephesians|Philippians|Colossians|Thessalonians|Timothy|Titus|Philemon|Hebrews|James|Peter|Jude|Revelation|Verse)\s/i.test(colA)) {
-        allRows.push({
-          chinese: '',
-          romanization: '',
-          english: '',
-          sectionHeader: colA,
-          contextLine: '',
-        });
+        allRows.push({ chinese: '', romanization: '', english: '', sectionHeader: colA, contextLine: '' });
       } else {
-        // Context/sentence line
-        allRows.push({
-          chinese: '',
-          romanization: '',
-          english: '',
-          sectionHeader: '',
-          contextLine: colA,
-        });
+        allRows.push({ chinese: '', romanization: '', english: '', sectionHeader: '', contextLine: colA });
       }
     } else {
-      allRows.push({
-        chinese: colA,
-        romanization: colB,
-        english: colC,
-        sectionHeader: '',
-        contextLine: '',
-      });
+      var rom = detectedCols === 2 ? '' : colB;
+      var eng = detectedCols === 2 ? colB : colC;
+      allRows.push({ chinese: colA, romanization: rom, english: eng, sectionHeader: '', contextLine: '' });
     }
   }
 
-  setStatus(allRows.length + ' lines');
+  setStatus('Loaded ' + allRows.length + ' lines (' + detectedCols + '-col)');
   refreshRows();
 }
 
