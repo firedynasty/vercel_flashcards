@@ -33,19 +33,28 @@
   .err { color:#a03a3a; font-size:14px; margin-bottom:12px; }
   /* ---- outline view ---- */
   nav { padding:12px 28px; border-bottom:1px solid var(--line);
-        display:flex; gap:16px; align-items:baseline; font-size:14px; background:#faf8f3; }
+        display:flex; gap:16px; align-items:baseline; font-size:14px; background:#faf8f3;
+        position:fixed; top:0; left:0; right:0; z-index:100;
+        transform:translateY(0); transition:transform .22s ease, box-shadow .22s ease; }
+  nav.nav-hidden { transform:translateY(-100%); }
   nav a, nav button.link { color:var(--accent); text-decoration:none; font:inherit;
                             background:none; border:none; padding:0; cursor:pointer; }
   nav a:hover, nav button.link:hover { text-decoration:underline; }
   nav .mid { margin:0 auto; text-align:center; }
   nav .mid h1 { font-size:17px; margin:0; }
   nav .mid .sub { color:var(--dim); font-size:12px; }
+  /* hover-reveal zone at top of screen */
+  #nav-hover-zone { position:fixed; top:0; left:0; right:0; height:18px; z-index:101; pointer-events:none; }
+  #nav-hover-zone.active { pointer-events:auto; }
   footer { padding:12px 28px; border-top:1px solid var(--line);
            display:flex; gap:16px; align-items:baseline; font-size:14px; margin-top:48px; }
   footer button.link, footer a { color:var(--accent); font:inherit; background:none;
                                   border:none; padding:0; cursor:pointer; text-decoration:none; }
   footer button.link:hover { text-decoration:underline; }
   footer .mid { margin:0 auto; text-align:center; color:var(--dim); font-size:12px; }
+  #view-outline > .stats, #view-outline > #out-panel, #view-outline > main { margin-top:0; }
+  /* push content below fixed nav; nav is ~46px tall */
+  #view-outline { padding-top:46px; }
   .stats { padding:8px 28px; border-bottom:1px solid var(--line);
            font-family:monospace; font-size:12px; color:var(--dim);
            display:flex; gap:16px; flex-wrap:wrap; }
@@ -141,6 +150,9 @@
   <div class="err" id="clip-err"></div>
 </main>
 </div>
+
+<!-- invisible hover zone to re-show nav when mouse reaches top -->
+<div id="nav-hover-zone"></div>
 
 <!-- =========================================================== OUTLINE VIEW -->
 <div id="view-outline" style="display:none">
@@ -1016,6 +1028,54 @@ function speakSelectionEN(text) {
   if (voice) utt.voice = voice;
   speechSynthesis.speak(utt);
 }
+
+// ============================================================
+// Nav hide-on-scroll / hover-to-reveal
+// ============================================================
+(function () {
+  var nav = document.querySelector('#view-outline nav');
+  var hoverZone = document.getElementById('nav-hover-zone');
+  var navHidden = false;
+  var hoverReveal = false;
+
+  function hideNav() {
+    navHidden = true;
+    nav.classList.add('nav-hidden');
+    hoverZone.classList.add('active'); // enable pointer events on thin zone
+  }
+  function showNav() {
+    navHidden = false;
+    nav.classList.remove('nav-hidden');
+    hoverZone.classList.remove('active');
+  }
+
+  window.addEventListener('scroll', function () {
+    if (document.getElementById('view-outline').style.display === 'none') return;
+    if (window.scrollY > 10 && !hoverReveal) {
+      hideNav();
+    } else if (window.scrollY <= 10) {
+      showNav();
+    }
+  }, { passive: true });
+
+  // Mouse near top of screen → reveal nav
+  document.addEventListener('mousemove', function (e) {
+    if (document.getElementById('view-outline').style.display === 'none') return;
+    if (!navHidden) return;
+    if (e.clientY < 10) {
+      hoverReveal = true;
+      showNav();
+    }
+  });
+
+  // Mouse leaves nav → hide again (only if scrolled away)
+  nav.addEventListener('mouseleave', function () {
+    if (window.scrollY > 10) {
+      hoverReveal = false;
+      hideNav();
+    }
+  });
+})();
 
 document.addEventListener('keydown', function (e) {
   if (document.getElementById('view-outline').style.display === 'none') return;
