@@ -2313,8 +2313,11 @@ document.getElementById('dbxPullBtn').addEventListener('click', async function()
   try {
     var text = await dbxDownload(dbxBucketPath(n));
     document.getElementById('pasteCsvInput').value = text;
-    var r3 = document.querySelector('input[name="csvColMode"][value="3"]');
-    if (r3 && !r3.checked) r3.click(); // buckets are always written 3-col
+    var csvLines = text.trim().split('\n');
+    var firstDataLine = csvLines.length > 1 ? csvLines[1] : csvLines[0];
+    var detectedCols = firstDataLine.split(',').length >= 3 ? '3' : '2';
+    var rCol = document.querySelector('input[name="csvColMode"][value="' + detectedCols + '"]');
+    if (rCol && !rCol.checked) rCol.click();
     loadPastedCsv();
     statusEl.textContent = '\u2705 Loaded bucket ' + n;
     setTimeout(function() { statusEl.textContent = ''; }, 2500);
