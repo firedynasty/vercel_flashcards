@@ -637,9 +637,19 @@
         <button class="btn primary" id="deckSaveBothBtn" style="padding:10px 18px; font-size:13px; background:#2563eb; width:100%; max-width:280px;" onclick="deckSaveMissedToSheet('both')">Copy missed + remaining</button>
         <div style="display:flex; gap:6px; width:100%; max-width:280px;">
           <select id="dbxPushBucketNum" style="padding:8px 7px; border:1px solid #ddd; border-radius:6px; font-size:12px; font-family:inherit; background:white; min-width:96px;"></select>
-          <button id="dbxPushBtn" style="flex:1; padding:10px 10px; font-size:13px; background:#0061fe; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:600; font-family:inherit; white-space:nowrap;">&#8593; Push</button>
+          <button id="dbxPushBtn" style="flex:1; padding:10px 10px; font-size:11px; background:#0061fe; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:600; font-family:inherit; white-space:nowrap;">&#8593; Push (missed&rem.)</button>
         </div>
         <div id="dbxPushStatus" style="font-size:12px; color:#888; min-height:18px;"></div>
+        <!-- Push confirmation overlay -->
+        <div id="dbxPushConfirm" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:9999; align-items:center; justify-content:center;">
+          <div style="background:white; border-radius:12px; padding:24px 28px; box-shadow:0 8px 32px rgba(0,0,0,0.3); text-align:center; max-width:280px; width:90%;">
+            <p id="dbxPushConfirmMsg" style="margin:0 0 18px; font-size:15px; color:#222; line-height:1.5; font-family:inherit;"></p>
+            <div style="display:flex; gap:10px;">
+              <button id="dbxPushCancelBtn" style="flex:1; padding:9px 0; font-size:14px; border-radius:8px; border:1px solid #ccc; background:#f5f5f5; color:#333; cursor:pointer; font-weight:600; font-family:inherit;">Cancel</button>
+              <button id="dbxPushConfirmBtn" style="flex:1; padding:9px 0; font-size:14px; border-radius:8px; border:none; background:#0061fe; color:white; cursor:pointer; font-weight:600; font-family:inherit;">Push</button>
+            </div>
+          </div>
+        </div>
         <div id="deckSaveStatus" style="font-size:12px; color:#888; margin-top:6px; min-height:18px;"></div>
         <textarea id="deckCsvTextarea" style="width:100%; max-width:280px; height:120px; font-size:11px; font-family:monospace; border:1px solid #ddd; border-radius:6px; padding:6px; box-sizing:border-box; resize:vertical;" readonly></textarea>
       </div>
@@ -2313,7 +2323,9 @@ document.getElementById('dbxPullBtn').addEventListener('click', async function()
   finally { btn.disabled = false; btn.textContent = '\u2193 Load bucket'; }
 });
 
-document.getElementById('dbxPushBtn').addEventListener('click', async function() {
+var _dbxPendingPush = null; // { n, csvRows, csv }
+
+function dbxBuildPushPayload() {
   var n = document.getElementById('dbxPushBucketNum').value;
   var statusEl = document.getElementById('dbxPushStatus');
   var csvRows = [], added = new Set();
@@ -2326,19 +2338,42 @@ document.getElementById('dbxPushBtn').addEventListener('click', async function()
   if (deckCurrent !== null && !added.has(deckCurrent)) {
     var item = filteredRows[deckCurrent]; if (item && (item.chinese || item.contextLine)) { csvRows.push([item.chinese || item.contextLine, item.romanization || '', item.english || '']); added.add(deckCurrent); }
   }
-  if (csvRows.length === 0) { statusEl.textContent = 'Nothing to push \u2014 no missed or remaining cards.'; return; }
+  if (csvRows.length === 0) { statusEl.textContent = 'Nothing to push \u2014 no missed or remaining cards.'; return null; }
   function csvEsc(s) { s = String(s); return (s.indexOf(',') >= 0 || s.indexOf('"') >= 0 || s.indexOf('\n') >= 0) ? '"' + s.replace(/"/g, '""') + '"' : s; }
   var lines = ['Chinese,Romanization,English'];
   csvRows.forEach(function(r) { lines.push(r.map(csvEsc).join(',')); });
-  var csv = lines.join('\n');
-  if (!DBX_TOKEN) { statusEl.textContent = 'Signing in\u2026'; await dbxSignIn('push:' + n); return; }
-  var btn = this; btn.disabled = true; btn.textContent = 'Pushing\u2026'; statusEl.textContent = '';
+  return { n: n, csvRows: csvRows, csv: lines.join('\n') };
+}
+
+document.getElementById('dbxPushBtn').addEventListener('click', async function() {
+  var payload = dbxBuildPushPayload();
+  if (!payload) return;
+  var statusEl = document.getElementById('dbxPushStatus');
+  if (!DBX_TOKEN) { statusEl.textContent = 'Signing in\u2026'; await dbxSignIn('push:' + payload.n); return; }
+  _dbxPendingPush = payload;
+  var confirmEl = document.getElementById('dbxPushConfirm');
+  document.getElementById('dbxPushConfirmMsg').textContent = 'Push ' + payload.csvRows.length + ' terms to bucket ' + payload.n + '?';
+  confirmEl.style.display = 'flex';
+});
+
+document.getElementById('dbxPushCancelBtn').addEventListener('click', function() {
+  document.getElementById('dbxPushConfirm').style.display = 'none';
+  _dbxPendingPush = null;
+});
+
+document.getElementById('dbxPushConfirmBtn').addEventListener('click', async function() {
+  document.getElementById('dbxPushConfirm').style.display = 'none';
+  if (!_dbxPendingPush) return;
+  var payload = _dbxPendingPush; _dbxPendingPush = null;
+  var statusEl = document.getElementById('dbxPushStatus');
+  var btn = document.getElementById('dbxPushBtn');
+  btn.disabled = true; btn.textContent = 'Pushing\u2026'; statusEl.textContent = '';
   try {
-    await dbxUpload(dbxBucketPath(n), csv);
-    statusEl.textContent = '\u2705 Pushed ' + csvRows.length + ' terms \u2192 bucket ' + n;
+    await dbxUpload(dbxBucketPath(payload.n), payload.csv);
+    statusEl.textContent = '\u2705 Pushed ' + payload.csvRows.length + ' terms \u2192 bucket ' + payload.n;
     setTimeout(function() { statusEl.textContent = ''; }, 3000);
   } catch(e) { statusEl.textContent = '\u274c ' + e.message; }
-  finally { btn.disabled = false; btn.textContent = '\u2191 Push'; }
+  finally { btn.disabled = false; btn.textContent = '\u2191 Push (missed&rem.)'; }
 });
 
 function dbxResumePending() {
