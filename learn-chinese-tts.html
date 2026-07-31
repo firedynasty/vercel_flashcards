@@ -1986,7 +1986,7 @@ function deckUpdateSaveButtons() {
   if (hasMissed) { missedCountEl.style.display = ''; missedCountEl.textContent = deckMissedSet.size + ' missed'; } else { missedCountEl.style.display = 'none'; }
   var remainingEl = document.getElementById('deckRemainingCount');
   if (hasRemaining) { remainingEl.style.display = ''; remainingEl.textContent = deckQueue.length + ' remaining'; } else { remainingEl.style.display = 'none'; }
-  document.getElementById('deckSaveBothBtn').style.display = hasRemaining ? '' : 'none';
+  document.getElementById('deckSaveBothBtn').style.display = '';
 }
 function deckFlipCard() {
   if (deckFlipped) return;
