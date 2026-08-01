@@ -178,7 +178,7 @@
         <button class="ml-2 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold bg-amber-500 text-white hover:bg-amber-600" id="notesBtn" title="Open notes (synced to Dropbox)">Notes</button>
         <button class="tool-btn" id="clearBtn">Clear</button>
         <button class="tool-btn" id="darkBtn">Dark</button>
-        <button class="tool-btn active" id="gridBtn">Grid</button>
+        <button class="tool-btn" id="gridBtn">Grid</button>
         <button class="tool-btn" id="scrollBtn" title="Toggle between drawing and one-finger scrolling">Scroll</button>
         <button class="tool-btn" id="undoBtn" title="Undo last stroke (Ctrl+Z)" disabled>Undo</button>
         <div class="stroke-control">
@@ -235,7 +235,7 @@
         let lastX = 0;
         let lastY = 0;
         let strokeSizeValue = 2;
-        let showGrid = true;
+        let showGrid = false;
         let isDark = false;
         let scrollMode = false;
         let imgURL = null;
