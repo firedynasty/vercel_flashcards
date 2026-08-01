@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Image Notes</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
         * {
             margin: 0;
@@ -174,6 +175,7 @@
     <div class="toolbar">
         <span class="title">N</span>
         <button class="tool-btn" id="loadImgBtn">Load Image</button>
+        <button class="ml-2 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold bg-amber-500 text-white hover:bg-amber-600" id="notesBtn" title="Open notes (synced to Dropbox)">Notes</button>
         <button class="tool-btn" id="clearBtn">Clear</button>
         <button class="tool-btn" id="darkBtn">Dark</button>
         <button class="tool-btn active" id="gridBtn">Grid</button>
@@ -183,6 +185,7 @@
             <label for="strokeSize">Stroke:</label>
             <input type="range" id="strokeSize" min="2" max="20" value="2">
         </div>
+        <input type="color" id="penColor" value="#000000" title="Pen color" style="width:36px; height:36px; border:2px solid rgba(255,255,255,0.25); border-radius:8px; padding:2px; background:none; cursor:pointer;">
     </div>
 
     <div class="image-area" id="imageArea">
@@ -197,6 +200,22 @@
     </div>
 
     <input type="file" id="fileInput" accept="image/*" style="display:none">
+
+    <!-- Notes / Dropbox sync modal -->
+    <div id="notesModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.72); z-index:200; align-items:center; justify-content:center; padding:20px;">
+      <div style="background:#1e293b; border-radius:16px; width:100%; max-width:480px; padding:20px; display:flex; flex-direction:column; gap:16px;">
+        <div style="display:flex; align-items:center; justify-content:space-between;">
+          <span style="color:#a8d8ea; font-weight:700; font-size:1rem;">Drawing — Dropbox sync</span>
+          <button id="notesCloseBtn" style="background:none; border:none; color:#94a3b8; font-size:1.25rem; cursor:pointer; padding:4px 8px; border-radius:6px;" title="Close">✕</button>
+        </div>
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <button id="notesDbxAuthBtn" style="font-size:11px; padding:4px 10px; border-radius:6px; border:1px solid #ccc; background:#f5f5f3; color:#555; cursor:pointer; font-family:inherit; font-weight:600; white-space:nowrap;">Dropbox</button>
+          <button id="notesLoadBtn" style="flex:1 1 0; padding:10px 0; font-size:15px; border:1px solid #ccc; border-radius:8px; background:#f5f5f5; color:#333; cursor:pointer; font-weight:600;">&#8595; Load</button>
+          <button id="notesSaveBtn" style="flex:2 1 0; padding:10px 0; font-size:15px; border:none; border-radius:8px; background:rgb(217,119,6); color:white; cursor:pointer; font-weight:600;">&#8593; Save to Dropbox</button>
+        </div>
+        <div id="notesStatus" style="font-size:12px; color:#94a3b8; min-height:16px;"></div>
+      </div>
+    </div>
 
     <script>
         const canvas = document.getElementById('drawCanvas');
@@ -303,11 +322,14 @@
             const pos = getPos(e);
             lastX = pos.x;
             lastY = pos.y;
-            currentStroke = { color: ctx.strokeStyle, width: ctx.lineWidth, points: [{ x: pos.x, y: pos.y }] };
+            // Use pen color picker value as the active color
+            const penColor = document.getElementById('penColor').value;
+            ctx.strokeStyle = penColor;
+            ctx.fillStyle = penColor;
+            currentStroke = { color: penColor, width: ctx.lineWidth, points: [{ x: pos.x, y: pos.y }] };
             // Draw a dot immediately so single taps are visible
             ctx.beginPath();
             ctx.arc(pos.x, pos.y, ctx.lineWidth / 2, 0, Math.PI * 2);
-            ctx.fillStyle = ctx.strokeStyle;
             ctx.fill();
         }
 
@@ -399,7 +421,9 @@
         darkBtn.addEventListener('click', () => {
             isDark = !isDark;
             canvas.style.background = isDark ? '#374151' : '#fff';
-            ctx.strokeStyle = isDark ? '#fff' : '#000';
+            const autoColor = isDark ? '#ffffff' : '#000000';
+            ctx.strokeStyle = autoColor;
+            document.getElementById('penColor').value = autoColor;
             darkBtn.textContent = isDark ? 'Light' : 'Dark';
             darkBtn.classList.toggle('active', isDark);
             drawGrid();
@@ -454,6 +478,165 @@
         window.addEventListener('orientationchange', () => setTimeout(resizeCanvas, 100));
 
         resizeCanvas();
+
+        // ── DROPBOX DRAWING SYNC ──
+        const DRAWING_DBX_PATH = '/flashcards/vercel/imagenotes.json';
+        var DBX_TOKEN = null;
+
+        function notesDbxSetAuthBtn() {
+            var btn = document.getElementById('notesDbxAuthBtn');
+            if (!btn) return;
+            if (DBX_TOKEN) {
+                btn.textContent = '● Dropbox'; btn.style.color = '#0061fe'; btn.style.borderColor = '#0061fe'; btn.title = 'Connected — click to sign out';
+            } else {
+                btn.textContent = 'Dropbox'; btn.style.color = '#555'; btn.style.borderColor = '#ccc'; btn.title = 'Sign in to Dropbox';
+            }
+        }
+
+        async function dbxGetAppKey() {
+            if (['localhost', '127.0.0.1'].includes(window.location.hostname)) {
+                var k = localStorage.getItem('dropbox-app-key') || '';
+                if (!k) { k = prompt('Dropbox App Key:') || ''; if (k) localStorage.setItem('dropbox-app-key', k); }
+                return k;
+            }
+            try { var r = await fetch('/api/dropbox-key'); return (await r.json()).key || ''; } catch(e) { return ''; }
+        }
+
+        function dbxMakeVerifier() {
+            var a = new Uint8Array(64); crypto.getRandomValues(a);
+            return btoa(String.fromCharCode.apply(null, a)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+        }
+
+        async function dbxMakeChallenge(v) {
+            var d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(v));
+            return btoa(String.fromCharCode.apply(null, new Uint8Array(d))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+        }
+
+        async function dbxSignIn(pendingAction) {
+            var key = await dbxGetAppKey();
+            if (!key) { alert('Dropbox App Key not configured'); return; }
+            if (pendingAction) sessionStorage.setItem('dbx_pending', pendingAction);
+            var v = dbxMakeVerifier();
+            var c = await dbxMakeChallenge(v);
+            var uri = window.location.origin + window.location.pathname;
+            var authUrl = 'https://www.dropbox.com/oauth2/authorize?client_id=' + key +
+                '&response_type=code&code_challenge=' + c + '&code_challenge_method=S256&redirect_uri=' + encodeURIComponent(uri) + '&token_access_type=online';
+            localStorage.setItem('dbx_verifier', v);
+            var popup = window.open(authUrl, 'dropbox_auth', 'width=520,height=680,scrollbars=yes,resizable=yes');
+            if (!popup) {
+                localStorage.removeItem('dbx_verifier'); sessionStorage.setItem('dbx_verifier', v);
+                window.location.href = authUrl;
+            }
+        }
+
+        async function dbxHandleRedirect() {
+            var params = new URLSearchParams(window.location.search);
+            var code = params.get('code');
+            if (!code) return;
+            var v = localStorage.getItem('dbx_verifier') || sessionStorage.getItem('dbx_verifier');
+            var key = await dbxGetAppKey();
+            if (!v || !key) return;
+            var uri = window.location.origin + window.location.pathname;
+            try {
+                var r = await fetch('https://api.dropboxapi.com/oauth2/token', {
+                    method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({ code: code, grant_type: 'authorization_code', client_id: key, redirect_uri: uri, code_verifier: v }).toString()
+                });
+                var d = await r.json();
+                localStorage.removeItem('dbx_verifier'); sessionStorage.removeItem('dbx_verifier');
+                if (d.access_token) {
+                    if (window.opener && !window.opener.closed) { window.opener.postMessage({ dropboxToken: d.access_token }, window.location.origin); window.close(); return; }
+                    DBX_TOKEN = d.access_token; window.history.replaceState({}, document.title, window.location.pathname);
+                } else { if (window.opener && !window.opener.closed) window.close(); }
+            } catch(e) { console.error('Dropbox auth:', e); if (window.opener && !window.opener.closed) window.close(); }
+        }
+
+        async function dbxDownload(path) {
+            var r = await fetch('https://content.dropboxapi.com/2/files/download', {
+                method: 'POST', headers: { Authorization: 'Bearer ' + DBX_TOKEN, 'Dropbox-API-Arg': JSON.stringify({ path: path }) }
+            });
+            if (r.status === 401) { DBX_TOKEN = null; notesDbxSetAuthBtn(); throw new Error('Session expired — sign in again'); }
+            if (r.status === 409) throw new Error('File not found in Dropbox');
+            if (!r.ok) throw new Error('Download failed (' + r.status + ')');
+            return await r.text();
+        }
+
+        async function dbxUpload(path, content) {
+            var r = await fetch('https://content.dropboxapi.com/2/files/upload', {
+                method: 'POST',
+                headers: { Authorization: 'Bearer ' + DBX_TOKEN, 'Dropbox-API-Arg': JSON.stringify({ path: path, mode: { '.tag': 'overwrite' }, mute: true }), 'Content-Type': 'application/octet-stream' },
+                body: content
+            });
+            if (r.status === 401) { DBX_TOKEN = null; notesDbxSetAuthBtn(); throw new Error('Session expired — sign in again'); }
+            if (!r.ok) throw new Error('Upload failed (' + r.status + ')');
+        }
+
+        // Notes modal open/close
+        const notesModal = document.getElementById('notesModal');
+        document.getElementById('notesBtn').addEventListener('click', () => {
+            notesModal.style.display = 'flex';
+        });
+        document.getElementById('notesCloseBtn').addEventListener('click', () => {
+            notesModal.style.display = 'none';
+        });
+        notesModal.addEventListener('click', (e) => {
+            if (e.target === notesModal) notesModal.style.display = 'none';
+        });
+
+        // Dropbox auth button
+        document.getElementById('notesDbxAuthBtn').addEventListener('click', function() {
+            if (DBX_TOKEN) {
+                try { fetch('https://api.dropboxapi.com/2/auth/token/revoke', { method: 'POST', headers: { Authorization: 'Bearer ' + DBX_TOKEN } }); } catch(e) {}
+                DBX_TOKEN = null; notesDbxSetAuthBtn();
+            } else { dbxSignIn('notes-load'); }
+        });
+
+        // Load drawing from Dropbox
+        document.getElementById('notesLoadBtn').addEventListener('click', async function() {
+            var statusEl = document.getElementById('notesStatus');
+            if (!DBX_TOKEN) { statusEl.textContent = 'Signing in…'; await dbxSignIn('notes-load'); return; }
+            var btn = this; btn.disabled = true; btn.textContent = 'Loading…'; statusEl.textContent = '';
+            try {
+                var text = await dbxDownload(DRAWING_DBX_PATH);
+                var data = JSON.parse(text);
+                strokes = data.strokes || [];
+                redrawAll();
+                updateUndoBtn();
+                statusEl.textContent = '✅ Loaded (' + strokes.length + ' strokes)';
+                setTimeout(() => { statusEl.textContent = ''; }, 2500);
+            } catch(e) { statusEl.textContent = '❌ ' + e.message; }
+            finally { btn.disabled = false; btn.textContent = '↓ Load'; }
+        });
+
+        // Save drawing to Dropbox
+        document.getElementById('notesSaveBtn').addEventListener('click', async function() {
+            var statusEl = document.getElementById('notesStatus');
+            if (!DBX_TOKEN) { statusEl.textContent = 'Signing in…'; await dbxSignIn('notes-save'); return; }
+            var btn = this; btn.disabled = true; btn.textContent = 'Saving…'; statusEl.textContent = '';
+            try {
+                var data = JSON.stringify({ width: cssW, height: cssH, strokes: strokes });
+                await dbxUpload(DRAWING_DBX_PATH, data);
+                statusEl.textContent = '✅ Saved (' + strokes.length + ' strokes)';
+                setTimeout(() => { statusEl.textContent = ''; }, 2500);
+            } catch(e) { statusEl.textContent = '❌ ' + e.message; }
+            finally { btn.disabled = false; btn.textContent = '↑ Save to Dropbox'; }
+        });
+
+        // Handle Dropbox popup postMessage
+        window.addEventListener('message', function(event) {
+            if (event.origin !== window.location.origin) return;
+            if (event.data && event.data.dropboxToken) {
+                DBX_TOKEN = event.data.dropboxToken; notesDbxSetAuthBtn();
+                var pending = sessionStorage.getItem('dbx_pending');
+                if (pending === 'notes-load') { sessionStorage.removeItem('dbx_pending'); document.getElementById('notesLoadBtn').click(); }
+                else if (pending === 'notes-save') { sessionStorage.removeItem('dbx_pending'); document.getElementById('notesSaveBtn').click(); }
+            }
+        });
+
+        (async function dbxBoot() {
+            await dbxHandleRedirect();
+            notesDbxSetAuthBtn();
+        })();
     </script>
 </body>
 </html>
