@@ -186,6 +186,20 @@
             <input type="range" id="strokeSize" min="2" max="20" value="2">
         </div>
         <input type="color" id="penColor" value="#000000" title="Pen color" style="width:36px; height:36px; border:2px solid rgba(255,255,255,0.25); border-radius:8px; padding:2px; background:none; cursor:pointer;">
+        <button class="ml-2 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700" id="ocrBtn" title="Extract text from drawing via OCR">OCR</button>
+    </div>
+
+    <!-- OCR result overlay -->
+    <div id="ocrOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.72); z-index:300; align-items:center; justify-content:center; padding:20px;">
+      <div style="background:#1e293b; border-radius:16px; width:100%; max-width:480px; padding:20px; display:flex; flex-direction:column; gap:14px;">
+        <div style="display:flex; align-items:center; justify-content:space-between;">
+          <span style="color:#a8d8ea; font-weight:700; font-size:1rem;">OCR Result</span>
+          <button id="ocrCloseBtn" style="background:none; border:none; color:#94a3b8; font-size:1.25rem; cursor:pointer; padding:4px 8px; border-radius:6px;" title="Close">✕</button>
+        </div>
+        <div id="ocrStatus" style="font-size:12px; color:#94a3b8; min-height:16px;"></div>
+        <textarea id="ocrResult" readonly style="background:#0f172a; color:#e2e8f0; border:1px solid #334155; border-radius:8px; padding:12px; font-size:14px; line-height:1.6; resize:vertical; font-family:inherit; outline:none; min-height:120px;"></textarea>
+        <button id="ocrCopyBtn" style="padding:10px 0; font-size:14px; border:none; border-radius:8px; background:#2563eb; color:white; cursor:pointer; font-weight:600;">Copy to clipboard</button>
+      </div>
     </div>
 
     <div class="image-area" id="imageArea">
@@ -637,6 +651,110 @@
             await dbxHandleRedirect();
             notesDbxSetAuthBtn();
         })();
+
+        // ── OCR ──
+        const ocrOverlay = document.getElementById('ocrOverlay');
+        document.getElementById('ocrBtn').addEventListener('click', ocrRun);
+        document.getElementById('ocrCloseBtn').addEventListener('click', () => { ocrOverlay.style.display = 'none'; });
+        ocrOverlay.addEventListener('click', (e) => { if (e.target === ocrOverlay) ocrOverlay.style.display = 'none'; });
+        document.getElementById('ocrCopyBtn').addEventListener('click', () => {
+            const text = document.getElementById('ocrResult').value;
+            navigator.clipboard.writeText(text).then(() => {
+                const btn = document.getElementById('ocrCopyBtn');
+                btn.textContent = 'Copied!';
+                setTimeout(() => { btn.textContent = 'Copy to clipboard'; }, 1800);
+            });
+        });
+
+        async function ocrRun() {
+            if (strokes.length === 0) { alert('Nothing drawn yet.'); return; }
+
+            // Compute bounding box of all stroke points
+            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+            strokes.forEach(s => s.points.forEach(p => {
+                if (p.x < minX) minX = p.x;
+                if (p.y < minY) minY = p.y;
+                if (p.x > maxX) maxX = p.x;
+                if (p.y > maxY) maxY = p.y;
+            }));
+            const PAD = 12;
+            minX = Math.max(0, minX - PAD);
+            minY = Math.max(0, minY - PAD);
+            maxX = Math.min(cssW, maxX + PAD);
+            maxY = Math.min(cssH, maxY + PAD);
+            const cropW = maxX - minX;
+            const cropH = maxY - minY;
+            if (cropW < 2 || cropH < 2) { alert('Drawing area too small.'); return; }
+
+            // Copy cropped region to a temp canvas (white bg) and export as base64
+            const dpr = Math.min(window.devicePixelRatio || 1, 2);
+            const tmp = document.createElement('canvas');
+            tmp.width = Math.round(cropW * dpr);
+            tmp.height = Math.round(cropH * dpr);
+            const tmpCtx = tmp.getContext('2d');
+            tmpCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            tmpCtx.fillStyle = isDark ? '#374151' : '#ffffff';
+            tmpCtx.fillRect(0, 0, cropW, cropH);
+            // Replay strokes offset by bounding box
+            strokes.forEach(s => {
+                if (s.points.length === 0) return;
+                tmpCtx.strokeStyle = s.color;
+                tmpCtx.fillStyle = s.color;
+                tmpCtx.lineWidth = s.width;
+                tmpCtx.lineCap = 'round';
+                tmpCtx.lineJoin = 'round';
+                if (s.points.length === 1) {
+                    tmpCtx.beginPath();
+                    tmpCtx.arc(s.points[0].x - minX, s.points[0].y - minY, s.width / 2, 0, Math.PI * 2);
+                    tmpCtx.fill();
+                    return;
+                }
+                tmpCtx.beginPath();
+                tmpCtx.moveTo(s.points[0].x - minX, s.points[0].y - minY);
+                for (let i = 1; i < s.points.length; i++) tmpCtx.lineTo(s.points[i].x - minX, s.points[i].y - minY);
+                tmpCtx.stroke();
+            });
+
+            const dataUrl = tmp.toDataURL('image/png');
+            const base64 = dataUrl.split(',')[1];
+
+            // Get / prompt for access code
+            var accessCode = localStorage.getItem('ocr-access-code') || '';
+            if (!accessCode) {
+                accessCode = prompt('Enter access code:') || '';
+                if (!accessCode) return;
+                localStorage.setItem('ocr-access-code', accessCode);
+            }
+
+            // Show overlay and call /api/ocr
+            ocrOverlay.style.display = 'flex';
+            const statusEl = document.getElementById('ocrStatus');
+            const resultEl = document.getElementById('ocrResult');
+            statusEl.textContent = 'Extracting text…';
+            resultEl.value = '';
+
+            try {
+                const resp = await fetch('/api/ocr', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ accessCode, imageBase64: base64 }),
+                });
+                const data = await resp.json();
+                if (!resp.ok) {
+                    if (resp.status === 401) {
+                        localStorage.removeItem('ocr-access-code');
+                        statusEl.textContent = '❌ Invalid access code — cleared, try again.';
+                    } else {
+                        statusEl.textContent = '❌ ' + (data.error || 'Request failed');
+                    }
+                    return;
+                }
+                statusEl.textContent = '';
+                resultEl.value = data.text || '(no text found)';
+            } catch (e) {
+                statusEl.textContent = '❌ ' + e.message;
+            }
+        }
     </script>
 </body>
 </html>
