@@ -177,13 +177,14 @@
 <body>
 
     <div class="toolbar">
-        <span class="title">N</span>
         <button class="tool-btn" id="loadImgBtn">Img</button>
         <button class="tool-btn" id="clearBtn">Clear</button>
         <button class="tool-btn" id="darkBtn">Dark</button>
         <button class="tool-btn" id="gridBtn">Grid</button>
         <button class="tool-btn" id="undoBtn" title="Undo last stroke (Ctrl+Z)" disabled>Undo</button>
-        <input type="range" id="strokeSize" min="2" max="20" value="2" style="width:60px; height:20px;">
+        <button class="tool-btn" id="scrollUpBtn" title="Scroll up">↑</button>
+        <button class="tool-btn" id="scrollDownBtn" title="Scroll down">↓</button>
+        <input type="range" id="strokeSize" min="2" max="20" value="2" style="width:75px; height:24px;">
         <button class="ml-2 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold bg-amber-500 text-white hover:bg-amber-600" id="notesBtn" title="Open notes (synced to Dropbox)">Notes</button>
         <button class="ml-2 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700" id="ocrBtn" title="Extract text from drawing via OCR">OCR</button>
     </div>
@@ -409,6 +410,10 @@
         canvas.addEventListener('touchcancel', stopDrawing);
 
         // Toolbar
+        const SCROLL_AMOUNT = 600;
+        document.getElementById('scrollUpBtn').addEventListener('click', () => window.scrollBy({ top: -SCROLL_AMOUNT, behavior: 'smooth' }));
+        document.getElementById('scrollDownBtn').addEventListener('click', () => window.scrollBy({ top: SCROLL_AMOUNT, behavior: 'smooth' }));
+
         document.getElementById('clearBtn').addEventListener('click', () => {
             strokes = [];
             ctx.clearRect(0, 0, cssW, cssH);
