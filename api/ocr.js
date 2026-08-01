@@ -50,7 +50,7 @@ export default async function handler(req, res) {
             },
             {
               type: 'text',
-              text: 'This is an image of handwritten notes with a stylus on a canvas. Transcribe all the text. Where handwriting is ambiguous, use context to infer the most likely word. Preserve line breaks. Output only the transcribed text, nothing else.',
+              text: 'This is an image of handwritten notes written with a stylus on a canvas. Transcribe all the text. If a transcribed word is not a real English word, correct it to the closest real word that fits the context — for example "decribe" should become "describe", "specifility" should become "specificity". Preserve line breaks. Output only the transcribed text, nothing else.',
             },
           ],
         }],
