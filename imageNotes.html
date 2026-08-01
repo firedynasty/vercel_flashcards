@@ -35,34 +35,38 @@
             top: 0;
             z-index: 10;
             display: flex;
-            gap: 8px;
+            gap: 5px;
             align-items: center;
-            flex-wrap: wrap;
+            flex-wrap: nowrap;
             justify-content: center;
             flex-shrink: 0;
             background: rgba(22, 33, 62, 0.95);
             backdrop-filter: blur(8px);
-            padding: 6px;
+            padding: 5px 8px;
             border-radius: 12px;
+            overflow-x: auto;
         }
 
         .toolbar .title {
-            font-size: 0.95rem;
+            font-size: 0.85rem;
             color: #a8d8ea;
             font-weight: 600;
-            margin-right: 4px;
+            margin-right: 2px;
+            flex-shrink: 0;
         }
 
         .tool-btn {
-            min-height: 40px;
-            padding: 8px 16px;
-            border: 2px solid rgba(255, 255, 255, 0.25);
-            border-radius: 10px;
+            min-height: 32px;
+            padding: 5px 10px;
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            border-radius: 8px;
             background: rgba(255, 255, 255, 0.1);
             color: #fff;
-            font-size: 0.9rem;
+            font-size: 0.8rem;
             cursor: pointer;
             transition: all 0.2s ease;
+            flex-shrink: 0;
+            white-space: nowrap;
         }
 
         .tool-btn:hover {
@@ -174,18 +178,13 @@
 
     <div class="toolbar">
         <span class="title">N</span>
-        <button class="tool-btn" id="loadImgBtn">Load Image</button>
-        <button class="ml-2 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold bg-amber-500 text-white hover:bg-amber-600" id="notesBtn" title="Open notes (synced to Dropbox)">Notes</button>
+        <button class="tool-btn" id="loadImgBtn">Img</button>
         <button class="tool-btn" id="clearBtn">Clear</button>
         <button class="tool-btn" id="darkBtn">Dark</button>
         <button class="tool-btn" id="gridBtn">Grid</button>
-        <button class="tool-btn" id="scrollBtn" title="Toggle between drawing and one-finger scrolling">Scroll</button>
         <button class="tool-btn" id="undoBtn" title="Undo last stroke (Ctrl+Z)" disabled>Undo</button>
-        <div class="stroke-control">
-            <label for="strokeSize">Stroke:</label>
-            <input type="range" id="strokeSize" min="2" max="20" value="2">
-        </div>
-        <input type="color" id="penColor" value="#000000" title="Pen color" style="width:36px; height:36px; border:2px solid rgba(255,255,255,0.25); border-radius:8px; padding:2px; background:none; cursor:pointer;">
+        <input type="range" id="strokeSize" min="2" max="20" value="2" style="width:60px; height:20px;">
+        <button class="ml-2 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold bg-amber-500 text-white hover:bg-amber-600" id="notesBtn" title="Open notes (synced to Dropbox)">Notes</button>
         <button class="ml-2 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700" id="ocrBtn" title="Extract text from drawing via OCR">OCR</button>
     </div>
 
@@ -251,7 +250,6 @@
         let strokeSizeValue = 2;
         let showGrid = false;
         let isDark = false;
-        let scrollMode = false;
         let imgURL = null;
         let strokes = [];        // completed strokes, for undo
         let currentStroke = null;
@@ -330,17 +328,12 @@
         }
 
         function startDrawing(e) {
-            if (scrollMode) return; // let the browser scroll
             e.preventDefault();
             isDrawing = true;
             const pos = getPos(e);
             lastX = pos.x;
             lastY = pos.y;
-            // Use pen color picker value as the active color
-            const penColor = document.getElementById('penColor').value;
-            ctx.strokeStyle = penColor;
-            ctx.fillStyle = penColor;
-            currentStroke = { color: penColor, width: ctx.lineWidth, points: [{ x: pos.x, y: pos.y }] };
+            currentStroke = { color: ctx.strokeStyle, width: ctx.lineWidth, points: [{ x: pos.x, y: pos.y }] };
             // Draw a dot immediately so single taps are visible
             ctx.beginPath();
             ctx.arc(pos.x, pos.y, ctx.lineWidth / 2, 0, Math.PI * 2);
@@ -348,7 +341,7 @@
         }
 
         function draw(e) {
-            if (!isDrawing || scrollMode) return;
+            if (!isDrawing) return;
             e.preventDefault();
             const pos = getPos(e);
             ctx.beginPath();
@@ -435,9 +428,7 @@
         darkBtn.addEventListener('click', () => {
             isDark = !isDark;
             canvas.style.background = isDark ? '#374151' : '#fff';
-            const autoColor = isDark ? '#ffffff' : '#000000';
-            ctx.strokeStyle = autoColor;
-            document.getElementById('penColor').value = autoColor;
+            ctx.strokeStyle = isDark ? '#ffffff' : '#000000';
             darkBtn.textContent = isDark ? 'Light' : 'Dark';
             darkBtn.classList.toggle('active', isDark);
             drawGrid();
@@ -447,16 +438,6 @@
             showGrid = !showGrid;
             gridBtn.classList.toggle('active', showGrid);
             drawGrid();
-        });
-
-        // Scroll mode: canvas stops capturing touches so one finger scrolls the page
-        const scrollBtn = document.getElementById('scrollBtn');
-        scrollBtn.addEventListener('click', () => {
-            scrollMode = !scrollMode;
-            isDrawing = false;
-            canvas.style.touchAction = scrollMode ? 'pan-y' : 'none';
-            scrollBtn.textContent = scrollMode ? 'Draw' : 'Scroll';
-            scrollBtn.classList.toggle('active', scrollMode);
         });
 
         document.getElementById('strokeSize').addEventListener('input', (e) => {
