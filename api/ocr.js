@@ -50,7 +50,7 @@ export default async function handler(req, res) {
             },
             {
               type: 'text',
-              text: 'Extract all the text from this image exactly as written. Preserve paragraphs and formatting. Output only the extracted text, nothing else.',
+              text: 'This is an image of handwritten notes with a stylus on a canvas. Transcribe all the text. Where handwriting is ambiguous, use context to infer the most likely word. Preserve line breaks. Output only the transcribed text, nothing else.',
             },
           ],
         }],
@@ -63,7 +63,8 @@ export default async function handler(req, res) {
     }
 
     const data = await response.json();
-    const text = data.choices?.[0]?.message?.content || '';
+    const raw = data.choices?.[0]?.message?.content || '';
+    const text = raw.split(/\s+/).join(' ').trim();
     return res.status(200).json({ text });
   } catch (err) {
     return res.status(500).json({ error: 'OCR request failed: ' + err.message });
