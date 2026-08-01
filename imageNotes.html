@@ -617,7 +617,7 @@
                 redrawAll();
                 updateUndoBtn();
                 statusEl.textContent = '✅ Loaded (' + strokes.length + ' strokes)';
-                setTimeout(() => { statusEl.textContent = ''; }, 2500);
+                setTimeout(() => { notesModal.style.display = 'none'; statusEl.textContent = ''; }, 800);
             } catch(e) { statusEl.textContent = '❌ ' + e.message; }
             finally { btn.disabled = false; btn.textContent = '↓ Load'; }
         });
@@ -631,7 +631,7 @@
                 var data = JSON.stringify({ width: cssW, height: cssH, strokes: strokes });
                 await dbxUpload(DRAWING_DBX_PATH, data);
                 statusEl.textContent = '✅ Saved (' + strokes.length + ' strokes)';
-                setTimeout(() => { statusEl.textContent = ''; }, 2500);
+                setTimeout(() => { notesModal.style.display = 'none'; statusEl.textContent = ''; }, 800);
             } catch(e) { statusEl.textContent = '❌ ' + e.message; }
             finally { btn.disabled = false; btn.textContent = '↑ Save to Dropbox'; }
         });
