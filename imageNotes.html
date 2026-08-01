@@ -185,6 +185,7 @@
         <button class="tool-btn" id="scrollUpBtn" title="Scroll up">↑</button>
         <button class="tool-btn" id="scrollDownBtn" title="Scroll down">↓</button>
         <input type="range" id="strokeSize" min="2" max="20" value="2" style="width:75px; height:24px;">
+        <button class="ml-2 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700" id="chinBtn" title="Toggle Chinese OCR mode">Chin</button>
         <button class="ml-2 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold bg-amber-500 text-white hover:bg-amber-600" id="notesBtn" title="Open notes (synced to Dropbox)">Notes</button>
         <button class="ml-2 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700" id="ocrBtn" title="Extract text from drawing via OCR">OCR</button>
     </div>
@@ -410,6 +411,18 @@
         canvas.addEventListener('touchcancel', stopDrawing);
 
         // Toolbar
+        let isChinese = false;
+        const chinBtn = document.getElementById('chinBtn');
+        function updateChinBtn() {
+            chinBtn.style.opacity = isChinese ? '1' : '0.45';
+            chinBtn.style.outline = isChinese ? '2px solid white' : 'none';
+        }
+        updateChinBtn();
+        chinBtn.addEventListener('click', () => {
+            isChinese = !isChinese;
+            updateChinBtn();
+        });
+
         const SCROLL_AMOUNT = 600;
         document.getElementById('scrollUpBtn').addEventListener('click', () => window.scrollBy({ top: -SCROLL_AMOUNT, behavior: 'smooth' }));
         document.getElementById('scrollDownBtn').addEventListener('click', () => window.scrollBy({ top: SCROLL_AMOUNT, behavior: 'smooth' }));
@@ -723,7 +736,7 @@
                 const resp = await fetch('/api/ocr', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ accessCode, imageBase64: base64 }),
+                    body: JSON.stringify({ accessCode, imageBase64: base64, chinese: isChinese }),
                 });
                 const data = await resp.json();
                 if (!resp.ok) {
