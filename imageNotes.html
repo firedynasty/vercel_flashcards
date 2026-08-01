@@ -185,9 +185,9 @@
         <button class="tool-btn" id="scrollUpBtn" title="Scroll up">↑</button>
         <button class="tool-btn" id="scrollDownBtn" title="Scroll down">↓</button>
         <input type="range" id="strokeSize" min="2" max="20" value="2" style="width:75px; height:24px;">
-        <button class="ml-2 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700" id="chinBtn" title="Toggle Chinese OCR mode">Chin</button>
         <button class="ml-2 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold bg-amber-500 text-white hover:bg-amber-600" id="notesBtn" title="Open notes (synced to Dropbox)">Notes</button>
-        <button class="ml-2 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700" id="ocrBtn" title="Extract text from drawing via OCR">OCR</button>
+        <button class="ml-2 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700" id="ocrBtn" title="Extract text (English)">OCR</button>
+        <button class="ml-2 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700" id="ocrChinBtn" title="Extract text (Chinese)">中文</button>
     </div>
 
     <!-- OCR result overlay -->
@@ -411,17 +411,6 @@
         canvas.addEventListener('touchcancel', stopDrawing);
 
         // Toolbar
-        let isChinese = false;
-        const chinBtn = document.getElementById('chinBtn');
-        function updateChinBtn() {
-            chinBtn.style.opacity = isChinese ? '1' : '0.45';
-            chinBtn.style.outline = isChinese ? '2px solid white' : 'none';
-        }
-        updateChinBtn();
-        chinBtn.addEventListener('click', () => {
-            isChinese = !isChinese;
-            updateChinBtn();
-        });
 
         const SCROLL_AMOUNT = 600;
         document.getElementById('scrollUpBtn').addEventListener('click', () => window.scrollBy({ top: -SCROLL_AMOUNT, behavior: 'smooth' }));
@@ -653,7 +642,8 @@
 
         // ── OCR ──
         const ocrOverlay = document.getElementById('ocrOverlay');
-        document.getElementById('ocrBtn').addEventListener('click', ocrRun);
+        document.getElementById('ocrBtn').addEventListener('click', () => ocrRun(false));
+        document.getElementById('ocrChinBtn').addEventListener('click', () => ocrRun(true));
         document.getElementById('ocrCloseBtn').addEventListener('click', () => { ocrOverlay.style.display = 'none'; });
         ocrOverlay.addEventListener('click', (e) => { if (e.target === ocrOverlay) ocrOverlay.style.display = 'none'; });
         document.getElementById('ocrCopyBtn').addEventListener('click', () => {
@@ -665,7 +655,7 @@
             });
         });
 
-        async function ocrRun() {
+        async function ocrRun(chinese) {
             if (strokes.length === 0) { alert('Nothing drawn yet.'); return; }
 
             // Compute bounding box of all stroke points
@@ -736,7 +726,7 @@
                 const resp = await fetch('/api/ocr', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ accessCode, imageBase64: base64, chinese: isChinese }),
+                    body: JSON.stringify({ accessCode, imageBase64: base64, chinese }),
                 });
                 const data = await resp.json();
                 if (!resp.ok) {
