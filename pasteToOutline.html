@@ -156,6 +156,7 @@
 
 <!-- =========================================================== OUTLINE VIEW -->
 <div id="view-outline" style="display:none">
+  <button title="Page down" onclick="window.scrollBy({top:window.innerHeight*0.9,behavior:'smooth'})" style="position:fixed;top:50%;left:6px;z-index:102;width:48px;height:48px;background:rgba(0,0,0,0.12);border-radius:50%;border:1.5px solid rgba(0,0,0,0.4);opacity:0.2;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:opacity .2s;" onmouseenter="this.style.opacity='.65'" onmouseleave="this.style.opacity='.2'"><svg width="28" height="28" viewBox="0 0 64 64"><path d="M8 20 L32 44 L56 20" stroke="rgba(0,0,0,0.75)" stroke-width="8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
   <nav>
     <button class="link back-btn">← new paste</button>
     <button class="link rerun-decaps">↺ re-outline w/ de-caps</button>
@@ -535,17 +536,13 @@ function chapterStats(roots) {
 // ============================================================
 // Match a line that contains only a timestamp
 const TS_LINE_RE = /^[ \t]*\[(?:\d{1,2}:)?\d{1,2}:\d{2}\][ \t]*$/gm;
-// Match any remaining inline timestamp (after line-only ones are gone)
-const TS_INLINE_RE = /\[(?:\d{1,2}:)?\d{1,2}:\d{2}\]/g;
 
 function stripTranscriptTimestamps(text) {
-  // Blanks out timestamp-only lines but keeps their newlines, so existing
-  // blank-line paragraph boundaries survive and the Kindle/Medium
-  // line-per-paragraph mode is not incorrectly triggered. Inline
-  // timestamps are stripped too; triple newlines collapse back to double.
+  // Collapse timestamp-only lines into inline markers (keep the [m:ss] text so
+  // it ends up embedded in the stitched sentence). Inline timestamps are already
+  // in place and are left untouched. Triple newlines collapse back to double.
   return text
-    .replace(TS_LINE_RE, '')
-    .replace(TS_INLINE_RE, '')
+    .replace(TS_LINE_RE, m => (m.match(/\[(?:\d{1,2}:)?\d{1,2}:\d{2}\]/) || [''])[0])
     .replace(/[ \t]{2,}/g, ' ')
     .replace(/\n{3,}/g, '\n\n');
 }
@@ -559,7 +556,6 @@ function isMostlyCaps(text) {
 
 function normalizeTranscript(text) {
   let t = text
-    .replace(/\[(?:\d{1,2}:)?\d{1,2}:\d{2}\]/g, ' ')  // [7:07] [1:23:45]
     .replace(/>>/g, '\x02')                            // speaker-turn sentinel
     .replace(/\s*\n\s*/g, ' ')                         // join hard line breaks
     .replace(/\x02/g, '\n\n')                          // speaker turns become paragraphs
@@ -813,13 +809,21 @@ function processInput() {
   const cleanup = document.getElementById('cleanup').checked;
 
   // timestamp/tidy subs would destroy reddit indentation — skip them there
-  if (mode !== 'reddit') text = stripTranscriptTimestamps(text);
+  // detect YouTube timestamps before stripping so we can auto-stitch caption line breaks
+  let hadTimestamps = false;
+  if (mode !== 'reddit') {
+    hadTimestamps = /\[(?:\d{1,2}:)?\d{1,2}:\d{2}\]/.test(text);
+    text = stripTranscriptTimestamps(text);
+  }
   // de-caps joins all lines, which would destroy reddit indentation — skip it there
   if (mode !== 'reddit' && document.getElementById('decaps').checked && isMostlyCaps(text)) {
     text = normalizeTranscript(text);
+    hadTimestamps = false; // normalizeTranscript already stitched everything
   }
 
-  const paras = paragraphsFromText(text, cleanup);
+  // YouTube transcripts use blank lines as caption separators, not paragraph breaks —
+  // auto-enable the cleanup stitcher so mid-sentence caption cuts get rejoined
+  const paras = paragraphsFromText(text, cleanup || hadTimestamps);
   if (!paras.length) { document.getElementById('input-err').textContent = 'No paragraphs found.'; return; }
 
   let title = document.getElementById('title-in').value.trim();
