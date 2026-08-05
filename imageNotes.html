@@ -192,13 +192,18 @@
     </div>
 
     <!-- OCR result overlay -->
-    <div id="ocrOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.72); z-index:300; align-items:center; justify-content:center; padding:20px;">
-      <div style="background:#1e293b; border-radius:16px; width:100%; max-width:480px; padding:20px; display:flex; flex-direction:column; gap:14px;">
+    <div id="ocrOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.72); z-index:300; align-items:flex-start; justify-content:center; padding:16px; overflow-y:auto;">
+      <div style="background:#1e293b; border-radius:16px; width:100%; max-width:640px; padding:20px; display:flex; flex-direction:column; gap:14px; margin:auto;">
         <div style="display:flex; align-items:center; justify-content:space-between;">
           <span style="color:#a8d8ea; font-weight:700; font-size:1rem;">OCR Result</span>
           <button id="ocrCloseBtn" style="background:none; border:none; color:#94a3b8; font-size:1.25rem; cursor:pointer; padding:4px 8px; border-radius:6px;" title="Close">✕</button>
         </div>
         <div id="ocrStatus" style="font-size:12px; color:#94a3b8; min-height:16px;"></div>
+        <!-- Canvas preview -->
+        <div style="background:#0f172a; border:1px solid #334155; border-radius:8px; padding:8px; display:flex; align-items:center; justify-content:center; min-height:80px;">
+          <img id="ocrPreview" src="" alt="Canvas preview" style="max-width:100%; max-height:40vh; border-radius:4px; display:none; object-fit:contain;">
+          <span id="ocrPreviewEmpty" style="color:#475569; font-size:12px;">canvas preview</span>
+        </div>
         <textarea id="ocrResult" style="background:#0f172a; color:#e2e8f0; border:1px solid #334155; border-radius:8px; padding:12px; font-size:14px; line-height:1.6; resize:vertical; font-family:inherit; outline:none; min-height:120px;"></textarea>
         <div style="display:flex; gap:8px;">
           <button id="ocrCopyBtn" style="flex:2; padding:10px 0; font-size:14px; border:none; border-radius:8px; background:#2563eb; color:white; cursor:pointer; font-weight:600;">Copy to clipboard</button>
@@ -797,6 +802,10 @@
             if (confirm('Clear the OCR result box?')) {
                 document.getElementById('ocrResult').value = '';
                 document.getElementById('ocrStatus').textContent = '';
+                const p = document.getElementById('ocrPreview');
+                const pe = document.getElementById('ocrPreviewEmpty');
+                p.src = ''; p.style.display = 'none';
+                if (pe) pe.style.display = '';
             }
         });
         document.getElementById('ocrAppendNotesBtn').addEventListener('click', () => {
@@ -808,6 +817,10 @@
                 localStorage.setItem('imageNotesText', updated);
                 // Keep textarea in sync if Notes modal is already open
                 if (txtNotesArea) txtNotesArea.value = updated;
+                // Clear canvas
+                strokes = [];
+                ctx.clearRect(0, 0, cssW, cssH);
+                updateUndoBtn();
                 const btn = document.getElementById('ocrAppendNotesBtn');
                 btn.textContent = 'Appended ✓';
                 setTimeout(() => { btn.textContent = 'Append to Notes'; }, 1800);
@@ -867,6 +880,13 @@
 
             const dataUrl = tmp.toDataURL('image/png');
             const base64 = dataUrl.split(',')[1];
+
+            // Show cropped canvas in the OCR overlay preview
+            const ocrPreview = document.getElementById('ocrPreview');
+            const ocrPreviewEmpty = document.getElementById('ocrPreviewEmpty');
+            ocrPreview.src = dataUrl;
+            ocrPreview.style.display = 'block';
+            if (ocrPreviewEmpty) ocrPreviewEmpty.style.display = 'none';
 
             // Get / prompt for access code
             var accessCode = localStorage.getItem('ocr-access-code') || '';
