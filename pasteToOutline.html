@@ -428,7 +428,7 @@ function outlineChapter(paragraphs, tagFn) {
   for (const para of paragraphs) {
     const sents = splitSentences(para);
     if (!sents.length) continue;
-    const claim = new Node(sents[0]);
+    let claim = new Node(sents[0]);
     roots.push(claim);
     let prev = claim, prevDepth = 1;
     const deferredDefs = [];
@@ -460,8 +460,10 @@ function outlineChapter(paragraphs, tagFn) {
         parent.children.push(node);
         prev = node; prevDepth = Math.min((parent === prev ? prevDepth : 1) + 1, 4);
       } else {
-        roots.push(new Node(s, null, true));
-        prev = claim; prevDepth = 1;
+        const newClaim = new Node(s, null, true);
+        roots.push(newClaim);
+        claim = newClaim; // pivot: subsequent sentences anchor here, not the original claim
+        prev = newClaim; prevDepth = 1;
       }
     }
     claim.children.push(...deferredDefs);
