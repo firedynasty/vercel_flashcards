@@ -222,7 +222,8 @@
         </div>
         <textarea id="txtNotesArea" placeholder="Write your notes here…" style="flex:1; min-height:400px; resize:vertical; background:#0f172a; color:#e2e8f0; border:1px solid #334155; border-radius:8px; padding:12px; font-size:14px; line-height:1.6; font-family:inherit; outline:none;"></textarea>
         <div style="display:flex; gap:8px; flex-shrink:0;">
-          <button id="txtNotesDbxAuthBtn" style="font-size:11px; padding:4px 10px; border-radius:6px; border:1px solid #ccc; background:#f5f5f3; color:#555; cursor:pointer; font-family:inherit; font-weight:600; white-space:nowrap;">Dropbox</button>
+          <button id="txtNotesDbxAuthBtn" style="font-size:11px; padding:4px 10px; border-radius:6px; border:1px solid #ccc; background:#f5f5f3; color:#555; cursor:pointer; font-family:inherit; font-weight:600; white-space:nowrap;" title="Sign in to Dropbox">Dropbox</button>
+          <span id="txtNotesDbxDot" style="display:none; align-self:center; font-size:13px; color:#0061fe; cursor:pointer; flex-shrink:0;" title="Connected to Dropbox — click to sign out">●</span>
           <button id="txtNotesLoadBtn" style="flex:1; padding:10px 0; font-size:15px; border:1px solid #ccc; border-radius:8px; background:#f5f5f5; color:#333; cursor:pointer; font-weight:600;">↓ Load</button>
           <button id="txtNotesSaveBtn" style="flex:2; padding:10px 0; font-size:15px; border:none; border-radius:8px; background:rgb(217,119,6); color:white; cursor:pointer; font-weight:600;">↑ Save to Dropbox</button>
           <button id="txtNotesPasteBtn" style="padding:10px 14px; font-size:15px; border:none; border-radius:8px; background:#334155; color:#e2e8f0; cursor:pointer; font-weight:600;" title="Paste from clipboard">📋</button>
@@ -698,11 +699,14 @@
 
         function txtNotesSetAuthBtn() {
             var btn = document.getElementById('txtNotesDbxAuthBtn');
+            var dot = document.getElementById('txtNotesDbxDot');
             if (!btn) return;
             if (DBX_TOKEN) {
-                btn.textContent = '● Dropbox'; btn.style.color = '#0061fe'; btn.style.borderColor = '#0061fe'; btn.title = 'Connected — click to sign out';
+                btn.style.display = 'none';
+                if (dot) dot.style.display = 'inline';
             } else {
-                btn.textContent = 'Dropbox'; btn.style.color = '#555'; btn.style.borderColor = '#ccc'; btn.title = 'Sign in to Dropbox';
+                btn.style.display = '';
+                if (dot) dot.style.display = 'none';
             }
         }
 
@@ -718,10 +722,11 @@
         });
 
         document.getElementById('txtNotesDbxAuthBtn').addEventListener('click', function() {
-            if (DBX_TOKEN) {
-                try { fetch('https://api.dropboxapi.com/2/auth/token/revoke', { method: 'POST', headers: { Authorization: 'Bearer ' + DBX_TOKEN } }); } catch(e) {}
-                DBX_TOKEN = null; notesDbxSetAuthBtn(); txtNotesSetAuthBtn();
-            } else { dbxSignIn('txtnotes-load'); }
+            dbxSignIn('txtnotes-auth');
+        });
+        document.getElementById('txtNotesDbxDot').addEventListener('click', function() {
+            try { fetch('https://api.dropboxapi.com/2/auth/token/revoke', { method: 'POST', headers: { Authorization: 'Bearer ' + DBX_TOKEN } }); } catch(e) {}
+            DBX_TOKEN = null; notesDbxSetAuthBtn(); txtNotesSetAuthBtn();
         });
 
         document.getElementById('txtNotesLoadBtn').addEventListener('click', async function() {
