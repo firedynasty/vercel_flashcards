@@ -161,6 +161,12 @@
     <button class="link back-btn">← new paste</button>
     <button class="link rerun-decaps">↺ re-outline w/ de-caps</button>
     <button class="link" id="btn-orig">original text</button>
+    <span id="ts-range" style="display:inline-flex;gap:4px;align-items:center;flex-wrap:nowrap;">
+      <input type="text" id="ts-start" placeholder="0:00" title="clip start time" style="width:52px;padding:2px 5px;font:inherit;font-size:12px;border:1px solid var(--line);border-radius:4px;background:#fff;color:var(--ink);">
+      <span style="font-size:11px;color:var(--dim);">–</span>
+      <input type="text" id="ts-end" placeholder="5:00" title="clip end time" style="width:52px;padding:2px 5px;font:inherit;font-size:12px;border:1px solid var(--line);border-radius:4px;background:#fff;color:var(--ink);">
+      <button class="link" id="btn-ts-copy" style="font-size:12px;white-space:nowrap;">copy clip</button>
+    </span>
     <button class="link" id="toggle-tags">hide tags</button>
     <button class="link" id="fz-dec">A−</button>
     <button class="link" id="fz-inc">A+</button>
@@ -974,6 +980,68 @@ function applyFz() {
 document.getElementById('fz-dec').addEventListener('click', () => { fz = Math.max(0.7, +(fz - 0.1).toFixed(2)); applyFz(); });
 document.getElementById('fz-inc').addEventListener('click', () => { fz = Math.min(2.0, +(fz + 0.1).toFixed(2)); applyFz(); });
 applyFz();
+
+// ============================================================
+// Timestamp range → clipboard
+// ============================================================
+function parseTimeToSeconds(s) {
+  s = (s || '').trim();
+  var parts = s.split(':').map(Number);
+  if (!parts.length || parts.some(isNaN)) return null;
+  if (parts.length === 2) return parts[0]*60 + parts[1];
+  if (parts.length === 3) return parts[0]*3600 + parts[1]*60 + parts[2];
+  return null;
+}
+
+document.getElementById('btn-ts-copy').addEventListener('click', function () {
+  var btn = this;
+  function flash(msg) {
+    var orig = btn.textContent;
+    btn.textContent = msg;
+    setTimeout(function () { btn.textContent = orig; }, 2000);
+  }
+  if (!lastRawText) { flash('no text'); return; }
+
+  var startSec = parseTimeToSeconds(document.getElementById('ts-start').value);
+  var endSec   = parseTimeToSeconds(document.getElementById('ts-end').value);
+  if (startSec === null || endSec === null || endSec <= startSec) {
+    flash('bad times'); return;
+  }
+
+  // match [m:ss], [mm:ss], [h:mm:ss] — NOT [music] etc.
+  var TS_RE = /\[(\d{1,2}:)?(\d{1,2}):(\d{2})\]/g;
+  var tsList = [];
+  var m;
+  while ((m = TS_RE.exec(lastRawText)) !== null) {
+    var inner = m[0].slice(1, -1);
+    var p = inner.split(':').map(Number);
+    var secs = p.length === 3 ? p[0]*3600 + p[1]*60 + p[2] : p[0]*60 + p[1];
+    tsList.push({ secs: secs, index: m.index });
+  }
+  if (!tsList.length) { flash('no timestamps'); return; }
+
+  // last timestamp at or before startSec
+  var si = 0;
+  for (var i = 0; i < tsList.length; i++) {
+    if (tsList[i].secs <= startSec) si = i;
+  }
+
+  // first timestamp at or after endSec → that's where we stop
+  var endPos = lastRawText.length;
+  for (var i = 0; i < tsList.length; i++) {
+    if (tsList[i].secs >= endSec) { endPos = tsList[i].index; break; }
+  }
+
+  var segment = lastRawText.slice(tsList[si].index, endPos).trim();
+  // strip timestamp brackets (but leave [music] etc.)
+  segment = segment.replace(/\[(?:\d{1,2}:)?\d{1,2}:\d{2}\]\s*/g, ' ').replace(/\s+/g, ' ').trim();
+
+  navigator.clipboard.writeText(segment).then(function () {
+    flash('\u2713 copied!');
+  }).catch(function () {
+    flash('blocked \u2014 click page');
+  });
+});
 
 // ============================================================
 // Original-text new tab
