@@ -1036,11 +1036,25 @@ document.getElementById('btn-ts-copy').addEventListener('click', function () {
   // strip timestamp brackets (but leave [music] etc.)
   segment = segment.replace(/\[(?:\d{1,2}:)?\d{1,2}:\d{2}\]\s*/g, ' ').replace(/\s+/g, ' ').trim();
 
-  navigator.clipboard.writeText(segment).then(function () {
-    flash('\u2713 copied!');
-  }).catch(function () {
-    flash('blocked \u2014 click page');
-  });
+  function doFallbackCopy() {
+    var ta = document.createElement('textarea');
+    ta.value = segment;
+    ta.style.cssText = 'position:fixed;top:0;left:-9999px;width:2px;height:2px;opacity:0;';
+    document.body.appendChild(ta);
+    ta.focus(); ta.select();
+    var ok = false;
+    try { ok = document.execCommand('copy'); } catch(e) {}
+    document.body.removeChild(ta);
+    flash(ok ? '\u2713 copied!' : 'blocked \u2014 click page');
+  }
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(segment).then(function () {
+      flash('\u2713 copied!');
+    }).catch(doFallbackCopy);
+  } else {
+    doFallbackCopy();
+  }
 });
 
 // ============================================================
