@@ -246,6 +246,14 @@
 
     <input type="file" id="fileInput" accept="image/*" style="display:none">
 
+    <!-- Floating page up / page down buttons -->
+    <button id="floatPageUpBtn" title="Page up" style="position:fixed; right:6px; top:calc(50% - 30px); transform:translateY(-50%); z-index:10; width:48px; height:48px; background:rgba(255,255,255,0.08); border-radius:50%; border:1.5px solid rgb(255,255,255); opacity:0.15; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.2s; padding:0;">
+      <svg width="48" height="48" viewBox="0 0 64 64"><path d="M8 44 L32 20 L56 44" stroke="rgba(255,255,255,0.9)" stroke-width="8" fill="none" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+    </button>
+    <button id="floatPageDownBtn" title="Page down" style="position:fixed; right:6px; top:calc(50% + 30px); transform:translateY(-50%); z-index:10; width:48px; height:48px; background:rgba(255,255,255,0.08); border-radius:50%; border:1.5px solid rgb(255,255,255); opacity:0.15; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.2s; padding:0;">
+      <svg width="48" height="48" viewBox="0 0 64 64"><path d="M8 20 L32 44 L56 20" stroke="rgba(255,255,255,0.9)" stroke-width="8" fill="none" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+    </button>
+
     <!-- Notes / Dropbox sync modal -->
     <div id="notesModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.72); z-index:200; align-items:center; justify-content:center; padding:20px;">
       <div style="background:#1e293b; border-radius:16px; width:100%; max-width:480px; padding:20px; display:flex; flex-direction:column; gap:16px;">
@@ -457,6 +465,16 @@
         const SCROLL_AMOUNT = 600;
         document.getElementById('scrollUpBtn').addEventListener('click', () => window.scrollBy({ top: -SCROLL_AMOUNT, behavior: 'smooth' }));
         document.getElementById('scrollDownBtn').addEventListener('click', () => window.scrollBy({ top: SCROLL_AMOUNT, behavior: 'smooth' }));
+
+        // Floating page up / down buttons
+        const floatPageUpBtn = document.getElementById('floatPageUpBtn');
+        const floatPageDownBtn = document.getElementById('floatPageDownBtn');
+        floatPageUpBtn.addEventListener('click', () => window.scrollBy({ top: -SCROLL_AMOUNT, behavior: 'smooth' }));
+        floatPageDownBtn.addEventListener('click', () => window.scrollBy({ top: SCROLL_AMOUNT, behavior: 'smooth' }));
+        floatPageUpBtn.addEventListener('mouseenter', () => { floatPageUpBtn.style.opacity = '0.45'; floatPageUpBtn.style.background = 'rgba(255,255,255,0.18)'; });
+        floatPageUpBtn.addEventListener('mouseleave', () => { floatPageUpBtn.style.opacity = '0.15'; floatPageUpBtn.style.background = 'rgba(255,255,255,0.08)'; });
+        floatPageDownBtn.addEventListener('mouseenter', () => { floatPageDownBtn.style.opacity = '0.45'; floatPageDownBtn.style.background = 'rgba(255,255,255,0.18)'; });
+        floatPageDownBtn.addEventListener('mouseleave', () => { floatPageDownBtn.style.opacity = '0.15'; floatPageDownBtn.style.background = 'rgba(255,255,255,0.08)'; });
 
         document.getElementById('clearBtn').addEventListener('click', () => {
             strokes = [];
