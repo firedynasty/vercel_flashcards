@@ -1400,7 +1400,8 @@ function loadPastedCsv() {
   var ok = loadCsvText(raw, 'pasted-csv');
   if (ok) {
     statusEl.textContent = 'Loaded.';
-    if (!deckViewOn) toggleDeckView();
+    if (tableViewOn) renderTableView();
+    else if (!deckViewOn) toggleDeckView();
   } else {
     statusEl.textContent = 'Error: could not parse CSV.';
   }
