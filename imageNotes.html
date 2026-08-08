@@ -278,6 +278,15 @@
           <button id="notesLoadBtn" style="flex:1 1 0; padding:10px 0; font-size:15px; border:1px solid #ccc; border-radius:8px; background:#f5f5f5; color:#333; cursor:pointer; font-weight:600;">&#8595; Load</button>
           <button id="notesSaveBtn" style="flex:2 1 0; padding:10px 0; font-size:15px; border:none; border-radius:8px; background:rgb(217,119,6); color:white; cursor:pointer; font-weight:600;">&#8593; Save to Dropbox</button>
         </div>
+        <div style="display:flex; gap:16px; align-items:center;">
+          <label style="display:flex; align-items:center; gap:6px; color:#cbd5e1; font-size:13px; cursor:pointer;">
+            <input type="radio" name="saveFormat" value="json" checked style="accent-color:rgb(217,119,6);"> JSON
+          </label>
+          <label style="display:flex; align-items:center; gap:6px; color:#cbd5e1; font-size:13px; cursor:pointer;">
+            <input type="radio" name="saveFormat" value="png" style="accent-color:rgb(217,119,6);"> PNG
+          </label>
+          <span id="saveFormatHint" style="font-size:11px; color:#64748b;">strokes data</span>
+        </div>
         <div id="notesStatus" style="font-size:12px; color:#94a3b8; min-height:16px;"></div>
       </div>
     </div>
@@ -546,6 +555,10 @@
             var n = document.getElementById('notesSlot').value || '1';
             return '/vercel/imageNotes/imageBuckets' + n + '.json';
         }
+        function selectedSaveFormat() {
+            var r = document.querySelector('input[name="saveFormat"]:checked');
+            return r ? r.value : 'json';
+        }
         var DBX_TOKEN = null;
 
         function notesDbxSetAuthBtn() {
@@ -636,6 +649,16 @@
             if (!r.ok) throw new Error('Upload failed (' + r.status + ')');
         }
 
+        // Save format radio — update hint + Load button availability
+        document.querySelectorAll('input[name="saveFormat"]').forEach(function(r) {
+            r.addEventListener('change', function() {
+                var isPng = this.value === 'png';
+                document.getElementById('saveFormatHint').textContent = isPng ? 'exports/imageNotes_<timestamp>.png' : 'strokes data';
+                document.getElementById('notesLoadBtn').disabled = isPng;
+                document.getElementById('notesLoadBtn').style.opacity = isPng ? '0.4' : '1';
+            });
+        });
+
         // Notes modal open/close
         const notesModal = document.getElementById('notesModal');
         document.getElementById('notesBtn').addEventListener('click', () => {
@@ -673,15 +696,61 @@
             finally { btn.disabled = false; btn.textContent = '↓ Load'; }
         });
 
+        function exportPngDbxPath() {
+            var now = new Date();
+            var pad = function(n) { return String(n).padStart(2, '0'); };
+            var ts = now.getFullYear() + '-' + pad(now.getMonth()+1) + '-' + pad(now.getDate()) +
+                     '_' + pad(now.getHours()) + '-' + pad(now.getMinutes()) + '-' + pad(now.getSeconds());
+            return '/vercel/imageNotes/exports/imageNotes_' + ts + '.png';
+        }
+
         // Save drawing to Dropbox
         document.getElementById('notesSaveBtn').addEventListener('click', async function() {
             var statusEl = document.getElementById('notesStatus');
             if (!DBX_TOKEN) { statusEl.textContent = 'Signing in…'; await dbxSignIn('notes-save'); return; }
             var btn = this; btn.disabled = true; btn.textContent = 'Saving…'; statusEl.textContent = '';
             try {
-                var data = JSON.stringify({ width: cssW, height: cssH, strokes: strokes });
-                await dbxUpload(drawingDbxPath(), data);
-                statusEl.textContent = '✅ Saved (' + strokes.length + ' strokes)';
+                if (selectedSaveFormat() === 'png') {
+                    if (strokes.length === 0) { statusEl.textContent = '❌ Nothing drawn yet.'; return; }
+                    var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+                    strokes.forEach(function(s) { s.points.forEach(function(p) {
+                        if (p.x < minX) minX = p.x; if (p.y < minY) minY = p.y;
+                        if (p.x > maxX) maxX = p.x; if (p.y > maxY) maxY = p.y;
+                    }); });
+                    var PAD = 12;
+                    minX = Math.max(0, minX - PAD); minY = Math.max(0, minY - PAD);
+                    maxX = Math.min(cssW, maxX + PAD); maxY = Math.min(cssH, maxY + PAD);
+                    var cropW = maxX - minX, cropH = maxY - minY;
+                    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+                    var tmp = document.createElement('canvas');
+                    tmp.width = Math.round(cropW * dpr); tmp.height = Math.round(cropH * dpr);
+                    var tmpCtx = tmp.getContext('2d');
+                    tmpCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+                    tmpCtx.fillStyle = isDark ? '#374151' : '#ffffff';
+                    tmpCtx.fillRect(0, 0, cropW, cropH);
+                    strokes.forEach(function(s) {
+                        if (s.points.length === 0) return;
+                        tmpCtx.strokeStyle = s.color; tmpCtx.fillStyle = s.color;
+                        tmpCtx.lineWidth = s.width; tmpCtx.lineCap = 'round'; tmpCtx.lineJoin = 'round';
+                        if (s.points.length === 1) {
+                            tmpCtx.beginPath();
+                            tmpCtx.arc(s.points[0].x - minX, s.points[0].y - minY, s.width / 2, 0, Math.PI * 2);
+                            tmpCtx.fill(); return;
+                        }
+                        tmpCtx.beginPath();
+                        tmpCtx.moveTo(s.points[0].x - minX, s.points[0].y - minY);
+                        for (var i = 1; i < s.points.length; i++) tmpCtx.lineTo(s.points[i].x - minX, s.points[i].y - minY);
+                        tmpCtx.stroke();
+                    });
+                    var pngPath = exportPngDbxPath();
+                    var blob = await new Promise(function(res) { tmp.toBlob(res, 'image/png'); });
+                    await dbxUpload(pngPath, blob);
+                    statusEl.textContent = '✅ PNG saved: ' + pngPath.split('/').pop();
+                } else {
+                    var data = JSON.stringify({ width: cssW, height: cssH, strokes: strokes });
+                    await dbxUpload(drawingDbxPath(), data);
+                    statusEl.textContent = '✅ Saved (' + strokes.length + ' strokes)';
+                }
                 setTimeout(() => { notesModal.style.display = 'none'; statusEl.textContent = ''; }, 800);
             } catch(e) { statusEl.textContent = '❌ ' + e.message; }
             finally { btn.disabled = false; btn.textContent = '↑ Save to Dropbox'; }
