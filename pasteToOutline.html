@@ -66,6 +66,8 @@
   ul.tree li { position:relative; margin:4px 0; line-height:1.5; font-size:calc(16px * var(--fz)); }
   ul.tree li::before { content:""; position:absolute; left:-16px; top:.72em;
                        width:5px; height:5px; border-radius:50%; background:#b9b2a2; }
+  ul.tree li.bullet-spacer { margin:10px 0 2px; min-height:10px; }
+  ul.tree li.bullet-spacer::before { display:none; }
   .tag { font-family:monospace; font-size:11px; padding:1px 6px;
          border-radius:9px; margin-left:6px; white-space:nowrap; }
   .t-evidence      { background:#e2efe0; color:#3c7a3c; }
@@ -108,6 +110,15 @@
   .dim { color:var(--dim); }
   .mini { font-family:monospace; font-size:11px; color:var(--dim); }
   .chain { font-family:monospace; font-size:12px; }
+  /* ---- bullets tool ---- */
+  .bullets-section { border-top:1px solid var(--line); margin-top:36px; padding-top:28px; }
+  .bullets-section h2 { font-size:17px; margin:0 0 4px; }
+  .bullets-section .sub { color:var(--dim); font-size:13px; margin-bottom:14px; }
+  #bullets-out { list-style:disc; padding-left:22px; margin:14px 0; font-size:15px;
+                 line-height:1.7; display:none; }
+  #bullets-out li { margin:3px 0; }
+  .bullets-row { display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-top:10px; }
+  #bullets-copy-msg { font-size:13px; color:#3c7a3c; }
 </style>
 </head>
 <body>
@@ -132,6 +143,8 @@
       <div class="hint">opinion pieces — author position, speculation, grades</div>
       <label><input type="radio" name="mode" value="reddit"> reddit</label>
       <div class="hint">comment threads — strips u/ names, nests replies by indentation</div>
+      <label><input type="radio" name="mode" value="news"> news</label>
+      <div class="hint">flat sentence bullets — one bullet per sentence, blank bullet between paragraphs, no tags</div>
     </fieldset>
     <div class="opts">
       <label><input type="checkbox" id="cleanup" value="1">
@@ -148,6 +161,20 @@
     <button id="btn-paste-run" class="ghost">paste &amp; outline</button>
   </div>
   <div class="err" id="clip-err"></div>
+
+  <div class="bullets-section">
+    <h2>Sentences → bullet list</h2>
+    <div class="sub">paste sentences — splits on . ? ! — copy pastes as real bullets into Word / Google Docs</div>
+    <textarea id="bullets-text" placeholder="Paste sentences here…" style="min-height:100px;width:100%;font-family:monospace;font-size:13px;line-height:1.5;padding:12px;border:1px solid var(--line);border-radius:4px;background:#fff;color:var(--ink);resize:vertical;box-sizing:border-box;"></textarea>
+    <div class="bullets-row">
+      <button id="btn-bullets">convert</button>
+      <button id="btn-bullets-paste" class="ghost">paste &amp; convert</button>
+      <button id="btn-bullets-clear" class="ghost">clear</button>
+      <button id="btn-bullets-copy" class="ghost" style="display:none">copy as bullets</button>
+      <span id="bullets-copy-msg"></span>
+    </div>
+    <ul id="bullets-out"></ul>
+  </div>
 </main>
 </div>
 
@@ -160,6 +187,7 @@
   <nav>
     <button class="link back-btn">← new paste</button>
     <button class="link rerun-decaps">↺ re-outline w/ de-caps</button>
+    <button class="link" id="btn-repaste">⬇ repaste</button>
     <button class="link" id="btn-orig">original text</button>
     <span id="ts-range" style="display:inline-flex;gap:4px;align-items:center;flex-wrap:nowrap;">
       <input type="text" id="ts-start" placeholder="0:00" title="clip start time" style="width:52px;padding:2px 5px;font:inherit;font-size:12px;border:1px solid var(--line);border-radius:4px;background:#fff;color:var(--ink);">
@@ -733,6 +761,7 @@ function splitChapters(paras) {
 // HTML rendering
 // ============================================================
 function renderNode(node) {
+  if (node.tag === 'spacer') return `<li class="bullet-spacer" aria-hidden="true"></li>`;
   let h = `<li>`;
   if (node.tag) {
     h += `${escHtml(node.text)}<span class="tag t-${node.tag}">[${node.tag}]</span>`;
@@ -846,7 +875,18 @@ function processInput() {
   const totalTags = {};
   let panel = null;
 
-  if (mode === 'reddit') {
+  if (mode === 'news') {
+    const roots = [];
+    for (const para of paras) {
+      if (roots.length > 0) roots.push(new Node('', 'spacer'));
+      const sents = splitSentences(para);
+      for (const s of sents) roots.push(new Node(s));
+    }
+    md = renderMarkdown(title, roots);
+    const st = chapterStats(roots);
+    totalNodes = st.nNodes; maxd = st.maxd; totalUnplaced = st.nProvisional;
+    sections.push({ title: null, roots });
+  } else if (mode === 'reddit') {
     const roots = buildRedditTree(text);
     md = renderMarkdown(title, roots);
     const st = chapterStats(roots);
@@ -968,6 +1008,19 @@ document.querySelectorAll('.rerun-decaps').forEach(btn => {
   btn.addEventListener('click', () => {
     document.getElementById('decaps').checked = true;
     processInput();
+  });
+});
+
+document.getElementById('btn-repaste').addEventListener('click', function () {
+  const btn = this;
+  const orig = btn.textContent;
+  navigator.clipboard.readText().then(function (text) {
+    if (!text.trim()) { btn.textContent = 'empty!'; setTimeout(() => btn.textContent = orig, 1800); return; }
+    document.getElementById('paste-text').value = text;
+    processInput();
+  }).catch(function () {
+    btn.textContent = 'blocked';
+    setTimeout(() => btn.textContent = orig, 1800);
   });
 });
 
@@ -1161,6 +1214,95 @@ function speakSelectionEN(text) {
     if (window.scrollY > 10) {
       hoverReveal = false;
       hideNav();
+    }
+  });
+})();
+
+// ============================================================
+// Sentences → Bullets
+// ============================================================
+(function () {
+  var lastBullets = [];
+
+  function convertBullets() {
+    var raw = document.getElementById('bullets-text').value.trim();
+    if (!raw) return;
+    var paras = raw.split(/\n\s*\n/).map(function(p) {
+      return p.split('\n').map(function(l){return l.trim();}).filter(Boolean).join(' ');
+    }).filter(Boolean);
+    if (paras.length === 1 && (raw.match(/\n/g)||[]).length >= 1) {
+      paras = raw.split('\n').map(function(l){return l.trim();}).filter(Boolean);
+    }
+    var sents = [];
+    paras.forEach(function(p) { sents = sents.concat(splitSentences(p)); });
+    if (!sents.length) return;
+    lastBullets = sents;
+    var ul = document.getElementById('bullets-out');
+    ul.innerHTML = sents.map(function(s) { return '<li>' + escHtml(s) + '</li>'; }).join('');
+    ul.style.display = 'block';
+    document.getElementById('btn-bullets-copy').style.display = '';
+    document.getElementById('bullets-copy-msg').textContent = '';
+  }
+
+  function clearBullets() {
+    document.getElementById('bullets-text').value = '';
+    var ul = document.getElementById('bullets-out');
+    ul.innerHTML = '';
+    ul.style.display = 'none';
+    document.getElementById('btn-bullets-copy').style.display = 'none';
+    document.getElementById('bullets-copy-msg').textContent = '';
+    lastBullets = [];
+  }
+
+  document.getElementById('btn-bullets').addEventListener('click', convertBullets);
+
+  document.getElementById('btn-bullets-paste').addEventListener('click', function () {
+    var msg = document.getElementById('bullets-copy-msg');
+    navigator.clipboard.readText().then(function(text) {
+      if (!text.trim()) { msg.textContent = 'clipboard is empty'; return; }
+      document.getElementById('bullets-text').value = text;
+      convertBullets();
+    }).catch(function() {
+      msg.textContent = 'clipboard blocked — click the page first, then try again';
+      setTimeout(function(){ msg.textContent = ''; }, 2500);
+    });
+  });
+
+  document.getElementById('btn-bullets-clear').addEventListener('click', clearBullets);
+
+  document.getElementById('bullets-text').addEventListener('keydown', function(e) {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); convertBullets(); }
+  });
+
+  document.getElementById('btn-bullets-copy').addEventListener('click', function () {
+    if (!lastBullets.length) return;
+    var msg = document.getElementById('bullets-copy-msg');
+    var liHtml = lastBullets.map(function(s) { return '<li>' + escHtml(s) + '</li>'; }).join('');
+    var html = '<ul>' + liHtml + '</ul>';
+    var plain = lastBullets.map(function(s) { return '\u2022 ' + s; }).join('\n');
+
+    function flash(text) {
+      msg.textContent = text;
+      setTimeout(function(){ msg.textContent = ''; }, 2200);
+    }
+
+    if (window.ClipboardItem && navigator.clipboard && navigator.clipboard.write) {
+      navigator.clipboard.write([
+        new ClipboardItem({
+          'text/html':  new Blob([html],  { type: 'text/html' }),
+          'text/plain': new Blob([plain], { type: 'text/plain' })
+        })
+      ]).then(function(){ flash('\u2713 copied!'); }).catch(function(){ flash('blocked — try clicking the page first'); });
+    } else {
+      var ta = document.createElement('textarea');
+      ta.value = plain;
+      ta.style.cssText = 'position:fixed;top:0;left:-9999px;width:2px;height:2px;opacity:0;';
+      document.body.appendChild(ta);
+      ta.focus(); ta.select();
+      var ok = false;
+      try { ok = document.execCommand('copy'); } catch(e) {}
+      document.body.removeChild(ta);
+      flash(ok ? '\u2713 copied (plain text)!' : 'copy failed');
     }
   });
 })();
