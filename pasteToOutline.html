@@ -889,10 +889,10 @@ function processInput() {
       return null;
     }
     const roots = [];
+    let lastRoot = null;
     for (const para of paras) {
       if (roots.length > 0) roots.push(new Node('', 'spacer'));
       const sents = splitSentences(para);
-      let lastRoot = null;
       for (const s of sents) {
         const tag = newsTag(s);
         if (tag && lastRoot) {
