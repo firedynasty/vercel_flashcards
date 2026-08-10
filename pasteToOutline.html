@@ -133,7 +133,7 @@
   <div class="row">
     <fieldset>
       <legend>mode</legend>
-      <label><input type="radio" name="mode" value="theology" checked> theology</label>
+      <label><input type="radio" name="mode" value="theology"> theology</label>
       <div class="hint">dense prose — concession / evidence / qualification tags</div>
       <label><input type="radio" name="mode" value="general"> general</label>
       <div class="hint">nonfiction / op-eds / books — Gutenberg, Kindle, Medium; chapters auto-split</div>
@@ -143,7 +143,7 @@
       <div class="hint">opinion pieces — author position, speculation, grades</div>
       <label><input type="radio" name="mode" value="reddit"> reddit</label>
       <div class="hint">comment threads — strips u/ names, nests replies by indentation</div>
-      <label><input type="radio" name="mode" value="news"> news</label>
+      <label><input type="radio" name="mode" value="news" checked> news</label>
       <div class="hint">flat sentence bullets — one bullet per sentence, blank bullet between paragraphs, no tags</div>
     </fieldset>
     <div class="opts">
@@ -860,7 +860,7 @@ function processInput() {
 
   // YouTube transcripts use blank lines as caption separators, not paragraph breaks —
   // auto-enable the cleanup stitcher so mid-sentence caption cuts get rejoined
-  const paras = paragraphsFromText(text, cleanup || hadTimestamps);
+  const paras = paragraphsFromText(text, cleanup || hadTimestamps || mode === 'news');
   if (!paras.length) { document.getElementById('input-err').textContent = 'No paragraphs found.'; return; }
 
   let title = document.getElementById('title-in').value.trim();
