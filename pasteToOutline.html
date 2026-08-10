@@ -876,11 +876,33 @@ function processInput() {
   let panel = null;
 
   if (mode === 'news') {
+    const NEWS_INDENT_RULES = [
+      ['evidence', /^(because|for\b|since\b|after all|the reason|in fact|as a matter of fact|the fact (?:is|remains)|we know|it is a fact|that is (?:the reason|why we know))/i],
+      ['example',  /^(for example|for instance|take |think of |consider |suppose, for example)/i],
+      ['contrast', /^((?:so )?far from|but|however|yet\b|nevertheless|none the less|nonetheless|still\b|on the other hand|on the contrary|whereas|while\b(?!\s+it\s+is\s+true)|conversely|in contrast|at the same time)/i],
+    ];
+    function newsTag(s) {
+      const stripped = stripOpener(s);
+      for (const [tag, rx] of NEWS_INDENT_RULES) {
+        if (rx.test(stripped)) return tag;
+      }
+      return null;
+    }
     const roots = [];
     for (const para of paras) {
       if (roots.length > 0) roots.push(new Node('', 'spacer'));
       const sents = splitSentences(para);
-      for (const s of sents) roots.push(new Node(s));
+      let lastRoot = null;
+      for (const s of sents) {
+        const tag = newsTag(s);
+        if (tag && lastRoot) {
+          lastRoot.children.push(new Node(s, tag));
+        } else {
+          const node = new Node(s);
+          roots.push(node);
+          lastRoot = node;
+        }
+      }
     }
     md = renderMarkdown(title, roots);
     const st = chapterStats(roots);
