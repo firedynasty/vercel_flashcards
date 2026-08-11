@@ -295,6 +295,8 @@
   }
   .tbl-play-btn:hover { background: #1d4ed8; }
   .tbl-play-btn.speaking { background: #16a34a; }
+  /* , / . keyboard nav — current row highlight (td-level: wins over inline tr backgrounds) */
+  #tableViewContainer table.dataTable tbody tr.tbl-current > td { background-color: #bfdbfe !important; }
   .dataTables_wrapper .dataTables_length,
   .dataTables_wrapper .dataTables_filter,
   .dataTables_wrapper .dataTables_info,
@@ -1861,6 +1863,13 @@ function tblSpeak(idx, btnEl) {
     el.classList.remove('speaking');
   });
 
+  // Re-anchor , / . nav to this row
+  document.querySelectorAll('#vocabDataTable tr.tbl-current').forEach(function(el) {
+    el.classList.remove('tbl-current');
+  });
+  var tr = btnEl.closest('tr');
+  if (tr) tr.classList.add('tbl-current');
+
   var row = filteredRows[idx];
   if (!row) return;
   var text = row.chinese || row.contextLine || '';
@@ -1873,6 +1882,54 @@ function tblSpeak(idx, btnEl) {
     btnEl.classList.remove('speaking');
   });
 }
+
+// ── TABLE ROW NAV: , prev playable row, . next playable row (highlight + speak) ──
+function tblNavRow(dir) {
+  if (!dataTableInstance) return;
+  var allNodes = dataTableInstance.rows({ search: 'applied', order: 'current' }).nodes().toArray();
+  var playable = allNodes.filter(function(tr) { return tr.querySelector('.tbl-play-btn'); });
+  if (!playable.length) return;
+
+  // Anchor on the row carrying .tbl-current; none → '.' starts at first, ',' at last
+  var cur = -1;
+  playable.forEach(function(tr, i) { if (tr.classList.contains('tbl-current')) cur = i; });
+  var target = cur + dir;
+  if (cur === -1 && dir === -1) target = playable.length - 1;
+  if (target < 0 || target >= playable.length) return;
+
+  var tr = playable[target];
+
+  // Jump to the DataTables page containing the row if it isn't on the current page
+  var pos = allNodes.indexOf(tr);
+  var page = Math.floor(pos / dataTableInstance.page.len());
+  if (page !== dataTableInstance.page()) {
+    dataTableInstance.page(page).draw(false);
+  }
+
+  tr.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+  var idx = parseInt(tr.getAttribute('data-row-idx'), 10);
+  var btn = tr.querySelector('.tbl-play-btn');
+  if (!isNaN(idx) && btn) tblSpeak(idx, btn);
+}
+
+document.addEventListener('keydown', function(e) {
+  if (!tableViewOn || !dataTableInstance) return;
+  if (e.target.matches('input, textarea, select')) return;
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  // a — re-speak the highlighted row
+  if (e.key === 'a') {
+    var curTr = document.querySelector('#vocabDataTable tr.tbl-current');
+    var curBtn = curTr ? curTr.querySelector('.tbl-play-btn') : null;
+    if (!curBtn) return;
+    e.preventDefault();
+    tblSpeak(parseInt(curTr.getAttribute('data-row-idx'), 10), curBtn);
+    return;
+  }
+  if (e.key !== ',' && e.key !== '.') return;
+  e.preventDefault();
+  tblNavRow(e.key === '.' ? 1 : -1);
+});
 
 // ── DECK VIEW ──
 function toggleDeckView() {
@@ -2404,7 +2461,14 @@ setTtsEngine(localStorage.getItem('chineseTts_ttsEngine') || 'browser');
 var _ov = localStorage.getItem('chineseTts_openaiVoice'); if (_ov) document.getElementById('openaiVoiceSelect').value = _ov;
 var _ev = localStorage.getItem('chineseTts_elevenVoice'); if (_ev) document.getElementById('elevenVoiceSelect').value = _ev;
 setTtsLang(ttsLang); // sync language select + dialect buttons with saved pref
-initFromApi();
+if (window.EMBEDDED_CSV_TEXT) {
+  // Standalone file baked by script_csv_to_html.py — data embedded, skip the sheets API
+  document.getElementById('folderName').textContent = window.EMBEDDED_CSV_NAME || 'embedded.csv';
+  loadCsvText(window.EMBEDDED_CSV_TEXT, window.EMBEDDED_CSV_NAME || 'embedded.csv');
+  if (window.EMBEDDED_TABLE_VIEW && !tableViewOn) toggleTableView();
+} else {
+  initFromApi();
+}
 </script>
 </body>
 </html>
