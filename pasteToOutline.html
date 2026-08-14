@@ -177,7 +177,7 @@
   </div>
 
   <div class="bullets-section">
-    <h2>Coursera / YouTube transcript</h2>
+    <h2>Coursera / YouTube transcript <button id="btn-bookmarklets-ref" class="ghost" style="font-size:12px;padding:3px 10px;vertical-align:middle;">bookmarklets</button></h2>
     <div class="sub">paste Coursera transcript HTML — or YouTube transcript text with [0:00] timestamps — tap any line to copy, timestamps shown but stripped on copy</div>
     <textarea id="coursera-html" placeholder="Paste Coursera transcript HTML or YouTube [0:00] transcript text here…" style="min-height:120px;width:100%;font-family:monospace;font-size:12px;line-height:1.5;padding:12px;border:1px solid var(--line);border-radius:4px;background:#fff;color:var(--ink);resize:vertical;box-sizing:border-box;"></textarea>
     <div class="bullets-row">
@@ -235,6 +235,36 @@
     <button id="to-top" type="button" class="link">↑ top</button>
     <div class="mid" id="out-footer-title"></div>
   </footer>
+</div>
+
+<!-- ============================================================ BOOKMARKLETS MODAL -->
+<div id="bookmarklets-modal" style="display:none;position:fixed;inset:0;z-index:300;background:rgba(0,0,0,0.72);display:none;align-items:center;justify-content:center;">
+  <div style="background:#faf8f3;border-radius:8px;max-width:680px;width:94%;max-height:88vh;overflow-y:auto;padding:28px 28px 24px;position:relative;box-shadow:0 8px 40px rgba(0,0,0,0.4);">
+    <button id="btn-bm-close" style="position:absolute;top:14px;right:16px;background:none;border:none;font-size:22px;cursor:pointer;color:#777;">&times;</button>
+    <h2 style="margin:0 0 18px;font-size:17px;color:#7a5c2e;">Bookmarklets</h2>
+
+    <div style="margin-bottom:20px;">
+      <div style="font-size:14px;font-weight:bold;margin-bottom:4px;">YouTube Transcript Copier</div>
+      <div style="font-size:12px;color:#777;margin-bottom:8px;">Open the transcript panel on YouTube, then click this bookmarklet. Copies full transcript with [0:00] timestamps.</div>
+      <div style="position:relative;">
+        <textarea id="bm-yt" readonly style="width:100%;height:72px;font-family:monospace;font-size:11px;line-height:1.5;padding:10px 80px 10px 10px;border:1px solid #e3e0d8;border-radius:4px;background:#fff;color:#2b2b2b;resize:none;box-sizing:border-box;">javascript:(function(){const url=location.href;let segs=document.querySelectorAll('ytd-transcript-segment-renderer'),mode='old';if(!segs.length){segs=document.querySelectorAll('transcript-segment-view-model');mode='new';}if(!segs.length){alert('No transcript found. Open the transcript panel first.');return;}let out=url+'\n\n';segs.forEach(s=>{let ts='',tx='';if(mode==='old'){ts=(s.querySelector('.segment-timestamp')?.textContent||'').trim();tx=(s.querySelector('.segment-text')?.textContent||'').trim();}else{ts=(s.querySelector('.ytwTranscriptSegmentViewModelTimestamp')?.textContent||'').trim();tx=(s.querySelector('span[role="text"]')?.textContent||'').trim();}if(!tx)return;out+='['+ts+'] '+tx+'\n';});const ta=document.createElement('textarea');ta.value=out;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();let ok=false;try{ok=document.execCommand('copy');}catch(e){}document.body.removeChild(ta);if(ok){alert('\u2705 Transcript copied to clipboard!');}else if(navigator.clipboard){navigator.clipboard.writeText(out).then(()=>alert('\u2705 Copied!'),()=>{console.log(out);alert('Copy failed \u2014 logged to console.');});}else{console.log(out);alert('Copy failed \u2014 logged to console.');}})();</textarea>
+        <button onclick="copyBm('bm-yt','bm-yt-msg')" style="position:absolute;top:8px;right:8px;font:12px Georgia,serif;padding:4px 10px;background:#7a5c2e;color:#fff;border:none;border-radius:4px;cursor:pointer;">copy</button>
+      </div>
+      <span id="bm-yt-msg" style="font-size:12px;color:#3c7a3c;"></span>
+    </div>
+
+    <div>
+      <div style="font-size:14px;font-weight:bold;margin-bottom:4px;">Coursera Transcript Copier</div>
+      <div style="font-size:12px;color:#777;margin-bottom:8px;">Open the transcript panel on Coursera, then click this bookmarklet. Copies clean plain text grouped by paragraph.</div>
+      <div style="position:relative;">
+        <textarea id="bm-cs" readonly style="width:100%;height:72px;font-family:monospace;font-size:11px;line-height:1.5;padding:10px 80px 10px 10px;border:1px solid #e3e0d8;border-radius:4px;background:#fff;color:#2b2b2b;resize:none;box-sizing:border-box;">javascript:(function(){function t(e){return e.textContent.replace(/[\u200B\uFEFF]/g,'').replace(/\u00A0/g,' ').trim();}var p=document.querySelectorAll('.rc-Paragraph'),out='';if(p.length){out=Array.from(p).map(function(para){var ph=para.querySelectorAll('.rc-Phrase');return ph.length?Array.from(ph).map(t).filter(Boolean).join(' '):t(para);}).filter(Boolean).join('\n\n');}else{var ph=document.querySelectorAll('.rc-Phrase');if(ph.length)out=Array.from(ph).map(t).filter(Boolean).join(' ');}if(!out){alert('No transcript found. Open the Coursera transcript panel first.');return;}var ta=document.createElement('textarea');ta.value=out;ta.style.cssText='position:fixed;opacity:0;';document.body.appendChild(ta);ta.select();var ok=false;try{ok=document.execCommand('copy');}catch(e){}document.body.removeChild(ta);if(ok){alert('\u2705 Transcript copied!');}else if(navigator.clipboard){navigator.clipboard.writeText(out).then(function(){alert('\u2705 Copied!');},function(){console.log(out);alert('Copy failed \u2014 check console.');});}else{console.log(out);alert('Copy failed \u2014 check console.');}})();</textarea>
+        <button onclick="copyBm('bm-cs','bm-cs-msg')" style="position:absolute;top:8px;right:8px;font:12px Georgia,serif;padding:4px 10px;background:#7a5c2e;color:#fff;border:none;border-radius:4px;cursor:pointer;">copy</button>
+      </div>
+      <span id="bm-cs-msg" style="font-size:12px;color:#3c7a3c;"></span>
+    </div>
+
+    <div style="margin-top:16px;font-size:12px;color:#999;">To install: copy the bookmarklet text → create a new bookmark in your browser → paste as the URL.</div>
+  </div>
 </div>
 
 <!-- ============================================================ COURSERA MODAL -->
@@ -1363,6 +1393,35 @@ function speakSelectionEN(text) {
       document.body.removeChild(ta);
       flash(ok ? '\u2713 copied (plain text)!' : 'copy failed');
     }
+  });
+})();
+
+// ============================================================
+// Bookmarklets reference modal
+// ============================================================
+function copyBm(id, msgId) {
+  var ta = document.getElementById(id);
+  var msg = document.getElementById(msgId);
+  ta.select();
+  var ok = false;
+  try { ok = document.execCommand('copy'); } catch(e) {}
+  if (!ok && navigator.clipboard) {
+    navigator.clipboard.writeText(ta.value).then(function(){ msg.textContent = '\u2713 copied!'; setTimeout(function(){ msg.textContent=''; }, 2000); });
+    return;
+  }
+  msg.textContent = ok ? '\u2713 copied!' : 'select all + Cmd+C';
+  setTimeout(function(){ msg.textContent = ''; }, 2000);
+}
+(function() {
+  var modal = document.getElementById('bookmarklets-modal');
+  document.getElementById('btn-bookmarklets-ref').addEventListener('click', function() {
+    modal.style.display = 'flex';
+  });
+  document.getElementById('btn-bm-close').addEventListener('click', function() {
+    modal.style.display = 'none';
+  });
+  modal.addEventListener('click', function(e) {
+    if (e.target === modal) modal.style.display = 'none';
   });
 })();
 
