@@ -175,6 +175,23 @@
     </div>
     <ul id="bullets-out"></ul>
   </div>
+
+  <div class="bullets-section">
+    <h2>Coursera transcript → plain text</h2>
+    <div class="sub">paste the raw HTML from a Coursera transcript panel — extracts clean text, one paragraph per block</div>
+    <textarea id="coursera-html" placeholder="Paste Coursera transcript HTML here…" style="min-height:120px;width:100%;font-family:monospace;font-size:12px;line-height:1.5;padding:12px;border:1px solid var(--line);border-radius:4px;background:#fff;color:var(--ink);resize:vertical;box-sizing:border-box;"></textarea>
+    <div class="bullets-row">
+      <button id="btn-coursera">extract</button>
+      <button id="btn-coursera-paste" class="ghost">paste &amp; extract</button>
+      <button id="btn-coursera-clear" class="ghost">clear</button>
+      <span id="coursera-msg"></span>
+    </div>
+    <div class="bullets-row" id="coursera-copy-row" style="display:none;margin-top:10px;">
+      <button id="btn-coursera-browse">browse lines</button>
+      <button id="btn-coursera-outline" class="ghost">send to outline</button>
+      <span id="coursera-copy-msg"></span>
+    </div>
+  </div>
 </main>
 </div>
 
@@ -218,6 +235,20 @@
     <button id="to-top" type="button" class="link">↑ top</button>
     <div class="mid" id="out-footer-title"></div>
   </footer>
+</div>
+
+<!-- ============================================================ COURSERA MODAL -->
+<div id="coursera-modal" style="display:none;position:fixed;inset:0;z-index:200;background:#111;overflow-y:auto;-webkit-overflow-scrolling:touch;">
+  <div style="min-height:100%;display:flex;flex-direction:column;">
+    <div style="position:sticky;top:0;z-index:10;display:flex;align-items:center;justify-content:space-between;padding:14px 20px;background:#1a1a1a;border-bottom:1px solid #333;">
+      <span style="color:#f5f0e8;font-family:Georgia,serif;font-size:15px;font-weight:bold;">Coursera transcript — tap a line to copy</span>
+      <div style="display:flex;align-items:center;gap:14px;">
+        <span id="coursera-modal-flash" style="color:#6ee7b7;font-size:13px;font-family:monospace;opacity:0;transition:opacity .3s;"></span>
+        <button id="btn-coursera-modal-close" style="background:none;border:none;color:#aaa;font-size:24px;cursor:pointer;line-height:1;padding:0 4px;">&times;</button>
+      </div>
+    </div>
+    <div id="coursera-modal-lines" style="padding:16px 20px 60px;flex:1;"></div>
+  </div>
 </div>
 
 <script>
@@ -1326,6 +1357,172 @@ function speakSelectionEN(text) {
       document.body.removeChild(ta);
       flash(ok ? '\u2713 copied (plain text)!' : 'copy failed');
     }
+  });
+})();
+
+// ============================================================
+// Coursera transcript extractor + modal
+// ============================================================
+(function () {
+  var extractedText = '';
+
+  function extractCoursera(html) {
+    var parser = new DOMParser();
+    var doc = parser.parseFromString(html, 'text/html');
+    function phraseText(el) {
+      return el.textContent.replace(/[\u200B\uFEFF]/g, '').replace(/\u00A0/g, ' ').trim();
+    }
+    var paragraphs = doc.querySelectorAll('.rc-Paragraph');
+    if (paragraphs.length) {
+      return Array.from(paragraphs).map(function(para) {
+        var phrases = para.querySelectorAll('.rc-Phrase');
+        if (!phrases.length) return phraseText(para);
+        return Array.from(phrases).map(phraseText).filter(Boolean).join(' ');
+      }).filter(Boolean).join('\n\n');
+    }
+    var phrases = doc.querySelectorAll('.rc-Phrase');
+    if (phrases.length) {
+      return Array.from(phrases).map(phraseText).filter(Boolean).join(' ');
+    }
+    return doc.body.textContent.replace(/[ \t]{2,}/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
+  }
+
+  function buildModal(text) {
+    var container = document.getElementById('coursera-modal-lines');
+    container.innerHTML = '';
+    var paragraphs = text.split(/\n\n+/);
+    var flashEl = document.getElementById('coursera-modal-flash');
+    var flashTimer = null;
+
+    function showFlash(msg) {
+      flashEl.textContent = msg;
+      flashEl.style.opacity = '1';
+      clearTimeout(flashTimer);
+      flashTimer = setTimeout(function(){ flashEl.style.opacity = '0'; }, 1400);
+    }
+
+    function copyText(txt, el) {
+      function onSuccess() {
+        el.style.background = '#064e3b';
+        el.style.color = '#6ee7b7';
+        showFlash('\u2713 copied');
+        setTimeout(function(){ el.style.background = ''; el.style.color = ''; }, 900);
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(txt).then(onSuccess).catch(function() {
+          showFlash('blocked — long-press to select');
+        });
+      } else {
+        var ta = document.createElement('textarea');
+        ta.value = txt;
+        ta.style.cssText = 'position:fixed;top:0;left:-9999px;width:2px;height:2px;opacity:0;';
+        document.body.appendChild(ta);
+        ta.focus(); ta.select();
+        var ok = false;
+        try { ok = document.execCommand('copy'); } catch(e) {}
+        document.body.removeChild(ta);
+        if (ok) onSuccess(); else showFlash('blocked');
+      }
+    }
+
+    paragraphs.forEach(function(para, pi) {
+      if (pi > 0) {
+        var sep = document.createElement('div');
+        sep.style.cssText = 'border-top:1px solid #333;margin:10px 0;';
+        container.appendChild(sep);
+      }
+      // Split into sentences using the existing splitSentences function
+      var sents = splitSentences(para);
+      if (!sents.length) sents = [para];
+      sents.forEach(function(sent) {
+        var line = document.createElement('div');
+        line.textContent = sent;
+        line.style.cssText = [
+          'padding:13px 16px',
+          'margin:4px 0',
+          'border-radius:6px',
+          'cursor:pointer',
+          'color:#f0ebe0',
+          'font-family:Georgia,"Times New Roman",serif',
+          'font-size:16px',
+          'line-height:1.6',
+          'transition:background .12s,color .12s',
+          'user-select:none',
+          '-webkit-user-select:none',
+        ].join(';');
+        line.addEventListener('touchstart', function(){ line.style.background='#1e3a3a'; }, {passive:true});
+        line.addEventListener('touchend', function(){ line.style.background=''; });
+        line.addEventListener('mouseenter', function(){ line.style.background='#1e2d2d'; });
+        line.addEventListener('mouseleave', function(){ line.style.background=''; });
+        line.addEventListener('click', function(){ copyText(sent, line); });
+        container.appendChild(line);
+      });
+    });
+  }
+
+  function openModal() {
+    if (!extractedText) return;
+    buildModal(extractedText);
+    document.getElementById('coursera-modal').style.display = '';
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeModal() {
+    document.getElementById('coursera-modal').style.display = 'none';
+    document.body.style.overflow = '';
+  }
+
+  document.getElementById('btn-coursera-modal-close').addEventListener('click', closeModal);
+  document.getElementById('coursera-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeModal();
+  });
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && document.getElementById('coursera-modal').style.display !== 'none') closeModal();
+  });
+
+  function doExtract() {
+    var html = document.getElementById('coursera-html').value.trim();
+    var msg = document.getElementById('coursera-msg');
+    if (!html) { msg.textContent = 'paste some HTML first'; setTimeout(function(){ msg.textContent=''; }, 2000); return; }
+    msg.textContent = '';
+    var result = extractCoursera(html);
+    if (!result) { msg.textContent = 'nothing extracted'; setTimeout(function(){ msg.textContent=''; }, 2000); return; }
+    extractedText = result;
+    document.getElementById('coursera-copy-row').style.display = '';
+    openModal();
+  }
+
+  document.getElementById('btn-coursera').addEventListener('click', doExtract);
+
+  document.getElementById('btn-coursera-paste').addEventListener('click', function () {
+    var msg = document.getElementById('coursera-msg');
+    navigator.clipboard.readText().then(function(text) {
+      if (!text.trim()) { msg.textContent = 'clipboard is empty'; setTimeout(function(){ msg.textContent=''; }, 2000); return; }
+      document.getElementById('coursera-html').value = text;
+      doExtract();
+    }).catch(function() {
+      msg.textContent = 'clipboard blocked — click the page first, then try again';
+      setTimeout(function(){ msg.textContent = ''; }, 2500);
+    });
+  });
+
+  document.getElementById('btn-coursera-clear').addEventListener('click', function () {
+    document.getElementById('coursera-html').value = '';
+    extractedText = '';
+    document.getElementById('coursera-copy-row').style.display = 'none';
+    document.getElementById('coursera-msg').textContent = '';
+    document.getElementById('coursera-copy-msg').textContent = '';
+    closeModal();
+  });
+
+  document.getElementById('btn-coursera-browse').addEventListener('click', openModal);
+
+  document.getElementById('btn-coursera-outline').addEventListener('click', function () {
+    if (!extractedText) return;
+    document.getElementById('paste-text').value = extractedText;
+    closeModal();
+    document.getElementById('view-input').scrollIntoView();
+    document.getElementById('paste-text').focus();
   });
 })();
 
