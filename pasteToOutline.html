@@ -247,6 +247,7 @@
         <div style="display:flex;gap:6px;align-items:center;margin-left:auto;">
           <input id="coursera-note-input" type="text" placeholder="type a note…" style="font:14px Georgia,serif;padding:6px 10px;border:1px solid #444;border-radius:4px;background:#2a2a2a;color:#f0ebe0;width:200px;outline:none;">
           <button id="btn-coursera-note-add" style="font:13px Georgia,serif;padding:6px 12px;background:#2a5c3c;color:#6ee7b7;border:1px solid #3a7c5c;border-radius:4px;cursor:pointer;white-space:nowrap;">add [<span id="coursera-counter-preview">1</span>]</button>
+          <button id="btn-coursera-copy-all" style="font:13px Georgia,serif;padding:6px 12px;background:#1e3a5c;color:#93c5fd;border:1px solid #2e5a8c;border-radius:4px;cursor:pointer;">copy all</button>
           <button id="btn-coursera-notes-clear" style="font:13px Georgia,serif;padding:6px 12px;background:#3a2020;color:#f87171;border:1px solid #5c3030;border-radius:4px;cursor:pointer;">clear</button>
           <button id="btn-coursera-modal-close" style="background:none;border:none;color:#aaa;font-size:24px;cursor:pointer;line-height:1;padding:0 4px;">&times;</button>
         </div>
@@ -1437,11 +1438,16 @@ function speakSelectionEN(text) {
     el.dataset.badge = n;
   }
 
+  var collected = [];
+
   function clearBadges() {
     document.querySelectorAll('#coursera-modal-lines .c-badge').forEach(function(b){ b.remove(); });
-    document.querySelectorAll('#coursera-modal-lines [data-badge]').forEach(function(el){ delete el.dataset.badge; });
-    // remove injected note rows
-    document.querySelectorAll('#coursera-modal-lines .c-note-row').forEach(function(el){ el.remove(); });
+    document.querySelectorAll('#coursera-modal-lines [data-badge]').forEach(function(el){
+      delete el.dataset.badge;
+      el.style.background = '';
+      el.style.color = '';
+    });
+    collected = [];
     counter = 1;
     updateCounterPreview();
     showFlash('cleared');
@@ -1483,11 +1489,13 @@ function speakSelectionEN(text) {
         line.addEventListener('mouseleave', function(){ if(!line.dataset.badge) line.style.background=''; });
         line.addEventListener('click', function() {
           var n = counter++;
+          var fullText = '[' + n + '] ' + sent;
           applyBadge(line, n);
           line.style.background = '#0d3320';
           line.style.color = '#a7f3d0';
+          collected.push(fullText);
           updateCounterPreview();
-          doCopy('[' + n + '] ' + sent, function() {
+          doCopy(fullText, function() {
             showFlash('[' + n + '] copied');
           });
         });
@@ -1526,27 +1534,12 @@ function speakSelectionEN(text) {
     var txt = input.value.trim();
     if (!txt) return;
     var n = counter++;
-    updateCounterPreview();
-    // inject a note row at the bottom of the lines container
-    var container = document.getElementById('coursera-modal-lines');
-    var row = document.createElement('div');
-    row.className = 'c-note-row';
-    row.style.cssText = 'padding:11px 16px;margin:4px 0;border-radius:6px;background:#1a2a1a;border:1px solid #2a4a2a;color:#a7f3d0;font-family:Georgia,"Times New Roman",serif;font-size:15px;line-height:1.6;cursor:pointer;user-select:none;-webkit-user-select:none;';
-    var badge = document.createElement('span');
-    badge.textContent = '[' + n + '] ';
-    badge.style.cssText = 'color:#6ee7b7;font-family:monospace;font-size:13px;font-weight:bold;margin-right:4px;';
-    row.appendChild(badge);
-    row.appendChild(document.createTextNode(txt));
     var fullText = '[' + n + '] ' + txt;
-    row.addEventListener('click', function() {
-      doCopy(fullText, function(){ showFlash('[' + n + '] copied'); });
-    });
-    container.appendChild(row);
-    // copy it too
+    collected.push(fullText);
+    updateCounterPreview();
     doCopy(fullText, function(){ showFlash('[' + n + '] copied'); });
     input.value = '';
     input.focus();
-    row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 
   document.getElementById('btn-coursera-note-add').addEventListener('click', addNote);
@@ -1554,6 +1547,11 @@ function speakSelectionEN(text) {
     if (e.key === 'Enter') { e.preventDefault(); addNote(); }
   });
   document.getElementById('btn-coursera-notes-clear').addEventListener('click', clearBadges);
+  document.getElementById('btn-coursera-copy-all').addEventListener('click', function() {
+    if (!collected.length) { showFlash('nothing collected yet'); return; }
+    var all = collected.join('\n');
+    doCopy(all, function(){ showFlash('\u2713 copied ' + collected.length + ' items'); });
+  });
 
   function doExtract() {
     var html = document.getElementById('coursera-html').value.trim();
