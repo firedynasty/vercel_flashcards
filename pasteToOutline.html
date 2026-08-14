@@ -240,11 +240,16 @@
 <!-- ============================================================ COURSERA MODAL -->
 <div id="coursera-modal" style="display:none;position:fixed;inset:0;z-index:200;background:#111;overflow-y:auto;-webkit-overflow-scrolling:touch;">
   <div style="min-height:100%;display:flex;flex-direction:column;">
-    <div style="position:sticky;top:0;z-index:10;display:flex;align-items:center;justify-content:space-between;padding:14px 20px;background:#1a1a1a;border-bottom:1px solid #333;">
-      <span style="color:#f5f0e8;font-family:Georgia,serif;font-size:15px;font-weight:bold;">Coursera transcript — tap a line to copy</span>
-      <div style="display:flex;align-items:center;gap:14px;">
-        <span id="coursera-modal-flash" style="color:#6ee7b7;font-size:13px;font-family:monospace;opacity:0;transition:opacity .3s;"></span>
-        <button id="btn-coursera-modal-close" style="background:none;border:none;color:#aaa;font-size:24px;cursor:pointer;line-height:1;padding:0 4px;">&times;</button>
+    <div style="position:sticky;top:0;z-index:10;padding:10px 16px;background:#1a1a1a;border-bottom:1px solid #333;">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <span style="color:#f5f0e8;font-family:Georgia,serif;font-size:14px;font-weight:bold;white-space:nowrap;">Coursera transcript</span>
+        <span id="coursera-modal-flash" style="color:#6ee7b7;font-size:12px;font-family:monospace;opacity:0;transition:opacity .3s;white-space:nowrap;"></span>
+        <div style="display:flex;gap:6px;align-items:center;margin-left:auto;">
+          <input id="coursera-note-input" type="text" placeholder="type a note…" style="font:14px Georgia,serif;padding:6px 10px;border:1px solid #444;border-radius:4px;background:#2a2a2a;color:#f0ebe0;width:200px;outline:none;">
+          <button id="btn-coursera-note-add" style="font:13px Georgia,serif;padding:6px 12px;background:#2a5c3c;color:#6ee7b7;border:1px solid #3a7c5c;border-radius:4px;cursor:pointer;white-space:nowrap;">add [<span id="coursera-counter-preview">1</span>]</button>
+          <button id="btn-coursera-notes-clear" style="font:13px Georgia,serif;padding:6px 12px;background:#3a2020;color:#f87171;border:1px solid #5c3030;border-radius:4px;cursor:pointer;">clear</button>
+          <button id="btn-coursera-modal-close" style="background:none;border:none;color:#aaa;font-size:24px;cursor:pointer;line-height:1;padding:0 4px;">&times;</button>
+        </div>
       </div>
     </div>
     <div id="coursera-modal-lines" style="padding:16px 20px 60px;flex:1;"></div>
@@ -1387,43 +1392,65 @@ function speakSelectionEN(text) {
     return doc.body.textContent.replace(/[ \t]{2,}/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
   }
 
+  var counter = 1;
+  var flashEl = document.getElementById('coursera-modal-flash');
+  var flashTimer = null;
+
+  function showFlash(msg) {
+    flashEl.textContent = msg;
+    flashEl.style.opacity = '1';
+    clearTimeout(flashTimer);
+    flashTimer = setTimeout(function(){ flashEl.style.opacity = '0'; }, 1400);
+  }
+
+  function updateCounterPreview() {
+    document.getElementById('coursera-counter-preview').textContent = counter;
+  }
+
+  function doCopy(txt, onSuccess) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(txt).then(onSuccess).catch(function() {
+        showFlash('blocked — long-press to select');
+      });
+    } else {
+      var ta = document.createElement('textarea');
+      ta.value = txt;
+      ta.style.cssText = 'position:fixed;top:0;left:-9999px;width:2px;height:2px;opacity:0;';
+      document.body.appendChild(ta);
+      ta.focus(); ta.select();
+      var ok = false;
+      try { ok = document.execCommand('copy'); } catch(e) {}
+      document.body.removeChild(ta);
+      if (ok) onSuccess(); else showFlash('blocked');
+    }
+  }
+
+  function applyBadge(el, n) {
+    // prefix existing badge span if present, else create one
+    var existing = el.querySelector('.c-badge');
+    if (existing) existing.remove();
+    var badge = document.createElement('span');
+    badge.className = 'c-badge';
+    badge.textContent = '[' + n + '] ';
+    badge.style.cssText = 'color:#6ee7b7;font-family:monospace;font-size:13px;font-weight:bold;margin-right:4px;';
+    el.insertBefore(badge, el.firstChild);
+    el.dataset.badge = n;
+  }
+
+  function clearBadges() {
+    document.querySelectorAll('#coursera-modal-lines .c-badge').forEach(function(b){ b.remove(); });
+    document.querySelectorAll('#coursera-modal-lines [data-badge]').forEach(function(el){ delete el.dataset.badge; });
+    // remove injected note rows
+    document.querySelectorAll('#coursera-modal-lines .c-note-row').forEach(function(el){ el.remove(); });
+    counter = 1;
+    updateCounterPreview();
+    showFlash('cleared');
+  }
+
   function buildModal(text) {
     var container = document.getElementById('coursera-modal-lines');
     container.innerHTML = '';
     var paragraphs = text.split(/\n\n+/);
-    var flashEl = document.getElementById('coursera-modal-flash');
-    var flashTimer = null;
-
-    function showFlash(msg) {
-      flashEl.textContent = msg;
-      flashEl.style.opacity = '1';
-      clearTimeout(flashTimer);
-      flashTimer = setTimeout(function(){ flashEl.style.opacity = '0'; }, 1400);
-    }
-
-    function copyText(txt, el) {
-      function onSuccess() {
-        el.style.background = '#064e3b';
-        el.style.color = '#6ee7b7';
-        showFlash('\u2713 copied');
-        setTimeout(function(){ el.style.background = ''; el.style.color = ''; }, 900);
-      }
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(txt).then(onSuccess).catch(function() {
-          showFlash('blocked — long-press to select');
-        });
-      } else {
-        var ta = document.createElement('textarea');
-        ta.value = txt;
-        ta.style.cssText = 'position:fixed;top:0;left:-9999px;width:2px;height:2px;opacity:0;';
-        document.body.appendChild(ta);
-        ta.focus(); ta.select();
-        var ok = false;
-        try { ok = document.execCommand('copy'); } catch(e) {}
-        document.body.removeChild(ta);
-        if (ok) onSuccess(); else showFlash('blocked');
-      }
-    }
 
     paragraphs.forEach(function(para, pi) {
       if (pi > 0) {
@@ -1431,12 +1458,12 @@ function speakSelectionEN(text) {
         sep.style.cssText = 'border-top:1px solid #333;margin:10px 0;';
         container.appendChild(sep);
       }
-      // Split into sentences using the existing splitSentences function
       var sents = splitSentences(para);
       if (!sents.length) sents = [para];
       sents.forEach(function(sent) {
         var line = document.createElement('div');
-        line.textContent = sent;
+        // text node so badge span can be prepended cleanly
+        line.appendChild(document.createTextNode(sent));
         line.style.cssText = [
           'padding:13px 16px',
           'margin:4px 0',
@@ -1452,16 +1479,26 @@ function speakSelectionEN(text) {
         ].join(';');
         line.addEventListener('touchstart', function(){ line.style.background='#1e3a3a'; }, {passive:true});
         line.addEventListener('touchend', function(){ line.style.background=''; });
-        line.addEventListener('mouseenter', function(){ line.style.background='#1e2d2d'; });
-        line.addEventListener('mouseleave', function(){ line.style.background=''; });
-        line.addEventListener('click', function(){ copyText(sent, line); });
+        line.addEventListener('mouseenter', function(){ if(!line.dataset.badge) line.style.background='#1e2d2d'; });
+        line.addEventListener('mouseleave', function(){ if(!line.dataset.badge) line.style.background=''; });
+        line.addEventListener('click', function() {
+          var n = counter++;
+          applyBadge(line, n);
+          line.style.background = '#0d3320';
+          line.style.color = '#a7f3d0';
+          updateCounterPreview();
+          doCopy('[' + n + '] ' + sent, function() {
+            showFlash('[' + n + '] copied');
+          });
+        });
         container.appendChild(line);
       });
     });
   }
 
-  function openModal() {
+  function openModal(rebuild) {
     if (!extractedText) return;
+    if (rebuild) { counter = 1; updateCounterPreview(); }
     buildModal(extractedText);
     document.getElementById('coursera-modal').style.display = '';
     document.body.style.overflow = 'hidden';
@@ -1477,8 +1514,46 @@ function speakSelectionEN(text) {
     if (e.target === this) closeModal();
   });
   document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape' && document.getElementById('coursera-modal').style.display !== 'none') closeModal();
+    if (e.key === 'Escape' && document.getElementById('coursera-modal').style.display !== 'none') {
+      // don't close if user is typing in the note input
+      if (document.activeElement === document.getElementById('coursera-note-input')) return;
+      closeModal();
+    }
   });
+
+  function addNote() {
+    var input = document.getElementById('coursera-note-input');
+    var txt = input.value.trim();
+    if (!txt) return;
+    var n = counter++;
+    updateCounterPreview();
+    // inject a note row at the bottom of the lines container
+    var container = document.getElementById('coursera-modal-lines');
+    var row = document.createElement('div');
+    row.className = 'c-note-row';
+    row.style.cssText = 'padding:11px 16px;margin:4px 0;border-radius:6px;background:#1a2a1a;border:1px solid #2a4a2a;color:#a7f3d0;font-family:Georgia,"Times New Roman",serif;font-size:15px;line-height:1.6;cursor:pointer;user-select:none;-webkit-user-select:none;';
+    var badge = document.createElement('span');
+    badge.textContent = '[' + n + '] ';
+    badge.style.cssText = 'color:#6ee7b7;font-family:monospace;font-size:13px;font-weight:bold;margin-right:4px;';
+    row.appendChild(badge);
+    row.appendChild(document.createTextNode(txt));
+    var fullText = '[' + n + '] ' + txt;
+    row.addEventListener('click', function() {
+      doCopy(fullText, function(){ showFlash('[' + n + '] copied'); });
+    });
+    container.appendChild(row);
+    // copy it too
+    doCopy(fullText, function(){ showFlash('[' + n + '] copied'); });
+    input.value = '';
+    input.focus();
+    row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  document.getElementById('btn-coursera-note-add').addEventListener('click', addNote);
+  document.getElementById('coursera-note-input').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') { e.preventDefault(); addNote(); }
+  });
+  document.getElementById('btn-coursera-notes-clear').addEventListener('click', clearBadges);
 
   function doExtract() {
     var html = document.getElementById('coursera-html').value.trim();
@@ -1489,7 +1564,7 @@ function speakSelectionEN(text) {
     if (!result) { msg.textContent = 'nothing extracted'; setTimeout(function(){ msg.textContent=''; }, 2000); return; }
     extractedText = result;
     document.getElementById('coursera-copy-row').style.display = '';
-    openModal();
+    openModal(true);
   }
 
   document.getElementById('btn-coursera').addEventListener('click', doExtract);
