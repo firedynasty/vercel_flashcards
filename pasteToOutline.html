@@ -1549,7 +1549,7 @@ function speakSelectionEN(text) {
   document.getElementById('btn-coursera-notes-clear').addEventListener('click', clearBadges);
   document.getElementById('btn-coursera-copy-all').addEventListener('click', function() {
     if (!collected.length) { showFlash('nothing collected yet'); return; }
-    var all = collected.join('\n');
+    var all = collected.map(function(s){ return s.replace(/^\[\d+\] /, ''); }).join('\n\n');
     doCopy(all, function(){ showFlash('\u2713 copied ' + collected.length + ' items'); });
   });
 
