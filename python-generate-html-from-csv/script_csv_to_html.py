@@ -16,7 +16,7 @@ import json
 import sys
 from pathlib import Path
 
-TEMPLATE = Path(__file__).resolve().parent / 'learn-chinese-tts.html'
+TEMPLATE = Path(__file__).resolve().parent.parent / 'learn-chinese-tts.html'
 
 
 def main():
@@ -25,7 +25,7 @@ def main():
     ap.add_argument('-o', '--output',
                     help='Output .html path (default: learn-chinese-tts_<name>.html next to the CSV)')
     ap.add_argument('-t', '--template', default=str(TEMPLATE),
-                    help='Template HTML (default: learn-chinese-tts.html next to this script)')
+                    help='Template HTML (default: learn-chinese-tts.html at the repo root, one level up)')
     ap.add_argument('--no-table', action='store_true',
                     help='Boot into lyrics view instead of table view')
     args = ap.parse_args()
