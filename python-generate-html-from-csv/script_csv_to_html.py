@@ -48,6 +48,11 @@ def main():
     name_js = json.dumps(csv_path.name)
 
     embed = (
+        '<style>\n'
+        '/* script_csv_to_html.py: hide setup UI not needed in baked copies */\n'
+        '#pasteCsvInput { display: none !important; }\n'
+        'div:has(#dbxAuthBtn) { display: none !important; }\n'
+        '</style>\n'
         '<script>\n'
         '// Baked in by script_csv_to_html.py — consumed by the INIT block\n'
         f'var EMBEDDED_CSV_TEXT = {data_js};\n'
