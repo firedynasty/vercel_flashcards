@@ -604,7 +604,7 @@
   <div class="ctrl-inner">
     <input type="text" id="searchInput" placeholder="&#128269; Search terms or definitions…" oninput="filterAndRender()">
     <button class="btn outline sm" id="darkModeBtn" onclick="toggleDarkMode()">&#9790; Dark</button>
-    <span class="toggle-chip" id="toggleTableView" onclick="toggleTableView()">Table</span>
+    <span class="toggle-chip on" id="toggleTableView" onclick="toggleTableView()">Table</span>
     <span class="toggle-chip" id="toggleDeckView" onclick="toggleDeckView()">Deck</span>
     <select id="filterSel" onchange="filterAndRender()" style="display:none">
       <option value="all">All cards</option>
@@ -648,12 +648,12 @@
 </div>
 
 <!-- ── CARDS ── -->
-<div class="cards-area" id="cardsArea">
+<div class="cards-area" id="cardsArea" style="display:none">
   <div id="cardsContainer"></div>
 </div>
 
 <!-- ── TABLE VIEW ── -->
-<div id="tableViewContainer">
+<div id="tableViewContainer" class="active">
   <div id="tableViewInner"></div>
 </div>
 
@@ -754,7 +754,7 @@ var scores       = {};   // idx -> 'correct'|'partial'|'wrong'
 var modalFI      = -1;   // current filteredVocab index in modal
 var hardSet      = new Set();
 var darkModeOn   = localStorage.getItem('darkMode') === 'true';
-var tableViewOn  = false;
+var tableViewOn  = true;
 var dataTableInstance = null;
 var deckViewOn   = false;
 var deckQueue    = [];
@@ -1660,12 +1660,18 @@ function tblSpeak(n, btnEl) {
     el.classList.remove('speaking');
   });
   window.speechSynthesis.cancel();
-  var utterance = new SpeechSynthesisUtterance(row.term);
-  utterance.rate = 1;
   btnEl.classList.add('speaking');
-  utterance.onend = function() { btnEl.classList.remove('speaking'); };
-  utterance.onerror = function() { btnEl.classList.remove('speaking'); };
-  window.speechSynthesis.speak(utterance);
+
+  var u1 = new SpeechSynthesisUtterance(row.term);
+  u1.rate = 1;
+  var u2 = new SpeechSynthesisUtterance(row.definition || '');
+  u2.rate = 1;
+  u2.onend = function() { btnEl.classList.remove('speaking'); };
+  u2.onerror = function() { btnEl.classList.remove('speaking'); };
+  u1.onerror = function() { btnEl.classList.remove('speaking'); };
+  window.speechSynthesis.speak(u1);
+  if (row.definition) window.speechSynthesis.speak(u2);
+  else u1.onend = function() { btnEl.classList.remove('speaking'); };
 }
 
 // ── DECK VIEW (Mango-style swipe review) ──
