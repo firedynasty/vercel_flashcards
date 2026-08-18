@@ -478,6 +478,7 @@
     <div style="display:flex;gap:16px;align-items:center;margin-bottom:6px;font-size:12px;color:#555;flex-wrap:wrap;">
       <label style="cursor:pointer;display:flex;align-items:center;gap:4px;"><input type="radio" name="csvColMode" value="3" checked> 3 columns <span style="color:#999;">(language, pronunciation, definition)</span></label>
       <label style="cursor:pointer;display:flex;align-items:center;gap:4px;"><input type="radio" name="csvColMode" value="2"> 2 columns <span style="color:#999;">(language, definition)</span></label>
+      <label style="cursor:pointer;display:flex;align-items:center;gap:4px;"><input type="radio" name="csvColMode" value="0"> multi-line blocks <span style="color:#999;">(each line = one field, blank line = row separator)</span></label>
     </div>
     <textarea id="pasteCsvInput" rows="5" style="width:100%;border:1px solid #ddd;border-radius:8px;padding:10px 14px;font-family:'SF Mono',Monaco,monospace;font-size:12px;line-height:1.6;resize:vertical;color:#333;" placeholder="Paste CSV content here (Chinese,Pinyin,English)&#10;一,yī,one&#10;五,wǔ,five&#10;魚,yú,fish"></textarea>
     <div style="margin-top:6px;">
@@ -1378,12 +1379,17 @@ function pasteFromClipboard() {
   });
 }
 
-// ── CSV COLUMN MODE (paste path): 3 = language,pronunciation,definition · 2 = language,definition ──
-var csvColMode = parseInt(localStorage.getItem('chineseTts_csvColMode') || '3', 10);
+// ── CSV COLUMN MODE (paste path): 3 = language,pronunciation,definition · 2 = language,definition · 0 = multi-line blocks ──
+var csvColMode = parseInt(localStorage.getItem('chineseTts_csvColMode') ?? '3', 10);
+if (isNaN(csvColMode)) csvColMode = 3;
 function updateCsvPlaceholder() {
-  document.getElementById('pasteCsvInput').placeholder = csvColMode === 2
-    ? 'Paste CSV content here (Chinese,English)\n一,one\n五,five\n魚,fish'
-    : 'Paste CSV content here (Chinese,Pinyin,English)\n一,yī,one\n五,wǔ,five\n魚,fish';
+  if (csvColMode === 0) {
+    document.getElementById('pasteCsvInput').placeholder = 'Paste multi-line blocks here\n(each field on its own line, blank line between rows)\n\n神說：...\nshén shuō:...\nGod said:...\n\n神稱旱地為地...\nshén chēng hàn dì...\nGod called the dry land...';
+  } else if (csvColMode === 2) {
+    document.getElementById('pasteCsvInput').placeholder = 'Paste CSV content here (Chinese,English)\n一,one\n五,five\n魚,fish';
+  } else {
+    document.getElementById('pasteCsvInput').placeholder = 'Paste CSV content here (Chinese,Pinyin,English)\n一,yī,one\n五,wǔ,five\n魚,fish';
+  }
 }
 document.querySelectorAll('input[name="csvColMode"]').forEach(function(r) {
   r.checked = parseInt(r.value, 10) === csvColMode;
@@ -1395,12 +1401,52 @@ document.querySelectorAll('input[name="csvColMode"]').forEach(function(r) {
 });
 updateCsvPlaceholder();
 
+function csvQuoteCell(s) {
+  if (s.indexOf(',') >= 0 || s.indexOf('"') >= 0 || s.indexOf('\n') >= 0) {
+    return '"' + s.replace(/"/g, '""') + '"';
+  }
+  return s;
+}
+
+// Convert multi-line block format → CSV.
+// Blocks are separated by blank lines. Each non-numeric block becomes one row.
+// Auto-detects 2 or 3 lines per block from the first valid block found.
+function convertMultilineBlocksToCsv(text) {
+  var blocks = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split(/\n{2,}/);
+  // Detect lines-per-card from first valid (non-numeric) block
+  var linesPerCard = 3;
+  for (var i = 0; i < blocks.length; i++) {
+    var lines = blocks[i].split('\n').map(function(l) { return l.trim(); }).filter(Boolean);
+    if (lines.length > 0 && !lines.every(function(l) { return /^\d+[a-z]?$/i.test(l); })) {
+      linesPerCard = lines.length;
+      break;
+    }
+  }
+  var csvRows = [];
+  blocks.forEach(function(block) {
+    var lines = block.split('\n').map(function(l) { return l.trim(); }).filter(Boolean);
+    if (lines.length === 0) return;
+    if (lines.every(function(l) { return /^\d+[a-z]?$/i.test(l); })) return; // skip verse-ref blocks
+    if (lines.length !== linesPerCard) return;
+    csvRows.push(lines.map(csvQuoteCell).join(','));
+  });
+  var header = linesPerCard === 2 ? 'term,definition' : 'term,pronunciation,definition';
+  return header + '\n' + csvRows.join('\n');
+}
+
 function loadPastedCsv() {
   var raw = document.getElementById('pasteCsvInput').value.trim();
   var statusEl = document.getElementById('pasteCsvStatus');
   if (!raw) { statusEl.textContent = 'Paste some CSV first.'; return; }
-  if (raw.indexOf('\t') >= 0) raw = raw.split('\n').map(tabToCsv).join('\n'); // Google Sheets copies are tab-separated
-  var ok = loadCsvText(raw, 'pasted-csv');
+  var forceMode;
+  if (csvColMode === 0) {
+    raw = convertMultilineBlocksToCsv(raw);
+    forceMode = raw.startsWith('term,definition') ? 2 : 3; // match what converter emitted
+  } else {
+    forceMode = csvColMode;
+    if (raw.indexOf('\t') >= 0) raw = raw.split('\n').map(tabToCsv).join('\n'); // Google Sheets copies are tab-separated
+  }
+  var ok = loadCsvText(raw, 'pasted-csv', forceMode);
   if (ok) {
     statusEl.textContent = 'Loaded.';
     if (tableViewOn) renderTableView();
@@ -2079,6 +2125,69 @@ document.querySelectorAll('.deck-side-btn.miss').forEach(function(btn) {
 });
 document.getElementById('deckRevealBtn').addEventListener('click', function() { deckFlipCard(); });
 document.getElementById('deckRestartBtn').addEventListener('click', function() { startDeckSession(); });
+
+// ── DECK SWIPE (touch) ──
+(function() {
+  var card = document.getElementById('deckCard');
+  var SWIPE_THRESHOLD = 60; // px to trigger grade
+  var TAP_MAX_MOVE = 10;    // px — below this counts as a tap, not a swipe
+  var TAP_MAX_MS   = 250;   // ms — above this counts as a hold, not a tap
+  var touchStartX, touchStartY, touchStartTime, isDragging = false;
+
+  card.addEventListener('touchstart', function(e) {
+    if (deckCurrent === null) return;
+    var t = e.touches[0];
+    touchStartX = t.clientX; touchStartY = t.clientY;
+    touchStartTime = Date.now();
+    isDragging = false;
+    card.style.transition = 'none';
+  }, { passive: true });
+
+  card.addEventListener('touchmove', function(e) {
+    if (deckCurrent === null) return;
+    var dx = e.touches[0].clientX - touchStartX;
+    var dy = e.touches[0].clientY - touchStartY;
+    if (Math.abs(dx) < Math.abs(dy) && !isDragging) return; // vertical scroll, ignore
+    isDragging = true;
+    e.preventDefault();
+    var rotate = dx * 0.08;
+    card.style.transform = 'translateX(' + dx + 'px) rotate(' + rotate + 'deg)';
+    // Tint stamp labels as hint
+    var stampR = document.getElementById('deckStampRight');
+    var stampL = document.getElementById('deckStampLeft');
+    var ratio = Math.min(Math.abs(dx) / SWIPE_THRESHOLD, 1);
+    if (dx > 0)      { stampR.style.opacity = ratio * 0.8; stampL.style.opacity = 0; }
+    else if (dx < 0) { stampL.style.opacity = ratio * 0.8; stampR.style.opacity = 0; }
+    else             { stampR.style.opacity = 0; stampL.style.opacity = 0; }
+  }, { passive: false });
+
+  card.addEventListener('touchend', function(e) {
+    if (deckCurrent === null) return;
+    var dx = e.changedTouches[0].clientX - touchStartX;
+    var dy = e.changedTouches[0].clientY - touchStartY;
+    var dt = Date.now() - touchStartTime;
+    document.getElementById('deckStampRight').style.opacity = 0;
+    document.getElementById('deckStampLeft').style.opacity = 0;
+
+    if (!isDragging && Math.abs(dx) < TAP_MAX_MOVE && dt < TAP_MAX_MS) {
+      // Short tap — flip
+      card.style.transform = '';
+      deckFlipCard();
+      return;
+    }
+    if (dx > SWIPE_THRESHOLD) {
+      deckGrade(true);
+    } else if (dx < -SWIPE_THRESHOLD) {
+      deckGrade(false);
+    } else {
+      // Not far enough — snap back
+      card.style.transition = 'transform 0.2s ease, opacity 0.2s ease';
+      card.style.transform = '';
+    }
+    isDragging = false;
+  }, { passive: true });
+})();
+
 // ── DECK KEYBOARD SHORTCUTS: ← again, ↑/Space flip, → got it ──
 document.addEventListener('keydown', function(e) {
   if (!deckViewOn || deckCurrent === null) return;
@@ -2465,7 +2574,7 @@ setTtsLang(ttsLang); // sync language select + dialect buttons with saved pref
 if (window.EMBEDDED_CSV_TEXT) {
   // Standalone file baked by script_csv_to_html.py — data embedded, skip the sheets API
   document.getElementById('folderName').textContent = window.EMBEDDED_CSV_NAME || 'embedded.csv';
-  loadCsvText(window.EMBEDDED_CSV_TEXT, window.EMBEDDED_CSV_NAME || 'embedded.csv');
+  loadCsvText(window.EMBEDDED_CSV_TEXT, window.EMBEDDED_CSV_NAME || 'embedded.csv', window.EMBEDDED_COL_MODE || 3);
   if (window.EMBEDDED_TABLE_VIEW && !tableViewOn) toggleTableView();
 } else {
   initFromApi();
