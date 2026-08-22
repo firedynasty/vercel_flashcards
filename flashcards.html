@@ -971,6 +971,7 @@
         <button class="paste-btn" id="learnScriptureBtn" title="Open Learn Scripture" style="border: 2px solid #92400e; color: #92400e;">Learn Scripture</button>
         <button class="paste-btn" id="musicBtn" title="Open Music" style="border: 2px solid #16a34a; color: #16a34a;">Music</button>
         <button class="paste-btn" id="imageNotesBtn" title="Open Image Notes" style="border: 2px solid #f97316; color: #f97316;">Image Notes</button>
+        <button class="paste-btn" id="ttsPlayerBtn" title="Open TTS Transcript Player" style="border: 2px solid #8b5cf6; color: #8b5cf6;">TTS Player</button>
 
         <!-- Input Section -->
         <div class="input-section" id="inputSection">
@@ -2463,6 +2464,9 @@ God loves the world
 
             document.getElementById('imageNotesBtn').addEventListener('click', () => {
                 window.open('imageNotes.html', '_blank');
+            document.getElementById('ttsPlayerBtn').addEventListener('click', () => {
+                window.open('textToSpeechPlayer.html', '_blank');
+            });
             });
 
             document.getElementById('folderFlatInput').addEventListener('change', async function() {

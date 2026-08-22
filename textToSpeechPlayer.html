@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TTS Transcript Player</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: #0f0f0f;
+  color: #e0e0e0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Sticky navbar (header + player) ── */
+.navbar {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: #1a1a1a;
+  border-bottom: 1px solid #2a2a2a;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.5);
+}
+
+/* ── Header ── */
+.header {
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.header-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+  flex: 1;
+  min-width: 120px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.header-title small {
+  color: #666;
+  font-weight: 400;
+  font-size: 12px;
+  margin-left: 8px;
+}
+.btn {
+  border: none;
+  border-radius: 7px;
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.1s;
+  white-space: nowrap;
+}
+.btn:hover { opacity: 0.85; }
+.btn:active { transform: scale(0.97); }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn-dbx  { background: linear-gradient(45deg, #0061ff, #004bb5); font-size: 13px; padding: 8px 16px; }
+.btn-local { background: #2d2d2d; font-size: 13px; padding: 8px 14px; }
+
+/* ── Audio player ── */
+.player-section {
+  background: #161616;
+  border-top: 1px solid #222;
+  padding: 12px 20px;
+}
+.player-label {
+  font-size: 13px;
+  color: #999;
+  margin-bottom: 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#audioEl {
+  width: 100%;
+  height: 36px;
+  accent-color: #0061ff;
+}
+
+/* ── Transcript ── */
+.transcript-section {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 16px 40px;
+  /* Ensure it scrolls independently of the sticky navbar */
+  min-height: 0;
+}
+.transcript-empty {
+  color: #444;
+  font-size: 14px;
+  text-align: center;
+  margin-top: 80px;
+  line-height: 1.8;
+}
+
+.seg {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background 0.1s, border-color 0.1s;
+}
+.seg:hover { background: #1c1c1c; }
+.seg.active {
+  background: #0d1f0d;
+  border-color: #1a3a1a;
+}
+
+.seg-ts {
+  font-size: 11px;
+  color: #4a4a4a;
+  min-width: 36px;
+  padding-top: 3px;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+  transition: color 0.1s;
+}
+.seg.active .seg-ts { color: #4ecb71; }
+
+.seg-voice {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  min-width: 64px;
+  padding-top: 3px;
+  flex-shrink: 0;
+}
+.seg-text {
+  font-size: 14px;
+  line-height: 1.6;
+  flex: 1;
+  color: #bbb;
+  transition: color 0.1s;
+}
+.seg.active .seg-text { color: #eee; }
+
+.seg-ask {
+  flex-shrink: 0;
+  background: #252525;
+  border: none;
+  border-radius: 5px;
+  color: #666;
+  font-size: 11px;
+  padding: 3px 9px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s, background 0.1s;
+  align-self: flex-start;
+  margin-top: 2px;
+}
+.seg:hover .seg-ask { opacity: 1; }
+.seg-ask:hover { background: #333; color: #ccc; }
+
+/* Voice colors */
+.voice-narrator  { color: #777; }
+.voice-student   { color: #4a9eff; }
+.voice-teacher   { color: #4ecb71; }
+.voice-scripture { color: #b89eff; }
+
+/* ── Dropbox Modal ── */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.72);
+  z-index: 100;
+  align-items: center;
+  justify-content: center;
+}
+.modal-overlay.open { display: flex; }
+.modal-box {
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 12px;
+  width: 540px;
+  max-width: 95vw;
+  max-height: 82vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+}
+.modal-header {
+  padding: 15px 18px;
+  border-bottom: 1px solid #2a2a2a;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.modal-header h3 { font-size: 15px; font-weight: 700; }
+.modal-close {
+  background: none;
+  border: none;
+  color: #666;
+  font-size: 20px;
+  cursor: pointer;
+  line-height: 1;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.modal-close:hover { background: #2a2a2a; color: #ccc; }
+
+.modal-toolbar {
+  padding: 10px 14px;
+  border-bottom: 1px solid #222;
+  display: flex;
+  gap: 8px;
+}
+.modal-path-input {
+  flex: 1;
+  background: #111;
+  border: 1px solid #3a3a3a;
+  border-radius: 6px;
+  color: #ddd;
+  font-size: 13px;
+  padding: 6px 10px;
+  font-family: monospace;
+}
+.modal-path-input:focus { outline: none; border-color: #0061ff; }
+.modal-go-btn {
+  background: #2a2a2a;
+  border: 1px solid #3a3a3a;
+  border-radius: 6px;
+  color: #ccc;
+  font-size: 13px;
+  padding: 6px 14px;
+  cursor: pointer;
+}
+.modal-go-btn:hover { background: #333; color: #fff; }
+.modal-go-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.modal-breadcrumb {
+  padding: 5px 16px;
+  font-size: 12px;
+  color: #555;
+  min-height: 26px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-wrap: wrap;
+}
+.crumb-btn {
+  background: none;
+  border: none;
+  color: #4a9eff;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 1px 3px;
+  border-radius: 3px;
+}
+.crumb-btn:hover { background: #1e2a3a; text-decoration: underline; }
+
+.modal-status {
+  padding: 3px 16px 5px;
+  font-size: 12px;
+  color: #555;
+  min-height: 22px;
+}
+
+.modal-list {
+  flex: 1;
+  overflow-y: auto;
+}
+.dsm-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: background 0.1s;
+  border-bottom: 1px solid #1a1a1a;
+}
+.dsm-item:hover { background: #222; }
+.dsm-icon { font-size: 15px; flex-shrink: 0; }
+.dsm-name {
+  flex: 1;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dsm-action {
+  background: linear-gradient(45deg, #0061ff, #004bb5);
+  border: none;
+  border-radius: 5px;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 12px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.dsm-action:hover { opacity: 0.85; }
+.dsm-signin-btn {
+  background: linear-gradient(45deg, #0061ff, #004bb5);
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 12px 28px;
+  cursor: pointer;
+  display: block;
+  margin: 48px auto 0;
+}
+
+/* ── Toast ── */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: #1e1e1e;
+  border: 1px solid #3a3a3a;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: 13px;
+  color: #ddd;
+  z-index: 200;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.2s, transform 0.2s;
+  pointer-events: none;
+  max-width: 320px;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+</style>
+</head>
+<body>
+
+<!-- Sticky navbar: header + audio player -->
+<div class="navbar">
+  <div class="header">
+    <div class="header-title">
+      TTS Player
+      <small id="fileLabel">— no file loaded</small>
+    </div>
+    <button id="loadFromDbBtn" class="btn btn-dbx" onclick="loadFromDbx()">📥 Load from DB</button>
+    <button class="btn btn-dbx" onclick="openDbxModal()">📂 Dropbox Files</button>
+    <button class="btn btn-local" onclick="document.getElementById('localPicker').click()">📁 Local</button>
+    <input type="file" id="localPicker" accept=".mp3,.m4a,.wav,.ogg,.json" multiple style="display:none" onchange="handleLocalFiles(this.files)">
+    <button class="btn btn-local" onclick="changeFontSize(1)" title="Increase font size">A+</button>
+    <button class="btn btn-local" onclick="changeFontSize(-1)" title="Decrease font size">A-</button>
+  </div>
+  <div class="player-section">
+    <div class="player-label" id="playerLabel">No file loaded — use a button above to load an MP3 + JSON transcript pair</div>
+    <audio id="audioEl" controls></audio>
+  </div>
+</div>
+
+<!-- Transcript -->
+<div class="transcript-section" id="transcriptSection">
+  <div class="transcript-empty" id="transcriptEmpty">
+    Load an MP3 with a paired JSON transcript<br>to see the synchronized dialogue here
+  </div>
+</div>
+
+<!-- Dropbox File Browser Modal -->
+<div class="modal-overlay" id="dbxOverlay">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3>📂 Dropbox Files</h3>
+      <button class="modal-close" onclick="closeDbxModal()">✕</button>
+    </div>
+    <div class="modal-toolbar">
+      <input class="modal-path-input" id="dbxPathInput" value="/" placeholder="/ (root)">
+      <button class="modal-go-btn" id="dbxGoBtn" onclick="dbxBrowse(document.getElementById('dbxPathInput').value)">Go</button>
+    </div>
+    <div class="modal-breadcrumb" id="dbxBreadcrumb"></div>
+    <div class="modal-status" id="dbxStatus">Not signed in</div>
+    <div class="modal-list" id="dbxList"></div>
+  </div>
+</div>
+
+<!-- Toast notification -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════
+// DROPBOX PKCE AUTH  (ported from vercel_youtube/public/index.html)
+// ═══════════════════════════════════════════════════════════════════════
+(function () {
+  let dropboxAccessToken = null;
+  let dropboxAppKey = '';
+  const IS_LOCALHOST = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+
+  // PKCE helpers
+  function generateCodeVerifier() {
+    const a = new Uint8Array(64);
+    crypto.getRandomValues(a);
+    return btoa(String.fromCharCode(...a)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+  }
+  async function generateCodeChallenge(v) {
+    const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(v));
+    return btoa(String.fromCharCode(...new Uint8Array(digest))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+  }
+
+  async function fetchAppKey() {
+    if (IS_LOCALHOST) return localStorage.getItem('dropbox-app-key') || '';
+    try { const r = await fetch('/api/dropbox-key'); return (await r.json()).key || ''; } catch { return ''; }
+  }
+
+  // Popup-based sign-in (same as vercel_youtube)
+  async function dropboxSignInPopup(onSuccess) {
+    let appKey;
+    if (IS_LOCALHOST) {
+      appKey = localStorage.getItem('dropbox-app-key') || prompt('Enter your Dropbox App Key:');
+      if (!appKey) return;
+      localStorage.setItem('dropbox-app-key', appKey);
+    } else {
+      appKey = await fetchAppKey();
+      if (!appKey) { alert('Dropbox App Key not configured'); return; }
+    }
+    dropboxAppKey = appKey;
+
+    const verifier   = generateCodeVerifier();
+    const challenge  = await generateCodeChallenge(verifier);
+    localStorage.setItem('dropbox_code_verifier', verifier);
+
+    const redirectUri = window.location.origin + window.location.pathname;
+    const authUrl = 'https://www.dropbox.com/oauth2/authorize'
+      + '?client_id=' + appKey
+      + '&response_type=code'
+      + '&code_challenge=' + challenge
+      + '&code_challenge_method=S256'
+      + '&redirect_uri=' + encodeURIComponent(redirectUri)
+      + '&token_access_type=online';
+
+    const w = 600, h = 700;
+    const left = Math.round(window.screenX + (window.outerWidth  - w) / 2);
+    const top  = Math.round(window.screenY + (window.outerHeight - h) / 2);
+    window.open(authUrl, 'dropbox-auth', `width=${w},height=${h},left=${left},top=${top}`);
+
+    function handler(e) {
+      if (e.origin !== window.location.origin) return;
+      if (!e.data || e.data.type !== 'dropbox-token') return;
+      dropboxAccessToken = e.data.token;
+      window.removeEventListener('message', handler);
+      if (onSuccess) onSuccess();
+    }
+    window.addEventListener('message', handler);
+  }
+
+  // Handle OAuth redirect / popup callback
+  async function handleOAuthRedirect() {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('code');
+    if (!code) return;
+
+    const verifier = sessionStorage.getItem('dropbox_code_verifier')
+                  || localStorage.getItem('dropbox_code_verifier');
+    const appKey = await fetchAppKey();
+    if (!verifier || !appKey) return;
+
+    const redirectUri = window.location.origin + window.location.pathname;
+    try {
+      const res = await fetch('https://api.dropboxapi.com/oauth2/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ code, grant_type:'authorization_code', client_id:appKey, redirect_uri:redirectUri, code_verifier:verifier }).toString(),
+      });
+      const data = await res.json();
+      if (data.access_token) {
+        sessionStorage.removeItem('dropbox_code_verifier');
+        localStorage.removeItem('dropbox_code_verifier');
+        if (window.opener && !window.opener.closed) {
+          window.opener.postMessage({ type: 'dropbox-token', token: data.access_token }, window.location.origin);
+          window.close();
+          return;
+        }
+        dropboxAccessToken = data.access_token;
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    } catch (err) {
+      console.error('Dropbox auth error:', err);
+      if (window.opener && !window.opener.closed) window.close();
+    }
+  }
+  handleOAuthRedirect();
+
+  // ── Expose helpers globally ───────────────────────────────────────────
+  window.getDropboxAccessToken = () => dropboxAccessToken;
+  window.dropboxSignInPopup    = dropboxSignInPopup;
+
+  window.dropboxDownloadText = async function (path) {
+    const res = await fetch('https://content.dropboxapi.com/2/files/download', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + dropboxAccessToken, 'Dropbox-API-Arg': JSON.stringify({ path }) },
+    });
+    if (!res.ok) throw new Error('Download failed (' + res.status + ')');
+    return res.text();
+  };
+
+  window.dropboxDownloadBlob = async function (path) {
+    const res = await fetch('https://content.dropboxapi.com/2/files/download', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + dropboxAccessToken, 'Dropbox-API-Arg': JSON.stringify({ path }) },
+    });
+    if (!res.ok) throw new Error('Download failed (' + res.status + ')');
+    return res.blob();
+  };
+
+  window.dropboxListFolder = async function (path) {
+    const normPath = (!path || path === '/') ? '' : ('/' + path.replace(/^\/+|\/+$/g, ''));
+    const res = await fetch('https://api.dropboxapi.com/2/files/list_folder', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + dropboxAccessToken, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path: normPath }),
+    });
+    if (!res.ok) throw new Error('List folder failed (' + res.status + ')');
+    return res.json();
+  };
+})();
+
+
+// ═══════════════════════════════════════════════════════════════════════
+// AUDIO + TRANSCRIPT SYNC
+// ═══════════════════════════════════════════════════════════════════════
+const audioEl = document.getElementById('audioEl');
+let segments = [];
+let currentSegIdx = -1;
+
+function msToTs(ms) {
+  const s = Math.floor(ms / 1000);
+  const m = Math.floor(s / 60);
+  return m + ':' + String(s % 60).padStart(2, '0');
+}
+
+function escHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function loadTranscript(data) {
+  segments = data.segments || [];
+  currentSegIdx = -1;
+  const section = document.getElementById('transcriptSection');
+  const empty   = document.getElementById('transcriptEmpty');
+
+  if (!segments.length) {
+    section.innerHTML = '';
+    section.appendChild(empty);
+    empty.style.display = 'block';
+    return;
+  }
+
+  section.innerHTML = '';
+  segments.forEach((seg, i) => {
+    const div = document.createElement('div');
+    div.className = 'seg';
+    div.dataset.idx = i;
+    div.innerHTML =
+      `<span class="seg-ts">${msToTs(seg.start_ms)}</span>` +
+      `<span class="seg-voice voice-${seg.voice}">${seg.voice}</span>` +
+      `<span class="seg-text">${escHtml(seg.text)}</span>` +
+      `<button class="seg-ask" title="Copy context for Claude">Ask</button>`;
+
+    div.addEventListener('click', e => {
+      if (e.target.classList.contains('seg-ask')) { askAt(i); return; }
+      if (i === currentSegIdx) {
+        // Same segment — toggle pause/play
+        if (audioEl.paused) audioEl.play();
+        else audioEl.pause();
+      } else {
+        // Different segment — seek and play
+        audioEl.currentTime = seg.start_ms / 1000;
+        if (audioEl.paused) audioEl.play();
+      }
+    });
+    section.appendChild(div);
+  });
+}
+
+audioEl.addEventListener('timeupdate', () => {
+  const nowMs = audioEl.currentTime * 1000;
+  let hitIdx = -1;
+  for (let i = 0; i < segments.length; i++) {
+    if (segments[i].start_ms <= nowMs && nowMs <= segments[i].end_ms) { hitIdx = i; break; }
+  }
+  if (hitIdx === currentSegIdx) return;
+  currentSegIdx = hitIdx;
+
+  const section = document.getElementById('transcriptSection');
+  section.querySelectorAll('.seg.active').forEach(el => el.classList.remove('active'));
+  if (hitIdx >= 0) {
+    const el = section.querySelector(`.seg[data-idx="${hitIdx}"]`);
+    if (el) {
+      el.classList.add('active');
+      el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }
+});
+
+
+// ═══════════════════════════════════════════════════════════════════════
+// ASK AT  (mirrors ask_at.py — copies context block to clipboard)
+// ═══════════════════════════════════════════════════════════════════════
+function askAt(idx, contextN = 3) {
+  const start = Math.max(0, idx - contextN);
+  const end   = Math.min(segments.length - 1, idx + contextN);
+  const ctx   = segments.slice(start, end + 1);
+
+  // Derive a title from the audio filename
+  const rawName = (audioEl.src || '').split('/').pop().replace(/\?.*$/, '');
+  const title   = decodeURIComponent(rawName)
+    .replace(/\.[^.]+$/, '').replace(/_/g, ' ')
+    .replace(/\b\w/g, c => c.toUpperCase()) || 'Dialogue';
+
+  const lines = [`[From "${title}" — at ${msToTs(segments[idx].start_ms)}]`, ''];
+  ctx.forEach((seg, i) => {
+    const marker = (start + i === idx) ? ' ◀ you are here' : '';
+    lines.push(`[${msToTs(seg.start_ms)}] ${seg.voice.toUpperCase()}: ${seg.text}${marker}`);
+  });
+  lines.push('', '[Your question:]', '');
+
+  navigator.clipboard.writeText(lines.join('\n'))
+    .then(() => showToast('Copied — paste into Claude chat'))
+    .catch(() => showToast('Clipboard copy failed'));
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════
+// LOCAL FILE LOADING
+// ═══════════════════════════════════════════════════════════════════════
+function handleLocalFiles(files) {
+  let mp3 = null, json = null;
+  for (const f of files) {
+    const ext = f.name.slice(f.name.lastIndexOf('.')).toLowerCase();
+    if (['.mp3','.m4a','.wav','.ogg','.flac'].includes(ext)) mp3 = f;
+    if (ext === '.json') json = f;
+  }
+  if (mp3) {
+    const url = URL.createObjectURL(mp3);
+    audioEl.src = url;
+    document.getElementById('playerLabel').textContent = mp3.name;
+    document.getElementById('fileLabel').textContent = '— ' + mp3.name;
+    audioEl.play();
+  }
+  if (json) {
+    const reader = new FileReader();
+    reader.onload = e => {
+      try { loadTranscript(JSON.parse(e.target.result)); }
+      catch { showToast('Could not parse JSON file'); }
+    };
+    reader.readAsText(json);
+  }
+  if (!mp3 && !json) showToast('Select an MP3 and/or JSON file');
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════
+// DROPBOX FILE BROWSER MODAL
+// ═══════════════════════════════════════════════════════════════════════
+const DBX_AUDIO_EXT = new Set(['.mp3','.m4a','.wav','.ogg','.flac','.aac','.opus','.webm']);
+const DBX_LAST_PATH_KEY = 'tts-dbx-last-path';
+
+function openDbxModal(startPath) {
+  document.getElementById('dbxOverlay').classList.add('open');
+  const token = window.getDropboxAccessToken && window.getDropboxAccessToken();
+  if (!token) {
+    document.getElementById('dbxList').innerHTML =
+      '<button class="dsm-signin-btn" onclick="dbxSignIn()">Sign in with Dropbox</button>';
+    document.getElementById('dbxStatus').textContent = 'Not signed in';
+    return;
+  }
+  const path = startPath || document.getElementById('dbxPathInput').value.trim() || '/';
+  dbxBrowse(path);
+}
+
+function closeDbxModal() {
+  document.getElementById('dbxOverlay').classList.remove('open');
+}
+
+async function dbxSignIn() {
+  closeDbxModal();
+  if (window.dropboxSignInPopup) {
+    await window.dropboxSignInPopup(() => openDbxModal());
+  }
+}
+
+async function dbxBrowse(path) {
+  const token = window.getDropboxAccessToken && window.getDropboxAccessToken();
+  if (!token) { openDbxModal(); return; }
+
+  const goBtn = document.getElementById('dbxGoBtn');
+  goBtn.disabled = true;
+  document.getElementById('dbxStatus').textContent = 'Loading…';
+  document.getElementById('dbxList').innerHTML = '';
+
+  const normPath = (!path || path === '/') ? '' : ('/' + path.replace(/^\/+|\/+$/g, ''));
+  document.getElementById('dbxPathInput').value = normPath || '/';
+  localStorage.setItem(DBX_LAST_PATH_KEY, normPath || '/');
+
+  try {
+    const data = await window.dropboxListFolder(normPath || '');
+    const entries = (data.entries || [])
+      .map(e => ({
+        name: e.name,
+        path: e.path_lower || e.path_display,
+        isFolder: e['.tag'] === 'folder',
+      }))
+      .filter(e => {
+        if (e.isFolder) return true;
+        const ext = e.name.slice(e.name.lastIndexOf('.')).toLowerCase();
+        return DBX_AUDIO_EXT.has(ext) || ext === '.json';
+      })
+      .sort((a, b) => {
+        if (a.isFolder !== b.isFolder) return a.isFolder ? -1 : 1;
+        return a.name.localeCompare(b.name, undefined, { numeric: true });
+      });
+
+    const nFolders = entries.filter(e => e.isFolder).length;
+    const nFiles   = entries.filter(e => !e.isFolder).length;
+    document.getElementById('dbxStatus').textContent = `${nFolders} folders · ${nFiles} files`;
+
+    dbxRenderBreadcrumb(normPath);
+    dbxRenderList(entries);
+  } catch (err) {
+    document.getElementById('dbxStatus').textContent = 'Error: ' + err.message;
+  } finally {
+    goBtn.disabled = false;
+  }
+}
+
+function dbxRenderBreadcrumb(path) {
+  const el = document.getElementById('dbxBreadcrumb');
+  if (!path) { el.innerHTML = ''; return; }
+  const parts = path.replace(/^\//, '').split('/').filter(Boolean);
+  let html = '<span style="color:#444">▸</span>';
+  parts.forEach((part, i) => {
+    const crumbPath = '/' + parts.slice(0, i + 1).join('/');
+    html += `<span style="color:#444"> / </span><button class="crumb-btn" onclick="dbxBrowse('${crumbPath}')">${escHtml(part)}</button>`;
+  });
+  el.innerHTML = html;
+}
+
+function dbxRenderList(entries) {
+  const list = document.getElementById('dbxList');
+  if (!entries.length) {
+    list.innerHTML = '<div style="color:#444;padding:24px;text-align:center">No audio or JSON files found</div>';
+    return;
+  }
+  list.innerHTML = entries.map(e => {
+    if (e.isFolder) {
+      const safeP = e.path.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+      return `<div class="dsm-item" onclick="dbxBrowse('${safeP}')">
+        <span class="dsm-icon">📁</span>
+        <span class="dsm-name">${escHtml(e.name)}</span>
+      </div>`;
+    }
+    const ext = e.name.slice(e.name.lastIndexOf('.')).toLowerCase();
+    const isAudio = DBX_AUDIO_EXT.has(ext);
+    const icon    = isAudio ? '🎵' : '📋';
+    const label   = isAudio ? 'Load' : 'JSON';
+    const safeP   = e.path.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    const safeN   = e.name.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    const fn      = isAudio ? `dbxLoadAudio('${safeP}','${safeN}')` : `dbxLoadJson('${safeP}','${safeN}')`;
+    return `<div class="dsm-item">
+      <span class="dsm-icon">${icon}</span>
+      <span class="dsm-name">${escHtml(e.name)}</span>
+      <button class="dsm-action" onclick="${fn}">${label}</button>
+    </div>`;
+  }).join('');
+}
+
+async function dbxLoadAudio(path, name) {
+  document.getElementById('dbxStatus').textContent = 'Downloading ' + name + '…';
+  try {
+    const blob = await window.dropboxDownloadBlob(path);
+    const url  = URL.createObjectURL(blob);
+    audioEl.src = url;
+    document.getElementById('playerLabel').textContent = name;
+    document.getElementById('fileLabel').textContent = '— ' + name;
+
+    // Auto-load paired JSON (same stem, .json extension)
+    const jsonPath = path.replace(/\.[^.]+$/, '.json');
+    try {
+      const jsonText = await window.dropboxDownloadText(jsonPath);
+      loadTranscript(JSON.parse(jsonText));
+      document.getElementById('dbxStatus').textContent = '✅ Loaded with transcript';
+      showToast('Loaded: ' + name + ' + transcript');
+    } catch {
+      document.getElementById('dbxStatus').textContent = '✅ ' + name + ' (no JSON found)';
+      showToast('Loaded: ' + name + ' — no paired transcript');
+    }
+
+    closeDbxModal();
+    audioEl.play();
+  } catch (err) {
+    document.getElementById('dbxStatus').textContent = 'Error: ' + err.message;
+    showToast('Error: ' + err.message);
+  }
+}
+
+async function dbxLoadJson(path, name) {
+  document.getElementById('dbxStatus').textContent = 'Loading ' + name + '…';
+  try {
+    const text = await window.dropboxDownloadText(path);
+    loadTranscript(JSON.parse(text));
+    document.getElementById('dbxStatus').textContent = '✅ Transcript loaded — now load an MP3';
+    showToast('Transcript loaded: ' + name);
+  } catch (err) {
+    document.getElementById('dbxStatus').textContent = 'Error: ' + err.message;
+    showToast('Error: ' + err.message);
+  }
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════
+// "LOAD FROM DB" BUTTON  — signs in if needed, then opens browser at
+//  the last-used folder (or root if first time)
+// ═══════════════════════════════════════════════════════════════════════
+async function loadFromDbx() {
+  const token = window.getDropboxAccessToken && window.getDropboxAccessToken();
+  const lastPath = localStorage.getItem(DBX_LAST_PATH_KEY) || '/';
+  if (!token) {
+    if (window.dropboxSignInPopup) {
+      await window.dropboxSignInPopup(() => openDbxModal(lastPath));
+    }
+    return;
+  }
+  openDbxModal(lastPath);
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════════════════════════════════════
+let toastTimer;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2800);
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════
+// FONT SIZE
+// ═══════════════════════════════════════════════════════════════════════
+let transcriptFontSize = 14;
+function changeFontSize(delta) {
+  transcriptFontSize = Math.min(26, Math.max(10, transcriptFontSize + delta));
+  document.querySelectorAll('.seg-text').forEach(el => el.style.fontSize = transcriptFontSize + 'px');
+}
+
+// UX — close modal on backdrop click, Go on Enter key
+// ═══════════════════════════════════════════════════════════════════════
+document.getElementById('dbxOverlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('dbxOverlay')) closeDbxModal();
+});
+document.getElementById('dbxPathInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') dbxBrowse(e.target.value);
+});
+</script>
+</body>
+</html>
