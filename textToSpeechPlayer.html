@@ -878,7 +878,7 @@ document.addEventListener('keydown', function(e) {
   if (!ap || !ap.src) return;
 
   // ` — play/pause
-  if (e.key === '`') { e.preventDefault(); ap.paused ? ap.play() : ap.pause(); return; }
+  if (e.key === '`' || e.key === 'q' || e.key === 'a' || e.key === 'z') { e.preventDefault(); ap.paused ? ap.play() : ap.pause(); return; }
 
   // 1-6 — seek 0:00–0:50
   const row0 = { '1': 0, '2': 10, '3': 20, '4': 30, '5': 40, '6': 50 };
