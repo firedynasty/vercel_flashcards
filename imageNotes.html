@@ -713,11 +713,16 @@
                 if (selectedSaveFormat() === 'png') {
                     if (strokes.length === 0) { statusEl.textContent = '❌ Nothing drawn yet.'; return; }
                     var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-                    strokes.forEach(function(s) { s.points.forEach(function(p) {
-                        if (p.x < minX) minX = p.x; if (p.y < minY) minY = p.y;
-                        if (p.x > maxX) maxX = p.x; if (p.y > maxY) maxY = p.y;
-                    }); });
-                    var PAD = 12;
+                    var maxStrokeW = 0;
+                    strokes.forEach(function(s) {
+                        if (s.width > maxStrokeW) maxStrokeW = s.width;
+                        s.points.forEach(function(p) {
+                            if (p.x < minX) minX = p.x; if (p.y < minY) minY = p.y;
+                            if (p.x > maxX) maxX = p.x; if (p.y > maxY) maxY = p.y;
+                        });
+                    });
+                    // Pad by half the thickest stroke so no edge pixels get clipped
+                    var PAD = Math.ceil(maxStrokeW / 2) + 4;
                     minX = Math.max(0, minX - PAD); minY = Math.max(0, minY - PAD);
                     maxX = Math.min(cssW, maxX + PAD); maxY = Math.min(cssH, maxY + PAD);
                     var cropW = maxX - minX, cropH = maxY - minY;
