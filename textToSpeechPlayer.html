@@ -127,6 +127,8 @@ body {
 }
 .seg.active .seg-ts { color: #4ecb71; }
 
+.single-voice .seg-voice { display: none; }
+
 .seg-voice {
   font-size: 10px;
   font-weight: 700;
@@ -560,7 +562,7 @@ function loadTranscript(data) {
     div.dataset.idx = i;
     div.innerHTML =
       `<span class="seg-ts">${msToTs(seg.start_ms)}</span>` +
-      `<span class="seg-voice voice-${seg.voice}">${seg.voice}</span>` +
+      `<span class="seg-voice voice-${seg.voice}">${seg.voice.replace(/_/g, ' ')}</span>` +
       `<span class="seg-text">${escHtml(seg.text)}</span>` +
       `<button class="seg-ask" title="Copy context for Claude">Ask</button>`;
 
@@ -578,6 +580,10 @@ function loadTranscript(data) {
     });
     section.appendChild(div);
   });
+
+  // Hide voice labels when all segments share the same voice
+  const voices = new Set(segments.map(s => s.voice));
+  section.classList.toggle('single-voice', voices.size <= 1);
 }
 
 audioEl.addEventListener('timeupdate', () => {
@@ -862,6 +868,33 @@ document.getElementById('dbxOverlay').addEventListener('click', e => {
 });
 document.getElementById('dbxPathInput').addEventListener('keydown', e => {
   if (e.key === 'Enter') dbxBrowse(e.target.value);
+});
+
+// Keyboard seek shortcuts
+document.addEventListener('keydown', function(e) {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+  const ap = document.getElementById('audioEl');
+  if (!ap || !ap.src) return;
+
+  // ` — play/pause
+  if (e.key === '`') { e.preventDefault(); ap.paused ? ap.play() : ap.pause(); return; }
+
+  // 1-6 — seek 0:00–0:50
+  const row0 = { '1': 0, '2': 10, '3': 20, '4': 30, '5': 40, '6': 50 };
+  if (e.key in row0) { e.preventDefault(); ap.currentTime = row0[e.key]; return; }
+
+  // w,e,r,t,y,u — seek 1:00–1:50
+  const row1 = { w: 60, e: 70, r: 80, t: 90, y: 100, u: 110 };
+  if (e.key in row1) { e.preventDefault(); ap.currentTime = row1[e.key]; return; }
+
+  // s,d,f,g,h — seek 2:00–2:40
+  const row2 = { s: 120, d: 130, f: 140, g: 150, h: 160 };
+  if (e.key in row2) { e.preventDefault(); ap.currentTime = row2[e.key]; return; }
+
+  // x,c,v,b,n,m — seek 3:00–3:50
+  const row3 = { x: 180, c: 190, v: 200, b: 210, n: 220, m: 230 };
+  if (e.key in row3) { e.preventDefault(); ap.currentTime = row3[e.key]; return; }
 });
 </script>
 </body>

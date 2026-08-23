@@ -453,6 +453,38 @@
     document.getElementById('localAudioLabel').textContent = file.name;
     document.getElementById('localAudioZone').style.borderColor = '#3ea6ff';
   }
+
+  // Keyboard shortcuts
+  document.addEventListener('keydown', function(e) {
+    // Ignore when typing in an input/textarea
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+    const ap = document.getElementById('localAudioPlayer');
+    if (!ap || !ap.src) return;
+
+    // ` — play/pause
+    if (e.key === '`') {
+      e.preventDefault();
+      ap.paused ? ap.play() : ap.pause();
+      return;
+    }
+
+    // 1-6 — seek 0:00–0:50
+    const row0 = { '1': 0, '2': 10, '3': 20, '4': 30, '5': 40, '6': 50 };
+    if (e.key in row0) { e.preventDefault(); ap.currentTime = row0[e.key]; return; }
+
+    // w,e,r,t,y,u — seek 1:00–1:50
+    const row1 = { w: 60, e: 70, r: 80, t: 90, y: 100, u: 110 };
+    if (e.key in row1) { e.preventDefault(); ap.currentTime = row1[e.key]; return; }
+
+    // s,d,f,g,h — seek 2:00–2:40
+    const row2 = { s: 120, d: 130, f: 140, g: 150, h: 160 };
+    if (e.key in row2) { e.preventDefault(); ap.currentTime = row2[e.key]; return; }
+
+    // x,c,v,b,n,m — seek 3:00–3:50
+    const row3 = { x: 180, c: 190, v: 200, b: 210, n: 220, m: 230 };
+    if (e.key in row3) { e.preventDefault(); ap.currentTime = row3[e.key]; return; }
+  });
   </script>
 
   <!-- Dropbox Song Browser -->
