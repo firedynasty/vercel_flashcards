@@ -622,6 +622,7 @@
     <button class="try-btn" onclick="openPracticeModal(true)">&#9660; Randomize</button>
     <button class="btn outline sm" id="exportAllBtn" style="display:none" onclick="exportAll()">&#128203; Export All</button>
     <button class="btn outline sm" id="exportHardBtn" style="display:none" onclick="exportHard()">Export Hard</button>
+    <button class="btn outline sm" id="downloadCsvBtn" style="display:none" onclick="downloadAllCsv()">&#8659; Download CSV</button>
   </div>
 </div>
 
@@ -1291,6 +1292,20 @@ function exportHard() {
   document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
 }
 
+// ── DOWNLOAD ALL CSV ──
+function downloadAllCsv() {
+  if (allVocab.length === 0) { alert('No data loaded yet.'); return; }
+  function csvEsc(s) { s = String(s || ''); return (s.indexOf(',') >= 0 || s.indexOf('"') >= 0 || s.indexOf('\n') >= 0) ? '"' + s.replace(/"/g, '""') + '"' : s; }
+  var lines = ['Term,Definition'];
+  allVocab.forEach(function(v) { lines.push([v.term, v.definition].map(csvEsc).join(',')); });
+  var blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  var now = new Date(); var pad = function(n) { return n < 10 ? '0' + n : '' + n; };
+  a.href = url; a.download = 'vocab_' + now.getFullYear() + '-' + pad(now.getMonth()+1) + '-' + pad(now.getDate()) + '.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+}
+
 // ── FILE LOADING ──
 function pasteFromClipboard() {
   var statusEl = document.getElementById('pasteCsvStatus');
@@ -1316,6 +1331,7 @@ function loadPastedCsv() {
     document.getElementById('controlBar').classList.add('active');
     document.getElementById('cardsArea').classList.add('active');
     document.getElementById('exportAllBtn').style.display = '';
+    document.getElementById('downloadCsvBtn').style.display = '';
     document.getElementById('uploadZone').style.display = 'none';
     filterAndRender();
     activateDeckView();
@@ -1365,6 +1381,7 @@ function readFile(file) {
       document.getElementById('controlBar').classList.add('active');
       document.getElementById('cardsArea').classList.add('active');
       document.getElementById('exportAllBtn').style.display = '';
+      document.getElementById('downloadCsvBtn').style.display = '';
 
       // Collapse upload zone
       document.getElementById('uploadZone').style.display = 'none';
@@ -1548,6 +1565,7 @@ function onGSheetSelect() {
   document.getElementById('controlBar').classList.add('active');
   document.getElementById('cardsArea').classList.add('active');
   document.getElementById('exportAllBtn').style.display = '';
+  document.getElementById('downloadCsvBtn').style.display = '';
 
   // Hide upload zone but keep Google Sheets controls visible
   document.getElementById('uploadZone').style.display = 'none';

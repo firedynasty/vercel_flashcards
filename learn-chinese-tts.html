@@ -551,6 +551,7 @@
       <span class="toggle-chip" id="toggleTableView" onclick="toggleTableView()">Table</span>
       <span class="toggle-chip" id="toggleDeckView" onclick="toggleDeckView()">Deck</span>
       <a href="https://vercel-spanish-chinese.vercel.app/chinese-glosser" target="_blank" class="toggle-chip" style="text-decoration:none;background:#0EA5E9;color:white;border-color:#0EA5E9;">Glosser</a>
+      <button onclick="exportAllCsv()" class="toggle-chip" style="background:#16a34a;color:white;border-color:#16a34a;cursor:pointer;font-family:inherit;font-size:inherit;">&#8659; CSV</button>
     </div>
 
     <!-- Learning approach modal -->
@@ -678,6 +679,7 @@ let gdriveCurrentSheetName = null;
 
 let allRows = [];
 let filteredRows = [];
+let currentCsvName = '';
 let ttsEngine = 'browser'; // 'browser' or 'openai'
 let dialect = 'mandarin'; // 'mandarin' or 'cantonese'
 var ttsLang = localStorage.getItem('chineseTts_ttsLang') || 'zh-CN'; // browser TTS playback language
@@ -1324,6 +1326,7 @@ function loadCsvText(text, fileName, forceColMode) {
   var rows = parseCsv(text);
   if (rows.length < 2) { setStatus('CSV is empty'); return false; }
 
+  currentCsvName = fileName || '';
   allRows = [];
   for (var i = 1; i < rows.length; i++) {
     var r = rows[i];
@@ -2235,6 +2238,24 @@ function deckSaveMissedToSheet(mode) {
   }).catch(function() {
     statusEl.textContent = 'Tap and select all in the box below to copy';
   });
+}
+
+// ── EXPORT ALL CSV ──
+function exportAllCsv() {
+  var vocabRows = allRows.filter(function(r) { return r.chinese || r.contextLine; });
+  if (vocabRows.length === 0) { alert('No data loaded yet.'); return; }
+  function csvEsc(s) { s = String(s || ''); return (s.indexOf(',') >= 0 || s.indexOf('"') >= 0 || s.indexOf('\n') >= 0) ? '"' + s.replace(/"/g, '""') + '"' : s; }
+  var lines = ['Chinese,Romanization,English'];
+  vocabRows.forEach(function(r) {
+    lines.push([r.chinese || r.contextLine, r.romanization || '', r.english || ''].map(csvEsc).join(','));
+  });
+  var csv = lines.join('\n');
+  var baseName = (currentCsvName || 'export').replace(/\.[^.]+$/, '').replace(/[^\w\s-]/g, '_');
+  var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url; a.download = baseName + '.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
 }
 
 // ── TTS SELECTION TOOLTIP ──
