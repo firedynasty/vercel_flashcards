@@ -164,11 +164,22 @@ body {
 .seg:hover .seg-ask { opacity: 1; }
 .seg-ask:hover { background: #333; color: #ccc; }
 
-/* Voice colors */
+/* Voice colors — legacy role names */
 .voice-narrator  { color: #777; }
 .voice-student   { color: #4a9eff; }
 .voice-teacher   { color: #4ecb71; }
 .voice-scripture { color: #b89eff; }
+
+/* Voice colors — Kokoro language prefixes */
+.voice-lang-en { color: #a0a0a0; }   /* English  — grey   */
+.voice-lang-zh { color: #f0a040; }   /* Chinese  — amber  */
+.voice-lang-fr { color: #b89eff; }   /* French   — lavender */
+.voice-lang-es { color: #ff7070; }   /* Spanish  — coral  */
+.voice-lang-pt { color: #4ecb71; }   /* Portuguese — green */
+.voice-lang-ja { color: #ff9ec8; }   /* Japanese — pink   */
+.voice-lang-ko { color: #40d0d0; }   /* Korean   — teal   */
+.voice-lang-hi { color: #ffb347; }   /* Hindi    — saffron */
+.voice-lang-it { color: #90ee90; }   /* Italian  — sage   */
 
 /* ── Dropbox Modal ── */
 .modal-overlay {
@@ -367,6 +378,79 @@ body.light .toast { background: #fff; border-color: #ccc; color: #333; }
 body.light .btn-theme { border-color: #bbb; color: #555; }
 body.light .btn-theme:hover { border-color: #666; color: #111; }
 
+/* ── Language picker ── */
+.lang-picker-wrap { position: relative; }
+.btn-lang {
+  background: #2d2d2d;
+  border: 1px solid #444;
+  border-radius: 7px;
+  color: #ddd;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 11px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color 0.15s, background 0.15s;
+}
+.btn-lang:hover { background: #3a3a3a; border-color: #666; }
+body.light .btn-lang { background: #e0e0e0; border-color: #bbb; color: #333; }
+body.light .btn-lang:hover { background: #d0d0d0; }
+.lang-dropdown {
+  display: none;
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  background: #1e1e1e;
+  border: 1px solid #333;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  z-index: 60;
+  min-width: 160px;
+  overflow: hidden;
+  padding: 4px 0;
+}
+.lang-dropdown.open { display: block; }
+body.light .lang-dropdown { background: #fff; border-color: #ddd; box-shadow: 0 8px 24px rgba(0,0,0,0.12); }
+.lang-opt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 14px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #ccc;
+  transition: background 0.1s;
+}
+.lang-opt:hover { background: #2a2a2a; }
+.lang-opt.selected { background: #1a2a1a; color: #4ecb71; }
+body.light .lang-opt { color: #333; }
+body.light .lang-opt:hover { background: #f0f0f0; }
+body.light .lang-opt.selected { background: #e6f4ea; color: #16a34a; }
+.lang-opt-flag { font-size: 16px; line-height: 1; }
+.lang-opt-name { flex: 1; }
+.lang-opt-code { font-size: 10px; color: #555; font-family: monospace; }
+body.light .lang-opt-code { color: #999; }
+
+/* ── Speak button (per segment, like Ask) ── */
+.seg-speak {
+  flex-shrink: 0;
+  background: #252525;
+  border: none;
+  border-radius: 5px;
+  color: #666;
+  font-size: 12px;
+  padding: 3px 7px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s, background 0.1s, color 0.1s;
+  align-self: flex-start;
+  margin-top: 2px;
+  line-height: 1.4;
+}
+.seg:hover .seg-speak { opacity: 1; }
+.seg-speak:hover { background: #333; color: #ccc; }
+.seg-speak.speaking { opacity: 1; color: #4ecb71; background: #1a2a1a; }
+
 /* ── Toast ── */
 .toast {
   position: fixed;
@@ -403,6 +487,10 @@ body.light .btn-theme:hover { border-color: #666; color: #111; }
     <input type="file" id="localPicker" accept=".mp3,.m4a,.wav,.ogg,.json" multiple style="display:none" onchange="handleLocalFiles(this.files)">
     <button class="btn btn-local" onclick="changeFontSize(1)" title="Increase font size">A+</button>
     <button class="btn btn-local" onclick="changeFontSize(-1)" title="Decrease font size">A-</button>
+    <div class="lang-picker-wrap">
+      <button class="btn-lang" id="langPickerBtn" onclick="toggleLangDropdown()" title="TTS language">🌐 <span id="langPickerLabel">EN</span></button>
+      <div class="lang-dropdown" id="langDropdown"></div>
+    </div>
     <button class="btn-theme" id="themeToggleBtn" onclick="toggleTheme()" title="Toggle dark/light mode">🌙</button>
   </div>
   <div class="player-section">
@@ -588,6 +676,153 @@ function toggleTheme() {
 
 
 // ═══════════════════════════════════════════════════════════════════════
+// LANGUAGE PICKER + WEB SPEECH TTS
+// ═══════════════════════════════════════════════════════════════════════
+const TTS_LANGUAGES = [
+  { code: 'en-US', label: 'English',    flag: '🇺🇸', short: 'EN' },
+  { code: 'zh-CN', label: 'Chinese',    flag: '🇨🇳', short: 'ZH' },
+  { code: 'zh-HK', label: 'Cantonese', flag: '🇭🇰', short: 'HK' },
+  { code: 'fr-FR', label: 'French',     flag: '🇫🇷', short: 'FR' },
+  { code: 'es-ES', label: 'Spanish',    flag: '🇪🇸', short: 'ES' },
+  { code: 'pt-PT', label: 'Portuguese', flag: '🇵🇹', short: 'PT' },
+  { code: 'ja-JP', label: 'Japanese',   flag: '🇯🇵', short: 'JA' },
+  { code: 'ko-KR', label: 'Korean',     flag: '🇰🇷', short: 'KO' },
+  { code: 'hi-IN', label: 'Hindi',      flag: '🇮🇳', short: 'HI' },
+  { code: 'it-IT', label: 'Italian',    flag: '🇮🇹', short: 'IT' },
+];
+
+let ttsLang = localStorage.getItem('tn_tts_lang') || 'en-US';
+let speakingBtn = null;
+
+(function initLangPicker() {
+  const dropdown = document.getElementById('langDropdown');
+  TTS_LANGUAGES.forEach(l => {
+    const el = document.createElement('div');
+    el.className = 'lang-opt' + (l.code === ttsLang ? ' selected' : '');
+    el.dataset.code = l.code;
+    el.innerHTML = `<span class="lang-opt-flag">${l.flag}</span><span class="lang-opt-name">${l.label}</span><span class="lang-opt-code">${l.code}</span>`;
+    el.addEventListener('click', () => selectLang(l.code));
+    dropdown.appendChild(el);
+  });
+  updateLangLabel();
+})();
+
+function updateLangLabel() {
+  const lang = TTS_LANGUAGES.find(l => l.code === ttsLang) || TTS_LANGUAGES[0];
+  document.getElementById('langPickerLabel').textContent = lang.short;
+}
+
+function selectLang(code) {
+  ttsLang = code;
+  localStorage.setItem('tn_tts_lang', code);
+  document.querySelectorAll('.lang-opt').forEach(el => {
+    el.classList.toggle('selected', el.dataset.code === code);
+  });
+  updateLangLabel();
+  closeLangDropdown();
+}
+
+function toggleLangDropdown() {
+  document.getElementById('langDropdown').classList.toggle('open');
+}
+function closeLangDropdown() {
+  document.getElementById('langDropdown').classList.remove('open');
+}
+document.addEventListener('click', e => {
+  if (!e.target.closest('.lang-picker-wrap')) closeLangDropdown();
+});
+
+function speakText(text, lang, btn) {
+  if (!window.speechSynthesis) { showToast('Web Speech not supported'); return; }
+  window.speechSynthesis.cancel();
+  if (speakingBtn) { speakingBtn.classList.remove('speaking'); speakingBtn.textContent = '🔊'; }
+  if (speakingBtn === btn) { speakingBtn = null; return; } // toggle off
+
+  const utt = new SpeechSynthesisUtterance(text);
+  utt.lang = lang || ttsLang;
+
+  // Pick best available voice for the language
+  const voices = window.speechSynthesis.getVoices();
+  const match = voices.find(v => v.lang === utt.lang && (v.localService || v.name.includes('Google')))
+             || voices.find(v => v.lang.startsWith(utt.lang.split('-')[0]))
+             || null;
+  if (match) utt.voice = match;
+
+  speakingBtn = btn;
+  if (btn) { btn.classList.add('speaking'); btn.textContent = '⏹'; }
+  utt.onend = utt.onerror = () => {
+    if (btn) { btn.classList.remove('speaking'); btn.textContent = '🔊'; }
+    if (speakingBtn === btn) speakingBtn = null;
+  };
+  window.speechSynthesis.speak(utt);
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// VOICE / LANGUAGE INFO  (Kokoro voice names + legacy role names)
+// ═══════════════════════════════════════════════════════════════════════
+const VOICE_INFO = {
+  // ── English (American) ──
+  'am_michael': { label: 'Narrator',  colorClass: 'voice-narrator',  lang: 'en', tooltip: 'am_michael · English (American) male' },
+  'am_adam':    { label: 'Adam',      colorClass: 'voice-student',   lang: 'en', tooltip: 'am_adam · English (American) male' },
+  'af_bella':   { label: 'Bella',     colorClass: 'voice-teacher',   lang: 'en', tooltip: 'af_bella · English (American) female' },
+  // ── English (British) ──
+  'bf_emma':    { label: 'Scripture', colorClass: 'voice-scripture', lang: 'en', tooltip: 'bf_emma · English (British) female' },
+  'bm_george':  { label: 'George',    colorClass: 'voice-student',   lang: 'en', tooltip: 'bm_george · English (British) male' },
+  // ── Chinese ──
+  'zf_xiaoxiao':{ label: '小小',      colorClass: 'voice-lang-zh',   lang: 'zh', tooltip: 'zf_xiaoxiao · Chinese female' },
+  // ── French ──
+  'ff_siwis':   { label: 'Siwis',     colorClass: 'voice-lang-fr',   lang: 'fr', tooltip: 'ff_siwis · French female' },
+  // ── Spanish ──
+  'ef_dora':    { label: 'Dora',      colorClass: 'voice-lang-es',   lang: 'es', tooltip: 'ef_dora · Spanish female' },
+  // ── Portuguese ──
+  'pf_dora':    { label: 'Dora',      colorClass: 'voice-lang-pt',   lang: 'pt', tooltip: 'pf_dora · Portuguese female' },
+  // ── Japanese ──
+  'jf_alpha':   { label: 'Alpha',     colorClass: 'voice-lang-ja',   lang: 'ja', tooltip: 'jf_alpha · Japanese female' },
+  // ── Korean ──
+  'kf_alpha':   { label: 'Alpha',     colorClass: 'voice-lang-ko',   lang: 'ko', tooltip: 'kf_alpha · Korean female' },
+  // ── Hindi ──
+  'hf_alpha':   { label: 'Alpha',     colorClass: 'voice-lang-hi',   lang: 'hi', tooltip: 'hf_alpha · Hindi female' },
+  // ── Italian ──
+  'if_sara':    { label: 'Sara',      colorClass: 'voice-lang-it',   lang: 'it', tooltip: 'if_sara · Italian female' },
+  // ── Legacy role names ──
+  'narrator':   { label: 'Narrator',  colorClass: 'voice-narrator',  lang: 'en', tooltip: 'narrator' },
+  'student':    { label: 'Student',   colorClass: 'voice-student',   lang: 'en', tooltip: 'student' },
+  'teacher':    { label: 'Teacher',   colorClass: 'voice-teacher',   lang: 'en', tooltip: 'teacher' },
+  'scripture':  { label: 'Scripture', colorClass: 'voice-scripture', lang: 'en', tooltip: 'scripture' },
+};
+
+// Language prefix → BCP-47 tag (for unknown Kokoro voices)
+const KOKORO_LANG_PREFIX = {
+  a: 'en', b: 'en', z: 'zh', f: 'fr', e: 'es',
+  p: 'pt', j: 'ja', k: 'ko', h: 'hi', i: 'it',
+};
+const KOKORO_LANG_LABEL = {
+  en: 'English', zh: 'Chinese', fr: 'French', es: 'Spanish',
+  pt: 'Portuguese', ja: 'Japanese', ko: 'Korean', hi: 'Hindi', it: 'Italian',
+};
+
+function inferVoiceInfo(voice) {
+  // Try to parse Kokoro naming: <lang><gender>_<name>
+  const m = voice.match(/^([a-z])([mf])_(.+)$/);
+  if (m) {
+    const lang = KOKORO_LANG_PREFIX[m[1]] || 'en';
+    const gender = m[2] === 'f' ? 'female' : 'male';
+    const name = m[3].replace(/_/g, ' ');
+    const langLabel = KOKORO_LANG_LABEL[lang] || lang;
+    const label = name.charAt(0).toUpperCase() + name.slice(1);
+    return {
+      label,
+      colorClass: `voice-lang-${lang}`,
+      lang,
+      tooltip: `${voice} · ${langLabel} ${gender}`,
+    };
+  }
+  // Fallback: pretty-print the raw voice name
+  const label = voice.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  return { label, colorClass: 'voice-narrator', lang: 'en', tooltip: voice };
+}
+
+// ═══════════════════════════════════════════════════════════════════════
 // AUDIO + TRANSCRIPT SYNC
 // ═══════════════════════════════════════════════════════════════════════
 const audioEl = document.getElementById('audioEl');
@@ -619,16 +854,19 @@ function loadTranscript(data) {
 
   section.innerHTML = '';
   segments.forEach((seg, i) => {
+    const info = VOICE_INFO[seg.voice] || inferVoiceInfo(seg.voice);
     const div = document.createElement('div');
     div.className = 'seg';
     div.dataset.idx = i;
     div.innerHTML =
       `<span class="seg-ts">${msToTs(seg.start_ms)}</span>` +
-      `<span class="seg-voice voice-${seg.voice}">${seg.voice.replace(/_/g, ' ')}</span>` +
-      `<span class="seg-text">${escHtml(seg.text)}</span>` +
+      `<span class="seg-voice ${info.colorClass}" title="${escHtml(info.tooltip)}">${escHtml(info.label)}</span>` +
+      `<span class="seg-text" lang="${info.lang}">${escHtml(seg.text)}</span>` +
+      `<button class="seg-speak" title="Speak with selected language">🔊</button>` +
       `<button class="seg-ask" title="Copy context for Claude">Ask</button>`;
 
     div.addEventListener('click', e => {
+      if (e.target.classList.contains('seg-speak')) { speakText(seg.text, ttsLang, e.target); return; }
       if (e.target.classList.contains('seg-ask')) { askAt(i); return; }
       if (i === currentSegIdx) {
         // Same segment — toggle pause/play
