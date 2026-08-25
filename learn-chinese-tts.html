@@ -295,8 +295,9 @@
   }
   .tbl-play-btn:hover { background: #1d4ed8; }
   .tbl-play-btn.speaking { background: #16a34a; }
-  /* , / . keyboard nav — current row highlight (td-level: wins over inline tr backgrounds) */
+  /* , / . keyboard nav — current row highlight */
   #tableViewContainer table.dataTable tbody tr.tbl-current > td { background-color: #bbf7d0 !important; }
+  #tableViewContainer table.dataTable tbody tr.tbl-current { background-color: #bbf7d0 !important; }
   .dataTables_wrapper .dataTables_length,
   .dataTables_wrapper .dataTables_filter,
   .dataTables_wrapper .dataTables_info,
@@ -775,6 +776,7 @@ let currentAudio = null; // for OpenAI playback
 
 let tableViewOn = false;
 let dataTableInstance = null;
+let tblCurrentDataIdx = -1; // tracks highlighted row by data-row-idx; survives DataTables redraws
 var deckViewOn = false;
 var deckQueue = [];
 var deckTotal = 0;
@@ -1985,6 +1987,11 @@ function renderTableView() {
       info: 'Showing _START_ to _END_ of _TOTAL_ entries',
     }
   });
+
+  // Re-apply green highlight after every sort/filter/page redraw
+  $('#vocabDataTable').on('draw.dt', function() {
+    tblApplyHighlight();
+  });
 }
 
 function tblSpeak(idx, btnEl) {
@@ -1994,12 +2001,11 @@ function tblSpeak(idx, btnEl) {
     el.classList.remove('speaking');
   });
 
-  // Re-anchor , / . nav to this row
-  document.querySelectorAll('#vocabDataTable tr.tbl-current').forEach(function(el) {
-    el.classList.remove('tbl-current');
-  });
+  // Anchor , / . nav to this row (persists across DataTables redraws)
   var tr = btnEl.closest('tr');
-  if (tr) tr.classList.add('tbl-current');
+  var dataIdx = tr ? parseInt(tr.getAttribute('data-row-idx'), 10) : idx;
+  tblCurrentDataIdx = isNaN(dataIdx) ? idx : dataIdx;
+  tblApplyHighlight();
 
   var row = filteredRows[idx];
   if (!row) return;
@@ -2014,37 +2020,59 @@ function tblSpeak(idx, btnEl) {
   });
 }
 
-// ── TABLE ROW NAV: , / . move highlight only; j speaks the highlighted row ──
-function tblSetCurrent(tr) {
+// ── TABLE ROW HIGHLIGHT: re-applies tbl-current after any DataTables redraw ──
+function tblApplyHighlight() {
   document.querySelectorAll('#vocabDataTable tr.tbl-current').forEach(function(el) {
     el.classList.remove('tbl-current');
   });
-  tr.classList.add('tbl-current');
-  // Jump to the DataTables page containing the row if it isn't on the current page
+  if (tblCurrentDataIdx < 0) return;
+  var tr = document.querySelector('#vocabDataTable tr[data-row-idx="' + tblCurrentDataIdx + '"]');
+  if (tr) tr.classList.add('tbl-current');
+}
+
+// ── TABLE ROW NAV: , / . move highlight only; / or a speaks the highlighted row ──
+function tblSetCurrent(dataIdx, andScroll) {
+  tblCurrentDataIdx = dataIdx;
+  if (!dataTableInstance) return;
+
+  // Find which page this row is on and jump if needed
   var allNodes = dataTableInstance.rows({ search: 'applied', order: 'current' }).nodes().toArray();
-  var pos = allNodes.indexOf(tr);
+  var tr = null;
+  var pos = -1;
+  allNodes.forEach(function(node, i) {
+    if (parseInt(node.getAttribute('data-row-idx'), 10) === dataIdx) { tr = node; pos = i; }
+  });
+  if (!tr) return; // row filtered out
+
   var page = Math.floor(pos / dataTableInstance.page.len());
   if (page !== dataTableInstance.page()) {
     dataTableInstance.page(page).draw(false);
+    // After draw, re-find the row (DataTables may have re-inserted it)
+    tr = document.querySelector('#vocabDataTable tr[data-row-idx="' + dataIdx + '"]');
   }
-  tr.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+  tblApplyHighlight();
+  if (andScroll && tr) tr.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
 function tblNavRow(dir) {
   if (!dataTableInstance) return;
   var allNodes = dataTableInstance.rows({ search: 'applied', order: 'current' }).nodes().toArray();
-  var playable = allNodes.filter(function(tr) { return tr.querySelector('.tbl-play-btn'); });
+  var playable = allNodes.filter(function(node) { return node.querySelector('.tbl-play-btn'); });
   if (!playable.length) return;
 
-  // Anchor on the row carrying .tbl-current; none → '.' starts at first, ',' at last
+  // Find current position by tblCurrentDataIdx
   var cur = -1;
-  playable.forEach(function(tr, i) { if (tr.classList.contains('tbl-current')) cur = i; });
+  playable.forEach(function(node, i) {
+    if (parseInt(node.getAttribute('data-row-idx'), 10) === tblCurrentDataIdx) cur = i;
+  });
   var target = cur + dir;
   if (cur === -1 && dir === -1) target = playable.length - 1;
   if (cur === -1 && dir === 1) target = 0;
   if (target < 0 || target >= playable.length) return;
 
-  tblSetCurrent(playable[target]);
+  var targetDataIdx = parseInt(playable[target].getAttribute('data-row-idx'), 10);
+  tblSetCurrent(targetDataIdx, true);
 }
 
 document.addEventListener('keydown', function(e) {
@@ -2053,11 +2081,12 @@ document.addEventListener('keydown', function(e) {
   if (e.metaKey || e.ctrlKey || e.altKey) return;
   // / or a — speak the highlighted row
   if (e.key === '/' || e.key === 'a') {
-    var curTr = document.querySelector('#vocabDataTable tr.tbl-current');
+    if (tblCurrentDataIdx < 0) return;
+    var curTr = document.querySelector('#vocabDataTable tr[data-row-idx="' + tblCurrentDataIdx + '"]');
     var curBtn = curTr ? curTr.querySelector('.tbl-play-btn') : null;
     if (!curBtn) return;
     e.preventDefault();
-    tblSpeak(parseInt(curTr.getAttribute('data-row-idx'), 10), curBtn);
+    tblSpeak(tblCurrentDataIdx, curBtn);
     return;
   }
   if (e.key !== ',' && e.key !== '.') return;
