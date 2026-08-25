@@ -531,6 +531,69 @@
   }
   .tbl-play-btn:hover { background: #1d4ed8; }
   .tbl-play-btn.speaking { background: #16a34a; }
+
+  /* ── Dropbox File Browser Modal ── */
+  .dbx-modal-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55);
+    z-index: 1000; align-items: center; justify-content: center;
+  }
+  .dbx-modal-overlay.open { display: flex; }
+  .dbx-modal-box {
+    background: #fff; border: 1px solid #ddd; border-radius: 12px;
+    width: 520px; max-width: 95vw; max-height: 82vh;
+    display: flex; flex-direction: column; overflow: hidden;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.18); font-family: inherit;
+  }
+  .dbx-modal-header {
+    padding: 14px 16px; border-bottom: 1px solid #eee;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .dbx-modal-header h3 { font-size: 14px; font-weight: 700; color: #222; margin: 0; }
+  .dbx-modal-close {
+    background: none; border: none; color: #999; font-size: 18px;
+    cursor: pointer; line-height: 1; padding: 2px 6px; border-radius: 4px;
+  }
+  .dbx-modal-close:hover { background: #f0f0f0; color: #333; }
+  .dbx-modal-toolbar { padding: 8px 12px; border-bottom: 1px solid #eee; display: flex; gap: 6px; }
+  .dbx-modal-path {
+    flex: 1; background: #f8f8f8; border: 1px solid #ddd; border-radius: 6px;
+    color: #333; font-size: 12px; padding: 5px 9px; font-family: monospace;
+  }
+  .dbx-modal-path:focus { outline: none; border-color: #2563eb; }
+  .dbx-modal-go {
+    background: #f0f0f0; border: 1px solid #ddd; border-radius: 6px;
+    color: #444; font-size: 12px; padding: 5px 12px; cursor: pointer; font-family: inherit;
+  }
+  .dbx-modal-go:hover { background: #e4e4e4; }
+  .dbx-modal-go:disabled { opacity: 0.5; cursor: not-allowed; }
+  .dbx-modal-breadcrumb {
+    padding: 4px 14px; font-size: 11px; color: #888;
+    min-height: 22px; display: flex; align-items: center; gap: 2px; flex-wrap: wrap;
+  }
+  .dbx-crumb-btn {
+    background: none; border: none; color: #2563eb; cursor: pointer;
+    font-size: 11px; padding: 1px 3px; border-radius: 3px;
+  }
+  .dbx-crumb-btn:hover { background: #eff6ff; text-decoration: underline; }
+  .dbx-modal-status { padding: 2px 14px 4px; font-size: 11px; color: #888; min-height: 20px; }
+  .dbx-modal-list { flex: 1; overflow-y: auto; }
+  .dbx-item {
+    display: flex; align-items: center; gap: 8px; padding: 9px 14px;
+    cursor: default; border-bottom: 1px solid #f5f5f5; transition: background 0.1s;
+  }
+  .dbx-item:hover { background: #f8faff; }
+  .dbx-item-icon { font-size: 14px; flex-shrink: 0; }
+  .dbx-item-name { flex: 1; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #333; }
+  .dbx-item-action {
+    background: #2563eb; border: none; border-radius: 5px; color: #fff;
+    font-size: 11px; font-weight: 700; padding: 4px 10px; cursor: pointer; flex-shrink: 0;
+  }
+  .dbx-item-action:hover { background: #1d4ed8; }
+  .dbx-signin-btn {
+    background: #2563eb; border: none; border-radius: 8px; color: #fff;
+    font-size: 14px; font-weight: 700; padding: 12px 28px; cursor: pointer;
+    display: block; margin: 48px auto 0;
+  }
 </style>
 </head>
 <body>
@@ -570,6 +633,8 @@
     <button id="dbxAuthBtn" style="font-size:11px; padding:4px 10px; border-radius:6px; border:1px solid #ccc; background:#f5f5f3; color:#555; cursor:pointer; font-family:inherit; font-weight:600; white-space:nowrap;">Dropbox</button>
     <select id="dbxPullBucketNum" style="padding:5px 7px; border:1px solid #ddd; border-radius:6px; font-size:12px; font-family:inherit; background:white;"></select>
     <button id="dbxPullBtn" style="font-size:12px; padding:5px 12px; border-radius:6px; border:1px solid #2563eb; background:#eff6ff; color:#2563eb; cursor:pointer; font-family:inherit; font-weight:600; white-space:nowrap;">↓ Load bucket</button>
+    <button onclick="loadFromDbxFile()" style="font-size:12px; padding:5px 12px; border-radius:6px; border:1px solid #059669; background:#ecfdf5; color:#059669; cursor:pointer; font-family:inherit; font-weight:600; white-space:nowrap;">📥 Load from DB</button>
+    <button onclick="openDbxFileModal()" style="font-size:12px; padding:5px 12px; border-radius:6px; border:1px solid #059669; background:#ecfdf5; color:#059669; cursor:pointer; font-family:inherit; font-weight:600; white-space:nowrap;">📂 Dropbox Files</button>
     <span id="dbxPullStatus" style="font-size:11px; color:#888;"></span>
   </div>
 
@@ -2173,6 +2238,160 @@ window.addEventListener('message', function(event) {
   if (DBX_TOKEN) dbxResumePending(); // only reached on fallback redirect
 })();
 
+// ── DROPBOX FILE BROWSER MODAL ──
+var DBX_FILE_LAST_PATH = 'google-tts-dbx-last-path';
+
+function openDbxFileModal(startPath) {
+  document.getElementById('dbxFileOverlay').classList.add('open');
+  if (!DBX_TOKEN) {
+    document.getElementById('dbxFileList').innerHTML =
+      '<button class="dbx-signin-btn" onclick="dbxFileSignIn()">Sign in with Dropbox</button>';
+    document.getElementById('dbxFileStatus').textContent = 'Not signed in';
+    return;
+  }
+  var path = startPath || document.getElementById('dbxFilePath').value.trim() || '/';
+  dbxFileBrowse(path);
+}
+
+function closeDbxFileModal() {
+  document.getElementById('dbxFileOverlay').classList.remove('open');
+}
+
+function dbxFileSignIn() {
+  closeDbxFileModal();
+  dbxSignIn('');
+  window._dbxReopenBrowser = true;
+}
+
+async function loadFromDbxFile() {
+  var lastPath = localStorage.getItem(DBX_FILE_LAST_PATH) || '/';
+  if (!DBX_TOKEN) {
+    window._dbxReopenBrowser = true;
+    await dbxSignIn('');
+    return;
+  }
+  openDbxFileModal(lastPath);
+}
+
+async function dbxFileBrowse(path) {
+  if (!DBX_TOKEN) { openDbxFileModal(); return; }
+  var goBtn = document.getElementById('dbxFileGo');
+  goBtn.disabled = true;
+  document.getElementById('dbxFileStatus').textContent = 'Loading\u2026';
+  document.getElementById('dbxFileList').innerHTML = '';
+
+  var normPath = (!path || path === '/') ? '' : ('/' + path.replace(/^\/+|\/+$/g, ''));
+  document.getElementById('dbxFilePath').value = normPath || '/';
+  localStorage.setItem(DBX_FILE_LAST_PATH, normPath || '/');
+
+  try {
+    var res = await fetch('https://api.dropboxapi.com/2/files/list_folder', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + DBX_TOKEN, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path: normPath })
+    });
+    if (res.status === 401) { DBX_TOKEN = null; dbxSetAuthBtn(); openDbxFileModal(); return; }
+    if (!res.ok) throw new Error('List failed (' + res.status + ')');
+    var data = await res.json();
+
+    var entries = (data.entries || [])
+      .map(function(e) { return { name: e.name, path: e.path_lower || e.path_display, isFolder: e['.tag'] === 'folder' }; })
+      .filter(function(e) {
+        if (e.isFolder) return true;
+        var ext = e.name.slice(e.name.lastIndexOf('.')).toLowerCase();
+        return ext === '.csv' || ext === '.txt';
+      })
+      .sort(function(a, b) {
+        if (a.isFolder !== b.isFolder) return a.isFolder ? -1 : 1;
+        return a.name.localeCompare(b.name, undefined, { numeric: true });
+      });
+
+    var nFolders = entries.filter(function(e){ return e.isFolder; }).length;
+    var nFiles   = entries.filter(function(e){ return !e.isFolder; }).length;
+    document.getElementById('dbxFileStatus').textContent = nFolders + ' folders \u00b7 ' + nFiles + ' files';
+
+    dbxFileRenderBreadcrumb(normPath);
+    dbxFileRenderList(entries);
+  } catch(err) {
+    document.getElementById('dbxFileStatus').textContent = 'Error: ' + err.message;
+  } finally {
+    goBtn.disabled = false;
+  }
+}
+
+function dbxFileRenderBreadcrumb(path) {
+  var el = document.getElementById('dbxFileBreadcrumb');
+  if (!path) { el.innerHTML = ''; return; }
+  var parts = path.replace(/^\//, '').split('/').filter(Boolean);
+  var html = '<span style="color:#888">\u25b8</span>';
+  parts.forEach(function(part, i) {
+    var crumbPath = '/' + parts.slice(0, i + 1).join('/');
+    html += '<span style="color:#888"> / </span><button class="dbx-crumb-btn" onclick="dbxFileBrowse(\'' + crumbPath.replace(/'/g, "\\'") + '\')">' + escHtml(part) + '</button>';
+  });
+  el.innerHTML = html;
+}
+
+function dbxFileRenderList(entries) {
+  var list = document.getElementById('dbxFileList');
+  if (!entries.length) {
+    list.innerHTML = '<div style="color:#888;padding:24px;text-align:center">No CSV or TXT files found</div>';
+    return;
+  }
+  list.innerHTML = entries.map(function(e) {
+    if (e.isFolder) {
+      var safeP = e.path.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+      return '<div class="dbx-item" onclick="dbxFileBrowse(\'' + safeP + '\')" style="cursor:pointer;">' +
+        '<span class="dbx-item-icon">📁</span>' +
+        '<span class="dbx-item-name">' + escHtml(e.name) + '</span>' +
+        '</div>';
+    }
+    var safeP = e.path.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    var safeN = e.name.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    return '<div class="dbx-item">' +
+      '<span class="dbx-item-icon">📄</span>' +
+      '<span class="dbx-item-name">' + escHtml(e.name) + '</span>' +
+      '<button class="dbx-item-action" onclick="dbxFileLoad(\'' + safeP + '\',\'' + safeN + '\')">Load</button>' +
+      '</div>';
+  }).join('');
+}
+
+async function dbxFileLoad(path, name) {
+  document.getElementById('dbxFileStatus').textContent = 'Downloading ' + name + '\u2026';
+  try {
+    var r = await fetch('https://content.dropboxapi.com/2/files/download', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + DBX_TOKEN, 'Dropbox-API-Arg': JSON.stringify({ path: path }) }
+    });
+    if (r.status === 401) { DBX_TOKEN = null; dbxSetAuthBtn(); throw new Error('Session expired \u2014 sign in again'); }
+    if (!r.ok) throw new Error('Download failed (' + r.status + ')');
+    var text = await r.text();
+    document.getElementById('pasteCsvInput').value = text;
+    loadPastedCsv();
+    closeDbxFileModal();
+    document.getElementById('dbxPullStatus').textContent = '\u2705 Loaded ' + name;
+    setTimeout(function() { document.getElementById('dbxPullStatus').textContent = ''; }, 2500);
+  } catch(err) {
+    document.getElementById('dbxFileStatus').textContent = 'Error: ' + err.message;
+  }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  document.getElementById('dbxFileOverlay').addEventListener('click', function(e) {
+    if (e.target === document.getElementById('dbxFileOverlay')) closeDbxFileModal();
+  });
+  document.getElementById('dbxFilePath').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') dbxFileBrowse(e.target.value);
+  });
+});
+
+window.addEventListener('message', function(event) {
+  if (event.origin !== window.location.origin) return;
+  if (event.data && event.data.dropboxToken && window._dbxReopenBrowser) {
+    window._dbxReopenBrowser = false;
+    setTimeout(function() { openDbxFileModal(localStorage.getItem(DBX_FILE_LAST_PATH) || '/'); }, 200);
+  }
+});
+
 // ── KEYBOARD ──
 document.addEventListener('keydown', function(e) {
   var pracOpen = document.getElementById('practiceOverlay').classList.contains('open');
@@ -2198,5 +2417,22 @@ document.addEventListener('keydown', function(e) {
   }
 });
 </script>
+
+<!-- Dropbox File Browser Modal -->
+<div class="dbx-modal-overlay" id="dbxFileOverlay">
+  <div class="dbx-modal-box">
+    <div class="dbx-modal-header">
+      <h3>📂 Dropbox Files</h3>
+      <button class="dbx-modal-close" onclick="closeDbxFileModal()">✕</button>
+    </div>
+    <div class="dbx-modal-toolbar">
+      <input class="dbx-modal-path" id="dbxFilePath" value="/" placeholder="/ (root)">
+      <button class="dbx-modal-go" id="dbxFileGo" onclick="dbxFileBrowse(document.getElementById('dbxFilePath').value)">Go</button>
+    </div>
+    <div class="dbx-modal-breadcrumb" id="dbxFileBreadcrumb"></div>
+    <div class="dbx-modal-status" id="dbxFileStatus">Not signed in</div>
+    <div class="dbx-modal-list" id="dbxFileList"></div>
+  </div>
+</div>
 </body>
 </html>
