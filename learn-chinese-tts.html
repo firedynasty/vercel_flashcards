@@ -1324,7 +1324,7 @@ function onSheetSelect() {
 
     if (!colA && !colB && !colC) continue;
 
-    if (colA && !colB && !colC) {
+    if (colA && !colB && !colC && r.length < 2) {
       if (/^(Dialogue|Scene|Chapter|Part|Section|Lesson|Unit|Genesis|Exodus|Leviticus|Numbers|Deuteronomy|Joshua|Judges|Ruth|Samuel|Kings|Chronicles|Ezra|Nehemiah|Esther|Job|Psalm|Psalms|Proverbs|Ecclesiastes|Song|Isaiah|Jeremiah|Lamentations|Ezekiel|Daniel|Hosea|Joel|Amos|Obadiah|Jonah|Micah|Nahum|Habakkuk|Zephaniah|Haggai|Zechariah|Malachi|Matthew|Mark|Luke|John|Acts|Romans|Corinthians|Galatians|Ephesians|Philippians|Colossians|Thessalonians|Timothy|Titus|Philemon|Hebrews|James|Peter|Jude|Revelation|Verse)\s/i.test(colA)) {
         allRows.push({ chinese: '', romanization: '', english: '', sectionHeader: colA, contextLine: '' });
       } else {
@@ -1421,7 +1421,7 @@ function loadCsvText(text, fileName, forceColMode) {
 
     if (!colA && !colB && !colC) continue;
 
-    if (colA && !colB && !colC) {
+    if (colA && !colB && !colC && r.length < 2) {
       if (/^(Dialogue|Scene|Chapter|Part|Section|Lesson|Unit|Genesis|Exodus|Leviticus|Numbers|Deuteronomy|Joshua|Judges|Ruth|Samuel|Kings|Chronicles|Ezra|Nehemiah|Esther|Job|Psalm|Psalms|Proverbs|Ecclesiastes|Song|Isaiah|Jeremiah|Lamentations|Ezekiel|Daniel|Hosea|Joel|Amos|Obadiah|Jonah|Micah|Nahum|Habakkuk|Zephaniah|Haggai|Zechariah|Malachi|Matthew|Mark|Luke|John|Acts|Romans|Corinthians|Galatians|Ephesians|Philippians|Colossians|Thessalonians|Timothy|Titus|Philemon|Hebrews|James|Peter|Jude|Revelation|Verse)\s/i.test(colA)) {
         allRows.push({ chinese: '', romanization: '', english: '', sectionHeader: colA, contextLine: '' });
       } else {
@@ -1846,7 +1846,7 @@ function loadSheetByName(name) {
 
     if (!colA && !colB && !colC) continue;
 
-    if (colA && !colB && !colC) {
+    if (colA && !colB && !colC && rows[i].length < 2) {
       if (/^(Dialogue|Scene|Chapter|Part|Section|Lesson|Unit|Genesis|Exodus|Leviticus|Numbers|Deuteronomy|Joshua|Judges|Ruth|Samuel|Kings|Chronicles|Ezra|Nehemiah|Esther|Job|Psalm|Psalms|Proverbs|Ecclesiastes|Song|Isaiah|Jeremiah|Lamentations|Ezekiel|Daniel|Hosea|Joel|Amos|Obadiah|Jonah|Micah|Nahum|Habakkuk|Zephaniah|Haggai|Zechariah|Malachi|Matthew|Mark|Luke|John|Acts|Romans|Corinthians|Galatians|Ephesians|Philippians|Colossians|Thessalonians|Timothy|Titus|Philemon|Hebrews|James|Peter|Jude|Revelation|Verse)\s/i.test(colA)) {
         allRows.push({ chinese: '', romanization: '', english: '', sectionHeader: colA, contextLine: '' });
       } else {
