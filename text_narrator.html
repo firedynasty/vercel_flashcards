@@ -317,6 +317,56 @@ body {
   margin: 48px auto 0;
 }
 
+/* ── Light mode ── */
+body.light {
+  background: #f5f5f5;
+  color: #1a1a1a;
+}
+body.light .navbar {
+  background: #ffffff;
+  border-bottom-color: #ddd;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+}
+body.light .header-title { color: #111; }
+body.light .header-title small { color: #888; }
+body.light .btn-local { background: #e0e0e0; color: #222; }
+body.light .btn-local:hover { background: #ccc; }
+body.light .player-section { background: #f0f0f0; border-top-color: #ddd; }
+body.light .player-label { color: #555; }
+body.light .seg:hover { background: #e8e8e8; }
+body.light .seg.active { background: #e6f4ea; border-color: #a8d5b5; }
+body.light .seg-ts { color: #888; }
+body.light .seg-text { color: #1a1a1a; }
+body.light .seg.active .seg-text { color: #000; }
+body.light .seg-ask { background: #e0e0e0; color: #666; }
+body.light .seg-ask:hover { background: #ccc; color: #333; }
+body.light .modal-box { background: #fff; border-color: #ddd; }
+body.light .modal-header { border-bottom-color: #eee; }
+body.light .modal-toolbar { border-bottom-color: #eee; }
+body.light .modal-path-input { background: #f5f5f5; border-color: #ccc; color: #222; }
+body.light .modal-go-btn { background: #e8e8e8; border-color: #ccc; color: #333; }
+body.light .modal-go-btn:hover { background: #ddd; color: #111; }
+body.light .dsm-item { border-bottom-color: #eee; }
+body.light .dsm-item:hover { background: #f0f0f0; }
+body.light .dsm-name { color: #222; }
+body.light .toast { background: #fff; border-color: #ccc; color: #333; }
+
+/* ── Dark/Light toggle button ── */
+.btn-theme {
+  background: none;
+  border: 1px solid #444;
+  border-radius: 7px;
+  color: #aaa;
+  font-size: 16px;
+  padding: 6px 10px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+  line-height: 1;
+}
+.btn-theme:hover { border-color: #888; color: #fff; }
+body.light .btn-theme { border-color: #bbb; color: #555; }
+body.light .btn-theme:hover { border-color: #666; color: #111; }
+
 /* ── Toast ── */
 .toast {
   position: fixed;
@@ -353,6 +403,7 @@ body {
     <input type="file" id="localPicker" accept=".mp3,.m4a,.wav,.ogg,.json" multiple style="display:none" onchange="handleLocalFiles(this.files)">
     <button class="btn btn-local" onclick="changeFontSize(1)" title="Increase font size">A+</button>
     <button class="btn btn-local" onclick="changeFontSize(-1)" title="Decrease font size">A-</button>
+    <button class="btn-theme" id="themeToggleBtn" onclick="toggleTheme()" title="Toggle dark/light mode">🌙</button>
   </div>
   <div class="player-section">
     <div class="player-label" id="playerLabel">No file loaded — use a button above to load an MP3 + JSON transcript pair</div>
@@ -388,6 +439,17 @@ body {
 <div class="toast" id="toast"></div>
 
 <script>
+// ── Theme toggle ──
+(function () {
+  const saved = localStorage.getItem('tn_theme');
+  if (saved === 'light') { document.body.classList.add('light'); document.getElementById('themeToggleBtn').textContent = '☀️'; }
+})();
+function toggleTheme() {
+  const isLight = document.body.classList.toggle('light');
+  document.getElementById('themeToggleBtn').textContent = isLight ? '☀️' : '🌙';
+  localStorage.setItem('tn_theme', isLight ? 'light' : 'dark');
+}
+
 // ═══════════════════════════════════════════════════════════════════════
 // DROPBOX PKCE AUTH  (ported from vercel_youtube/public/index.html)
 // ═══════════════════════════════════════════════════════════════════════
