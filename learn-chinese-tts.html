@@ -298,6 +298,7 @@
   /* , / . keyboard nav — current row highlight */
   #tableViewContainer table.dataTable tbody tr.tbl-current > td { background-color: #bbf7d0 !important; }
   #tableViewContainer table.dataTable tbody tr.tbl-current { background-color: #bbf7d0 !important; }
+  .tbl-nav-hint { font-size: 11px; color: #94a3b8; white-space: nowrap; user-select: none; }
   .dataTables_wrapper .dataTables_length,
   .dataTables_wrapper .dataTables_filter,
   .dataTables_wrapper .dataTables_info,
@@ -635,6 +636,7 @@
       <div class="sep"></div>
       <div class="sep"></div>
       <span class="toggle-chip" id="toggleTableView" onclick="toggleTableView()">Table</span>
+      <span class="tbl-nav-hint">,&nbsp;up&nbsp;&nbsp;.&nbsp;down&nbsp;&nbsp;/&nbsp;play</span>
       <span class="toggle-chip" id="toggleDeckView" onclick="toggleDeckView()">Deck</span>
       <a href="https://vercel-spanish-chinese.vercel.app/chinese-glosser" target="_blank" class="toggle-chip" style="text-decoration:none;background:#0EA5E9;color:white;border-color:#0EA5E9;">Glosser</a>
       <button onclick="exportAllCsv()" class="toggle-chip" style="background:#16a34a;color:white;border-color:#16a34a;cursor:pointer;font-family:inherit;font-size:inherit;">&#8659; CSV</button>
