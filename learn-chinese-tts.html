@@ -2045,11 +2045,15 @@ function tblSetCurrent(dataIdx, andScroll) {
   }
 }
 
-function tblNavRow(dir) {
-  // Navigate through visible (current page) rows that have a play button
-  var playable = Array.from(
+function tblVisibleRows() {
+  // Visible (current page) rows that have a play button — section headers excluded
+  return Array.from(
     document.querySelectorAll('#vocabDataTable tbody tr[data-row-idx] .tbl-play-btn')
   ).map(function(btn) { return btn.closest('tr'); });
+}
+
+function tblNavRow(dir) {
+  var playable = tblVisibleRows();
   console.log('[tbl] navRow dir=' + dir + ': playable rows found=' + playable.length + ' tblCurrentDataIdx=' + tblCurrentDataIdx);
   if (!playable.length) { console.log('[tbl] navRow: NO playable rows — table not rendered? selector wrong?'); return; }
 
@@ -2060,10 +2064,25 @@ function tblNavRow(dir) {
   var target = cur + dir;
   if (cur === -1) target = dir === 1 ? 0 : playable.length - 1;
   console.log('[tbl] navRow: cur=' + cur + ' target=' + target);
-  if (target < 0 || target >= playable.length) { console.log('[tbl] navRow: target out of bounds, at edge'); return; }
 
-  var targetDataIdx = parseInt(playable[target].getAttribute('data-row-idx'), 10);
-  tblSetCurrent(targetDataIdx, true);
+  if (target >= 0 && target < playable.length) {
+    tblSetCurrent(parseInt(playable[target].getAttribute('data-row-idx'), 10), true);
+    return;
+  }
+  // At page edge — jump to next/prev DataTables page if one exists
+  if (!dataTableInstance) return;
+  var info = dataTableInstance.page.info();
+  if (dir === 1 && info.page < info.pages - 1) {
+    dataTableInstance.page('next').draw(false);
+    var next = tblVisibleRows();
+    if (next.length) tblSetCurrent(parseInt(next[0].getAttribute('data-row-idx'), 10), true);
+  } else if (dir === -1 && info.page > 0) {
+    dataTableInstance.page('previous').draw(false);
+    var prev = tblVisibleRows();
+    if (prev.length) tblSetCurrent(parseInt(prev[prev.length - 1].getAttribute('data-row-idx'), 10), true);
+  } else {
+    console.log('[tbl] navRow: at ' + (dir === 1 ? 'last' : 'first') + ' page, nowhere to go');
+  }
 }
 
 document.addEventListener('keydown', function(e) {
