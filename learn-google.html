@@ -531,6 +531,9 @@
   }
   .tbl-play-btn:hover { background: #1d4ed8; }
   .tbl-play-btn.speaking { background: #16a34a; }
+  /* , / . keyboard nav — current row highlight */
+  #tableViewContainer table.dataTable tbody tr.tbl-current > td { background-color: #bbf7d0 !important; }
+  #tableViewContainer table.dataTable tbody tr.tbl-current { background-color: #bbf7d0 !important; }
 
   /* ── Dropbox File Browser Modal ── */
   .dbx-modal-overlay {
@@ -819,6 +822,7 @@ var hardSet      = new Set();
 var darkModeOn   = localStorage.getItem('darkMode') === 'true';
 var tableViewOn  = true;
 var dataTableInstance = null;
+var tblCurrentDataIdx = -1; // tracks highlighted row by data-row-idx; survives DataTables redraws
 var deckViewOn   = false;
 var deckQueue    = [];
 var deckTotal    = 0;
@@ -1693,7 +1697,7 @@ function renderTableView() {
   html += '</tr></thead><tbody>';
 
   filteredVocab.forEach(function(row, n) {
-    html += '<tr>';
+    html += '<tr data-row-idx="' + n + '">';
     html += '<td>' + (n + 1) + '</td>';
     html += '<td><button class="tbl-play-btn" onclick="tblSpeak(' + n + ', this)" title="Speak term">&#9654;</button></td>';
     html += '<td style="font-weight:600;">' + escHtml(row.term) + '</td>';
@@ -1721,6 +1725,11 @@ function renderTableView() {
       info: 'Showing _START_ to _END_ of _TOTAL_ entries',
     }
   });
+
+  // Re-apply green highlight after every sort/filter/page redraw
+  $('#vocabDataTable').on('draw.dt', function() {
+    tblApplyHighlight();
+  });
 }
 
 // ── TTS ──
@@ -1735,6 +1744,12 @@ function speakText(text) {
 function tblSpeak(n, btnEl) {
   var row = filteredVocab[n];
   if (!row) return;
+  // Anchor , / . nav to this row (persists across DataTables redraws)
+  var tr = btnEl.closest('tr');
+  var dataIdx = tr ? parseInt(tr.getAttribute('data-row-idx'), 10) : n;
+  tblCurrentDataIdx = isNaN(dataIdx) ? n : dataIdx;
+  console.log('[tbl] tblSpeak: n=' + n + ' dataIdx=' + tblCurrentDataIdx);
+  tblApplyHighlight();
   // Clear previous speaking state
   document.querySelectorAll('.tbl-play-btn.speaking').forEach(function(el) {
     el.classList.remove('speaking');
@@ -1753,6 +1768,88 @@ function tblSpeak(n, btnEl) {
   if (row.definition) window.speechSynthesis.speak(u2);
   else u1.onend = function() { btnEl.classList.remove('speaking'); };
 }
+
+// ── TABLE ROW HIGHLIGHT: re-applies tbl-current after any DataTables redraw ──
+function tblApplyHighlight() {
+  document.querySelectorAll('#vocabDataTable tr.tbl-current').forEach(function(el) {
+    el.classList.remove('tbl-current');
+  });
+  if (tblCurrentDataIdx < 0) { console.log('[tbl] applyHighlight: tblCurrentDataIdx<0, nothing to highlight'); return; }
+  var tr = document.querySelector('#vocabDataTable tr[data-row-idx="' + tblCurrentDataIdx + '"]');
+  if (tr) { tr.classList.add('tbl-current'); console.log('[tbl] applyHighlight: highlighted row idx=' + tblCurrentDataIdx); }
+  else console.log('[tbl] applyHighlight: row idx=' + tblCurrentDataIdx + ' NOT FOUND in DOM (other page?)');
+}
+
+// ── TABLE ROW NAV: , / . move highlight only; / or a speaks the highlighted row ──
+function tblSetCurrent(dataIdx, andScroll) {
+  console.log('[tbl] setCurrent: idx=' + dataIdx + ' scroll=' + andScroll);
+  tblCurrentDataIdx = dataIdx;
+  tblApplyHighlight();
+  if (andScroll) {
+    var tr = document.querySelector('#vocabDataTable tr[data-row-idx="' + dataIdx + '"]');
+    if (tr) tr.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+}
+
+function tblVisibleRows() {
+  return Array.from(
+    document.querySelectorAll('#vocabDataTable tbody tr[data-row-idx] .tbl-play-btn')
+  ).map(function(btn) { return btn.closest('tr'); });
+}
+
+function tblNavRow(dir) {
+  var playable = tblVisibleRows();
+  console.log('[tbl] navRow dir=' + dir + ': visible rows=' + playable.length + ' tblCurrentDataIdx=' + tblCurrentDataIdx);
+  if (!playable.length) { console.log('[tbl] navRow: NO visible rows — table not rendered?'); return; }
+
+  var cur = -1;
+  playable.forEach(function(tr, i) {
+    if (parseInt(tr.getAttribute('data-row-idx'), 10) === tblCurrentDataIdx) cur = i;
+  });
+  var target = cur + dir;
+  if (cur === -1) target = dir === 1 ? 0 : playable.length - 1;
+
+  if (target >= 0 && target < playable.length) {
+    tblSetCurrent(parseInt(playable[target].getAttribute('data-row-idx'), 10), true);
+    return;
+  }
+  // At page edge — jump to next/prev DataTables page if one exists
+  if (!dataTableInstance) return;
+  var info = dataTableInstance.page.info();
+  if (dir === 1 && info.page < info.pages - 1) {
+    dataTableInstance.page('next').draw(false);
+    var next = tblVisibleRows();
+    if (next.length) tblSetCurrent(parseInt(next[0].getAttribute('data-row-idx'), 10), true);
+  } else if (dir === -1 && info.page > 0) {
+    dataTableInstance.page('previous').draw(false);
+    var prev = tblVisibleRows();
+    if (prev.length) tblSetCurrent(parseInt(prev[prev.length - 1].getAttribute('data-row-idx'), 10), true);
+  } else {
+    console.log('[tbl] navRow: at ' + (dir === 1 ? 'last' : 'first') + ' page, nowhere to go');
+  }
+}
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === ',' || e.key === '.' || e.key === '/' || e.key === 'a') {
+    console.log('[tbl] keydown "' + e.key + '": tableViewOn=' + tableViewOn + ' dataTableInstance=' + (dataTableInstance ? 'set' : 'null') + ' target=' + e.target.tagName);
+  }
+  if (!tableViewOn || !dataTableInstance) return;
+  if (e.target.matches('input, textarea, select')) { console.log('[tbl] keydown: skipped — focus is in input/textarea/select'); return; }
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  // / or a — speak the highlighted row
+  if (e.key === '/' || e.key === 'a') {
+    if (tblCurrentDataIdx < 0) { console.log('[tbl] speak key: no row highlighted yet'); return; }
+    var curTr = document.querySelector('#vocabDataTable tr[data-row-idx="' + tblCurrentDataIdx + '"]');
+    var curBtn = curTr ? curTr.querySelector('.tbl-play-btn') : null;
+    if (!curBtn) { console.log('[tbl] speak key: highlighted row not on this page'); return; }
+    e.preventDefault();
+    tblSpeak(tblCurrentDataIdx, curBtn);
+    return;
+  }
+  if (e.key !== ',' && e.key !== '.') return;
+  e.preventDefault();
+  tblNavRow(e.key === '.' ? 1 : -1);
+});
 
 // ── DECK VIEW (Mango-style swipe review) ──
 function activateDeckView() {
