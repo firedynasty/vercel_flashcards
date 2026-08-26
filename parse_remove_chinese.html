@@ -21,6 +21,9 @@
   #clearBtn { background: #333; color: #ccc; }
   #clearBtn:hover { background: #444; }
   #status { font-size: 0.8rem; color: #0a0; }
+  #tsToggle { background: #333; color: #ccc; }
+  #tsToggle:hover { background: #444; }
+  #tsToggle.on { background: #b91c1c; color: #fff; }
 </style>
 </head>
 <body>
@@ -40,6 +43,7 @@
 
 <div class="buttons">
   <button id="parseBtn">Parse</button>
+  <button id="tsToggle">Remove Timestamps: OFF</button>
   <button id="copyBtn">Copy Output</button>
   <button id="clearBtn">Clear</button>
   <span id="status"></span>
@@ -47,6 +51,8 @@
 
 <script>
 const CHINESE = /[\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff\u3000-\u303f\uff01-\uff65]+/g;
+
+let removeTimestamps = false;
 
 function cleanLine(line) {
   if (!line.trim()) return line;
@@ -58,8 +64,16 @@ function cleanLine(line) {
   let rest = match[2].replace(CHINESE, '');
   rest = rest.replace(/^[,. ]+/, '').replace(/\s+/g, ' ').trim();
 
+  if (removeTimestamps) return rest;
   return rest ? `${timestamp} ${rest}` : timestamp;
 }
+
+document.getElementById('tsToggle').addEventListener('click', () => {
+  removeTimestamps = !removeTimestamps;
+  const btn = document.getElementById('tsToggle');
+  btn.textContent = `Remove Timestamps: ${removeTimestamps ? 'ON' : 'OFF'}`;
+  btn.classList.toggle('on', removeTimestamps);
+});
 
 document.getElementById('parseBtn').addEventListener('click', () => {
   const lines = document.getElementById('input').value.split('\n');
