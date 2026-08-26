@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Transcript Parser</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, 'Inter', sans-serif;
+    background: #f9f9f7;
+    min-height: 100vh;
+    color: #1a1a1a;
+  }
+  .container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 24px 20px;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+  }
+  h1 { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+  .subtitle { font-size: 12px; color: #888; margin-bottom: 16px; }
+
+  .btn {
+    border: none; border-radius: 6px; padding: 8px 16px;
+    font-weight: 600; font-size: 13px; cursor: pointer; transition: opacity 0.15s;
+    font-family: inherit;
+  }
+  .btn:hover { opacity: 0.85; }
+  .btn.primary { background: #2563eb; color: white; }
+  .btn.outline { background: none; border: 1px solid #ccc; color: #555; }
+
+  /* ── CONTROLS ── */
+  .controls {
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .controls-label {
+    font-size: 12px; font-weight: 600; color: #888; text-transform: uppercase;
+    letter-spacing: 0.5px; white-space: nowrap;
+  }
+  .toggle-group { display: flex; gap: 6px; }
+  .toggle-group button {
+    padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 600;
+    cursor: pointer; border: 1px solid #ddd; background: white; color: #555;
+    transition: all 0.15s; font-family: inherit;
+  }
+  .toggle-group button.active {
+    background: #2563eb; color: white; border-color: #2563eb;
+  }
+  .toggle-group button.active.chinese { background: #dc2626; border-color: #dc2626; }
+  .toggle-group button.active.pinyin  { background: #7c3aed; border-color: #7c3aed; }
+  .toggle-group button.active.english { background: #15803d; border-color: #15803d; }
+
+  .divider { width: 1px; height: 28px; background: #e0e0e0; }
+
+  .action-btns { display: flex; gap: 8px; margin-left: auto; align-items: center; }
+  .format-badge {
+    font-size: 11px; padding: 3px 8px; border-radius: 10px; font-weight: 600;
+    background: #f0f4ff; color: #2563eb; border: 1px solid #c7d7ff;
+    display: none;
+  }
+  .status-msg { font-size: 12px; color: #16a34a; min-width: 50px; }
+
+  /* ── TEXTAREAS ── */
+  .editors {
+    display: flex;
+    gap: 14px;
+    flex: 1;
+    min-height: 0;
+  }
+  .editor-col {
+    display: flex; flex-direction: column; flex: 1; gap: 6px;
+  }
+  .editor-col label {
+    font-size: 11px; font-weight: 700; color: #888;
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .editor-col textarea {
+    flex: 1;
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    padding: 14px 16px;
+    font-family: -apple-system, 'Inter', sans-serif;
+    font-size: 13px;
+    line-height: 1.65;
+    color: #1a1a1a;
+    resize: none;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .editor-col textarea:focus { border-color: #2563eb; }
+  #output { background: #f9f9f7; color: #374151; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <h1>Transcript Parser</h1>
+  <p class="subtitle">Remove Chinese, Pinyin, or English lines from a transcript. Select what to remove, then parse.</p>
+
+  <div class="controls">
+    <span class="controls-label">Remove</span>
+    <div class="toggle-group">
+      <button id="togChinese" class="chinese active" onclick="toggle(this)">Chinese</button>
+      <button id="togPinyin"  class="pinyin  active" onclick="toggle(this)">Pinyin</button>
+      <button id="togEnglish" class="english"        onclick="toggle(this)">English</button>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="action-btns">
+      <span class="format-badge" id="fmtBadge"></span>
+      <span class="status-msg"   id="statusMsg"></span>
+      <button class="btn outline" onclick="doClear()">Clear</button>
+      <button class="btn outline" onclick="doCopy()">Copy Output</button>
+      <button class="btn primary" onclick="doParse()">Parse</button>
+    </div>
+  </div>
+
+  <div class="editors">
+    <div class="editor-col">
+      <label>Input</label>
+      <textarea id="input" placeholder="Paste your transcript here…&#10;&#10;Supports two formats:&#10;&#10;① Timestamp  →  0:00 Chinese English&#10;&#10;② Dialogue blocks  →&#10;一菲: 你好！&#10;Yī Fēi: Nǐ hǎo!&#10;Yifei: Hello!"></textarea>
+    </div>
+    <div class="editor-col">
+      <label>Output</label>
+      <textarea id="output" readonly></textarea>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── Detection helpers ──────────────────────────────────────────
+const CJK_RE   = /[\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff\u3000-\u303f\uff01-\uff65]/;
+const CJK_RE_G = /[\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff\u3000-\u303f\uff01-\uff65]+/g;
+const PINYIN_RE = /[āáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜ]/;
+
+function lineType(line) {
+  if (!line.trim())       return 'blank';
+  if (CJK_RE.test(line)) return 'chinese';
+  if (PINYIN_RE.test(line)) return 'pinyin';
+  return 'english';
+}
+
+function detectFormat(lines) {
+  const nonEmpty = lines.filter(l => l.trim());
+  if (!nonEmpty.length) return 'dialogue';
+  const ts = nonEmpty.filter(l => /^\s*\d+:\d+/.test(l)).length;
+  return ts / nonEmpty.length > 0.4 ? 'timestamp' : 'dialogue';
+}
+
+// ── Dialogue mode: filter by line type ─────────────────────────
+function parseDialogue(lines, remove) {
+  const out = [];
+  for (const line of lines) {
+    const t = lineType(line);
+    if (t === 'blank') {
+      if (out.length && out[out.length - 1] !== '') out.push('');
+      continue;
+    }
+    if (remove.has(t)) continue;
+    out.push(line.trimStart());
+  }
+  while (out.length && !out[0].trim())            out.shift();
+  while (out.length && !out[out.length-1].trim()) out.pop();
+  return out;
+}
+
+// ── Timestamp mode: inline strip ───────────────────────────────
+function parseTimestamp(lines, remove) {
+  return lines.map(line => {
+    if (!line.trim()) return line;
+    const m = line.match(/^(\s*\d+:\d+)\s+(.*)/s);
+    if (!m) return line;
+
+    const ts   = m[1].trim();
+    let   rest = m[2];
+
+    if (remove.has('chinese')) {
+      rest = rest.replace(CJK_RE_G, '');
+      rest = rest.replace(/^[\s,.\u3002\uff0c\uff01\uff1f]+/, '');
+    }
+    if (remove.has('pinyin')) {
+      // drop whole tokens that contain a tone diacritic
+      rest = rest.replace(/\S*[āáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜ]\S*/g, '');
+    }
+    if (remove.has('english')) {
+      // English part follows the Chinese; trim from first uppercase ASCII word
+      // after a space that follows CJK content
+      rest = rest.replace(/\s+[A-Za-z][\s\S]*$/, '');
+    }
+
+    rest = rest.replace(/\s+/g, ' ').trim();
+    return rest ? `${ts} ${rest}` : ts;
+  });
+}
+
+// ── Main ───────────────────────────────────────────────────────
+function getRemoveSet() {
+  const s = new Set();
+  if (document.getElementById('togChinese').classList.contains('active')) s.add('chinese');
+  if (document.getElementById('togPinyin').classList.contains('active'))  s.add('pinyin');
+  if (document.getElementById('togEnglish').classList.contains('active')) s.add('english');
+  return s;
+}
+
+function toggle(btn) {
+  btn.classList.toggle('active');
+}
+
+function doParse() {
+  const raw    = document.getElementById('input').value;
+  const lines  = raw.split('\n');
+  const remove = getRemoveSet();
+  const fmt    = detectFormat(lines);
+
+  const result = fmt === 'timestamp'
+    ? parseTimestamp(lines, remove)
+    : parseDialogue(lines, remove);
+
+  document.getElementById('output').value = result.join('\n');
+
+  const badge = document.getElementById('fmtBadge');
+  badge.textContent = fmt === 'timestamp' ? 'timestamp' : 'dialogue';
+  badge.style.display = 'inline';
+}
+
+function doCopy() {
+  const out = document.getElementById('output').value;
+  if (!out) return;
+  navigator.clipboard.writeText(out).then(() => {
+    const msg = document.getElementById('statusMsg');
+    msg.textContent = 'Copied!';
+    setTimeout(() => msg.textContent = '', 1500);
+  });
+}
+
+function doClear() {
+  document.getElementById('input').value  = '';
+  document.getElementById('output').value = '';
+  document.getElementById('fmtBadge').style.display = 'none';
+  document.getElementById('statusMsg').textContent  = '';
+}
+</script>
+</body>
+</html>

@@ -973,6 +973,8 @@
         <button class="paste-btn" id="musicBtn" title="Open Music" style="border: 2px solid #16a34a; color: #16a34a;">Music</button>
         <button class="paste-btn" id="imageNotesBtn" title="Open Image Notes" style="border: 2px solid #f97316; color: #f97316;">Image Notes</button>
         <button class="paste-btn" id="ttsPlayerBtn" title="Open TTS Transcript Player" style="border: 2px solid #8b5cf6; color: #16a34a;">Text Narrator</button>
+        <button class="paste-btn" id="parseRemoveChineseBtn" title="Open Remove Chinese Parser" style="border: 2px solid #dc2626; color: #dc2626;">Remove Chinese</button>
+        <button class="paste-btn" id="parseYoutubeScriptBtn" title="Open YouTube Chinese Script Parser" style="border: 2px solid #7c3aed; color: #7c3aed;">YT Script Parser</button>
 
         <!-- Input Section -->
         <div class="input-section" id="inputSection">
@@ -2469,6 +2471,14 @@ God loves the world
 
             document.getElementById('ttsPlayerBtn').addEventListener('click', () => {
                 window.open('text_narrator.html', '_blank');
+            });
+
+            document.getElementById('parseRemoveChineseBtn').addEventListener('click', () => {
+                window.open('parse_remove_chinese.html', '_blank');
+            });
+
+            document.getElementById('parseYoutubeScriptBtn').addEventListener('click', () => {
+                window.open('parse_youtube_chinese_script.html', '_blank');
             });
 
             document.getElementById('folderFlatInput').addEventListener('change', async function() {
