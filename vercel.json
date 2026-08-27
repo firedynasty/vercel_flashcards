@@ -30,6 +30,8 @@
     { "source": "/crossword-reveal", "destination": "/crossword_reveal.html" },
     { "source": "/pasteToOutline.html", "destination": "/pasteToOutline.html" },
     { "source": "/pasteToOutline", "destination": "/pasteToOutline.html" },
+    { "source": "/paste-and-preview.html", "destination": "/paste-and-preview.html" },
+    { "source": "/paste-and-preview", "destination": "/paste-and-preview.html" },
     { "source": "/(.*)", "destination": "/flashcards.html" }
   ]
 }
