@@ -674,7 +674,7 @@
     <input type="text" id="searchInput" placeholder="&#128269; Search terms or definitions…" oninput="filterAndRender()">
     <button class="btn outline sm" id="darkModeBtn" onclick="toggleDarkMode()">&#9790; Dark</button>
     <span class="toggle-chip on" id="toggleTableView" onclick="toggleTableView()">Table</span>
-    <span class="tbl-nav-hint">,&nbsp;up&nbsp;&nbsp;.&nbsp;down&nbsp;&nbsp;/&nbsp;play</span>
+    <span class="tbl-nav-hint">,&nbsp;up&nbsp;&nbsp;.&nbsp;down&nbsp;&nbsp;/&nbsp;play&nbsp;&nbsp;;&nbsp;stop</span>
     <span class="toggle-chip" id="toggleDeckView" onclick="toggleDeckView()">Deck</span>
     <select id="filterSel" onchange="filterAndRender()" style="display:none">
       <option value="all">All cards</option>
@@ -1832,12 +1832,20 @@ function tblNavRow(dir) {
 }
 
 document.addEventListener('keydown', function(e) {
-  if (e.key === ',' || e.key === '.' || e.key === '/' || e.key === 'a') {
+  if (e.key === ',' || e.key === '.' || e.key === '/' || e.key === 'a' || e.key === ';') {
     console.log('[tbl] keydown "' + e.key + '": tableViewOn=' + tableViewOn + ' dataTableInstance=' + (dataTableInstance ? 'set' : 'null') + ' target=' + e.target.tagName);
   }
   if (!tableViewOn || !dataTableInstance) return;
   if (e.target.matches('input, textarea, select')) { console.log('[tbl] keydown: skipped — focus is in input/textarea/select'); return; }
   if (e.metaKey || e.ctrlKey || e.altKey) return;
+  // ; — stop speaking
+  if (e.key === ';') {
+    e.preventDefault();
+    window.speechSynthesis.cancel();
+    document.querySelectorAll('.tbl-play-btn.speaking').forEach(function(el) { el.classList.remove('speaking'); });
+    console.log('[tbl] ; key: speech cancelled');
+    return;
+  }
   // / or a — speak the highlighted row
   if (e.key === '/' || e.key === 'a') {
     if (tblCurrentDataIdx < 0) { console.log('[tbl] speak key: no row highlighted yet'); return; }

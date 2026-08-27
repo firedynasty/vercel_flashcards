@@ -636,7 +636,7 @@
       <div class="sep"></div>
       <div class="sep"></div>
       <span class="toggle-chip" id="toggleTableView" onclick="toggleTableView()">Table</span>
-      <span class="tbl-nav-hint">,&nbsp;up&nbsp;&nbsp;.&nbsp;down&nbsp;&nbsp;/&nbsp;play</span>
+      <span class="tbl-nav-hint">,&nbsp;up&nbsp;&nbsp;.&nbsp;down&nbsp;&nbsp;/&nbsp;play&nbsp;&nbsp;;&nbsp;stop</span>
       <span class="toggle-chip" id="toggleDeckView" onclick="toggleDeckView()">Deck</span>
       <a href="https://vercel-spanish-chinese.vercel.app/chinese-glosser" target="_blank" class="toggle-chip" style="text-decoration:none;background:#0EA5E9;color:white;border-color:#0EA5E9;">Glosser</a>
       <button onclick="exportAllCsv()" class="toggle-chip" style="background:#16a34a;color:white;border-color:#16a34a;cursor:pointer;font-family:inherit;font-size:inherit;">&#8659; CSV</button>
@@ -2086,12 +2086,20 @@ function tblNavRow(dir) {
 }
 
 document.addEventListener('keydown', function(e) {
-  if (e.key === ',' || e.key === '.' || e.key === '/' || e.key === 'a') {
+  if (e.key === ',' || e.key === '.' || e.key === '/' || e.key === 'a' || e.key === ';') {
     console.log('[tbl] keydown "' + e.key + '": tableViewOn=' + tableViewOn + ' dataTableInstance=' + (dataTableInstance ? 'set' : 'null') + ' target=' + e.target.tagName + (e.target.id ? '#' + e.target.id : '') + (e.target.className && e.target.className.baseVal === undefined ? '.' + String(e.target.className).split(' ')[0] : ''));
   }
   if (!tableViewOn || !dataTableInstance) return;
   if (e.target.matches('input, textarea, select')) { console.log('[tbl] keydown: skipped — focus is in input/textarea/select'); return; }
   if (e.metaKey || e.ctrlKey || e.altKey) return;
+  // ; — stop speaking
+  if (e.key === ';') {
+    e.preventDefault();
+    stopSpeaking();
+    document.querySelectorAll('.tbl-play-btn.speaking').forEach(function(el) { el.classList.remove('speaking'); });
+    console.log('[tbl] ; key: speech cancelled');
+    return;
+  }
   // / or a — speak the highlighted row
   if (e.key === '/' || e.key === 'a') {
     if (tblCurrentDataIdx < 0) { console.log('[tbl] speak key: no row highlighted yet (tblCurrentDataIdx=' + tblCurrentDataIdx + ')'); return; }
