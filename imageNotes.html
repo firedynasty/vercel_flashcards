@@ -189,6 +189,7 @@
         <button class="ml-2 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700" id="ocrBtn" title="Extract text (English)">OCR</button>
         <button class="ml-2 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700" id="ocrChinBtn" title="Extract text (Chinese)">中文</button>
         <button class="ml-2 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700" id="txtNotesBtn" title="Open text notes (synced to Dropbox)">Notes</button>
+        <button class="ml-2 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold bg-teal-500 text-white hover:bg-teal-600" id="savePngBtn" title="Save drawing as PNG to device">&#8595; PNG</button>
     </div>
 
     <!-- OCR result overlay -->
@@ -924,6 +925,73 @@
             } catch(e) {
                 document.getElementById('ocrStatus').textContent = '❌ Could not save to localStorage';
             }
+        });
+
+        // ── SAVE PNG TO DEVICE ──
+        document.getElementById('savePngBtn').addEventListener('click', async function() {
+            if (strokes.length === 0) { alert('Nothing drawn yet.'); return; }
+
+            // Compute bounding box
+            var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+            var maxStrokeW = 0;
+            strokes.forEach(function(s) {
+                if (s.width > maxStrokeW) maxStrokeW = s.width;
+                s.points.forEach(function(p) {
+                    if (p.x < minX) minX = p.x; if (p.y < minY) minY = p.y;
+                    if (p.x > maxX) maxX = p.x; if (p.y > maxY) maxY = p.y;
+                });
+            });
+            var PAD = Math.ceil(maxStrokeW / 2) + 8;
+            minX = Math.max(0, minX - PAD); minY = Math.max(0, minY - PAD);
+            maxX = Math.min(cssW, maxX + PAD); maxY = Math.min(cssH, maxY + PAD);
+            var cropW = maxX - minX, cropH = maxY - minY;
+
+            var dpr = Math.min(window.devicePixelRatio || 1, 2);
+            var tmp = document.createElement('canvas');
+            tmp.width = Math.round(cropW * dpr); tmp.height = Math.round(cropH * dpr);
+            var tmpCtx = tmp.getContext('2d');
+            tmpCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            tmpCtx.fillStyle = isDark ? '#374151' : '#ffffff';
+            tmpCtx.fillRect(0, 0, cropW, cropH);
+            strokes.forEach(function(s) {
+                if (s.points.length === 0) return;
+                tmpCtx.strokeStyle = s.color; tmpCtx.fillStyle = s.color;
+                tmpCtx.lineWidth = s.width; tmpCtx.lineCap = 'round'; tmpCtx.lineJoin = 'round';
+                if (s.points.length === 1) {
+                    tmpCtx.beginPath();
+                    tmpCtx.arc(s.points[0].x - minX, s.points[0].y - minY, s.width / 2, 0, Math.PI * 2);
+                    tmpCtx.fill(); return;
+                }
+                tmpCtx.beginPath();
+                tmpCtx.moveTo(s.points[0].x - minX, s.points[0].y - minY);
+                for (var i = 1; i < s.points.length; i++) tmpCtx.lineTo(s.points[i].x - minX, s.points[i].y - minY);
+                tmpCtx.stroke();
+            });
+
+            var now = new Date();
+            var pad = function(n) { return String(n).padStart(2, '0'); };
+            var ts = now.getFullYear() + '-' + pad(now.getMonth()+1) + '-' + pad(now.getDate()) +
+                     '_' + pad(now.getHours()) + '-' + pad(now.getMinutes()) + '-' + pad(now.getSeconds());
+            var filename = 'imageNotes_' + ts + '.png';
+
+            var blob = await new Promise(function(res) { tmp.toBlob(res, 'image/png'); });
+
+            // Use Web Share API on iOS/iPadOS (allows save to Photos or Files)
+            if (navigator.canShare && navigator.canShare({ files: [new File([blob], filename, { type: 'image/png' })] })) {
+                try {
+                    await navigator.share({ files: [new File([blob], filename, { type: 'image/png' })], title: filename });
+                    return;
+                } catch(e) {
+                    if (e.name === 'AbortError') return; // user cancelled
+                }
+            }
+
+            // Fallback: standard download link (works on desktop, opens in new tab on iOS)
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url; a.download = filename; a.target = '_blank';
+            document.body.appendChild(a); a.click();
+            setTimeout(function() { document.body.removeChild(a); URL.revokeObjectURL(url); }, 1000);
         });
 
         async function ocrRun(chinese) {
