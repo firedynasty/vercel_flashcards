@@ -9,8 +9,10 @@
     --ink: #1c1b19;
     --paper: #f7f5f0;
     --line: #d8d3c8;
-    --mark: #8a5a3b;
-    --mark-dark: #6e4429;
+    --mark-a: #8a5a3b;
+    --mark-a-dark: #6e4429;
+    --mark-b: #3a5f8a;
+    --mark-b-dark: #2d4a6e;
     --muted: #8a8578;
     --good: #3f6b4a;
   }
@@ -48,77 +50,54 @@
     text-transform: uppercase;
     font-weight: 700;
   }
-  .header input {
-    margin-top: 8px;
-    width: 100%;
-    font-family: inherit;
-    font-size: 13px;
-    border: none;
-    border-bottom: 1px solid var(--line);
-    background: transparent;
-    padding: 4px 0;
-    color: var(--ink);
-  }
-  .header input:focus { outline: none; border-bottom-color: var(--mark); }
-  .header input::placeholder { color: var(--muted); }
 
-  .tally-area {
-    padding: 24px;
-    min-height: 90px;
+  .trackers {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
   }
-  .marks {
-    line-height: 2.1;
-    font-size: 20px;
-    letter-spacing: 2px;
-    word-break: break-all;
-    color: var(--mark-dark);
+  .tracker {
+    padding: 20px;
+    border-bottom: 1px dashed var(--line);
   }
-  .marks .group { margin-right: 10px; display: inline-block; }
-  .empty-hint {
-    color: var(--muted);
-    font-size: 13px;
-    font-style: italic;
-  }
+  .tracker-a { border-right: 1px dashed var(--line); }
 
-  .count-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    padding: 0 24px 20px;
-  }
-  .count-row .today {
-    font-size: 13px;
+  .tracker-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
     color: var(--muted);
+    margin-bottom: 10px;
   }
-  .count-row .total {
-    font-size: 13px;
-    color: var(--muted);
-  }
-  .count-row .num {
-    font-size: 15px;
-    color: var(--ink);
+  .tracker-display {
     font-weight: 700;
+    line-height: 1;
+    margin-bottom: 16px;
+    min-height: 44px;
+  }
+  .tracker-a .tracker-display {
+    font-size: 48px;
+    color: var(--mark-a-dark);
+  }
+  .tracker-b .tracker-display {
+    font-size: 14px;
+    color: var(--mark-b-dark);
+    line-height: 1.8;
+    max-height: 160px;
+    overflow-y: auto;
   }
 
-  .btn-row {
+  .tracker-btn-row {
     display: flex;
-    gap: 10px;
-    padding: 0 24px 24px;
+    gap: 8px;
   }
-  button {
-    font-family: inherit;
-    cursor: pointer;
-    border-radius: 6px;
-    border: 1px solid var(--line);
-  }
+  button { font-family: inherit; cursor: pointer; border-radius: 6px; }
   .log-btn {
     flex: 1;
-    padding: 16px;
-    font-size: 15px;
+    padding: 14px;
+    font-size: 14px;
     font-weight: 700;
     letter-spacing: 0.03em;
     text-transform: uppercase;
-    background: var(--mark);
     color: #fff8f0;
     border: none;
     transition: transform 0.05s ease, background 0.15s ease;
@@ -127,13 +106,18 @@
     -webkit-user-select: none;
     -webkit-tap-highlight-color: transparent;
   }
-  .log-btn:hover { background: var(--mark-dark); }
-  .log-btn:active { transform: scale(0.98); }
+  .tracker-a .log-btn { background: var(--mark-a); }
+  .tracker-a .log-btn:hover { background: var(--mark-a-dark); }
+  .tracker-b .log-btn { background: var(--mark-b); }
+  .tracker-b .log-btn:hover { background: var(--mark-b-dark); }
+  .log-btn:active { transform: scale(0.97); }
+
   .undo-btn {
-    padding: 16px 14px;
+    padding: 14px 12px;
     background: transparent;
     color: var(--muted);
-    font-size: 13px;
+    font-size: 12px;
+    border: 1px solid var(--line);
   }
   .undo-btn:hover { color: var(--ink); border-color: var(--ink); }
 
@@ -152,14 +136,12 @@
     padding: 6px 10px;
     font-size: 12px;
     color: var(--ink);
+    border: 1px solid var(--line);
   }
   .file-btn:hover { border-color: var(--ink); }
   .file-btn.connected { color: var(--good); border-color: var(--good); }
   .status { display: flex; align-items: center; gap: 6px; }
-  .dot {
-    width: 7px; height: 7px; border-radius: 50%;
-    background: var(--muted);
-  }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
   .dot.on { background: var(--good); }
   .status-text { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
@@ -178,6 +160,62 @@
     pointer-events: none;
   }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  .dialog-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(28,27,25,0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease;
+    z-index: 100;
+  }
+  .dialog-overlay.show { opacity: 1; pointer-events: all; }
+  .dialog {
+    background: #fffdf9;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 24px;
+    max-width: 320px;
+    width: 90%;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+    transform: translateY(6px);
+    transition: transform 0.15s ease;
+  }
+  .dialog-overlay.show .dialog { transform: translateY(0); }
+  .dialog p {
+    margin: 0 0 20px;
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--ink);
+  }
+  .dialog p strong { color: #b94040; }
+  .dialog-btns {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+  }
+  .dialog-btns button { padding: 10px 18px; font-size: 13px; font-family: inherit; }
+  .btn-cancel {
+    background: transparent;
+    border: 1px solid var(--line);
+    color: var(--ink);
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  .btn-cancel:hover { border-color: var(--ink); }
+  .btn-delete {
+    background: #b94040;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 700;
+  }
+  .btn-delete:hover { background: #962f2f; }
 </style>
 </head>
 <body>
@@ -185,21 +223,25 @@
 <div class="card">
   <div class="header">
     <h1>Tally Logger</h1>
-    <input id="labelInput" type="text" placeholder="what are you tracking? (optional label)" />
   </div>
 
-  <div class="tally-area">
-    <div id="marks" class="marks"><span class="empty-hint">Hit "Log it" to start — each click is one timestamped row.</span></div>
-  </div>
-
-  <div class="count-row">
-    <div class="today">Today: <span class="num" id="todayCount">0</span></div>
-    <div class="total">All time: <span class="num" id="totalCount">0</span></div>
-  </div>
-
-  <div class="btn-row">
-    <button class="log-btn" id="logBtn">Log it</button>
-    <button class="undo-btn" id="undoBtn" title="Remove last entry">Undo</button>
+  <div class="trackers">
+    <div class="tracker tracker-a">
+      <div class="tracker-label">Tracker A — count</div>
+      <div class="tracker-display" id="displayA">0</div>
+      <div class="tracker-btn-row">
+        <button class="log-btn" id="logBtnA">Log A</button>
+        <button class="undo-btn" id="undoBtnA">Undo</button>
+      </div>
+    </div>
+    <div class="tracker tracker-b">
+      <div class="tracker-label">Tracker B — last hit</div>
+      <div class="tracker-display" id="displayB">—</div>
+      <div class="tracker-btn-row">
+        <button class="log-btn" id="logBtnB">Log B</button>
+        <button class="undo-btn" id="undoBtnB">Undo</button>
+      </div>
+    </div>
   </div>
 
   <div class="footer">
@@ -210,6 +252,17 @@
     <div style="display:flex; gap:6px;">
       <button class="file-btn" id="dbxBtn">Dropbox</button>
       <button class="file-btn" id="downloadBtn">Download .csv</button>
+      <button class="file-btn" id="clearBtn">Clear</button>
+    </div>
+  </div>
+</div>
+
+<div class="dialog-overlay" id="dialogOverlay">
+  <div class="dialog">
+    <p>Delete <strong>all entries</strong> from localStorage and Dropbox?<br>This cannot be undone.</p>
+    <div class="dialog-btns">
+      <button class="btn-cancel" id="dialogCancel">Cancel</button>
+      <button class="btn-delete" id="dialogConfirm">Delete</button>
     </div>
   </div>
 </div>
@@ -218,21 +271,27 @@
 
 <script>
 (function () {
-  const marksEl = document.getElementById('marks');
-  const todayCountEl = document.getElementById('todayCount');
-  const totalCountEl = document.getElementById('totalCount');
-  const logBtn = document.getElementById('logBtn');
-  const undoBtn = document.getElementById('undoBtn');
-  const dbxBtn = document.getElementById('dbxBtn');
-  const downloadBtn = document.getElementById('downloadBtn');
-  const statusDot = document.getElementById('statusDot');
-  const statusText = document.getElementById('statusText');
-  const labelInput = document.getElementById('labelInput');
-  const toast = document.getElementById('toast');
+  const displayA    = document.getElementById('displayA');
+  const displayB    = document.getElementById('displayB');
+  const logBtnA     = document.getElementById('logBtnA');
+  const logBtnB     = document.getElementById('logBtnB');
+  const undoBtnA    = document.getElementById('undoBtnA');
+  const undoBtnB    = document.getElementById('undoBtnB');
+  const dbxBtn        = document.getElementById('dbxBtn');
+  const downloadBtn   = document.getElementById('downloadBtn');
+  const clearBtn      = document.getElementById('clearBtn');
+  const dialogOverlay = document.getElementById('dialogOverlay');
+  const dialogCancel  = document.getElementById('dialogCancel');
+  const dialogConfirm = document.getElementById('dialogConfirm');
+  const statusDot     = document.getElementById('statusDot');
+  const statusText    = document.getElementById('statusText');
+  const toast         = document.getElementById('toast');
 
-  let entries = []; // { date, time, label }
+  // entries: { date, tracker_a, tracker_b }
+  // One of tracker_a / tracker_b is set per row — the other is empty string.
+  let entries = [];
 
-  // ── Dropbox sync (OAuth PKCE, same flow as famous-beats-maker_1.html) ──────
+  // ── Dropbox sync ──────────────────────────────────────────────────────────
   const DROPBOX_LOG_PATH = '/vercel/tally-log.json';
   const isLocalhost = ['localhost', '127.0.0.1', ''].includes(window.location.hostname);
   let dropboxAccessToken = null;
@@ -277,18 +336,14 @@
     } else {
       dbxBtn.textContent = 'Dropbox';
       dbxBtn.classList.remove('connected');
-      dbxBtn.title = 'Sign in to Dropbox to sync your log across devices';
+      dbxBtn.title = 'Sign in to Dropbox to sync across devices';
     }
   }
 
   async function dbxSignIn() {
     const appKey = await fetchDropboxAppKey();
     if (!appKey) { showToast('Dropbox App Key not configured'); return; }
-    // Stash the working log so the OAuth redirect doesn't lose unsaved entries
-    sessionStorage.setItem('tally_logger_pending', JSON.stringify({
-      entries: entries,
-      label: labelInput.value.trim(),
-    }));
+    sessionStorage.setItem('tally_logger_pending', JSON.stringify({ entries }));
     const verifier = generateCodeVerifier();
     const challenge = await generateCodeChallenge(verifier);
     sessionStorage.setItem('dropbox_code_verifier', verifier);
@@ -312,7 +367,7 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({
-          code: code, grant_type: 'authorization_code', client_id: appKey,
+          code, grant_type: 'authorization_code', client_id: appKey,
           redirect_uri: redirectUri, code_verifier: verifier,
         }).toString(),
       });
@@ -320,8 +375,6 @@
       if (data.access_token) {
         dropboxAccessToken = data.access_token;
         sessionStorage.removeItem('dropbox_code_verifier');
-      } else {
-        console.error('Dropbox auth failed:', data);
       }
     } catch (err) { console.error('Dropbox auth error:', err); }
     window.history.replaceState({}, document.title, window.location.pathname);
@@ -348,52 +401,54 @@
   }
 
   async function dropboxDownloadFile(path) {
-    if (!dropboxAccessToken) throw new Error('Not signed into Dropbox');
+    if (!dropboxAccessToken) throw new Error('Not signed in');
     const response = await fetch('https://content.dropboxapi.com/2/files/download', {
       method: 'POST',
       headers: {
         Authorization: 'Bearer ' + dropboxAccessToken,
-        'Dropbox-API-Arg': JSON.stringify({ path: path }),
+        'Dropbox-API-Arg': JSON.stringify({ path }),
       },
     });
-    if (response.status === 401) { dbxHandle401(); throw new Error('Dropbox session expired — sign in again'); }
+    if (response.status === 401) { dbxHandle401(); throw new Error('Session expired'); }
     if (!response.ok) throw new Error('Download failed (' + response.status + ')');
     return await response.text();
   }
 
   async function dropboxUploadFile(path, content) {
-    if (!dropboxAccessToken) throw new Error('Not signed into Dropbox');
+    if (!dropboxAccessToken) throw new Error('Not signed in');
     const response = await fetch('https://content.dropboxapi.com/2/files/upload', {
       method: 'POST',
       headers: {
         Authorization: 'Bearer ' + dropboxAccessToken,
-        'Dropbox-API-Arg': JSON.stringify({ path: path, mode: { '.tag': 'overwrite' }, mute: true }),
+        'Dropbox-API-Arg': JSON.stringify({ path, mode: { '.tag': 'overwrite' }, mute: true }),
         'Content-Type': 'application/octet-stream',
       },
       body: content,
     });
-    if (response.status === 401) { dbxHandle401(); throw new Error('Dropbox session expired — sign in again'); }
+    if (response.status === 401) { dbxHandle401(); throw new Error('Session expired'); }
     if (!response.ok) throw new Error('Upload failed (' + response.status + ')');
     return true;
   }
 
-  // ── Load / save ────────────────────────────────────────────────────────────
-  // The Dropbox file holds one JSON array of entries. Saves always rewrite the
-  // whole file; on "Log it" we first merge in the freshest remote copy so logs
-  // from other devices aren't lost (same append-safety pattern as famous beats).
-  function entryKey(e) { return e.date + '|' + e.time + '|' + (e.label || ''); }
-
+  // ── Merge / save / load ───────────────────────────────────────────────────
+  function entryKey(e) {
+    return (e.date || '') + '|' + (e.tracker_a || '') + '|' + (e.tracker_b || '');
+  }
   function mergeEntries(a, b) {
     const seen = new Set();
     const merged = [];
     a.concat(b).forEach(e => {
-      if (!e || !e.date || !e.time) return;
+      if (!e || !e.date) return;
       const k = entryKey(e);
       if (seen.has(k)) return;
       seen.add(k);
       merged.push(e);
     });
-    merged.sort((x, y) => (x.date + x.time).localeCompare(y.date + y.time));
+    merged.sort((x, y) => {
+      const tx = x.tracker_a || x.tracker_b || '';
+      const ty = y.tracker_a || y.tracker_b || '';
+      return (x.date + tx).localeCompare(y.date + ty);
+    });
     return merged;
   }
 
@@ -407,10 +462,7 @@
         const data = JSON.parse(await dropboxDownloadFile(DROPBOX_LOG_PATH));
         if (Array.isArray(data)) entries = mergeEntries(entries, data);
         return 'Dropbox';
-      } catch (e) {
-        // First use: the file may not exist yet — fall through to local copy
-        console.warn('Dropbox load failed:', e.message);
-      }
+      } catch (e) { console.warn('Dropbox load failed:', e.message); }
     }
     try {
       const local = JSON.parse(localStorage.getItem('tally_log_entries') || '[]');
@@ -428,7 +480,7 @@
         try {
           const data = JSON.parse(await dropboxDownloadFile(DROPBOX_LOG_PATH));
           if (Array.isArray(data)) remote = data;
-        } catch (e) { /* file may not exist yet */ }
+        } catch (e) { /* first upload */ }
         entries = mergeEntries(entries, remote);
         saveLocal();
       }
@@ -440,10 +492,8 @@
     }
   }
 
-  // ── UI ─────────────────────────────────────────────────────────────────────
-  function todayStr() {
-    return new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
-  }
+  // ── UI ────────────────────────────────────────────────────────────────────
+  function todayStr() { return new Date().toLocaleDateString('en-CA'); }
 
   function showToast(msg) {
     toast.textContent = msg;
@@ -453,52 +503,51 @@
 
   function render() {
     const today = todayStr();
-    const todayEntries = entries.filter(e => e.date === today);
-    todayCountEl.textContent = todayEntries.length;
-    totalCountEl.textContent = entries.length;
-
-    if (todayEntries.length === 0) {
-      marksEl.innerHTML = '<span class="empty-hint">No entries yet today. Hit "Log it" to start.</span>';
-      return;
-    }
-    // tally marks in groups of 5: |||| with a slash through, rendered simply as groups
-    let html = '';
-    for (let i = 0; i < todayEntries.length; i += 5) {
-      const groupSize = Math.min(5, todayEntries.length - i);
-      let group = '|'.repeat(groupSize);
-      if (groupSize === 5) group = '<s>||||</s>|'; // strike-through look for a full group of 5
-      html += `<span class="group">${group}</span>`;
-    }
-    marksEl.innerHTML = html;
+    const countA = entries.filter(e => e.date === today && e.tracker_a).length;
+    const timesB = entries.filter(e => e.date === today && e.tracker_b).map(e => e.tracker_b);
+    displayA.textContent = countA;
+    displayB.innerHTML = timesB.length
+      ? timesB.map(t => `<div>${t}</div>`).join('')
+      : '<span style="color:var(--muted);font-style:italic;font-size:12px;">no hits yet</span>';
   }
 
   function toCSV() {
-    const header = 'date,time,label\n';
-    const rows = entries.map(e => `${e.date},${e.time},${(e.label || '').replace(/,/g, ';')}`).join('\n');
+    const header = 'date,tracker_a,tracker_b\n';
+    const rows = entries.map(e =>
+      `${e.date},${e.tracker_a || ''},${e.tracker_b || ''}`
+    ).join('\n');
     return header + rows + (entries.length ? '\n' : '');
   }
 
-  let lastLogAt = 0;
-  async function logEntry() {
+  let lastLogA = 0, lastLogB = 0;
+
+  async function logEntry(tracker) {
     const now = Date.now();
-    if (now - lastLogAt < 400) return; // swallow accidental double-taps
-    lastLogAt = now;
-    const d = new Date(now);
+    if (tracker === 'a') {
+      if (now - lastLogA < 400) return;
+      lastLogA = now;
+    } else {
+      if (now - lastLogB < 400) return;
+      lastLogB = now;
+    }
+    const time = new Date(now).toTimeString().slice(0, 8);
     entries.push({
       date: todayStr(),
-      time: d.toTimeString().slice(0, 8),
-      label: labelInput.value.trim()
+      tracker_a: tracker === 'a' ? time : '',
+      tracker_b: tracker === 'b' ? time : '',
     });
     render();
     await saveLog({ mergeRemote: true });
-    render(); // merge may have pulled in rows from other devices
+    render();
   }
 
-  async function undoEntry() {
-    if (!entries.length) return;
-    entries.pop();
+  async function undoEntry(tracker) {
+    const hits = entries.map((e, i) => ({ e, i }))
+      .filter(({ e }) => tracker === 'a' ? e.tracker_a : e.tracker_b);
+    if (!hits.length) return;
+    entries.splice(hits[hits.length - 1].i, 1);
     render();
-    await saveLog({ mergeRemote: false }); // overwrite so the deletion sticks
+    await saveLog({ mergeRemote: false });
   }
 
   function downloadCSV() {
@@ -511,37 +560,48 @@
     URL.revokeObjectURL(url);
   }
 
-  logBtn.addEventListener('click', logEntry);
-  undoBtn.addEventListener('click', undoEntry);
-  dbxBtn.addEventListener('click', () => {
-    dropboxAccessToken ? dbxSignOut() : dbxSignIn();
-  });
+  logBtnA.addEventListener('click', () => logEntry('a'));
+  logBtnB.addEventListener('click', () => logEntry('b'));
+  undoBtnA.addEventListener('click', () => undoEntry('a'));
+  undoBtnB.addEventListener('click', () => undoEntry('b'));
+  dbxBtn.addEventListener('click', () => dropboxAccessToken ? dbxSignOut() : dbxSignIn());
   downloadBtn.addEventListener('click', downloadCSV);
 
-  labelInput.addEventListener('input', () => {
-    localStorage.setItem('tally_log_label', labelInput.value.trim());
+  clearBtn.addEventListener('click', () => {
+    dialogOverlay.classList.add('show');
+    dialogConfirm.focus();
   });
-
-  document.addEventListener('keydown', (e) => {
-    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      logEntry();
+  dialogCancel.addEventListener('click', () => dialogOverlay.classList.remove('show'));
+  dialogOverlay.addEventListener('click', (e) => {
+    if (e.target === dialogOverlay) dialogOverlay.classList.remove('show');
+  });
+  dialogConfirm.addEventListener('click', async () => {
+    dialogOverlay.classList.remove('show');
+    entries = [];
+    localStorage.removeItem('tally_log_entries');
+    render();
+    if (dropboxAccessToken) {
+      try {
+        await dropboxUploadFile(DROPBOX_LOG_PATH, JSON.stringify([], null, 2));
+        setStatus('Dropbox · tally-log.json', true);
+        showToast('All entries deleted from Dropbox');
+      } catch (e) {
+        showToast('Local cleared — Dropbox delete failed');
+      }
+    } else {
+      showToast('All entries cleared');
     }
   });
 
-  // ── Boot: OAuth redirect → restore stash → load (Dropbox when signed in → local) ──
+  // ── Boot ──────────────────────────────────────────────────────────────────
   (async function boot() {
-    labelInput.value = localStorage.getItem('tally_log_label') || '';
     await dbxHandleOAuthRedirect();
     updateDbxBtn();
 
-    // Restore the log stashed before an OAuth redirect
     let pending = null;
     try { pending = JSON.parse(sessionStorage.getItem('tally_logger_pending')); } catch (e) { /* ignore */ }
     sessionStorage.removeItem('tally_logger_pending');
     if (pending && Array.isArray(pending.entries)) entries = pending.entries;
-    if (pending && pending.label && !labelInput.value) labelInput.value = pending.label;
 
     setStatus('Loading…', !!dropboxAccessToken);
     const source = await loadLog();
@@ -551,7 +611,6 @@
       !!dropboxAccessToken
     );
 
-    // Came back from sign-in with unsaved entries — push them up now
     if (pending && pending.entries && pending.entries.length && dropboxAccessToken) {
       await saveLog({ mergeRemote: true });
       render();
