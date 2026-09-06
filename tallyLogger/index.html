@@ -241,6 +241,10 @@
         <button class="log-btn" id="logBtnB">Log B</button>
         <button class="undo-btn" id="undoBtnB">Undo</button>
       </div>
+      <input type="number" id="offsetB" placeholder="−hr (e.g. -2)" max="0"
+        style="margin-top:8px;width:100%;padding:6px 8px;font-family:inherit;font-size:12px;
+               border:1px solid var(--line);border-radius:6px;background:transparent;
+               color:var(--ink);text-align:center;" />
     </div>
   </div>
 
@@ -277,6 +281,7 @@
   const logBtnB     = document.getElementById('logBtnB');
   const undoBtnA    = document.getElementById('undoBtnA');
   const undoBtnB    = document.getElementById('undoBtnB');
+  const offsetB     = document.getElementById('offsetB');
   const dbxBtn        = document.getElementById('dbxBtn');
   const downloadBtn   = document.getElementById('downloadBtn');
   const clearBtn      = document.getElementById('clearBtn');
@@ -530,7 +535,13 @@
       if (now - lastLogB < 400) return;
       lastLogB = now;
     }
-    const time = new Date(now).toTimeString().slice(0, 8);
+    let ts = now;
+    if (tracker === 'b') {
+      const hrs = parseInt(offsetB.value, 10);
+      if (!isNaN(hrs) && hrs < 0) ts = now + hrs * 3600000;
+      offsetB.value = '';
+    }
+    const time = new Date(ts).toTimeString().slice(0, 8);
     entries.push({
       date: todayStr(),
       tracker_a: tracker === 'a' ? time : '',
