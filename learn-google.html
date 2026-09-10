@@ -133,6 +133,9 @@
     color: #111; cursor: pointer; padding-top: 0;
   }
   .card-term:hover { color: #2563eb; }
+  .card-term { cursor: pointer; user-select: none; }
+  .card-term.tts-speaking { color: #2563eb; }
+  .card-term.tts-speaking::after { content: ' 🔊'; font-size: 11px; }
   .card-actions {
     display: flex; gap: 6px; align-items: center; flex-shrink: 0;
   }
@@ -848,6 +851,7 @@ var tableViewOn  = true;
 var dataTableInstance = null;
 var tblCurrentDataIdx = -1; // tracks highlighted row by data-row-idx; survives DataTables redraws
 var deckViewOn   = false;
+var ttsPlaying   = null;  // current SpeechSynthesisUtterance chain cancel fn
 var deckQueue    = [];
 var deckTotal    = 0;
 var deckCleared  = 0;
@@ -962,6 +966,48 @@ function renderCards() {
   updateScorePills();
 }
 
+// ── TTS Suggestopedia ─────────────────────────────────────────────────────────
+function speakSuggestopedia(term, definition, termEl) {
+  // Stop any in-progress playback
+  if (ttsPlaying) { ttsPlaying(); }
+  speechSynthesis.cancel();
+
+  var cancelled = false;
+  ttsPlaying = function() { cancelled = true; speechSynthesis.cancel(); };
+
+  var rates = [1.0, 1.4, 1.0, 1.4];
+  var texts = [term, term, term, term]; // read just the term at each rate
+  // Actually read "term … definition" on first, then term+def faster, etc.
+  // Classic Suggestopedia: term+def at slow, term+def slightly faster, repeat
+  texts = [
+    term + '. ' + definition,
+    term + '. ' + definition,
+    term + '. ' + definition,
+    term + '. ' + definition,
+  ];
+
+  termEl.classList.add('tts-speaking');
+
+  var step = 0;
+  function next() {
+    if (cancelled || step >= rates.length) {
+      if (!cancelled) termEl.classList.remove('tts-speaking');
+      ttsPlaying = null;
+      return;
+    }
+    var utt = new SpeechSynthesisUtterance(texts[step]);
+    utt.rate = rates[step];
+    utt.lang = 'en-US';
+    utt.onend = function() {
+      step++;
+      setTimeout(next, 350);
+    };
+    utt.onerror = function() { termEl.classList.remove('tts-speaking'); ttsPlaying = null; };
+    speechSynthesis.speak(utt);
+  }
+  next();
+}
+
 function buildCard(row, fi) {
   var idx = row.idx;
   var score = scores[idx];
@@ -979,6 +1025,13 @@ function buildCard(row, fi) {
   var termEl = document.createElement('div');
   termEl.className = 'card-term';
   termEl.textContent = row.term;
+  termEl.title = 'Click to hear (Suggestopedia TTS)';
+  termEl.addEventListener('click', (function(r, el) {
+    return function(e) {
+      e.stopPropagation();
+      speakSuggestopedia(r.term, r.definition, el);
+    };
+  })(row, termEl));
 
   // Reveal button
   var revealBtn = document.createElement('button');
