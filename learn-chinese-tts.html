@@ -617,6 +617,23 @@
     <span id="dbxPullStatus" style="font-size:11px; color:#888;"></span>
   </div>
 
+  <!-- Supabase load -->
+  <div id="sbSection" style="margin:8px 0 0;padding:12px 16px;border:1px solid #e0e0e0;border-radius:10px;background:white;">
+    <div style="font-size:12px;font-weight:600;color:#555;margin-bottom:8px;">Load from Supabase</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+      <input type="text" id="sbUrl" placeholder="https://xxxx.supabase.co" style="flex:2;min-width:180px;padding:5px 10px;border:1px solid #ddd;border-radius:6px;font-size:12px;font-family:inherit;">
+      <input type="password" id="sbKey" placeholder="anon key" style="flex:2;min-width:140px;padding:5px 10px;border:1px solid #ddd;border-radius:6px;font-size:12px;font-family:inherit;">
+      <button onclick="sbConnect()" style="padding:5px 12px;border-radius:6px;border:1px solid #2563eb;background:#eff6ff;color:#2563eb;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;">Connect</button>
+    </div>
+    <div style="display:flex;gap:6px;align-items:center;margin-top:6px;">
+      <select id="sbDeckSel" style="flex:1;padding:5px 8px;border:1px solid #ddd;border-radius:6px;font-size:12px;font-family:inherit;background:white;" disabled>
+        <option value="">— connect first —</option>
+      </select>
+      <button id="sbLoadBtn" onclick="sbLoadDeck()" disabled style="padding:5px 12px;border-radius:6px;border:1px solid #059669;background:#ecfdf5;color:#059669;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;">↓ Load deck</button>
+    </div>
+    <div id="sbStatus" style="font-size:11px;color:#888;margin-top:4px;"></div>
+  </div>
+
   <!-- Video Section (from folder drop) -->
   <div id="videoSection" style="display:none;margin-bottom:16px;">
     <div class="setup-header" onclick="toggleVideos()" style="border-radius:10px 10px 0 0;border:1px solid #e0e0e0;border-bottom:none;">
@@ -1241,6 +1258,99 @@ function renderLyrics() {
 
   // Refresh table view if active
   if (tableViewOn) renderTableView();
+}
+
+// ── SUPABASE ──────────────────────────────────────────────────────────────────
+var SB_LS_URL    = 'sb_url';
+var SB_LS_KEY    = 'sb_key';
+var sbUsingProxy = false;
+
+(function sbInit() {
+  fetch('/api/supabase?action=decks')
+    .then(function(r) { if (!r.ok) throw new Error('no proxy'); return r.json(); })
+    .then(function(decks) { sbUsingProxy = true; sbPopulateDecks(decks); })
+    .catch(function() {
+      var u = localStorage.getItem(SB_LS_URL);
+      var k = localStorage.getItem(SB_LS_KEY);
+      if (u) document.getElementById('sbUrl').value = u;
+      if (k) document.getElementById('sbKey').value = k;
+      if (u && k) sbConnectDirect();
+    });
+})();
+
+function sbFetchDirect(path) {
+  var url = document.getElementById('sbUrl').value.trim().replace(/\/$/, '');
+  var key = document.getElementById('sbKey').value.trim();
+  return fetch(url + path, {
+    headers: { 'apikey': key, 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json' }
+  }).then(function(r) {
+    if (!r.ok) return r.text().then(function(t) { throw new Error('HTTP ' + r.status + ' — ' + t); });
+    return r.json();
+  });
+}
+
+function sbConnect() {
+  var url = document.getElementById('sbUrl').value.trim();
+  var key = document.getElementById('sbKey').value.trim();
+  if (!url || !key) { document.getElementById('sbStatus').textContent = 'Enter URL and key first.'; return; }
+  localStorage.setItem(SB_LS_URL, url);
+  localStorage.setItem(SB_LS_KEY, key);
+  sbConnectDirect();
+}
+
+function sbConnectDirect() {
+  document.getElementById('sbStatus').textContent = 'Connecting…';
+  sbFetchDirect('/rest/v1/rpc/get_decks')
+    .catch(function() { return sbFetchDirect('/rest/v1/flashcards?select=deck&order=deck&limit=10000'); })
+    .then(function(rows) {
+      var seen = {};
+      var decks = rows.filter(function(r) { return r.deck && !seen[r.deck] && (seen[r.deck] = 1); }).map(function(r) { return r.deck; }).sort();
+      sbPopulateDecks(decks);
+    })
+    .catch(function(e) { document.getElementById('sbStatus').textContent = 'Connection failed: ' + e.message; });
+}
+
+function sbPopulateDecks(decks) {
+  var sel = document.getElementById('sbDeckSel');
+  sel.innerHTML = '<option value="">— pick a deck —</option>';
+  decks.forEach(function(d) {
+    var opt = document.createElement('option'); opt.value = d; opt.textContent = d; sel.appendChild(opt);
+  });
+  sel.disabled = false;
+  document.getElementById('sbLoadBtn').disabled = false;
+  document.getElementById('sbStatus').textContent = decks.length + ' deck' + (decks.length !== 1 ? 's' : '') + ' found.';
+}
+
+function sbLoadDeck() {
+  var deck = document.getElementById('sbDeckSel').value;
+  if (!deck) { document.getElementById('sbStatus').textContent = 'Pick a deck first.'; return; }
+  document.getElementById('sbStatus').textContent = 'Loading…';
+
+  var p = sbUsingProxy
+    ? fetch('/api/supabase?action=cards&deck=' + encodeURIComponent(deck)).then(function(r) { return r.json(); })
+    : sbFetchDirect('/rest/v1/flashcards?deck=eq.' + encodeURIComponent(deck) + '&select=front,back&order=id&limit=1000');
+
+  p.then(function(rows) {
+    if (!rows.length) { document.getElementById('sbStatus').textContent = 'No cards found in this deck.'; return; }
+
+    allRows = rows.map(function(r) {
+      var parts    = (r.back || '').split('\n');
+      var chinese  = parts[0] || '';
+      var pinyin   = parts[1] || '';
+      var english  = r.front || '';
+      // 2-col deck (no pinyin): treat front as term, back as definition
+      if (!pinyin && !chinese.match(/[\u4e00-\u9fff]/)) {
+        return { chinese: '', romanization: '', english: r.front + ' — ' + r.back, sectionHeader: '', contextLine: '' };
+      }
+      return { chinese: chinese, romanization: pinyin, english: english, sectionHeader: '', contextLine: '' };
+    });
+
+    currentCsvName = deck;
+    document.getElementById('sbStatus').textContent = '✅ ' + rows.length + ' cards loaded from "' + deck + '"';
+    setStatus('Loaded ' + rows.length + ' cards from Supabase deck "' + deck + '"');
+    refreshRows();
+    if (!deckViewOn) toggleDeckView();
+  }).catch(function(e) { document.getElementById('sbStatus').textContent = 'Load failed: ' + e.message; });
 }
 
 // ── GOOGLE SHEETS ──
