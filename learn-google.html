@@ -314,6 +314,11 @@
   .matched-word { color: #16a34a; font-weight: 600; }
   .missed-word { color: #dc2626; opacity: 0.6; }
 
+  /* ── CURRENT CARD HIGHLIGHT ── */
+  .vocab-card.current-card { background-color: #fef9c3; border-color: #fde047; border-left-color: #eab308; }
+  .vocab-card.current-card:hover { background-color: #fef08a; }
+  body.dark-mode .vocab-card.current-card { background-color: #3b3a10; border-color: #a16207; border-left-color: #ca8a04; }
+
   /* ── HARD HIGHLIGHT ── */
   .vocab-card.hard { background-color: #f3e8ff; border-color: #c4b5fd; border-left-color: #a78bfa; }
   .vocab-card.hard:hover { background-color: #ede5ff; }
@@ -962,14 +967,26 @@ function buildCard(row, fi) {
   var revealBtn = document.createElement('button');
   revealBtn.className = 'try-btn';
   revealBtn.id = 'revbtn-' + idx;
-  revealBtn.textContent = '\u25bc Reveal';
+  revealBtn.textContent = '\u25bc Reveal All';
   revealBtn.addEventListener('click', (function(capturedIdx) {
     return function(e) {
       e.stopPropagation();
-      var cardEl = document.getElementById('card-' + capturedIdx);
-      var btn = document.getElementById('revbtn-' + capturedIdx);
-      cardEl.classList.toggle('revealed');
-      btn.textContent = cardEl.classList.contains('revealed') ? '\u25b2 Hide' : '\u25bc Reveal';
+      var allCards = document.querySelectorAll('#cardsContainer .vocab-card');
+      var allRevealed = Array.from(allCards).every(function(c) { return c.classList.contains('revealed'); });
+      allCards.forEach(function(c) {
+        var i = c.id.replace('card-', '');
+        var b = document.getElementById('revbtn-' + i);
+        c.classList.remove('current-card');
+        if (allRevealed) {
+          c.classList.remove('revealed');
+          if (b) b.textContent = '\u25bc Reveal All';
+        } else {
+          c.classList.add('revealed');
+          if (b) b.textContent = '\u25b2 Hide All';
+        }
+      });
+      var clickedCard = document.getElementById('card-' + capturedIdx);
+      if (clickedCard) clickedCard.classList.add('current-card');
     };
   })(idx));
 

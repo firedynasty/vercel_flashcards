@@ -57,6 +57,13 @@
   .btn.primary { background: #2563eb; color: white; }
   .btn.google { background: #4285f4; color: white; }
   .btn.outline { background: none; border: 1px solid #ccc; color: #555; }
+  .try-btn {
+    font-size: 11px; padding: 3px 10px; border-radius: 10px;
+    border: 1px solid #d0d0d0; background: #f5f5f3; color: #555;
+    cursor: pointer; font-family: inherit; font-weight: 600;
+    white-space: nowrap; flex-shrink: 0;
+  }
+  .try-btn:hover { background: #e0e7ff; border-color: #a5b4fc; color: #4338ca; }
 
   .status { font-size: 12px; color: #888; min-height: 18px; margin-top: 6px; }
   .hint { font-size: 11px; color: #aaa; margin-top: 4px; line-height: 1.4; }
@@ -374,6 +381,20 @@
   .deck-done p { color: #888; font-size: 14px; margin: 0 0 10px; }
   .deck-hidden { display: none !important; }
 
+  /* ── CURRENT CARD HIGHLIGHT ── */
+  .vocab-card.current-card { background-color: #fef9c3 !important; border-color: #fde047 !important; border-left-color: #eab308 !important; }
+  .vocab-card.current-card:hover { background-color: #fef08a !important; }
+
+  /* ── DROP CSV ZONE ── */
+  .upload-zone {
+    border: 2px dashed #d0d0d0; border-radius: 10px;
+    padding: 18px 16px; text-align: center; cursor: pointer;
+    background: white; transition: border-color 0.2s, background 0.2s;
+  }
+  .upload-zone:hover, .upload-zone.drag-over { border-color: #2563eb; background: #eff6ff; }
+  .upload-zone .upload-label { font-size: 13px; font-weight: 600; color: #555; }
+  .upload-zone .upload-hint  { font-size: 11px; color: #aaa; margin-top: 4px; }
+
   /* ── Dropbox File Browser Modal ── */
   .dbx-modal-overlay {
     display: none;
@@ -577,6 +598,15 @@
     </div>
   </div>
 
+  <!-- Drop CSV zone -->
+  <div class="upload-zone" id="csvDropZone" style="margin:8px 0 0;"
+       ondragover="csvDropZoneOver(event)" ondragleave="csvDropZoneLeave(event)" ondrop="csvDropZoneDrop(event)"
+       onclick="document.getElementById('csvDropInput').click()">
+    <div class="upload-label">&#128196; Drop CSV here, or click to browse</div>
+    <div class="upload-hint">Uses the column mode selected above (3 cols / 2 cols / multi-line)</div>
+    <input type="file" id="csvDropInput" accept=".csv,.txt" style="display:none">
+  </div>
+
   <!-- Dropbox bucket pull -->
   <div style="margin:8px 0 0; padding:10px 14px; border:1px solid #e0e0e0; border-radius:10px; background:white; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
     <button id="dbxAuthBtn" style="font-size:11px; padding:4px 10px; border-radius:6px; border:1px solid #ccc; background:#f5f5f3; color:#555; cursor:pointer; font-family:inherit; font-weight:600; white-space:nowrap;">Dropbox</button>
@@ -638,6 +668,7 @@
       </div>
       <div class="sep"></div>
       <div class="sep"></div>
+      <span class="toggle-chip" id="revealAllChip" onclick="toggleRevealAll()">&#9660; Reveal All</span>
       <span class="toggle-chip" id="toggleTableView" onclick="toggleTableView()">Table</span>
       <span class="tbl-nav-hint">,&nbsp;up&nbsp;&nbsp;.&nbsp;down&nbsp;&nbsp;/&nbsp;play&nbsp;&nbsp;;&nbsp;stop</span>
       <span class="toggle-chip" id="toggleDeckView" onclick="toggleDeckView()">Deck</span>
@@ -1128,13 +1159,19 @@ function renderLyrics() {
     card.className = 'vocab-card';
     card.id = 'card-' + i;
 
+    // Card header row (num + chinese + reveal button)
+    var cardHeader = document.createElement('div');
+    cardHeader.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:8px;';
+
     var num = document.createElement('div');
     num.className = 'num';
     num.textContent = '#' + wordNum;
-    card.appendChild(num);
+    num.style.marginBottom = '0';
 
     var cn = document.createElement('div');
     cn.className = 'chinese';
+    cn.style.flex = '1';
+    cn.style.marginBottom = '0';
     cn.textContent = row.chinese;
     // Click on Chinese character speaks it
     cn.addEventListener('click', (function(capturedI) {
@@ -1143,18 +1180,48 @@ function renderLyrics() {
         speakLine(capturedI);
       };
     })(i));
-    card.appendChild(cn);
+
+    var revBtn = document.createElement('button');
+    revBtn.className = 'try-btn';
+    revBtn.id = 'revbtn-' + i;
+    revBtn.textContent = allRevealed ? '\u25b2 Hide All' : '\u25bc Reveal All';
+    revBtn.addEventListener('click', (function(capturedI) {
+      return function(e) {
+        e.stopPropagation();
+        var wasRevealed = allRevealed;
+        allRevealed = !allRevealed;
+        var chip = document.getElementById('revealAllChip');
+        document.querySelectorAll('#linesContainer .vocab-card').forEach(function(c) {
+          var idx = c.id.replace('card-', '');
+          c.classList.remove('current-card');
+          c.querySelectorAll('.english, .romanization').forEach(function(el) {
+            el.classList.toggle('hidden', !allRevealed);
+          });
+          var b = document.getElementById('revbtn-' + idx);
+          if (b) b.textContent = allRevealed ? '\u25b2 Hide All' : '\u25bc Reveal All';
+        });
+        chip.textContent = allRevealed ? '\u25b2 Hide All' : '\u25bc Reveal All';
+        chip.className = 'toggle-chip' + (allRevealed ? ' on' : '');
+        var thisCard = document.getElementById('card-' + capturedI);
+        if (thisCard) thisCard.classList.add('current-card');
+      };
+    })(i));
+
+    cardHeader.appendChild(num);
+    cardHeader.appendChild(cn);
+    cardHeader.appendChild(revBtn);
+    card.appendChild(cardHeader);
 
     if (row.romanization) {
       var rom = document.createElement('div');
-      rom.className = 'romanization';
+      rom.className = 'romanization' + (allRevealed ? '' : ' hidden');
       rom.textContent = row.romanization;
       card.appendChild(rom);
     }
 
     if (row.english) {
       var en = document.createElement('div');
-      en.className = 'english';
+      en.className = 'english' + (allRevealed ? '' : ' hidden');
       en.textContent = row.english;
       card.appendChild(en);
     }
@@ -2722,6 +2789,64 @@ window.addEventListener('message', function(event) {
   dbxSetAuthBtn();
   if (DBX_TOKEN) dbxResumePending();
 })();
+
+// ── REVEAL ALL / HIDE ALL ──
+var allRevealed = false; // definitions hidden by default
+function toggleRevealAll() {
+  allRevealed = !allRevealed;
+  var chip = document.getElementById('revealAllChip');
+  document.querySelectorAll('#linesContainer .vocab-card').forEach(function(c) {
+    var idx = c.id.replace('card-', '');
+    c.querySelectorAll('.english, .romanization').forEach(function(el) {
+      el.classList.toggle('hidden', !allRevealed);
+    });
+    var b = document.getElementById('revbtn-' + idx);
+    if (b) b.textContent = allRevealed ? '\u25b2 Hide All' : '\u25bc Reveal All';
+  });
+  chip.textContent = allRevealed ? '\u25b2 Hide All' : '\u25bc Reveal All';
+  chip.className = 'toggle-chip' + (allRevealed ? ' on' : '');
+}
+
+// ── DROP CSV ZONE ──
+function csvDropZoneOver(e) {
+  e.preventDefault();
+  document.getElementById('csvDropZone').classList.add('drag-over');
+}
+function csvDropZoneLeave(e) {
+  document.getElementById('csvDropZone').classList.remove('drag-over');
+}
+function csvDropZoneDrop(e) {
+  e.preventDefault();
+  document.getElementById('csvDropZone').classList.remove('drag-over');
+  var file = e.dataTransfer.files[0];
+  if (file) readDropCsvFile(file);
+}
+document.getElementById('csvDropInput').addEventListener('change', function() {
+  if (this.files[0]) readDropCsvFile(this.files[0]);
+  this.value = '';
+});
+function readDropCsvFile(file) {
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var text = e.target.result;
+    var forceMode;
+    if (csvColMode === 0) {
+      text = convertMultilineBlocksToCsv(text);
+      forceMode = text.startsWith('term,definition') ? 2 : 3;
+    } else {
+      forceMode = csvColMode;
+      if (text.indexOf('\t') >= 0) text = text.split('\n').map(tabToCsv).join('\n');
+    }
+    var ok = loadCsvText(text, file.name, forceMode);
+    if (ok) {
+      document.getElementById('dbxPullStatus').textContent = '\u2705 Loaded ' + file.name;
+      setTimeout(function() { document.getElementById('dbxPullStatus').textContent = ''; }, 2500);
+      if (tableViewOn) renderTableView();
+      else if (!deckViewOn) toggleDeckView();
+    }
+  };
+  reader.readAsText(file);
+}
 
 // ── DROPBOX FILE BROWSER MODAL ──
 var DBX_FILE_LAST_PATH = 'chinese-tts-dbx-last-path';
