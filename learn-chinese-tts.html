@@ -1333,16 +1333,19 @@ function sbLoadDeck() {
   p.then(function(rows) {
     if (!rows.length) { document.getElementById('sbStatus').textContent = 'No cards found in this deck.'; return; }
 
+    var colModeEl = document.querySelector('input[name="csvColMode"]:checked');
+    var colMode   = colModeEl ? parseInt(colModeEl.value) : 3;
+
     allRows = rows.map(function(r) {
-      var parts    = (r.back || '').split('\n');
-      var chinese  = parts[0] || '';
-      var pinyin   = parts[1] || '';
-      var english  = r.front || '';
-      // 2-col deck (no pinyin): treat front as term, back as definition
-      if (!pinyin && !chinese.match(/[\u4e00-\u9fff]/)) {
-        return { chinese: '', romanization: '', english: r.front + ' — ' + r.back, sectionHeader: '', contextLine: '' };
+      if (colMode === 2) {
+        // 2-col: front = term, back = definition (no romanization)
+        return { chinese: r.front || '', romanization: '', english: r.back || '', sectionHeader: '', contextLine: '' };
       }
-      return { chinese: chinese, romanization: pinyin, english: english, sectionHeader: '', contextLine: '' };
+      // 3-col default: front = english, back = "chinese\npinyin"
+      var parts   = (r.back || '').split('\n');
+      var chinese = parts[0] || '';
+      var pinyin  = parts[1] || '';
+      return { chinese: chinese, romanization: pinyin, english: r.front || '', sectionHeader: '', contextLine: '' };
     });
 
     currentCsvName = deck;
