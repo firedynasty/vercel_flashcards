@@ -1,0 +1,1149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Reading Map</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;0,600;0,700;1,500&family=Inter:wght@400;500;600&display=swap');
+
+:root{
+  --paper: #E9E4D6;
+  --paper-raised: #F2EEE2;
+  --ink: #26221B;
+  --ink-soft: #56503F;
+  --oxblood: #6E2A2A;
+  --teal: #2B4A48;
+  --gold: #A8863F;
+  --line: #C9C0AA;
+  --app-font-size: 15px;
+}
+[data-theme="dark"] {
+  --paper: #1a1a1a;
+  --paper-raised: #242424;
+  --ink: #e8e0d0;
+  --ink-soft: #9e9688;
+  --oxblood: #c96b6b;
+  --teal: #5a9e9c;
+  --gold: #c8a050;
+  --line: #3a3530;
+}
+
+*{box-sizing:border-box;}
+body{
+  margin:0;
+  background:var(--paper);
+  color:var(--ink);
+  font-family:'Inter',sans-serif;
+  font-size:var(--app-font-size);
+  padding:32px 16px 80px;
+}
+.wrap{max-width:760px;margin:0 auto;}
+
+.title{
+  font-family:'Lora',serif;
+  font-weight:700;
+  font-size:28px;
+  margin:0 0 2px;
+  letter-spacing:-0.01em;
+}
+.subtitle{
+  font-size:13px;
+  color:var(--ink-soft);
+  margin:0 0 6px;
+  line-height:1.5;
+}
+.toolbar{
+  display:flex;
+  gap:10px;
+  margin-bottom:28px;
+  align-items:center;
+}
+
+.branch{margin-bottom:36px;}
+.branch-head{
+  display:flex;
+  align-items:baseline;
+  justify-content:space-between;
+  border-bottom:1px solid var(--line);
+  padding-bottom:8px;
+  margin-bottom:14px;
+}
+.branch-title{
+  font-family:'Lora',serif;
+  font-weight:600;
+  font-size:19px;
+  margin:0;
+}
+.branch.family .branch-title{color:var(--oxblood);}
+.branch.chapters .branch-title{color:var(--teal);}
+.branch-tools{display:flex;gap:10px;}
+.linklike{
+  background:none;border:none;cursor:pointer;
+  font-family:'Inter',sans-serif;
+  font-size:12px;
+  color:var(--ink-soft);
+  padding:2px 0;
+  border-bottom:1px dotted var(--ink-soft);
+}
+.linklike:hover{color:var(--ink);}
+
+ul.tree{list-style:none;margin:0;padding:0;}
+ul.tree li{margin-bottom:6px;}
+
+.node{
+  background:var(--paper-raised);
+  border:1px solid var(--line);
+  border-radius:3px;
+  margin:4px 0;
+}
+.node-head{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:10px 12px;
+  cursor:pointer;
+  user-select:none;
+}
+.chev{
+  width:9px;height:9px;
+  border-right:1.5px solid var(--ink-soft);
+  border-bottom:1.5px solid var(--ink-soft);
+  transform:rotate(-45deg);
+  transition:transform .15s ease;
+  flex:none;
+}
+.node.open > .node-head .chev{transform:rotate(45deg);}
+.node-name{
+  font-family:'Lora',serif;
+  font-weight:600;
+  font-size:15.5px;
+  flex:1;
+}
+.family .node-name{color:var(--oxblood);}
+.chapters .node-name{color:var(--teal);}
+.node-role{
+  font-size:12px;
+  color:var(--ink-soft);
+  font-style:italic;
+}
+.node-body{
+  display:none;
+  padding:10px 14px 14px;
+  border-top:1px solid var(--line);
+}
+.node.open .node-body{display:block;}
+
+.node-body textarea{
+  width:100%;
+  font-family:'Inter',sans-serif;
+  font-size:13.5px;
+  color:var(--ink);
+  background:#fff;
+  border:1px solid var(--line);
+  border-radius:3px;
+  padding:8px 9px;
+  resize:vertical;
+  line-height:1.5;
+  min-height:60px;
+}
+.chapters .node-body textarea{
+  min-height:180px;
+}
+.node-body textarea:focus{outline:1.5px solid var(--gold);}
+
+.paste-btn{
+  background:none;
+  border:none;
+  color:var(--ink-soft);
+  font-size:11px;
+  cursor:pointer;
+  padding:2px 4px;
+  border-bottom:1px dotted var(--ink-soft);
+}
+.paste-btn:hover{color:var(--ink);}
+
+.add-form{
+  border:1px dashed var(--line);
+  border-radius:3px;
+  padding:12px;
+  margin-top:10px;
+  display:none;
+}
+.add-form.open{display:block;}
+.add-form input[type=text]{
+  width:100%;
+  font-family:'Inter',sans-serif;
+  font-size:13.5px;
+  border:1px solid var(--line);
+  border-radius:3px;
+  padding:8px 9px;
+  margin-bottom:8px;
+}
+.add-form .actions{display:flex;gap:8px;justify-content:flex-end;}
+.btn{
+  font-family:'Inter',sans-serif;
+  font-size:12.5px;
+  font-weight:500;
+  border-radius:3px;
+  padding:7px 13px;
+  cursor:pointer;
+  border:1px solid transparent;
+}
+.btn-primary.family{background:var(--oxblood);color:#fff;}
+.btn-primary.chapters{background:var(--teal);color:#fff;}
+.btn-ghost{background:none;border:1px solid var(--line);color:var(--ink-soft);}
+
+.empty-note{
+  font-size:12.5px;
+  color:var(--ink-soft);
+  font-style:italic;
+  padding:6px 2px 2px;
+}
+
+.save-pill{
+  position:fixed;
+  bottom:18px; left:50%;
+  transform:translateX(-50%) translateY(20px);
+  background:var(--ink);
+  color:var(--paper);
+  font-size:12px;
+  padding:7px 14px;
+  border-radius:20px;
+  opacity:0;
+  transition:opacity .25s ease, transform .25s ease;
+  pointer-events:none;
+}
+.save-pill.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* ── GOOGLE DOCS SETUP ── */
+.gdoc-setup {
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  margin-bottom: 20px;
+  background: var(--paper-raised);
+}
+.gdoc-setup-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  cursor: pointer;
+  user-select: none;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink-soft);
+}
+.gdoc-setup-header .toggle-arrow {
+  font-size: 10px;
+  transition: transform .15s ease;
+}
+.gdoc-setup-body {
+  padding: 10px 14px 14px;
+  border-top: 1px solid var(--line);
+}
+.gdoc-setup.collapsed .gdoc-setup-body { display: none; }
+.gdoc-setup.collapsed .toggle-arrow { transform: rotate(-90deg); }
+.gdoc-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+.gdoc-status {
+  font-size: 12px;
+  color: var(--ink-soft);
+  margin: 4px 0 0;
+  min-height: 16px;
+}
+/* ── RECENT DOCS DROPDOWN ── */
+.recent-dropdown-wrapper { position: relative; display: block; width: 100%; }
+.recent-dropdown {
+  position: absolute; top: 100%; left: 0;
+  width: 100%;
+  max-height: 220px; overflow-y: auto;
+  background: white; border: 1px solid var(--line); border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0,0,0,.1); z-index: 100;
+}
+.recent-dropdown-item {
+  display: block; width: 100%; padding: 12px 14px; min-height: 44px;
+  text-align: left; background: none; border: none;
+  border-bottom: 1px solid #f0f0f0; font-size: 13px; cursor: pointer;
+  white-space: normal; overflow: visible; word-break: break-word;
+  font-family: inherit; color: var(--ink);
+}
+.recent-dropdown-item:last-child { border-bottom: none; }
+.recent-dropdown-item:active { background: #f5f5f5; }
+
+/* ── NAVBAR ── */
+.app-nav {
+  position: sticky; top: 0; z-index: 200;
+  background: var(--paper-raised);
+  border-bottom: 1px solid var(--line);
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 12px;
+  overflow-x: auto; -webkit-overflow-scrolling: touch;
+  white-space: nowrap;
+}
+.app-nav button {
+  background: none; border: 1px solid var(--line);
+  border-radius: 4px; cursor: pointer;
+  font-family: inherit; font-size: 13px;
+  color: var(--ink-soft); padding: 8px 12px;
+  min-height: 44px; min-width: 44px;
+  white-space: nowrap; flex: none;
+}
+.app-nav button:active { background: var(--paper); }
+.app-nav button.active { background: var(--gold); color: #fff; border-color: var(--gold); }
+.app-nav-sep { width: 1px; height: 28px; background: var(--line); flex: none; margin: 0 2px; }
+
+/* ── OUTLINE MODE ── */
+.outline-list {
+  list-style: disc; margin: 4px 0; padding: 0 0 0 18px;
+}
+.outline-list li { margin-bottom: 4px; line-height: 1.5; }
+.outline-list .indent-1 { margin-left: 20px; list-style: circle; }
+.outline-list .indent-2 { margin-left: 40px; list-style: square; }
+
+/* ── SAVE CONFIRMATION ── */
+.gdoc-confirm-panel {
+  display: none; margin-top: 8px; padding: 10px 12px;
+  background: var(--paper); border: 1px solid var(--line);
+  border-radius: 4px; font-size: 13px; color: var(--ink);
+}
+.gdoc-confirm-panel .confirm-btns {
+  display: flex; gap: 8px; margin-top: 8px;
+}
+.gdoc-confirm-panel .confirm-btns button {
+  padding: 7px 14px; border-radius: 3px; font-family: inherit;
+  font-size: 12.5px; cursor: pointer; border: 1px solid var(--line);
+  background: var(--paper-raised); color: var(--ink);
+}
+.gdoc-confirm-panel .confirm-btns .btn-overwrite {
+  background: var(--oxblood); color: #fff; border-color: var(--oxblood);
+}
+</style>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+<nav class="app-nav" id="appNav">
+  <button id="navFontDec" title="Decrease font size" aria-label="A−">A−</button>
+  <button id="navFontInc" title="Increase font size" aria-label="A+">A+</button>
+  <div class="app-nav-sep"></div>
+  <button id="navExpandAll" title="Expand all nodes">Expand All</button>
+  <div class="app-nav-sep"></div>
+  <button id="navOutline" title="Toggle outline mode">Outline</button>
+  <div class="app-nav-sep"></div>
+  <button id="navTheme" title="Toggle dark/light mode">🌙</button>
+</nav>
+<div class="wrap">
+  <input class="title" id="bookTitle" value="Reading Map" placeholder="Book title…" style="background:none;border:none;border-bottom:1px dashed var(--line);border-radius:0;width:100%;padding:0;margin:0 0 2px;cursor:text;">
+  <p class="subtitle">Paste import to load any book's notes — or start blank and add as you go. Export to save.</p>
+
+  <!-- GOOGLE DOCS SETUP -->
+  <div class="gdoc-setup" id="gdocSetup">
+    <div class="gdoc-setup-header" id="gdocSetupToggle">
+      <span class="toggle-arrow">▼</span>
+      <span>Google Docs</span>
+    </div>
+    <div class="gdoc-setup-body">
+      <div class="gdoc-row">
+        <button class="linklike" id="gdocSignInBtn">Sign In</button>
+        <div class="recent-dropdown-wrapper">
+          <button class="linklike" id="gdocRecentBtn" disabled>Recent ▾</button>
+          <div id="gdocRecentDropdown" class="recent-dropdown" hidden></div>
+        </div>
+        <button class="linklike" id="gdocSaveBtn" style="display:none">Save →</button>
+      </div>
+      <div class="gdoc-confirm-panel" id="gdocConfirmPanel">
+        <span>Overwrite <strong id="gdocConfirmName"></strong>?</span>
+        <div class="confirm-btns">
+          <button id="gdocConfirmCancel">Cancel</button>
+          <button class="btn-overwrite" id="gdocConfirmOverwrite">Overwrite</button>
+        </div>
+      </div>
+      <p class="gdoc-status" id="gdocStatus"></p>
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <button class="linklike" id="exportBtn">export .txt</button>
+    <button class="linklike" id="importBtn">import .txt</button>
+    <button class="linklike" id="pasteImportBtn">paste import</button>
+    <button class="paste-btn" id="textEditorBtn" title="Open Text Editor" style="border: 2px solid #7c3aed; color: #7c3aed;" onclick="window.open('paste-and-preview.html', '_blank')">Text Editor</button>
+    <button class="paste-btn" title="Open Flashcards" style="border: 2px solid #0ea5e9; color: #0ea5e9;" onclick="window.open('http://localhost:3000/flashcards', '_blank')">Flashcards</button>
+    <input type="file" id="importFile" accept=".txt" style="display:none;">
+  </div>
+
+  <!-- FAMILY BRANCH -->
+  <div class="branch family">
+    <div class="branch-head">
+      <p class="branch-title">The Family</p>
+      <div class="branch-tools">
+        <button class="linklike" data-action="expand-family">expand all</button>
+        <button class="linklike" data-action="collapse-family">collapse all</button>
+      </div>
+    </div>
+    <ul class="tree" id="familyTree"></ul>
+    <button class="linklike" id="showAddPerson" style="margin-top:8px;">+ add a person</button>
+    <div class="add-form" id="addPersonForm">
+      <input type="text" id="newPersonName" placeholder="Name">
+      <input type="text" id="newPersonRole" placeholder="Role (e.g. Fyodor's second son)">
+      <div class="actions">
+        <button class="btn btn-ghost" id="cancelAddPerson">Cancel</button>
+        <button class="btn btn-primary family" id="confirmAddPerson">Add</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHAPTERS BRANCH -->
+  <div class="branch chapters">
+    <div class="branch-head">
+      <p class="branch-title">The Chapters</p>
+      <div class="branch-tools">
+        <button class="linklike" data-action="expand-chapters">expand all</button>
+        <button class="linklike" data-action="collapse-chapters">collapse all</button>
+      </div>
+    </div>
+    <ul class="tree" id="chapterTree"></ul>
+    <button class="linklike" id="showAddChapter" style="margin-top:8px;">+ add a chapter</button>
+    <div class="add-form" id="addChapterForm">
+      <input type="text" id="newChapterName" placeholder="Chapter title or number (e.g. Book II, Ch. 6)">
+      <div class="actions">
+        <button class="btn btn-ghost" id="cancelAddChapter">Cancel</button>
+        <button class="btn btn-primary chapters" id="confirmAddChapter">Add</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="save-pill" id="savePill">Imported</div>
+
+<script>
+var GDOC_CLIENT_ID = '1095683227908-7ro25k16mprkf408i3lf583gti8v759b.apps.googleusercontent.com';
+var gdriveAccessToken = '';
+var gdocTokenClient = null;
+var _gdocDismissListener = null;
+var _outlineMode   = false;
+var _allExpanded   = false;
+var _loadedDocId   = null;
+var _loadedDocName = null;
+
+let people   = [];
+let chapters = [];
+
+function uid(){ return Math.random().toString(36).slice(2,10); }
+
+function seedPeople(){
+  return [];
+}
+
+function loadData(){
+  people   = seedPeople();
+  chapters = [];
+  renderPeople();
+  renderChapters();
+}
+
+function queueSave(){ /* no-op — use export */ }
+
+function flashPill(msg){
+  const pill = document.getElementById('savePill');
+  pill.textContent = msg;
+  pill.classList.add('show');
+  setTimeout(()=> pill.classList.remove('show'), 1200);
+}
+
+/* ---------- export ---------- */
+
+function exportTxt(){
+  const lines = [];
+
+  const title = document.getElementById('bookTitle').value.trim();
+  if(title) lines.push('BOOK: ' + title, '');
+
+  lines.push('=== PEOPLE ===', '');
+  people.forEach(p => {
+    lines.push(`#${p.name}${p.role ? ' [' + p.role + ']' : ''}`);
+    if(p.notes.trim()) lines.push(p.notes.trim());
+    lines.push('');
+  });
+
+  lines.push('=== CHAPTERS ===', '');
+  chapters.forEach(ch => {
+    lines.push(`#${ch.name}`);
+    if(ch.notes.trim()) lines.push(ch.notes.trim());
+    lines.push('');
+  });
+
+  const blob = new Blob([lines.join('\n')], { type: 'text/plain' });
+  const a    = document.createElement('a');
+  a.href     = URL.createObjectURL(blob);
+  const slug = (document.getElementById('bookTitle').value.trim() || 'reading_map')
+    .toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+  a.download = slug + '_notes.txt';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+/* ---------- import ---------- */
+
+function importTxt(text){
+  const result = parseExport(text);
+  if(!result) return alert('Could not parse the file — make sure it was exported from this tool.');
+  if(result.bookTitle){
+    document.getElementById('bookTitle').value = result.bookTitle;
+    document.title = result.bookTitle + ' — Reading Map';
+  }
+  people   = result.people;
+  chapters = result.chapters;
+  renderPeople();
+  renderChapters();
+  flashPill('Imported');
+}
+
+function parseExport(text){
+  // Extract optional book title
+  const titleMatch = text.match(/^BOOK:\s*(.+)/m);
+  const bookTitle  = titleMatch ? titleMatch[1].trim() : '';
+
+  // Split into PEOPLE / CHAPTERS sections
+  const sectionRe = /^===\s*(PEOPLE|CHAPTERS)\s*===/m;
+  const parts = text.split(sectionRe);
+
+  const sectionMap = {};
+  for(let i = 1; i < parts.length; i += 2){
+    sectionMap[parts[i]] = parts[i + 1] || '';
+  }
+
+  if(!sectionMap['PEOPLE'] && !sectionMap['CHAPTERS']) return null;
+
+  return {
+    bookTitle,
+    people:   parseEntries(sectionMap['PEOPLE']   || '', true),
+    chapters: parseEntries(sectionMap['CHAPTERS'] || '', false),
+  };
+}
+
+function parseEntries(text, isPeople){
+  // Split on lines starting with #
+  const blocks = text.split(/(?=^#)/m);
+  const entries = [];
+
+  blocks.forEach(block => {
+    block = block.trim();
+    if(!block) return;
+
+    const lines    = block.split('\n');
+    const header   = lines[0].replace(/^#/, '').trim();
+    const noteText = lines.slice(1).join('\n').trim();
+
+    // Parse "Name [role]" — role is optional
+    const m    = header.match(/^(.+?)\s*\[(.+?)\]\s*$/);
+    const name = m ? m[1].trim() : header;
+    const role = m ? m[2].trim() : '';
+
+    if(!name) return;
+
+    if(isPeople){
+      entries.push({ id: uid(), name, role, notes: noteText });
+    } else {
+      entries.push({ id: uid(), name, notes: noteText });
+    }
+  });
+
+  return entries;
+}
+
+/* ---------- render people ---------- */
+
+function renderPeople(){
+  const root = document.getElementById('familyTree');
+  root.innerHTML = '';
+  if(!people.length){
+    const empty = document.createElement('li');
+    empty.innerHTML = '<p class="empty-note">No characters yet — add one, or paste import to load.</p>';
+    root.appendChild(empty);
+    return;
+  }
+  people.forEach(p => root.appendChild(buildPersonNode(p)));
+}
+
+function buildPersonNode(p){
+  const li   = document.createElement('li');
+  const node = document.createElement('div');
+  node.className  = 'node family';
+  node.dataset.id = p.id;
+
+  const head = document.createElement('div');
+  head.className = 'node-head';
+  head.innerHTML = `<span class="chev"></span><span class="node-name">${escapeHtml(p.name)}</span><span class="node-role">${escapeHtml(p.role||'')}</span>`;
+  head.addEventListener('click', function() {
+    node.classList.toggle('open');
+    if (_outlineMode && node.classList.contains('open')) {
+      applyOutlineMode(body, true);
+    }
+  });
+
+  const body = document.createElement('div');
+  body.className = 'node-body';
+  body.innerHTML = `
+    <textarea placeholder="Notes on this person...">${escapeHtml(p.notes||'')}</textarea>
+  `;
+  const pTA = body.querySelector('textarea');
+  pTA.addEventListener('input', e => { p.notes = e.target.value; queueSave(); });
+
+  node.appendChild(head);
+  node.appendChild(body);
+  li.appendChild(node);
+  return li;
+}
+
+/* ---------- render chapters ---------- */
+
+function renderChapters(){
+  const root = document.getElementById('chapterTree');
+  root.innerHTML = '';
+  if(!chapters.length){
+    const empty = document.createElement('li');
+    empty.innerHTML = '<p class="empty-note">No chapters yet — add one as you finish it, or paste import to load.</p>';
+    root.appendChild(empty);
+    return;
+  }
+  chapters.forEach(ch => root.appendChild(buildChapterNode(ch)));
+}
+
+function buildChapterNode(ch){
+  const li   = document.createElement('li');
+  const node = document.createElement('div');
+  node.className  = 'node chapters';
+  node.dataset.id = ch.id;
+
+  const head = document.createElement('div');
+  head.className = 'node-head';
+  head.innerHTML = `<span class="chev"></span><span class="node-name">${escapeHtml(ch.name)}</span>`;
+  head.addEventListener('click', function() {
+    node.classList.toggle('open');
+    if (_outlineMode && node.classList.contains('open')) {
+      applyOutlineMode(body, true);
+    }
+  });
+
+  const body = document.createElement('div');
+  body.className = 'node-body';
+  body.innerHTML = `
+    <textarea placeholder="What happened, what you noticed...">${escapeHtml(ch.notes||'')}</textarea>
+  `;
+  const cTA = body.querySelector('textarea');
+  cTA.addEventListener('input', e => { ch.notes = e.target.value; queueSave(); });
+
+  node.appendChild(head);
+  node.appendChild(body);
+  li.appendChild(node);
+  return li;
+}
+
+/* ---------- helpers ---------- */
+
+async function pasteInto(textarea, obj, field){
+  try {
+    const text = await navigator.clipboard.readText();
+    if(!text) return;
+    const sep = obj[field].trim() ? '\n\n' : '';
+    obj[field] = obj[field] + sep + text;
+    textarea.value = obj[field];
+    queueSave();
+  } catch(e) {
+    alert('Clipboard access denied — try pasting manually (Cmd+V).');
+  }
+}
+
+function escapeHtml(str){
+  return String(str).replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
+}
+
+/* ---------- add person ---------- */
+
+document.getElementById('showAddPerson').addEventListener('click', ()=>{
+  document.getElementById('addPersonForm').classList.add('open');
+});
+document.getElementById('cancelAddPerson').addEventListener('click', ()=>{
+  document.getElementById('addPersonForm').classList.remove('open');
+  document.getElementById('newPersonName').value = '';
+  document.getElementById('newPersonRole').value = '';
+});
+document.getElementById('confirmAddPerson').addEventListener('click', ()=>{
+  const name = document.getElementById('newPersonName').value.trim();
+  const role = document.getElementById('newPersonRole').value.trim();
+  if(!name) return;
+  people.push({ id: uid(), name, role, notes: '' });
+  document.getElementById('newPersonName').value = '';
+  document.getElementById('newPersonRole').value = '';
+  document.getElementById('addPersonForm').classList.remove('open');
+  queueSave();
+  renderPeople();
+});
+
+/* ---------- add chapter ---------- */
+
+document.getElementById('showAddChapter').addEventListener('click', ()=>{
+  document.getElementById('addChapterForm').classList.add('open');
+});
+document.getElementById('cancelAddChapter').addEventListener('click', ()=>{
+  document.getElementById('addChapterForm').classList.remove('open');
+  document.getElementById('newChapterName').value = '';
+});
+document.getElementById('confirmAddChapter').addEventListener('click', ()=>{
+  const name = document.getElementById('newChapterName').value.trim();
+  if(!name) return;
+  chapters.push({ id: uid(), name, notes: '' });
+  document.getElementById('newChapterName').value = '';
+  document.getElementById('addChapterForm').classList.remove('open');
+  queueSave();
+  renderChapters();
+});
+
+/* ---------- expand / collapse ---------- */
+
+document.querySelector('[data-action="expand-family"]').addEventListener('click', ()=>{
+  document.querySelectorAll('#familyTree .node').forEach(n => n.classList.add('open'));
+});
+document.querySelector('[data-action="collapse-family"]').addEventListener('click', ()=>{
+  document.querySelectorAll('#familyTree .node').forEach(n => n.classList.remove('open'));
+});
+document.querySelector('[data-action="expand-chapters"]').addEventListener('click', ()=>{
+  document.querySelectorAll('#chapterTree .node').forEach(n => n.classList.add('open'));
+});
+document.querySelector('[data-action="collapse-chapters"]').addEventListener('click', ()=>{
+  document.querySelectorAll('#chapterTree .node').forEach(n => n.classList.remove('open'));
+});
+
+/* ---------- export / import wiring ---------- */
+
+document.getElementById('exportBtn').addEventListener('click', exportTxt);
+
+document.getElementById('pasteImportBtn').addEventListener('click', async function() {
+  var text;
+  try {
+    text = await navigator.clipboard.readText();
+  } catch(e) {
+    alert('Clipboard access denied — try import .txt instead.');
+    return;
+  }
+  if (!text.trim()) return alert('Clipboard is empty.');
+  var docId = extractGDocId(text);
+  if (docId && gdriveAccessToken) {
+    await gdocImport(docId);
+  } else {
+    importTxt(text);
+  }
+});
+
+document.getElementById('importBtn').addEventListener('click', ()=>{
+  document.getElementById('importFile').click();
+});
+document.getElementById('importFile').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => importTxt(ev.target.result);
+  reader.readAsText(file);
+  e.target.value = ''; // reset so same file can be re-imported
+});
+
+/* ── GOOGLE DOCS WIRING ── */
+document.addEventListener('DOMContentLoaded', function() {
+  // Google Docs section
+  document.getElementById('gdocSignInBtn').addEventListener('click', gdocSignIn);
+  document.getElementById('gdocSetupToggle').addEventListener('click', function() {
+    document.getElementById('gdocSetup').classList.toggle('collapsed');
+  });
+  document.getElementById('gdocRecentBtn').addEventListener('click', function() {
+    var dropdown = document.getElementById('gdocRecentDropdown');
+    if (!dropdown.hasAttribute('hidden')) {
+      closeGdocDropdown();
+    } else {
+      fetchRecentDocs();
+    }
+  });
+  document.getElementById('gdocSaveBtn').addEventListener('click', showGdocConfirm);
+  document.getElementById('gdocConfirmCancel').addEventListener('click', hideGdocConfirm);
+  document.getElementById('gdocConfirmOverwrite').addEventListener('click', gdocSave);
+
+  // Navbar controls
+  initFontSize();
+  initTheme();
+  document.getElementById('navFontDec').addEventListener('click', function() {
+    var cur = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--app-font-size'));
+    setFontSize((cur || 15) - 2);
+  });
+  document.getElementById('navFontInc').addEventListener('click', function() {
+    var cur = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--app-font-size'));
+    setFontSize((cur || 15) + 2);
+  });
+  document.getElementById('navExpandAll').addEventListener('click', function() {
+    toggleAllNodes(!_allExpanded);
+  });
+  document.getElementById('navOutline').addEventListener('click', toggleOutlineMode);
+  document.getElementById('navTheme').addEventListener('click', toggleTheme);
+});
+
+// GIS loads async — poll until ready, then init the token client
+var _gdocCheckGoogle = setInterval(function() {
+  if (window.google && window.google.accounts) {
+    clearInterval(_gdocCheckGoogle);
+    gdocInitClient();
+  }
+}, 200);
+
+/* ── GOOGLE DOCS AUTH ── */
+
+function setGdocStatus(msg) {
+  document.getElementById('gdocStatus').textContent = msg;
+}
+
+function gdocInitClient() {
+  gdocTokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: GDOC_CLIENT_ID,
+    scope: 'https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/documents',
+    callback: function(response) {
+      if (response.error) {
+        setGdocStatus('Sign-in error: ' + response.error);
+        return;
+      }
+      gdriveAccessToken = response.access_token;
+      document.getElementById('gdocSignInBtn').textContent = 'Sign Out';
+      document.getElementById('gdocRecentBtn').disabled = false;
+      setGdocStatus('');
+    }
+  });
+}
+
+function gdocSignIn() {
+  if (gdriveAccessToken) {
+    google.accounts.oauth2.revoke(gdriveAccessToken, function() {});
+    gdriveAccessToken = '';
+    document.getElementById('gdocSignInBtn').textContent = 'Sign In';
+    document.getElementById('gdocRecentBtn').disabled = true;
+    closeGdocDropdown();
+    _loadedDocId = null;
+    _loadedDocName = null;
+    document.getElementById('gdocSaveBtn').style.display = 'none';
+    hideGdocConfirm();
+    setGdocStatus('');
+  } else if (gdocTokenClient) {
+    gdocTokenClient.requestAccessToken({ prompt: '' });
+  } else {
+    setGdocStatus('Google API not loaded yet — try again.');
+  }
+}
+
+/* ── GOOGLE DOC IMPORT ── */
+
+function extractGDocId(text) {
+  var m = String(text).match(/\/document\/d\/([a-zA-Z0-9_-]+)/);
+  return m ? m[1] : null;
+}
+
+async function gdocImport(fileId, docName) {
+  setGdocStatus('Loading\u2026');
+  try {
+    // Fetch doc name if not provided (e.g. paste-URL path only has the ID)
+    if (!docName) {
+      var metaResp = await fetch(
+        'https://www.googleapis.com/drive/v3/files/' + encodeURIComponent(fileId) + '?fields=name',
+        { headers: { Authorization: 'Bearer ' + gdriveAccessToken } }
+      );
+      if (metaResp.ok) {
+        var meta = await metaResp.json();
+        docName = meta.name || '';
+      }
+    }
+    var url = 'https://www.googleapis.com/drive/v3/files/' +
+              encodeURIComponent(fileId) +
+              '/export?mimeType=' + encodeURIComponent('text/plain');
+    var resp = await fetch(url, {
+      headers: { Authorization: 'Bearer ' + gdriveAccessToken }
+    });
+    if (!resp.ok) throw new Error('Drive API error ' + resp.status);
+    var text = await resp.text();
+    importTxt(text);
+    _loadedDocId   = fileId;
+    _loadedDocName = docName || '';
+    var saveBtn = document.getElementById('gdocSaveBtn');
+    saveBtn.textContent = 'Save \u2192 ' + (_loadedDocName || 'doc');
+    saveBtn.style.display = '';
+    setGdocStatus('Imported from Google Doc');
+  } catch (err) {
+    setGdocStatus('Error importing doc: ' + err.message);
+  }
+}
+
+/* ── RECENT DOCS DROPDOWN ── */
+
+async function fetchRecentDocs() {
+  var btn = document.getElementById('gdocRecentBtn');
+  btn.disabled = true;
+  btn.textContent = 'Loading\u2026';
+  try {
+    var q = encodeURIComponent("mimeType='application/vnd.google-apps.document' and trashed=false");
+    var fields = encodeURIComponent('files(id,name,viewedByMeTime)');
+    var url = 'https://www.googleapis.com/drive/v3/files?q=' + q +
+              '&orderBy=viewedByMeTime+desc&pageSize=10&fields=' + fields;
+    var resp = await fetch(url, { headers: { Authorization: 'Bearer ' + gdriveAccessToken } });
+    if (!resp.ok) throw new Error('Drive API error ' + resp.status);
+    var data = await resp.json();
+    openGdocDropdown(data.files);
+  } catch (err) {
+    setGdocStatus('Error fetching recent docs: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Recent \u25be';
+  }
+}
+
+function closeGdocDropdown() {
+  var dropdown = document.getElementById('gdocRecentDropdown');
+  if (dropdown) dropdown.setAttribute('hidden', '');
+  if (_gdocDismissListener) {
+    document.removeEventListener('touchstart', _gdocDismissListener);
+    document.removeEventListener('click', _gdocDismissListener);
+    _gdocDismissListener = null;
+  }
+}
+
+function _registerGdocDismissListener() {
+  if (_gdocDismissListener) return;
+  _gdocDismissListener = function(e) {
+    var wrapper = document.querySelector('.recent-dropdown-wrapper');
+    if (wrapper && !wrapper.contains(e.target)) {
+      closeGdocDropdown();
+    }
+  };
+  setTimeout(function() {
+    document.addEventListener('touchstart', _gdocDismissListener);
+    document.addEventListener('click', _gdocDismissListener);
+  }, 0);
+}
+
+function openGdocDropdown(docs) {
+  var dropdown = document.getElementById('gdocRecentDropdown');
+  dropdown.innerHTML = '';
+  if (!docs || docs.length === 0) {
+    var empty = document.createElement('button');
+    empty.className = 'recent-dropdown-item';
+    empty.textContent = 'No recent documents found';
+    empty.disabled = true;
+    empty.style.color = '#999';
+    empty.style.cursor = 'default';
+    dropdown.appendChild(empty);
+    dropdown.removeAttribute('hidden');
+    _registerGdocDismissListener();
+    return;
+  }
+  docs.forEach(function(doc) {
+    var item = document.createElement('button');
+    item.className = 'recent-dropdown-item';
+    item.textContent = doc.name;
+    item.addEventListener('click', function() {
+      closeGdocDropdown();
+      gdocImport(doc.id, doc.name);
+    });
+    dropdown.appendChild(item);
+  });
+  dropdown.removeAttribute('hidden');
+  _registerGdocDismissListener();
+}
+
+/* ── FONT SIZE ── */
+function setFontSize(n) {
+  n = Math.max(12, Math.min(24, n));
+  document.documentElement.style.setProperty('--app-font-size', n + 'px');
+  localStorage.setItem('litFontSize', n);
+  document.getElementById('navFontDec').disabled = n <= 12;
+  document.getElementById('navFontInc').disabled = n >= 24;
+  document.getElementById('navFontDec').style.opacity = n <= 12 ? '0.4' : '';
+  document.getElementById('navFontInc').style.opacity = n >= 24 ? '0.4' : '';
+}
+function initFontSize() {
+  var saved = parseInt(localStorage.getItem('litFontSize'), 10);
+  setFontSize(isNaN(saved) ? 15 : saved);
+}
+
+/* ── THEME ── */
+function applyTheme(theme) {
+  document.documentElement.dataset.theme = theme;
+  document.getElementById('navTheme').textContent = theme === 'dark' ? '☀' : '🌙';
+}
+function toggleTheme() {
+  var next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+  applyTheme(next);
+  localStorage.setItem('litTheme', next);
+}
+function initTheme() {
+  var saved = localStorage.getItem('litTheme');
+  if (saved) {
+    applyTheme(saved);
+  } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+    applyTheme('dark');
+  } else {
+    applyTheme('light');
+  }
+}
+
+/* ── EXPAND / COLLAPSE ALL ── */
+function toggleAllNodes(expand) {
+  document.querySelectorAll('.node').forEach(function(n) {
+    if (expand) {
+      n.classList.add('open');
+      if (_outlineMode) {
+        var b = n.querySelector('.node-body');
+        if (b) applyOutlineMode(b, true);
+      }
+    } else {
+      n.classList.remove('open');
+    }
+  });
+  _allExpanded = expand;
+  document.getElementById('navExpandAll').textContent = expand ? 'Collapse All' : 'Expand All';
+}
+
+/* ── OUTLINE MODE ── */
+function buildOutlineView(nodeBodyEl) {
+  var ta   = nodeBodyEl.querySelector('textarea');
+  var text = ta ? ta.value : '';
+  var lines = text.split('\n');
+  var ul = document.createElement('ul');
+  ul.className = 'outline-list';
+  lines.forEach(function(line) {
+    if (!line.trim()) return;
+    var li = document.createElement('li');
+    var leadSpaces = line.match(/^(\s+)/);
+    var indent = 0;
+    if (leadSpaces) {
+      var spaces = leadSpaces[1].replace(/\t/g, '  ').length;
+      indent = spaces >= 4 ? 2 : spaces >= 2 ? 1 : 0;
+    }
+    if (indent === 1) li.className = 'indent-1';
+    if (indent === 2) li.className = 'indent-2';
+    li.textContent = line.trim();
+    ul.appendChild(li);
+  });
+  return ul;
+}
+
+function applyOutlineMode(nodeBodyEl, enable) {
+  var ta       = nodeBodyEl.querySelector('textarea');
+  var pasteBtn = nodeBodyEl.querySelector('.paste-btn');
+  var existing = nodeBodyEl.querySelector('[data-outline-view]');
+  if (enable) {
+    if (!existing) {
+      var view = buildOutlineView(nodeBodyEl);
+      view.setAttribute('data-outline-view', '');
+      if (ta) ta.insertAdjacentElement('afterend', view);
+      else nodeBodyEl.appendChild(view);
+    } else {
+      var fresh = buildOutlineView(nodeBodyEl);
+      fresh.setAttribute('data-outline-view', '');
+      existing.replaceWith(fresh);
+    }
+    if (ta)       ta.style.display      = 'none';
+    if (pasteBtn) pasteBtn.style.display = 'none';
+  } else {
+    var ov = nodeBodyEl.querySelector('[data-outline-view]');
+    if (ov) ov.style.display = 'none';
+    if (ta)       ta.style.display      = '';
+    if (pasteBtn) pasteBtn.style.display = '';
+  }
+}
+
+function toggleOutlineMode() {
+  _outlineMode = !_outlineMode;
+  var btn = document.getElementById('navOutline');
+  btn.classList.toggle('active', _outlineMode);
+  btn.textContent = _outlineMode ? 'Outline ●' : 'Outline';
+  document.querySelectorAll('.node.open .node-body').forEach(function(body) {
+    applyOutlineMode(body, _outlineMode);
+  });
+}
+
+/* ── EXPORT AS STRING (for Google Doc save) ── */
+function exportTxtString() {
+  var lines = [];
+  var title = document.getElementById('bookTitle').value.trim();
+  if (title) lines.push('BOOK: ' + title, '');
+  lines.push('=== PEOPLE ===', '');
+  people.forEach(function(p) {
+    lines.push('#' + p.name + (p.role ? ' [' + p.role + ']' : ''));
+    if (p.notes.trim()) lines.push(p.notes.trim());
+    lines.push('');
+  });
+  lines.push('=== CHAPTERS ===', '');
+  chapters.forEach(function(ch) {
+    lines.push('#' + ch.name);
+    if (ch.notes.trim()) lines.push(ch.notes.trim());
+    lines.push('');
+  });
+  return lines.join('\n');
+}
+
+/* ── GOOGLE DOC SAVE ── */
+function showGdocConfirm() {
+  document.getElementById('gdocConfirmName').textContent = _loadedDocName || 'this document';
+  document.getElementById('gdocConfirmPanel').style.display = 'block';
+}
+function hideGdocConfirm() {
+  document.getElementById('gdocConfirmPanel').style.display = 'none';
+  var ob = document.getElementById('gdocConfirmOverwrite');
+  ob.disabled = false;
+  ob.textContent = 'Overwrite';
+}
+async function gdocSave() {
+  if (!_loadedDocId || !gdriveAccessToken) return;
+  var overwriteBtn = document.getElementById('gdocConfirmOverwrite');
+  overwriteBtn.disabled = true;
+  overwriteBtn.textContent = 'Saving\u2026';
+  try {
+    var docResp = await fetch(
+      'https://docs.googleapis.com/v1/documents/' + encodeURIComponent(_loadedDocId) +
+      '?fields=body.content',
+      { headers: { Authorization: 'Bearer ' + gdriveAccessToken } }
+    );
+    if (!docResp.ok) throw new Error('Could not read document (' + docResp.status + ')');
+    var doc = await docResp.json();
+    var content = doc.body.content;
+    var endIndex = content[content.length - 1].endIndex;
+    var exportText = exportTxtString();
+    var batchResp = await fetch(
+      'https://docs.googleapis.com/v1/documents/' + encodeURIComponent(_loadedDocId) + ':batchUpdate',
+      {
+        method: 'POST',
+        headers: {
+          Authorization: 'Bearer ' + gdriveAccessToken,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          requests: [
+            { deleteContentRange: { range: { startIndex: 1, endIndex: endIndex - 1 } } },
+            { insertText: { location: { index: 1 }, text: exportText } }
+          ]
+        })
+      }
+    );
+    if (!batchResp.ok) {
+      var errData = await batchResp.json().catch(function() { return {}; });
+      throw new Error((errData.error && errData.error.message) || 'Save failed (' + batchResp.status + ')');
+    }
+    hideGdocConfirm();
+    setGdocStatus('Saved to Google Doc');
+  } catch (err) {
+    overwriteBtn.disabled = false;
+    overwriteBtn.textContent = 'Overwrite';
+    setGdocStatus('Save error: ' + err.message);
+  }
+}
+
+loadData();
+</script>
+</body>
+</html>

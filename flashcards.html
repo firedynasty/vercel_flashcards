@@ -262,6 +262,55 @@
             background: #7c3aed;
         }
 
+        /* ── Button filter widget ── */
+        #btnFilterSection {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin: 12px 0 6px;
+            width: 100%;
+            max-width: 600px;
+        }
+        #btnFilterInput {
+            flex: 1;
+            padding: 10px 12px;
+            border: 1px solid rgba(255,255,255,0.25);
+            border-radius: 8px;
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            font-size: 0.95rem;
+            font-family: inherit;
+            min-height: 44px;
+            box-sizing: border-box;
+        }
+        #btnFilterInput::placeholder { color: rgba(255,255,255,0.4); }
+        #btnFilterInput:focus { outline: 2px solid #60a5fa; border-color: transparent; }
+        #btnFilterClear {
+            min-width: 44px;
+            min-height: 44px;
+            border: 1px solid rgba(255,255,255,0.25);
+            border-radius: 8px;
+            background: rgba(255,255,255,0.1);
+            color: rgba(255,255,255,0.7);
+            font-size: 1.2rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #btnFilterClear:hover { background: rgba(255,255,255,0.2); color: #fff; }
+        #btnFilterNoResults {
+            display: none;
+            color: rgba(255,255,255,0.5);
+            font-size: 0.85rem;
+            margin: 4px 0 8px;
+            font-style: italic;
+        }
+        .filter-focus {
+            outline: 2px solid #60a5fa !important;
+            outline-offset: 2px;
+        }
+
         /* Language Selector */
         .language-selector {
             display: flex;
@@ -954,6 +1003,12 @@
             <button class="big-rating-btn big-rating-3" id="bigRate3Btn">3 Mastered</button>
         </div>
 
+        <div id="btnFilterSection">
+            <input id="btnFilterInput" type="text" placeholder="Filter tools…" autocomplete="off">
+            <button id="btnFilterClear" title="Clear filter" aria-label="Clear filter">&#10005;</button>
+        </div>
+        <div id="btnFilterNoResults">No matching tools</div>
+
         <button class="paste-btn" id="pasteToOutlineBtn" title="Open Paste → Outline" style="border: 2px solid #7a5c2e; color: #7a5c2e;">Paste → Outline</button>
         <button class="paste-btn" id="tallyLoggerBtn" title="Open Tally Logger" style="border: 2px solid #3f6b4a; color: #3f6b4a;">Tally Logger</button>
         <input type="file" id="folderFlatInput" accept=".txt,.md" multiple style="display:none">
@@ -976,6 +1031,7 @@
         <button class="paste-btn" id="parseRemoveChineseBtn" title="Open Remove Chinese Parser" style="border: 2px solid #dc2626; color: #dc2626;">Remove Chinese</button>
         <button class="paste-btn" id="parseYoutubeScriptBtn" title="Open YouTube Chinese Script Parser" style="border: 2px solid #7c3aed; color: #7c3aed;">YT Script Parser</button>
         <button class="paste-btn" id="textEditorBtn" title="Open Text Editor" style="border: 2px solid #7c3aed; color: #7c3aed;" onclick="window.open('paste-and-preview.html', '_blank')">Text Editor</button>
+        <button class="paste-btn" id="readLiteratureBtn" title="Open Read Literature" style="border: 2px solid #b45309; color: #b45309;" onclick="window.open('read-literature.html', '_blank')">Read Literature</button>
 
         <!-- Input Section -->
         <div class="input-section" id="inputSection">
@@ -2583,6 +2639,112 @@ God loves the world
                 }
             });
         });
+
+        /* ── Button filter (T004/T005/T006/T007) ── */
+        var _btnFilterFocusedIndex = -1;
+
+        function _getBtnFilterVisible() {
+            return Array.from(document.querySelectorAll('.paste-btn'))
+                .filter(function(b) { return b.style.display !== 'none'; });
+        }
+        function _clearBtnFilterHighlight() {
+            document.querySelectorAll('.paste-btn.filter-focus').forEach(function(b) {
+                b.classList.remove('filter-focus');
+            });
+        }
+        function _setBtnFilterFocus(index) {
+            var items = _getBtnFilterVisible();
+            if (!items.length) return;
+            _clearBtnFilterHighlight();
+            _btnFilterFocusedIndex = Math.max(0, Math.min(index, items.length - 1));
+            var target = items[_btnFilterFocusedIndex];
+            target.classList.add('filter-focus');
+            target.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+        function _activateBtnFilterItem() {
+            var items = _getBtnFilterVisible();
+            if (_btnFilterFocusedIndex < 0 || _btnFilterFocusedIndex >= items.length) return;
+            items[_btnFilterFocusedIndex].click();
+        }
+        function filterButtons() {
+            var query = document.getElementById('btnFilterInput').value.trim().toLowerCase();
+            var buttons = document.querySelectorAll('.paste-btn');
+            var anyVisible = false;
+            buttons.forEach(function(btn) {
+                var label = btn.textContent.trim().toLowerCase();
+                var match = !query || label.includes(query);
+                btn.style.display = match ? '' : 'none';
+                if (match) anyVisible = true;
+            });
+            document.getElementById('btnFilterNoResults').style.display =
+                (query && !anyVisible) ? '' : 'none';
+            _btnFilterFocusedIndex = -1;
+            _clearBtnFilterHighlight();
+        }
+        function clearFilter() {
+            document.getElementById('btnFilterInput').value = '';
+            filterButtons();
+            document.getElementById('btnFilterInput').focus();
+        }
+
+        (function() {
+            var inp = document.getElementById('btnFilterInput');
+            var clr = document.getElementById('btnFilterClear');
+            if (!inp) return;
+
+            // Live filter
+            inp.addEventListener('input', filterButtons);
+
+            // Clear button
+            if (clr) clr.addEventListener('click', clearFilter);
+
+            // Enter / ArrowDown from input → jump into list
+            inp.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' || e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    var items = _getBtnFilterVisible();
+                    if (items.length) {
+                        _setBtnFilterFocus(0);
+                        inp.blur();
+                    }
+                }
+            });
+
+            // Global keydown: list navigation + Escape
+            document.addEventListener('keydown', function(e) {
+                // Escape: only intercept when filter has content or a button is highlighted
+                if (e.key === 'Escape') {
+                    var hasQuery = inp.value.trim().length > 0;
+                    var hasHighlight = _btnFilterFocusedIndex >= 0;
+                    if (hasQuery || hasHighlight) {
+                        e.preventDefault();
+                        _btnFilterFocusedIndex = -1;
+                        clearFilter();
+                    }
+                    return;
+                }
+                // Arrow/Enter navigation: only when not typing in the filter input
+                if (document.activeElement === inp) return;
+                if (_btnFilterFocusedIndex < 0) return;
+                var items = _getBtnFilterVisible();
+                if (!items.length) return;
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    _setBtnFilterFocus(
+                        _btnFilterFocusedIndex + 1 >= items.length ? 0 : _btnFilterFocusedIndex + 1
+                    );
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    _setBtnFilterFocus(
+                        _btnFilterFocusedIndex - 1 < 0 ? items.length - 1 : _btnFilterFocusedIndex - 1
+                    );
+                } else if (e.key === 'Enter') {
+                    e.preventDefault();
+                    _activateBtnFilterItem();
+                }
+            });
+        })();
     </script>
 </body>
 </html>
