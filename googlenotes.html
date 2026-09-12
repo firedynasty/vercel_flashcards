@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Google Doc Voice Notes</title>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    max-width: 700px;
+    margin: 0 auto;
+    padding: 16px;
+    background: #f7f7f8;
+    color: #222;
+  }
+  h1 { font-size: 1.3rem; margin: 0 0 12px; }
+  h2 { font-size: 1.05rem; margin: 16px 0 8px; word-break: break-word; }
+
+  button {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 8px 14px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    background: white;
+    font-size: 14px;
+    font-family: inherit;
+    cursor: pointer;
+  }
+  button:disabled { opacity: 0.5; cursor: default; }
+  button.btn-primary { border-color: #2563eb; background: #eff6ff; color: #2563eb; font-weight: 600; }
+
+  /* ── Setup section (sign-in + recent picker) ── */
+  .setup-section {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    padding: 12px;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    background: white;
+  }
+  .setup-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; width: 100%; }
+
+  /* ── Recent files dropdown (ported from learn-google.html) ── */
+  .recent-dropdown-wrapper { position: relative; display: inline-block; }
+  .recent-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    z-index: 20;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.15);
+    min-width: 240px;
+    max-width: 90vw;
+    max-height: 300px;
+    overflow-y: auto;
+    margin-top: 4px;
+  }
+  .recent-dropdown-item {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 10px 12px;
+    border: none;
+    border-bottom: 1px solid #f0f0f0;
+    background: white;
+    font-size: 13px;
+    cursor: pointer;
+    white-space: normal;
+    word-break: break-word;
+    min-height: 44px;
+  }
+  .recent-dropdown-item:last-child { border-bottom: none; }
+  .recent-dropdown-item:active { background: #f5f5f5; }
+
+  #gnStatus { font-size: 12px; color: #666; min-height: 16px; margin: 8px 0; }
+
+  /* ── Note area ── */
+  #gnNoteArea { margin-top: 16px; }
+  .note-view {
+    white-space: pre-wrap;
+    word-break: break-word;
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    padding: 14px;
+    min-height: 120px;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  .note-edit {
+    width: 100%;
+    min-height: 200px;
+    box-sizing: border-box;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    padding: 14px;
+    font-size: 14px;
+    line-height: 1.5;
+    font-family: inherit;
+    resize: vertical;
+  }
+
+  /* ── Mic button states (data-model.md VoiceNote.status) ── */
+  .mic-btn { font-size: 18px; }
+  .mic-btn.recording { background: #fee2e2; border-color: #ef4444; color: #b91c1c; animation: gnPulse 1s infinite; }
+  .mic-btn.transcribing { background: #f3f4f6; border-color: #9ca3af; color: #6b7280; cursor: wait; }
+  .mic-btn.failed { background: #fffbeb; border-color: #f59e0b; color: #92400e; }
+  @keyframes gnPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.55; }
+  }
+</style>
+</head>
+<body>
+
+<h1>Google Doc Voice Notes</h1>
+
+<div class="setup-section">
+  <div class="setup-row">
+    <button id="gnSignInBtn">Sign In</button>
+    <div class="recent-dropdown-wrapper">
+      <button id="gnRecentBtn" disabled>Recent &#9662;</button>
+      <div id="gnRecentDropdown" class="recent-dropdown" hidden></div>
+    </div>
+  </div>
+</div>
+
+<p id="gnStatus"></p>
+
+<div id="gnNoteArea" hidden>
+  <h2 id="gnFileName"></h2>
+  <div id="gnViewContent" class="note-view"></div>
+  <textarea id="gnEditContent" class="note-edit" hidden></textarea>
+  <div class="setup-row" style="margin-top:10px;">
+    <button id="gnEditBtn">Edit</button>
+    <button id="gnSaveBtn" class="btn-primary">Save</button>
+    <button id="gnMicBtn" class="mic-btn" title="Record a voice note">&#127908;</button>
+  </div>
+</div>
+
+<script>
+// Same OAuth client ID already used by learn-google.html / learn-chinese-tts.html in this repo.
+var GDRIVE_CLIENT_ID = '1095683227908-7ro25k16mprkf408i3lf583gti8v759b.apps.googleusercontent.com';
+
+// ── Shared state ──────────────────────────────────────────────────────────
+var gnAccessToken = null;
+var gnTokenClient = null;
+// NoteSession (data-model.md): mode starts at "view" on load; dirty is derived, not stored.
+var gnSession = { fileId: null, fileName: '', mimeType: '', originalContent: '', content: '', mode: 'view', saving: false };
+// VoiceNote (data-model.md): status enum "idle" | "recording" | "transcribing" | "failed".
+var gnVoice = { status: 'idle', startedAt: null, blob: null, errorMessage: null };
+var gnMediaRecorder = null;
+var gnRecordedChunks = [];
+var _gnRecentDismissListener = null;
+
+function gnSetStatus(msg) { document.getElementById('gnStatus').textContent = msg || ''; }
+function gnIsDirty() { return gnSession.content !== gnSession.originalContent; }
+
+// ── Google sign-in (US1) ─────────────────────────────────────────────────
+function gnInitClient() {
+  if (window.google && window.google.accounts) {
+    gnTokenClient = window.google.accounts.oauth2.initTokenClient({
+      client_id: GDRIVE_CLIENT_ID,
+      scope: 'https://www.googleapis.com/auth/drive', // research.md Decision 5 — single scope covers list/export/read/write
+      callback: function(resp) {
+        if (resp.access_token) {
+          gnAccessToken = resp.access_token;
+          document.getElementById('gnSignInBtn').textContent = 'Sign Out';
+          document.getElementById('gnRecentBtn').disabled = false;
+          gnSetStatus('Signed in');
+        } else {
+          gnSetStatus('Sign-in failed: ' + (resp.error || 'unknown error'));
+        }
+      }
+    });
+  } else {
+    setTimeout(gnInitClient, 100);
+  }
+}
+
+function gnSignIn() {
+  if (gnAccessToken) {
+    window.google.accounts.oauth2.revoke(gnAccessToken);
+    gnAccessToken = null;
+    document.getElementById('gnSignInBtn').textContent = 'Sign In';
+    document.getElementById('gnRecentBtn').disabled = true;
+    document.getElementById('gnRecentBtn').textContent = 'Recent ▾';
+    closeRecentDropdown();
+    gnSetStatus('Signed out');
+  } else if (gnTokenClient) {
+    gnTokenClient.requestAccessToken();
+  }
+}
+
+// ── Recent files dropdown (US1) ──────────────────────────────────────────
+function fetchRecentFiles() {
+  var btn = document.getElementById('gnRecentBtn');
+  btn.disabled = true;
+  btn.textContent = 'Loading…';
+  var q = encodeURIComponent(
+    "(mimeType='application/vnd.google-apps.document' or mimeType='application/vnd.google-apps.spreadsheet') and trashed=false"
+  );
+  var fields = 'files(id,name,mimeType,viewedByMeTime)';
+  var url = 'https://www.googleapis.com/drive/v3/files?q=' + q +
+    '&orderBy=viewedByMeTime+desc&pageSize=10&fields=' + fields;
+
+  fetch(url, { headers: { Authorization: 'Bearer ' + gnAccessToken } })
+    .then(function(r) { return r.json(); })
+    .then(function(data) { openRecentDropdown(data.files || []); })
+    .catch(function(err) { gnSetStatus('Error fetching recent files: ' + err.message); })
+    .finally(function() {
+      btn.disabled = false;
+      btn.textContent = 'Recent ▾';
+    });
+}
+
+function openRecentDropdown(files) {
+  var dropdown = document.getElementById('gnRecentDropdown');
+  dropdown.innerHTML = '';
+
+  if (files.length === 0) {
+    var empty = document.createElement('div');
+    empty.className = 'recent-dropdown-item';
+    empty.textContent = 'No recent files found';
+    dropdown.appendChild(empty);
+  } else {
+    files.forEach(function(f) {
+      var item = document.createElement('button');
+      item.className = 'recent-dropdown-item';
+      item.type = 'button';
+      var kind = f.mimeType === 'application/vnd.google-apps.spreadsheet' ? ' (Sheet)' : '';
+      item.textContent = f.name + kind;
+      item.addEventListener('click', function() {
+        loadFile(f.id, f.name, f.mimeType);
+      });
+      dropdown.appendChild(item);
+    });
+  }
+
+  dropdown.hidden = false;
+  _registerRecentDismissListener();
+}
+
+function closeRecentDropdown() {
+  var dropdown = document.getElementById('gnRecentDropdown');
+  dropdown.hidden = true;
+  if (_gnRecentDismissListener) {
+    document.removeEventListener('touchstart', _gnRecentDismissListener);
+    document.removeEventListener('click', _gnRecentDismissListener);
+    _gnRecentDismissListener = null;
+  }
+}
+
+function _registerRecentDismissListener() {
+  if (_gnRecentDismissListener) return; // already registered
+  setTimeout(function() {
+    _gnRecentDismissListener = function(e) {
+      var dropdown = document.getElementById('gnRecentDropdown');
+      var btn = document.getElementById('gnRecentBtn');
+      if (dropdown && !dropdown.contains(e.target) && e.target !== btn) {
+        closeRecentDropdown();
+      }
+    };
+    document.addEventListener('touchstart', _gnRecentDismissListener);
+    document.addEventListener('click', _gnRecentDismissListener);
+  }, 0);
+}
+
+// ── Load + render a file (US1) ───────────────────────────────────────────
+function loadFile(fileId, fileName, mimeType) {
+  if (gnIsDirty() && !window.confirm('Discard unsaved changes to "' + gnSession.fileName + '"?')) {
+    return;
+  }
+
+  gnSetStatus('Loading "' + fileName + '"…');
+
+  if (mimeType === 'application/vnd.google-apps.document') {
+    fetch('https://www.googleapis.com/drive/v3/files/' + fileId + '/export?mimeType=text/plain', {
+      headers: { Authorization: 'Bearer ' + gnAccessToken }
+    })
+      .then(function(r) {
+        if (!r.ok) throw new Error('Export failed (HTTP ' + r.status + ')');
+        return r.text();
+      })
+      .then(function(text) {
+        text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+        gnSession = { fileId: fileId, fileName: fileName, mimeType: mimeType, originalContent: text, content: text, mode: 'view', saving: false };
+        gnOpenNoteArea(true);
+        gnSetStatus('Loaded "' + fileName + '"');
+      })
+      .catch(function(err) { gnSetStatus('Error loading file: ' + err.message); });
+  } else {
+    // Sheet selected — read-only placeholder, editing/voice notes are Docs-only in this feature.
+    var placeholder = '(This is a Google Sheet — editing and voice notes are only supported for Google Docs.)';
+    gnSession = { fileId: fileId, fileName: fileName, mimeType: mimeType, originalContent: placeholder, content: placeholder, mode: 'view', saving: false };
+    gnOpenNoteArea(false);
+    gnSetStatus('Loaded "' + fileName + '" (Sheet — view only)');
+  }
+
+  closeRecentDropdown();
+}
+
+function gnOpenNoteArea(editable) {
+  document.getElementById('gnNoteArea').hidden = false;
+  document.getElementById('gnFileName').textContent = gnSession.fileName;
+  document.getElementById('gnEditBtn').disabled = !editable;
+  document.getElementById('gnSaveBtn').disabled = !editable;
+  document.getElementById('gnMicBtn').disabled = !editable;
+  document.getElementById('gnEditBtn').textContent = 'Edit';
+  gnRenderView();
+}
+
+function gnRenderView() {
+  document.getElementById('gnViewContent').textContent = gnSession.content;
+  document.getElementById('gnViewContent').hidden = false;
+  document.getElementById('gnEditContent').hidden = true;
+}
+
+// ── Edit / Save (US2) ────────────────────────────────────────────────────
+function toggleEditMode() {
+  if (gnSession.mode === 'view') {
+    var editEl = document.getElementById('gnEditContent');
+    editEl.value = gnSession.content;
+    document.getElementById('gnViewContent').hidden = true;
+    editEl.hidden = false;
+    gnSession.mode = 'edit'; // data-model.md NoteSession.mode enum: "view" | "edit"
+    document.getElementById('gnEditBtn').textContent = 'Done';
+    editEl.focus();
+    editEl.setSelectionRange(editEl.value.length, editEl.value.length);
+    editEl.scrollTop = editEl.scrollHeight;
+  } else {
+    gnSession.content = document.getElementById('gnEditContent').value;
+    gnSession.mode = 'view';
+    document.getElementById('gnEditBtn').textContent = 'Edit';
+    gnRenderView();
+  }
+}
+
+function saveToGoogleDoc() {
+  if (!gnSession.fileId) { gnSetStatus('Error: no file loaded'); return; }
+
+  if (gnSession.mode === 'edit') {
+    gnSession.content = document.getElementById('gnEditContent').value;
+  }
+
+  gnSession.saving = true;
+  document.getElementById('gnSaveBtn').disabled = true;
+  gnSetStatus('Saving "' + gnSession.fileName + '"…');
+
+  fetch('https://docs.googleapis.com/v1/documents/' + gnSession.fileId, {
+    headers: { Authorization: 'Bearer ' + gnAccessToken }
+  })
+    .then(function(r) {
+      if (!r.ok) throw new Error('Doc read failed (HTTP ' + r.status + ')');
+      return r.json();
+    })
+    .then(function(doc) {
+      var endIndex = doc.body.content[doc.body.content.length - 1].endIndex;
+      var requests = [];
+      if (endIndex > 2) {
+        requests.push({ deleteContentRange: { range: { startIndex: 1, endIndex: endIndex - 1 } } });
+      }
+      var normalized = gnSession.content.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+      if (normalized) {
+        requests.push({ insertText: { location: { index: 1 }, text: normalized } });
+      }
+      return fetch('https://docs.googleapis.com/v1/documents/' + gnSession.fileId + ':batchUpdate', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + gnAccessToken, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requests: requests })
+      });
+    })
+    .then(function(r) {
+      if (!r.ok) return r.json().then(function(err) { throw new Error(err.error && err.error.message || ('HTTP ' + r.status)); });
+      gnSession.originalContent = gnSession.content;
+      gnSetStatus('Saved "' + gnSession.fileName + '" successfully!');
+    })
+    .catch(function(err) {
+      // Edits are left untouched on failure — nothing is discarded (FR-006).
+      gnSetStatus('Error saving: ' + err.message);
+    })
+    .finally(function() {
+      gnSession.saving = false;
+      document.getElementById('gnSaveBtn').disabled = false;
+    });
+}
+
+// Unsaved-changes guard (FR-012).
+window.addEventListener('beforeunload', function(e) {
+  if (gnIsDirty()) { e.preventDefault(); e.returnValue = ''; }
+});
+
+// ── Voice notes (US3) ────────────────────────────────────────────────────
+function onMicTap() {
+  if (gnVoice.status === 'transcribing') return; // FR-007b: no second recording while transcribing
+  if (gnVoice.status === 'recording') { stopRecording(); return; }
+  // 'failed' and 'idle' both fall through here by design — a tap after a failure retries.
+  // FR-007a: applying edits + forcing View mode happens before recording starts.
+  if (gnSession.mode === 'edit') {
+    gnSession.content = document.getElementById('gnEditContent').value;
+    gnSession.mode = 'view';
+    document.getElementById('gnEditBtn').textContent = 'Edit';
+    gnRenderView();
+  }
+  startRecording();
+}
+
+function startRecording() {
+  navigator.mediaDevices.getUserMedia({ audio: true }).then(function(stream) {
+    gnRecordedChunks = [];
+    gnMediaRecorder = new MediaRecorder(stream);
+    gnMediaRecorder.ondataavailable = function(e) { if (e.data.size > 0) gnRecordedChunks.push(e.data); };
+    gnMediaRecorder.onstop = function() {
+      stream.getTracks().forEach(function(t) { t.stop(); });
+      var blob = new Blob(gnRecordedChunks, { type: gnMediaRecorder.mimeType });
+      transcribeRecording(blob);
+    };
+    gnMediaRecorder.start();
+    gnVoice = { status: 'recording', startedAt: Date.now(), blob: null, errorMessage: null };
+    document.getElementById('gnMicBtn').className = 'mic-btn recording';
+    gnSetStatus('Recording…');
+  }).catch(function() {
+    gnVoice = { status: 'failed', startedAt: null, blob: null, errorMessage: 'Microphone access is required to record a voice note.' };
+    document.getElementById('gnMicBtn').className = 'mic-btn failed';
+    gnSetStatus(gnVoice.errorMessage);
+  });
+}
+
+function stopRecording() {
+  if (gnMediaRecorder && gnMediaRecorder.state !== 'inactive') gnMediaRecorder.stop();
+  gnVoice.status = 'transcribing';
+  document.getElementById('gnMicBtn').className = 'mic-btn transcribing';
+  gnSetStatus('Transcribing…');
+}
+
+function transcribeRecording(blob) {
+  var reader = new FileReader();
+  reader.onload = function() {
+    var base64 = reader.result.split(',')[1]; // strip the data: URL prefix
+    fetch('/api/transcribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ audioBase64: base64, mimeType: blob.type })
+    })
+      .then(function(r) { return r.json().then(function(data) { return { ok: r.ok, data: data }; }); })
+      .then(function(result) {
+        if (!result.ok) throw new Error(result.data.error || 'Transcription failed');
+        // FR-008/FR-011: append to the (view-mode) note content, separated by a blank line.
+        gnSession.content = gnSession.content.replace(/\n+$/, '') + (gnSession.content ? '\n\n' : '') + result.data.text;
+        gnRenderView();
+        gnVoice = { status: 'idle', startedAt: null, blob: null, errorMessage: null };
+        document.getElementById('gnMicBtn').className = 'mic-btn';
+        gnSetStatus('Voice note added');
+      })
+      .catch(function(err) {
+        // FR-010: no partial/garbled text inserted; content is left untouched.
+        gnVoice = { status: 'failed', startedAt: null, blob: null, errorMessage: err.message };
+        document.getElementById('gnMicBtn').className = 'mic-btn failed';
+        gnSetStatus('Error: ' + err.message);
+      });
+  };
+  reader.readAsDataURL(blob);
+}
+
+// ── Wire up ───────────────────────────────────────────────────────────────
+document.getElementById('gnSignInBtn').addEventListener('click', gnSignIn);
+document.getElementById('gnRecentBtn').addEventListener('click', function() {
+  var dropdown = document.getElementById('gnRecentDropdown');
+  if (!dropdown.hidden) { closeRecentDropdown(); } else { fetchRecentFiles(); }
+});
+document.getElementById('gnEditBtn').addEventListener('click', toggleEditMode);
+document.getElementById('gnSaveBtn').addEventListener('click', saveToGoogleDoc);
+document.getElementById('gnMicBtn').addEventListener('click', onMicTap);
+
+gnInitClient();
+</script>
+
+</body>
+</html>

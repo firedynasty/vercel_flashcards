@@ -32,6 +32,8 @@
     { "source": "/pasteToOutline", "destination": "/pasteToOutline.html" },
     { "source": "/paste-and-preview.html", "destination": "/paste-and-preview.html" },
     { "source": "/paste-and-preview", "destination": "/paste-and-preview.html" },
+    { "source": "/googlenotes.html", "destination": "/googlenotes.html" },
+    { "source": "/googlenotes", "destination": "/googlenotes.html" },
     { "source": "/(.*)", "destination": "/flashcards.html" }
   ]
 }
