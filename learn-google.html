@@ -243,6 +243,26 @@
   .btn.google { background: #4285f4; color: white; }
   .g-status { font-size: 12px; color: #888; min-height: 18px; margin-top: 6px; }
   .g-hint { font-size: 11px; color: #aaa; margin-top: 4px; line-height: 1.4; }
+
+  /* ── RECENT FILES DROPDOWN ── */
+  .recent-dropdown-wrapper { position: relative; display: block; width: 100%; }
+  .recent-dropdown {
+    position: absolute; top: 100%; left: 0;
+    width: 100%;
+    max-height: 220px; overflow-y: auto;
+    background: white; border: 1px solid #ddd; border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0,0,0,.1); z-index: 100;
+  }
+  .recent-dropdown-item {
+    display: block; width: 100%; padding: 12px 14px; min-height: 44px;
+    text-align: left; background: none; border: none;
+    border-bottom: 1px solid #f0f0f0; font-size: 13px; cursor: pointer;
+    white-space: normal; overflow: visible; word-break: break-word;
+    font-family: inherit;
+  }
+  .recent-dropdown-item:last-child { border-bottom: none; }
+  .recent-dropdown-item:active { background: #f5f5f5; }
+
   .or-divider {
     text-align: center; font-size: 12px; color: #aaa; font-weight: 600;
     margin: 12px 0; letter-spacing: 1px;
@@ -670,16 +690,22 @@
   <div class="or-divider" id="orDivider">— OR —</div>
 
   <!-- Google Sheets Setup -->
-  <div class="setup-section collapsed" id="setupSection">
+  <div class="setup-section" id="setupSection">
     <div class="setup-header" onclick="toggleSetup()">
       <span>Load from Google Sheets</span>
-      <span class="toggle-arrow" id="setupArrow">&#9658;</span>
+      <span class="toggle-arrow" id="setupArrow">&#9660;</span>
     </div>
     <div class="setup-body">
       <div class="setup-row">
         <button class="btn google" id="authBtn" onclick="gdriveSignIn()">Sign In</button>
         <input type="text" id="gSearchInput" placeholder="vocabulary-google-it" value="">
         <button class="btn primary" id="gSearchBtn" onclick="gdriveSearch()" disabled>Load</button>
+      </div>
+      <div class="setup-row">
+        <div class="recent-dropdown-wrapper">
+          <button class="btn outline" id="recentBtn" disabled>Recent ▾</button>
+          <div id="recentDropdown" class="recent-dropdown" hidden></div>
+        </div>
       </div>
       <div class="setup-row">
         <label>Sheet</label>
@@ -1675,6 +1701,7 @@ function gdriveInitClient() {
           gdriveAccessToken = response.access_token;
           document.getElementById('authBtn').textContent = 'Sign Out';
           document.getElementById('gSearchBtn').disabled = false;
+          document.getElementById('recentBtn').disabled = false;
           setGStatus('Signed in. Enter a spreadsheet name and click Load.');
         }
       },
@@ -1697,6 +1724,8 @@ function gdriveSignIn() {
     document.getElementById('gSearchBtn').disabled = true;
     document.getElementById('gSheetSelect').innerHTML = '<option value="">Sign in first</option>';
     document.getElementById('gSheetSelect').disabled = true;
+    document.getElementById('recentBtn').disabled = true;
+    closeRecentDropdown();
     setGStatus('Signed out');
     return;
   }
@@ -1729,6 +1758,94 @@ async function gdriveSearch() {
     setGStatus('Error: ' + err.message);
   }
 }
+
+/* ── RECENT FILES DROPDOWN (T005–T014) ── */
+
+var _recentDismissListener = null;
+
+async function fetchRecentFiles() {
+  var btn = document.getElementById('recentBtn');
+  btn.disabled = true;
+  btn.textContent = 'Loading\u2026';
+  try {
+    var q = encodeURIComponent("mimeType='application/vnd.google-apps.spreadsheet' and trashed=false");
+    var fields = encodeURIComponent('files(id,name,viewedByMeTime)');
+    var url = 'https://www.googleapis.com/drive/v3/files?q=' + q +
+              '&orderBy=viewedByMeTime+desc&pageSize=10&fields=' + fields;
+    var resp = await fetch(url, { headers: { Authorization: 'Bearer ' + gdriveAccessToken } });
+    if (!resp.ok) throw new Error('Drive API error ' + resp.status);
+    var data = await resp.json();
+    openRecentDropdown(data.files);
+  } catch (err) {
+    setGStatus('Error fetching recent files: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Recent \u25be';
+  }
+}
+
+function openRecentDropdown(files) {
+  var dropdown = document.getElementById('recentDropdown');
+  dropdown.innerHTML = '';
+  if (!files || files.length === 0) {
+    var empty = document.createElement('button');
+    empty.className = 'recent-dropdown-item';
+    empty.textContent = 'No recent spreadsheets found';
+    empty.disabled = true;
+    empty.style.color = '#999'; empty.style.cursor = 'default';
+    dropdown.appendChild(empty);
+    dropdown.removeAttribute('hidden');
+    _registerDismissListener();
+    return;
+  }
+  files.forEach(function(f) {
+    var item = document.createElement('button');
+    item.className = 'recent-dropdown-item';
+    item.textContent = f.name;
+    item.addEventListener('click', function() {
+      closeRecentDropdown();
+      gdriveLoadSpreadsheet(f.id, f.name);
+    });
+    dropdown.appendChild(item);
+  });
+  dropdown.removeAttribute('hidden');
+  _registerDismissListener();
+}
+
+function closeRecentDropdown() {
+  var dropdown = document.getElementById('recentDropdown');
+  if (dropdown) dropdown.setAttribute('hidden', '');
+  if (_recentDismissListener) {
+    document.removeEventListener('touchstart', _recentDismissListener);
+    document.removeEventListener('click', _recentDismissListener);
+    _recentDismissListener = null;
+  }
+}
+
+function _registerDismissListener() {
+  if (_recentDismissListener) return;
+  _recentDismissListener = function(e) {
+    var wrapper = document.querySelector('.recent-dropdown-wrapper');
+    if (wrapper && !wrapper.contains(e.target)) {
+      closeRecentDropdown();
+    }
+  };
+  setTimeout(function() {
+    document.addEventListener('touchstart', _recentDismissListener);
+    document.addEventListener('click', _recentDismissListener);
+  }, 0);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  document.getElementById('recentBtn').addEventListener('click', function() {
+    var dropdown = document.getElementById('recentDropdown');
+    if (!dropdown.hasAttribute('hidden')) {
+      closeRecentDropdown();
+    } else {
+      fetchRecentFiles();
+    }
+  });
+});
 
 async function gdriveLoadSpreadsheet(fileId, fileName) {
   gdriveSpreadsheetId = fileId;

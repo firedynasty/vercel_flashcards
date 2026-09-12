@@ -477,6 +477,24 @@
     font-size: 14px; font-weight: 700; padding: 12px 28px; cursor: pointer;
     display: block; margin: 48px auto 0;
   }
+
+  /* ── RECENT FILES DROPDOWN ── */
+  .recent-dropdown-wrapper { position: relative; display: block; width: 100%; }
+  .recent-dropdown {
+    position: absolute; top: 100%; left: 0;
+    width: 100%;
+    max-height: 220px; overflow-y: auto;
+    background: white; border: 1px solid #ddd; border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0,0,0,.1); z-index: 100;
+  }
+  .recent-dropdown-item {
+    display: block; width: 100%; padding: 12px 14px; min-height: 44px;
+    text-align: left; background: none; border: none;
+    border-bottom: 1px solid #f0f0f0; font-size: 13px; cursor: pointer;
+    white-space: normal; overflow: visible; word-break: break-word;
+  }
+  .recent-dropdown-item:last-child { border-bottom: none; }
+  .recent-dropdown-item:active { background: #f5f5f5; }
 </style>
 </head>
 <body>
@@ -567,6 +585,12 @@
         <button class="btn google" id="authBtn" onclick="gdriveSignIn()">Sign In</button>
         <input type="text" id="searchInput" placeholder="Spreadsheet name..." value="chinese">
         <button class="btn primary" id="searchBtn" onclick="gdriveSearch()" disabled>Load</button>
+      </div>
+      <div class="setup-row">
+        <div class="recent-dropdown-wrapper">
+          <button class="btn outline" id="recentBtn" disabled>Recent ▾</button>
+          <div id="recentDropdown" class="recent-dropdown" hidden></div>
+        </div>
       </div>
       <div class="setup-row">
         <label>Sheet</label>
@@ -1369,6 +1393,7 @@ function gdriveInitClient() {
           gdriveAccessToken = response.access_token;
           document.getElementById('authBtn').textContent = 'Sign Out';
           document.getElementById('searchBtn').disabled = false;
+          document.getElementById('recentBtn').disabled = false;
           setStatus('Signed in. Click Load to fetch spreadsheet.');
         }
       },
@@ -1389,6 +1414,8 @@ function gdriveSignIn() {
     gdriveWorkbook = null;
     document.getElementById('authBtn').textContent = 'Sign In';
     document.getElementById('searchBtn').disabled = true;
+    document.getElementById('recentBtn').disabled = true;
+    closeRecentDropdown();
     document.getElementById('sheetSelect').innerHTML = '<option value="">Sign in first</option>';
     document.getElementById('sheetSelect').disabled = true;
     allRows = [];
@@ -1425,6 +1452,107 @@ async function gdriveSearch() {
     setStatus('Error: ' + err.message);
   }
 }
+
+// ── RECENT FILES DROPDOWN ────────────────────────────────────────────────────
+// T005–T013: fetch recent Drive spreadsheets and present as a dismissible dropdown
+
+var _recentDismissListener = null;
+
+async function fetchRecentFiles() {
+  // T009: loading state
+  var btn = document.getElementById('recentBtn');
+  btn.disabled = true;
+  btn.textContent = 'Loading\u2026';
+  try {
+    var q = encodeURIComponent("mimeType='application/vnd.google-apps.spreadsheet' and trashed=false");
+    var fields = encodeURIComponent('files(id,name,viewedByMeTime)');
+    var url = 'https://www.googleapis.com/drive/v3/files?q=' + q +
+              '&orderBy=viewedByMeTime+desc&pageSize=10&fields=' + fields;
+    var resp = await fetch(url, { headers: { Authorization: 'Bearer ' + gdriveAccessToken } });
+    if (!resp.ok) throw new Error('Drive API error ' + resp.status);
+    var data = await resp.json();
+    openRecentDropdown(data.files);
+  } catch (err) {
+    // T012: error state — button re-enabled via finally; status shows message
+    setStatus('Error fetching recent files: ' + err.message);
+  } finally {
+    // T010: always restore button
+    btn.disabled = false;
+    btn.textContent = 'Recent \u25be';
+  }
+}
+
+function openRecentDropdown(files) {
+  var dropdown = document.getElementById('recentDropdown');
+  dropdown.innerHTML = '';
+
+  // T011: empty state
+  if (!files || files.length === 0) {
+    var msg = document.createElement('p');
+    msg.style.cssText = 'padding:12px 14px;font-size:13px;color:#888;';
+    msg.textContent = 'No recent spreadsheets found';
+    dropdown.appendChild(msg);
+    dropdown.removeAttribute('hidden');
+    _registerDismissListener();
+    return;
+  }
+
+  files.forEach(function(file) {
+    var item = document.createElement('button');
+    item.className = 'recent-dropdown-item';
+    item.textContent = file.name || '(untitled)';
+    item.addEventListener('click', function() {
+      closeRecentDropdown();
+      loadSpreadsheet(file.id, file.name || '(untitled)');
+    });
+    dropdown.appendChild(item);
+  });
+
+  dropdown.removeAttribute('hidden');
+  _registerDismissListener();
+}
+
+function closeRecentDropdown() {
+  var dropdown = document.getElementById('recentDropdown');
+  if (dropdown) dropdown.setAttribute('hidden', '');
+  // T013: remove outside-tap listener
+  if (_recentDismissListener) {
+    document.removeEventListener('touchstart', _recentDismissListener);
+    document.removeEventListener('click', _recentDismissListener);
+    _recentDismissListener = null;
+  }
+}
+
+function _registerDismissListener() {
+  // T013: dismiss when tapping outside the dropdown or button
+  if (_recentDismissListener) return; // already registered
+  _recentDismissListener = function(e) {
+    var dropdown = document.getElementById('recentDropdown');
+    var btn = document.getElementById('recentBtn');
+    if (!dropdown || !btn) return;
+    if (!dropdown.contains(e.target) && e.target !== btn) {
+      closeRecentDropdown();
+    }
+  };
+  // Small delay so the opening click/touch doesn't immediately dismiss
+  setTimeout(function() {
+    document.addEventListener('touchstart', _recentDismissListener);
+    document.addEventListener('click', _recentDismissListener);
+  }, 0);
+}
+
+// T008: wire #recentBtn click
+document.addEventListener('DOMContentLoaded', function() {
+  document.getElementById('recentBtn').addEventListener('click', function() {
+    var dropdown = document.getElementById('recentDropdown');
+    if (!dropdown.hasAttribute('hidden')) {
+      closeRecentDropdown();
+    } else {
+      fetchRecentFiles();
+    }
+  });
+});
+// ─────────────────────────────────────────────────────────────────────────────
 
 async function loadSpreadsheet(fileId, fileName) {
   gdriveSpreadsheetId = fileId;
