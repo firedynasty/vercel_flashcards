@@ -158,6 +158,7 @@ var gnSession = { fileId: null, fileName: '', mimeType: '', originalContent: '',
 var gnVoice = { status: 'idle', startedAt: null, blob: null, errorMessage: null };
 var gnMediaRecorder = null;
 var gnRecordedChunks = [];
+var gnAutoSaveTimer = null; // debounced auto-save, armed after each voice note (see transcribeRecording)
 var _gnRecentDismissListener = null;
 
 function gnSetStatus(msg) { document.getElementById('gnStatus').textContent = msg || ''; }
@@ -278,6 +279,7 @@ function loadFile(fileId, fileName, mimeType) {
   if (gnIsDirty() && !window.confirm('Discard unsaved changes to "' + gnSession.fileName + '"?')) {
     return;
   }
+  clearTimeout(gnAutoSaveTimer); // a pending auto-save must not fire against the file being replaced
 
   gnSetStatus('Loading "' + fileName + '"…');
 
@@ -343,8 +345,10 @@ function toggleEditMode() {
   }
 }
 
-function saveToGoogleDoc() {
+function saveToGoogleDoc(isAutoSave) {
+  clearTimeout(gnAutoSaveTimer); // a save in progress/completed supersedes any pending auto-save
   if (!gnSession.fileId) { gnSetStatus('Error: no file loaded'); return; }
+  if (isAutoSave && !gnIsDirty()) return; // nothing to auto-save (e.g. user already saved manually)
 
   if (gnSession.mode === 'edit') {
     gnSession.content = document.getElementById('gnEditContent').value;
@@ -352,7 +356,7 @@ function saveToGoogleDoc() {
 
   gnSession.saving = true;
   document.getElementById('gnSaveBtn').disabled = true;
-  gnSetStatus('Saving "' + gnSession.fileName + '"…');
+  gnSetStatus(isAutoSave ? 'Auto-saving "' + gnSession.fileName + '"…' : 'Saving "' + gnSession.fileName + '"…');
 
   fetch('https://docs.googleapis.com/v1/documents/' + gnSession.fileId, {
     headers: { Authorization: 'Bearer ' + gnAccessToken }
@@ -380,7 +384,7 @@ function saveToGoogleDoc() {
     .then(function(r) {
       if (!r.ok) return r.json().then(function(err) { throw new Error(err.error && err.error.message || ('HTTP ' + r.status)); });
       gnSession.originalContent = gnSession.content;
-      gnSetStatus('Saved "' + gnSession.fileName + '" successfully!');
+      gnSetStatus(isAutoSave ? 'Auto-saved "' + gnSession.fileName + '"' : 'Saved "' + gnSession.fileName + '" successfully!');
     })
     .catch(function(err) {
       // Edits are left untouched on failure — nothing is discarded (FR-006).
@@ -457,7 +461,11 @@ function transcribeRecording(blob) {
         gnRenderView();
         gnVoice = { status: 'idle', startedAt: null, blob: null, errorMessage: null };
         document.getElementById('gnMicBtn').className = 'mic-btn';
-        gnSetStatus('Voice note added');
+        gnSetStatus('Voice note added — auto-saving in 1 min unless you save first');
+        // Debounced auto-save: another voice note within the window resets this timer
+        // rather than stacking a second save.
+        clearTimeout(gnAutoSaveTimer);
+        gnAutoSaveTimer = setTimeout(function() { saveToGoogleDoc(true); }, 60000);
       })
       .catch(function(err) {
         // FR-010: no partial/garbled text inserted; content is left untouched.
