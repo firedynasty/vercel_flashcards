@@ -241,7 +241,7 @@
         <button class="log-btn" id="logBtnB">Log B</button>
         <button class="undo-btn" id="undoBtnB">Undo</button>
       </div>
-      <input type="number" id="offsetB" placeholder="−hr (e.g. -2)" max="0"
+      <input type="text" inputmode="decimal" id="offsetB" placeholder="hr ago (e.g. 2 or 1:30)"
         style="margin-top:8px;width:100%;padding:6px 8px;font-family:inherit;font-size:12px;
                border:1px solid var(--line);border-radius:6px;background:transparent;
                color:var(--ink);text-align:center;" />
@@ -526,6 +526,17 @@
 
   let lastLogA = 0, lastLogB = 0;
 
+  // Parses "2" (2h), "1.5" (1.5h), or "1:30" (1h30m) into minutes.
+  // The "-" sign is optional and ignored — the offset always counts backwards.
+  function parseOffsetMinutes(raw) {
+    const s = (raw || '').trim().replace(/^-/, '');
+    if (!s) return 0;
+    const hm = s.match(/^(\d+):([0-5]?\d)$/);
+    if (hm) return parseInt(hm[1], 10) * 60 + parseInt(hm[2], 10);
+    const num = parseFloat(s);
+    return isNaN(num) ? 0 : num * 60;
+  }
+
   async function logEntry(tracker) {
     const now = Date.now();
     if (tracker === 'a') {
@@ -537,8 +548,8 @@
     }
     let ts = now;
     if (tracker === 'b') {
-      const hrs = parseInt(offsetB.value, 10);
-      if (!isNaN(hrs) && hrs < 0) ts = now + hrs * 3600000;
+      const mins = parseOffsetMinutes(offsetB.value);
+      if (mins > 0) ts = now - mins * 60000;
       offsetB.value = '';
     }
     const time = new Date(ts).toTimeString().slice(0, 8);
