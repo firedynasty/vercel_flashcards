@@ -506,13 +506,22 @@
     setTimeout(() => toast.classList.remove('show'), 1600);
   }
 
+  // Displays a stored "HH:MM:SS" (24h) time as 12h with AM/PM, e.g. "20:29:23" -> "8:29:23 PM".
+  // Storage/CSV stay in 24h format — this only affects what's shown on screen.
+  function formatTime12h(t) {
+    const [h, m, s] = t.split(':').map(Number);
+    const period = h < 12 ? 'AM' : 'PM';
+    const h12 = h % 12 || 12;
+    return `${h12}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')} ${period}`;
+  }
+
   function render() {
     const today = todayStr();
     const countA = entries.filter(e => e.date === today && e.tracker_a).length;
     const timesB = entries.filter(e => e.date === today && e.tracker_b).map(e => e.tracker_b);
     displayA.textContent = countA;
     displayB.innerHTML = timesB.length
-      ? timesB.map(t => `<div>${t}</div>`).join('')
+      ? timesB.map(t => `<div>${formatTime12h(t)}</div>`).join('')
       : '<span style="color:var(--muted);font-style:italic;font-size:12px;">no hits yet</span>';
   }
 
