@@ -337,50 +337,6 @@
     40% { transform: scale(1); }
   }
 
-  /* ── DECK VIEW ── */
-  #deckViewContainer { display: none; max-width: 480px; margin: 0 auto; padding: 20px 20px 40px; }
-  #deckViewContainer.active { display: flex; flex-direction: column; }
-  .deck-progress-row { display: flex; align-items: center; gap: 10px; margin-bottom: 22px; }
-  .deck-progress-track { flex: 1; height: 5px; background: #DAD6CC; border-radius: 3px; overflow: hidden; }
-  .deck-progress-fill { height: 100%; background: #C9A227; border-radius: 3px; transition: width .25s ease; }
-  .deck-progress-label { font-size: 12px; color: #888; white-space: nowrap; font-variant-numeric: tabular-nums; }
-  .deck-stage { position: relative; min-height: 300px; display: flex; align-items: center; justify-content: center; }
-  .deck-card {
-    position: absolute; width: 100%; max-width: 340px; min-height: 260px;
-    background: white; border-radius: 16px; border: 1px solid #e0e0db;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.06);
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    padding: 28px; text-align: center; cursor: pointer;
-  }
-  .deck-card .deck-eyebrow { position: absolute; top: 12px; left: 18px; font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: #888; }
-  .deck-card .deck-word { font-weight: 700; font-size: 26px; line-height: 1.25; color: #1a1a1a; }
-  .deck-card .deck-rom { font-size: 13px; color: #888; font-style: italic; margin-top: 6px; display: none; }
-  .deck-card .deck-def { font-size: 15px; color: #888; margin-top: 14px; line-height: 1.5; display: none; }
-  .deck-card.flipped .deck-word { font-size: 20px; color: #888; font-weight: 400; }
-  .deck-card.flipped .deck-rom { display: block; }
-  .deck-card.flipped .deck-def { display: block; color: #1a1a1a; }
-  .deck-card .deck-flip-hint { position: absolute; bottom: 14px; font-size: 11px; color: #888; opacity: .7; }
-  .deck-card.flipped .deck-flip-hint { display: none; }
-  .deck-stamp { position: absolute; top: 24px; font-weight: 700; font-size: 20px; letter-spacing: .06em; border: 3px solid; border-radius: 8px; padding: 4px 14px; text-transform: uppercase; opacity: 0; pointer-events: none; }
-  .deck-stamp.right { right: 26px; color: #16a34a; border-color: #16a34a; transform: rotate(-8deg); }
-  .deck-stamp.left { left: 26px; color: #4A5B7A; border-color: #4A5B7A; transform: rotate(8deg); }
-  .deck-side-col { position: absolute; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 14px; align-items: center; z-index: 10; }
-  .deck-side-col.left { left: 0; }
-  .deck-side-col.right { right: 0; }
-  .deck-side-btn { width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 700; cursor: pointer; border: 2px solid; background: white; font-family: inherit; box-shadow: 0 2px 8px rgba(0,0,0,0.08); transition: transform 0.1s, box-shadow 0.1s; }
-  .deck-side-btn:active { transform: scale(0.9); }
-  .deck-side-btn.miss { color: #dc2626; border-color: #fca5a5; }
-  .deck-side-btn.miss:active { background: #fef2f2; }
-  .deck-side-btn.correct { color: #16a34a; border-color: #86efac; }
-  .deck-side-btn.correct:active { background: #f0fdf4; }
-  .deck-side-btn.reveal { color: #888; border-color: #ccc; font-size: 20px; }
-  .deck-side-btn.reveal:active { background: #f5f5f5; }
-  .deck-side-btn:disabled { opacity: .35; cursor: default; }
-  .deck-done { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 10px; min-height: 300px; }
-  .deck-done .deck-done-big { font-weight: 700; font-size: 24px; }
-  .deck-done p { color: #888; font-size: 14px; margin: 0 0 10px; }
-  .deck-hidden { display: none !important; }
-
   /* ── CURRENT CARD HIGHLIGHT ── */
   .vocab-card.current-card { background-color: #fef9c3 !important; border-color: #fde047 !important; border-left-color: #eab308 !important; }
   .vocab-card.current-card:hover { background-color: #fef08a !important; }
@@ -712,7 +668,7 @@
       <span class="toggle-chip" id="revealAllChip" onclick="toggleRevealAll()">&#9660; Reveal All</span>
       <span class="toggle-chip" id="toggleTableView" onclick="toggleTableView()">Table</span>
       <span class="tbl-nav-hint">,&nbsp;up&nbsp;&nbsp;.&nbsp;down&nbsp;&nbsp;/&nbsp;play&nbsp;&nbsp;;&nbsp;stop</span>
-      <span class="toggle-chip" id="toggleDeckView" onclick="toggleDeckView()">Deck</span>
+      <span class="toggle-chip" id="toggleRandomize" onclick="toggleRandomize()">Randomize</span>
       <a href="https://vercel-spanish-chinese.vercel.app/chinese-glosser" target="_blank" class="toggle-chip" style="text-decoration:none;background:#0EA5E9;color:white;border-color:#0EA5E9;">Glosser</a>
       <button onclick="exportAllCsv()" class="toggle-chip" style="background:#16a34a;color:white;border-color:#16a34a;cursor:pointer;font-family:inherit;font-size:inherit;">&#8659; CSV</button>
     </div>
@@ -743,7 +699,7 @@
             </p>
             <div style="margin-top:10px;font-size:11px;color:#d97706;font-weight:600;">Tip:</div>
             <div style="font-size:11px;color:#555;line-height:1.6;margin-top:2px;">
-              Use the Deck view to self-test
+              Use Reveal on hover or Randomize to self-test
             </div>
           </div>
         </div>
@@ -763,68 +719,6 @@
     <div id="tableViewContainer">
       <div id="tableViewInner"></div>
       <div style="height: calc(20 * 2.5em);"></div>
-    </div>
-
-    <!-- Deck view container -->
-    <div id="deckViewContainer">
-      <div class="deck-progress-row">
-        <div class="deck-progress-track"><div class="deck-progress-fill" id="deckProgressFill"></div></div>
-        <div class="deck-progress-label" id="deckProgressLabel">0 / 0</div>
-      </div>
-      <div class="deck-stage" id="deckStage">
-        <div class="deck-stamp right" id="deckStampRight">Got it</div>
-        <div class="deck-stamp left" id="deckStampLeft">Again</div>
-        <div class="deck-side-col right">
-          <button class="deck-side-btn miss">✗</button>
-          <button class="deck-side-btn reveal" id="deckRevealBtn">↻</button>
-          <button class="deck-side-btn correct">✓</button>
-        </div>
-        <div class="deck-card" id="deckCard">
-          <span class="deck-eyebrow" id="deckEyebrow">1 of 1</span>
-          <span class="deck-word" id="deckWordText">word</span>
-          <span class="deck-rom" id="deckRomText"></span>
-          <span class="deck-def" id="deckDefText">definition</span>
-          <span class="deck-flip-hint">tap to reveal</span>
-        </div>
-      </div>
-      <div style="display:flex; justify-content:center; gap:48px; margin-top:8px;">
-        <span style="font-size:11px; color:#aaa;"><kbd style="background:#f0f0f0; border:1px solid #ccc; border-radius:3px; padding:1px 5px; font-size:10px; color:#555;">&#8592;</kbd> again</span>
-        <span style="font-size:11px; color:#aaa;"><kbd style="background:#f0f0f0; border:1px solid #ccc; border-radius:3px; padding:1px 5px; font-size:10px; color:#555;">&#8593;</kbd> flip</span>
-        <span style="font-size:11px; color:#aaa;"><kbd style="background:#f0f0f0; border:1px solid #ccc; border-radius:3px; padding:1px 5px; font-size:10px; color:#555;">&#8594;</kbd> got it</span>
-      </div>
-      <div style="text-align:center; margin-top:14px;">
-        <span id="deckMissedCount" style="font-size:12px; color:#dc2626; display:none;">0 missed</span>
-        <span id="deckRemainingCount" style="font-size:12px; color:#888; margin-left:10px; display:none;">0 remaining</span>
-      </div>
-      <div id="deckSaveArea" style="display:flex; flex-direction:column; align-items:center; gap:8px; margin-top:8px;">
-        <button class="btn primary" id="deckSaveMissedBtn" style="padding:10px 18px; font-size:13px; background:#16a34a; width:100%; max-width:280px;" onclick="deckSaveMissedToSheet('missed')">Copy missed CSV</button>
-        <button class="btn primary" id="deckSaveBothBtn" style="padding:10px 18px; font-size:13px; background:#2563eb; width:100%; max-width:280px;" onclick="deckSaveMissedToSheet('both')">Copy missed + remaining</button>
-        <div style="display:flex; gap:6px; width:100%; max-width:280px;">
-          <select id="dbxPushBucketNum" style="padding:8px 7px; border:1px solid #ddd; border-radius:6px; font-size:12px; font-family:inherit; background:white; min-width:96px;"></select>
-          <button id="dbxPushBtn" style="flex:1; padding:10px 10px; font-size:11px; background:#0061fe; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:600; font-family:inherit; white-space:nowrap;">&#8593; Push (missed&rem.)</button>
-        </div>
-        <div id="dbxPushStatus" style="font-size:12px; color:#888; min-height:18px;"></div>
-        <!-- Push confirmation overlay -->
-        <div id="dbxPushConfirm" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:9999; align-items:center; justify-content:center;">
-          <div style="background:white; border-radius:12px; padding:24px 28px; box-shadow:0 8px 32px rgba(0,0,0,0.3); text-align:center; max-width:280px; width:90%;">
-            <p id="dbxPushConfirmMsg" style="margin:0 0 18px; font-size:15px; color:#222; line-height:1.5; font-family:inherit;"></p>
-            <div style="display:flex; gap:10px;">
-              <button id="dbxPushCancelBtn" style="flex:1; padding:9px 0; font-size:14px; border-radius:8px; border:1px solid #ccc; background:#f5f5f5; color:#333; cursor:pointer; font-weight:600; font-family:inherit;">Cancel</button>
-              <button id="dbxPushConfirmBtn" style="flex:1; padding:9px 0; font-size:14px; border-radius:8px; border:none; background:#0061fe; color:white; cursor:pointer; font-weight:600; font-family:inherit;">Push</button>
-            </div>
-          </div>
-        </div>
-        <div id="deckSaveStatus" style="font-size:12px; color:#888; margin-top:6px; min-height:18px;"></div>
-        <textarea id="deckCsvTextarea" style="width:100%; max-width:280px; height:120px; font-size:11px; font-family:monospace; border:1px solid #ddd; border-radius:6px; padding:6px; box-sizing:border-box; resize:vertical;" readonly></textarea>
-      </div>
-      <div class="deck-done deck-hidden" id="deckDoneScreen">
-        <div class="deck-done-big">Deck cleared!</div>
-        <p id="deckDoneStats"></p>
-        <p id="deckMissedStats" style="font-size:13px; color:#dc2626;"></p>
-        <button class="btn primary" id="deckDoneSaveBtn" style="padding:12px 20px; display:none; background:#16a34a;" onclick="deckSaveMissedToSheet('missed')">Copy missed CSV</button>
-        <div id="deckDoneSaveStatus" style="font-size:12px; color:#888; margin-top:6px; min-height:18px;"></div>
-        <button class="btn primary" id="deckRestartBtn" style="padding:12px 20px;">Review again</button>
-      </div>
     </div>
   </div>
 </div>
@@ -854,15 +748,20 @@ let currentAudio = null; // for OpenAI playback
 let tableViewOn = false;
 let dataTableInstance = null;
 let tblCurrentDataIdx = -1; // tracks highlighted row by data-row-idx; survives DataTables redraws
-var deckViewOn = false;
-var deckQueue = [];
-var deckTotal = 0;
-var deckCleared = 0;
-var deckCurrent = null;
-var deckFlipped = false;
-var deckMissedSet = new Set();
 
 let tooltipOn = false;
+
+var randomizeOn = false;
+var displayOrder = []; // indices into filteredRows: identity order, or shuffled when randomizeOn
+
+// Recompute displayOrder from the current filteredRows + randomizeOn state.
+// Called whenever filteredRows changes (refreshRows) or randomizeOn is toggled —
+// NOT on a plain Cards/Table view switch, so switching views reuses the same order.
+function computeDisplayOrder() {
+  var identity = [];
+  for (var i = 0; i < filteredRows.length; i++) identity.push(i);
+  displayOrder = randomizeOn ? shuffleDeckArray(identity) : identity;
+}
 
 // ── OPENAI API KEY (localStorage) ──
 function getApiKey() {
@@ -1156,7 +1055,8 @@ function renderLyrics() {
   container.classList.toggle('tooltip-on', tooltipOn);
 
   var wordNum = 0;
-  filteredRows.forEach(function(row, i) {
+  displayOrder.forEach(function(i) {
+    var row = filteredRows[i];
     // Section header
     if (row.sectionHeader) {
       var header = document.createElement('div');
@@ -1376,7 +1276,6 @@ function sbLoadDeck() {
     document.getElementById('sbStatus').textContent = '✅ ' + rows.length + ' cards loaded from "' + deck + '"';
     setStatus('Loaded ' + rows.length + ' cards from Supabase deck "' + deck + '"');
     refreshRows();
-    if (!deckViewOn) toggleDeckView();
   }).catch(function(e) { document.getElementById('sbStatus').textContent = 'Load failed: ' + e.message; });
 }
 
@@ -1696,6 +1595,7 @@ function insertSentenceRepeats(rows) {
 
 function refreshRows() {
   filteredRows = insertSentenceRepeats(allRows.slice());
+  computeDisplayOrder();
   renderLyrics();
 }
 
@@ -1849,7 +1749,6 @@ function loadPastedCsv() {
   if (ok) {
     statusEl.textContent = 'Loaded.';
     if (tableViewOn) renderTableView();
-    else if (!deckViewOn) toggleDeckView();
   } else {
     statusEl.textContent = 'Error: could not parse CSV.';
   }
@@ -2208,7 +2107,6 @@ function toggleTableView() {
   var tableContainer = document.getElementById('tableViewContainer');
 
   if (tableViewOn) {
-    if (deckViewOn) { deckViewOn = false; document.getElementById('toggleDeckView').className = 'toggle-chip'; document.getElementById('deckViewContainer').classList.remove('active'); }
     linesContainer.style.display = 'none';
     tableContainer.classList.add('active');
     renderTableView();
@@ -2220,15 +2118,17 @@ function toggleTableView() {
       dataTableInstance = null;
     }
     document.getElementById('tableViewInner').innerHTML = '';
+    renderLyrics(); // keep in sync with the current Display Order — Cards may have been hidden (stale) while Randomize was toggled in Table mode
   }
 }
 
 function renderTableView() {
   var container = document.getElementById('tableViewInner');
 
-  // Show ALL rows: section headers, sentences, and vocab
+  // Show ALL rows: section headers, sentences, and vocab — in the current display order
   var displayRows = [];
-  filteredRows.forEach(function(row, origIdx) {
+  displayOrder.forEach(function(origIdx) {
+    var row = filteredRows[origIdx];
     if (row.sectionHeader || row.chinese || row.contextLine) {
       displayRows.push({ row: row, idx: origIdx });
     }
@@ -2426,267 +2326,16 @@ document.addEventListener('keydown', function(e) {
   tblNavRow(e.key === '.' ? 1 : -1);
 });
 
-// ── DECK VIEW ──
-function toggleDeckView() {
-  deckViewOn = !deckViewOn;
-  document.getElementById('toggleDeckView').className = 'toggle-chip' + (deckViewOn ? ' on' : '');
-  var linesContainer = document.getElementById('linesContainer');
-  var tableContainer = document.getElementById('tableViewContainer');
-  var deckContainer = document.getElementById('deckViewContainer');
-  if (deckViewOn) {
-    if (tableViewOn) {
-      tableViewOn = false;
-      document.getElementById('toggleTableView').className = 'toggle-chip';
-      tableContainer.classList.remove('active');
-      if (dataTableInstance) { dataTableInstance.destroy(); dataTableInstance = null; }
-      document.getElementById('tableViewInner').innerHTML = '';
-    }
-    linesContainer.style.display = 'none';
-    deckContainer.classList.add('active');
-    startDeckSession();
-  } else {
-    linesContainer.style.display = '';
-    deckContainer.classList.remove('active');
-  }
+function toggleRandomize() {
+  randomizeOn = !randomizeOn;
+  document.getElementById('toggleRandomize').className = 'toggle-chip' + (randomizeOn ? ' on' : '');
+  computeDisplayOrder();
+  if (tableViewOn) renderTableView(); else renderLyrics();
 }
 function shuffleDeckArray(arr) {
   var a = arr.slice();
   for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var tmp = a[i]; a[i] = a[j]; a[j] = tmp; }
   return a;
-}
-function getDeckVocabIndices() {
-  var indices = [];
-  filteredRows.forEach(function(row, i) {
-    if (row.sectionHeader) return;
-    if (row.chinese) { indices.push(i); return; }
-    if (row.contextLine && /[\u4e00-\u9fff\u3400-\u4dbf]/.test(row.contextLine)) indices.push(i);
-  });
-  return indices;
-}
-function dedupeDeckIndices(indices) {
-  var seen = {};
-  return indices.filter(function(i) {
-    var row = filteredRows[i];
-    var text = row.chinese || row.contextLine || '';
-    var key = text.split(' ').join('');
-    if (!key || seen[key]) return false; // skip duplicate glossed words / repeated sentences
-    seen[key] = true;
-    return true;
-  });
-}
-function startDeckSession() {
-  var vocabIndices = dedupeDeckIndices(getDeckVocabIndices());
-  if (vocabIndices.length === 0) return;
-  deckQueue = shuffleDeckArray(vocabIndices);
-  deckTotal = deckQueue.length;
-  deckCleared = 0; deckFlipped = false; deckMissedSet = new Set();
-  document.getElementById('deckStage').style.display = '';
-  document.querySelector('.deck-progress-row').style.display = '';
-  document.getElementById('deckDoneScreen').classList.add('deck-hidden');
-  document.getElementById('deckSaveStatus').textContent = '';
-  var saveMissedBtn = document.getElementById('deckSaveMissedBtn');
-  var saveBothBtn = document.getElementById('deckSaveBothBtn');
-  saveMissedBtn.textContent = 'Copy missed CSV'; saveMissedBtn.style.background = '#16a34a'; saveMissedBtn.disabled = false;
-  saveBothBtn.textContent = 'Copy missed + remaining'; saveBothBtn.style.background = '#2563eb'; saveBothBtn.disabled = false;
-  deckNextCard();
-}
-function deckUpdateProgress() {
-  document.getElementById('deckProgressLabel').textContent = deckCleared + ' / ' + deckTotal;
-  var pct = deckTotal ? (deckCleared / deckTotal) * 100 : 0;
-  document.getElementById('deckProgressFill').style.width = pct + '%';
-}
-function deckNextCard() {
-  deckFlipped = false;
-  var cardEl = document.getElementById('deckCard');
-  cardEl.classList.remove('flipped'); cardEl.style.transform = ''; cardEl.style.opacity = ''; cardEl.style.transition = 'none';
-  if (deckQueue.length === 0) { deckCurrent = null; deckUpdateProgress(); deckFinish(); return; }
-  deckCurrent = deckQueue.shift();
-  var item = filteredRows[deckCurrent];
-  var isSentenceOnly = !!item.contextLine && !item.chinese && !item.romanization && !item.english;
-  document.getElementById('deckWordText').textContent = item.chinese || item.contextLine || '';
-  document.getElementById('deckRomText').textContent = item.romanization || '';
-  document.getElementById('deckDefText').textContent = item.english || (isSentenceOnly ? 'Did you understand it?' : '');
-  document.getElementById('deckEyebrow').textContent = isSentenceOnly ? 'sentence' : 'in queue: ' + (deckQueue.length + 1);
-  var flipHint = cardEl.querySelector('.deck-flip-hint');
-  if (isSentenceOnly) {
-    // Pre-flip so X/✓ are immediately usable — no answer to reveal
-    deckFlipped = true;
-    cardEl.classList.add('flipped');
-    if (flipHint) flipHint.style.display = 'none';
-  } else {
-    if (flipHint) flipHint.style.display = '';
-  }
-  deckUpdateProgress();
-}
-function deckFinish() {
-  document.getElementById('deckStage').style.display = 'none';
-  document.querySelector('.deck-progress-row').style.display = 'none';
-  document.getElementById('deckMissedCount').style.display = 'none';
-  document.getElementById('deckRemainingCount').style.display = 'none';
-  var doneEl = document.getElementById('deckDoneScreen'); doneEl.classList.remove('deck-hidden');
-  document.getElementById('deckDoneStats').textContent = 'You cleared all ' + deckTotal + ' words in this deck.';
-  var missedEl = document.getElementById('deckMissedStats');
-  var saveBtn = document.getElementById('deckDoneSaveBtn');
-  document.getElementById('deckDoneSaveStatus').textContent = '';
-  if (deckMissedSet.size > 0) {
-    missedEl.textContent = deckMissedSet.size + ' word(s) you missed at least once.';
-    saveBtn.style.display = ''; saveBtn.textContent = 'Copy missed CSV'; saveBtn.style.background = '#16a34a'; saveBtn.disabled = false;
-  } else { missedEl.textContent = 'Perfect run — no misses!'; saveBtn.style.display = 'none'; }
-}
-function deckUpdateSaveButtons() {
-  var hasMissed = deckMissedSet.size > 0, hasRemaining = deckQueue.length > 0;
-  var missedCountEl = document.getElementById('deckMissedCount');
-  if (hasMissed) { missedCountEl.style.display = ''; missedCountEl.textContent = deckMissedSet.size + ' missed'; } else { missedCountEl.style.display = 'none'; }
-  var remainingEl = document.getElementById('deckRemainingCount');
-  if (hasRemaining) { remainingEl.style.display = ''; remainingEl.textContent = deckQueue.length + ' remaining'; } else { remainingEl.style.display = 'none'; }
-  document.getElementById('deckSaveBothBtn').style.display = '';
-}
-function deckFlipCard() {
-  if (deckFlipped) return;
-  deckFlipped = true;
-  document.getElementById('deckCard').classList.add('flipped');
-}
-function deckGrade(correct) {
-  if (deckCurrent === null) return;
-  if (!correct) { deckQueue.push(deckCurrent); deckMissedSet.add(deckCurrent); } else { deckCleared++; }
-  deckFlashStamp(correct);
-  deckAnimateOut(correct, function() { deckNextCard(); deckUpdateSaveButtons(); });
-}
-function deckFlashStamp(correct) {
-  var el = document.getElementById(correct ? 'deckStampRight' : 'deckStampLeft');
-  el.style.transition = 'none'; el.style.opacity = '1';
-  requestAnimationFrame(function() { el.style.transition = 'opacity .4s ease'; el.style.opacity = '0'; });
-}
-function deckAnimateOut(correct, cb) {
-  var cardEl = document.getElementById('deckCard');
-  cardEl.style.transition = 'transform .25s ease, opacity .25s ease';
-  cardEl.style.transform = 'translateX(' + (correct ? '120%' : '-120%') + ') rotate(' + (correct ? 10 : -10) + 'deg)';
-  cardEl.style.opacity = '0';
-  setTimeout(function() { cardEl.style.transition = 'none'; cb(); }, 220);
-}
-document.getElementById('deckCard').addEventListener('click', function() { deckFlipCard(); });
-document.querySelectorAll('.deck-side-btn.correct').forEach(function(btn) {
-  btn.addEventListener('click', function() { deckGrade(true); });
-});
-document.querySelectorAll('.deck-side-btn.miss').forEach(function(btn) {
-  btn.addEventListener('click', function() { deckGrade(false); });
-});
-document.getElementById('deckRevealBtn').addEventListener('click', function() { deckFlipCard(); });
-document.getElementById('deckRestartBtn').addEventListener('click', function() { startDeckSession(); });
-
-// ── DECK SWIPE (touch) ──
-(function() {
-  var card = document.getElementById('deckCard');
-  var SWIPE_THRESHOLD = 60; // px to trigger grade
-  var TAP_MAX_MOVE = 10;    // px — below this counts as a tap, not a swipe
-  var TAP_MAX_MS   = 250;   // ms — above this counts as a hold, not a tap
-  var touchStartX, touchStartY, touchStartTime, isDragging = false;
-
-  card.addEventListener('touchstart', function(e) {
-    if (deckCurrent === null) return;
-    var t = e.touches[0];
-    touchStartX = t.clientX; touchStartY = t.clientY;
-    touchStartTime = Date.now();
-    isDragging = false;
-    card.style.transition = 'none';
-  }, { passive: true });
-
-  card.addEventListener('touchmove', function(e) {
-    if (deckCurrent === null) return;
-    var dx = e.touches[0].clientX - touchStartX;
-    var dy = e.touches[0].clientY - touchStartY;
-    if (Math.abs(dx) < Math.abs(dy) && !isDragging) return; // vertical scroll, ignore
-    isDragging = true;
-    e.preventDefault();
-    var rotate = dx * 0.08;
-    card.style.transform = 'translateX(' + dx + 'px) rotate(' + rotate + 'deg)';
-    // Tint stamp labels as hint
-    var stampR = document.getElementById('deckStampRight');
-    var stampL = document.getElementById('deckStampLeft');
-    var ratio = Math.min(Math.abs(dx) / SWIPE_THRESHOLD, 1);
-    if (dx > 0)      { stampR.style.opacity = ratio * 0.8; stampL.style.opacity = 0; }
-    else if (dx < 0) { stampL.style.opacity = ratio * 0.8; stampR.style.opacity = 0; }
-    else             { stampR.style.opacity = 0; stampL.style.opacity = 0; }
-  }, { passive: false });
-
-  card.addEventListener('touchend', function(e) {
-    if (deckCurrent === null) return;
-    var dx = e.changedTouches[0].clientX - touchStartX;
-    var dy = e.changedTouches[0].clientY - touchStartY;
-    var dt = Date.now() - touchStartTime;
-    document.getElementById('deckStampRight').style.opacity = 0;
-    document.getElementById('deckStampLeft').style.opacity = 0;
-
-    if (!isDragging && Math.abs(dx) < TAP_MAX_MOVE && dt < TAP_MAX_MS) {
-      // Short tap — flip
-      card.style.transform = '';
-      deckFlipCard();
-      return;
-    }
-    if (dx > SWIPE_THRESHOLD) {
-      deckGrade(true);
-    } else if (dx < -SWIPE_THRESHOLD) {
-      deckGrade(false);
-    } else {
-      // Not far enough — snap back
-      card.style.transition = 'transform 0.2s ease, opacity 0.2s ease';
-      card.style.transform = '';
-    }
-    isDragging = false;
-  }, { passive: true });
-})();
-
-// ── DECK KEYBOARD SHORTCUTS: ← again, ↑/Space flip, → got it ──
-document.addEventListener('keydown', function(e) {
-  if (!deckViewOn || deckCurrent === null) return;
-  if (e.target.matches('input, textarea, select')) return;
-  if (e.key === 'ArrowLeft') { e.preventDefault(); deckGrade(false); }
-  else if (e.key === 'ArrowRight') { e.preventDefault(); deckGrade(true); }
-  else if (e.key === 'ArrowUp' || e.key === ' ') { e.preventDefault(); deckFlipCard(); }
-});
-function deckSaveMissedToSheet(mode) {
-  if (mode === 'missed' && deckMissedSet.size === 0) return;
-  if (mode === 'both' && deckMissedSet.size === 0 && deckQueue.length === 0 && deckCurrent === null) return;
-  var csvRows = [], added = new Set();
-  var sortedMissed = Array.from(deckMissedSet).sort(function(a, b) { return a - b; });
-  sortedMissed.forEach(function(fi) {
-    var item = filteredRows[fi];
-    if (item && (item.chinese || item.contextLine)) {
-      csvRows.push([item.chinese || item.contextLine, item.romanization || '', item.english || '']);
-      added.add(fi);
-    }
-  });
-  if (mode === 'both') {
-    deckQueue.forEach(function(fi) {
-      if (!added.has(fi)) {
-        var item = filteredRows[fi];
-        if (item && (item.chinese || item.contextLine)) {
-          csvRows.push([item.chinese || item.contextLine, item.romanization || '', item.english || '']);
-          added.add(fi);
-        }
-      }
-    });
-    if (deckCurrent !== null && !added.has(deckCurrent)) {
-      var item = filteredRows[deckCurrent];
-      if (item && (item.chinese || item.contextLine)) {
-        csvRows.push([item.chinese || item.contextLine, item.romanization || '', item.english || '']);
-        added.add(deckCurrent);
-      }
-    }
-  }
-  function csvEsc(s) { s = String(s); return (s.indexOf(',') >= 0 || s.indexOf('"') >= 0 || s.indexOf('\n') >= 0) ? '"' + s.replace(/"/g, '""') + '"' : s; }
-  var lines = ['Chinese,Romanization,English'];
-  csvRows.forEach(function(r) { lines.push(r.map(csvEsc).join(',')); });
-  var csv = lines.join('\n');
-  var statusEl = document.getElementById('deckSaveStatus');
-  var textarea = document.getElementById('deckCsvTextarea');
-  textarea.value = csv;
-  navigator.clipboard.writeText(csv).then(function() {
-    statusEl.textContent = '\u2705 Copied ' + csvRows.length + ' term' + (csvRows.length === 1 ? '' : 's') + ' to clipboard';
-    setTimeout(function() { statusEl.textContent = ''; }, 3000);
-  }).catch(function() {
-    statusEl.textContent = 'Tap and select all in the box below to copy';
-  });
 }
 
 // ── EXPORT ALL CSV ──
@@ -2925,7 +2574,7 @@ async function dbxUpload(path, content) {
 }
 
 function dbxPopulateBucketSelects() {
-  ['dbxPullBucketNum', 'dbxPushBucketNum'].forEach(function(id) {
+  ['dbxPullBucketNum'].forEach(function(id) {
     var sel = document.getElementById(id); if (!sel) return;
     sel.innerHTML = '';
     for (var i = 1; i <= 10; i++) { var opt = document.createElement('option'); opt.value = i; opt.textContent = 'Bucket ' + i; sel.appendChild(opt); }
@@ -2959,64 +2608,10 @@ document.getElementById('dbxPullBtn').addEventListener('click', async function()
   finally { btn.disabled = false; btn.textContent = '\u2193 Load bucket'; }
 });
 
-var _dbxPendingPush = null; // { n, csvRows, csv }
-
-function dbxBuildPushPayload() {
-  var n = document.getElementById('dbxPushBucketNum').value;
-  var statusEl = document.getElementById('dbxPushStatus');
-  var csvRows = [], added = new Set();
-  Array.from(deckMissedSet).sort(function(a,b){return a-b;}).forEach(function(fi) {
-    var item = filteredRows[fi]; if (item && (item.chinese || item.contextLine)) { csvRows.push([item.chinese || item.contextLine, item.romanization || '', item.english || '']); added.add(fi); }
-  });
-  deckQueue.forEach(function(fi) {
-    if (!added.has(fi)) { var item = filteredRows[fi]; if (item && (item.chinese || item.contextLine)) { csvRows.push([item.chinese || item.contextLine, item.romanization || '', item.english || '']); added.add(fi); } }
-  });
-  if (deckCurrent !== null && !added.has(deckCurrent)) {
-    var item = filteredRows[deckCurrent]; if (item && (item.chinese || item.contextLine)) { csvRows.push([item.chinese || item.contextLine, item.romanization || '', item.english || '']); added.add(deckCurrent); }
-  }
-  if (csvRows.length === 0) { statusEl.textContent = 'Nothing to push \u2014 no missed or remaining cards.'; return null; }
-  function csvEsc(s) { s = String(s); return (s.indexOf(',') >= 0 || s.indexOf('"') >= 0 || s.indexOf('\n') >= 0) ? '"' + s.replace(/"/g, '""') + '"' : s; }
-  var lines = ['Chinese,Romanization,English'];
-  csvRows.forEach(function(r) { lines.push(r.map(csvEsc).join(',')); });
-  return { n: n, csvRows: csvRows, csv: lines.join('\n') };
-}
-
-document.getElementById('dbxPushBtn').addEventListener('click', async function() {
-  var payload = dbxBuildPushPayload();
-  if (!payload) return;
-  var statusEl = document.getElementById('dbxPushStatus');
-  if (!DBX_TOKEN) { statusEl.textContent = 'Signing in\u2026'; await dbxSignIn('push:' + payload.n); return; }
-  _dbxPendingPush = payload;
-  var confirmEl = document.getElementById('dbxPushConfirm');
-  document.getElementById('dbxPushConfirmMsg').textContent = 'Push ' + payload.csvRows.length + ' terms to bucket ' + payload.n + '?';
-  confirmEl.style.display = 'flex';
-});
-
-document.getElementById('dbxPushCancelBtn').addEventListener('click', function() {
-  document.getElementById('dbxPushConfirm').style.display = 'none';
-  _dbxPendingPush = null;
-});
-
-document.getElementById('dbxPushConfirmBtn').addEventListener('click', async function() {
-  document.getElementById('dbxPushConfirm').style.display = 'none';
-  if (!_dbxPendingPush) return;
-  var payload = _dbxPendingPush; _dbxPendingPush = null;
-  var statusEl = document.getElementById('dbxPushStatus');
-  var btn = document.getElementById('dbxPushBtn');
-  btn.disabled = true; btn.textContent = 'Pushing\u2026'; statusEl.textContent = '';
-  try {
-    await dbxUpload(dbxBucketPath(payload.n), payload.csv);
-    statusEl.textContent = '\u2705 Pushed ' + payload.csvRows.length + ' terms \u2192 bucket ' + payload.n;
-    setTimeout(function() { statusEl.textContent = ''; }, 3000);
-  } catch(e) { statusEl.textContent = '\u274c ' + e.message; }
-  finally { btn.disabled = false; btn.textContent = '\u2191 Push (missed&rem.)'; }
-});
-
 function dbxResumePending() {
   var pending = sessionStorage.getItem('dbx_pending'); if (!pending) return;
   sessionStorage.removeItem('dbx_pending');
   if (pending.startsWith('pull:')) { document.getElementById('dbxPullBucketNum').value = pending.slice(5); document.getElementById('dbxPullBtn').click(); }
-  else if (pending.startsWith('push:')) { document.getElementById('dbxPushBucketNum').value = pending.slice(5); document.getElementById('dbxPushBtn').click(); }
 }
 
 window.addEventListener('message', function(event) {
@@ -3083,7 +2678,6 @@ function readDropCsvFile(file) {
       document.getElementById('dbxPullStatus').textContent = '\u2705 Loaded ' + file.name;
       setTimeout(function() { document.getElementById('dbxPullStatus').textContent = ''; }, 2500);
       if (tableViewOn) renderTableView();
-      else if (!deckViewOn) toggleDeckView();
     }
   };
   reader.readAsText(file);

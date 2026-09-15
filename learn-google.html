@@ -434,124 +434,6 @@
   body.dark-mode .dataTables_wrapper .dataTables_filter input { background: #2a2a3e; border-color: #444; color: #e0e0e0; }
   body.dark-mode .dataTables_wrapper .dataTables_paginate .paginate_button { border-color: #444; color: #ccc; background: #2a2a3e; }
 
-  /* ── DECK VIEW (Mango-style swipe review) ── */
-  #deckViewContainer { display: none; max-width: 480px; margin: 0 auto; padding: 20px 20px 40px; }
-  #deckViewContainer.active { display: flex; flex-direction: column; }
-  .deck-progress-row {
-    display: flex; align-items: center; gap: 10px; margin-bottom: 22px;
-  }
-  .deck-progress-track {
-    flex: 1; height: 5px; background: var(--rule, #DAD6CC); border-radius: 3px; overflow: hidden;
-  }
-  .deck-progress-fill { height: 100%; background: #C9A227; border-radius: 3px; transition: width .25s ease; }
-  .deck-progress-label { font-size: 12px; color: #888; white-space: nowrap; font-variant-numeric: tabular-nums; }
-
-  .deck-stage {
-    position: relative; min-height: 300px;
-    display: flex; align-items: center; justify-content: center;
-  }
-  .deck-side-col {
-    position: absolute; top: 50%; transform: translateY(-50%);
-    display: flex; flex-direction: column; gap: 14px;
-    align-items: center; z-index: 10;
-  }
-  .deck-side-col.left { left: 0; }
-  .deck-side-col.right { right: 0; }
-  .deck-side-btn {
-    width: 44px; height: 44px; border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 22px; font-weight: 700; cursor: pointer;
-    border: 2px solid; background: white; font-family: inherit;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-    transition: transform 0.1s, box-shadow 0.1s;
-  }
-  .deck-side-btn:active { transform: scale(0.9); }
-  .deck-side-btn.miss  { color: #dc2626; border-color: #fca5a5; }
-  .deck-side-btn.miss:active  { background: #fef2f2; }
-  .deck-side-btn.correct { color: #16a34a; border-color: #86efac; }
-  .deck-side-btn.correct:active { background: #f0fdf4; }
-  .deck-side-btn.reveal { color: #888; border-color: #ccc; font-size: 20px; }
-  .deck-side-btn.reveal:active { background: #f5f5f5; }
-  body.dark-mode .deck-side-btn.reveal { border-color: #555; color: #aaa; }
-  .deck-side-btn:disabled { opacity: .35; cursor: default; }
-  body.dark-mode .deck-side-btn { background: #2a2a3e; }
-  body.dark-mode .deck-side-btn.miss { border-color: #7f1d1d; }
-  body.dark-mode .deck-side-btn.correct { border-color: #166534; }
-  .deck-card {
-    position: absolute; width: 100%; max-width: 340px; height: 260px;
-    background: white; border-radius: 16px; border: 1px solid #e0e0db;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.06);
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    padding: 28px; text-align: center; cursor: pointer;
-  }
-  .deck-card::before {
-    content: ''; position: absolute; top: 34px; left: 0; right: 0;
-    height: 1px; background: #e0e0db; opacity: .6;
-  }
-  .deck-card .deck-eyebrow {
-    position: absolute; top: 12px; left: 18px;
-    font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: #888;
-  }
-  .deck-card .deck-word {
-    font-weight: 700; font-size: 26px; line-height: 1.25; color: #1a1a1a;
-  }
-  .deck-card .deck-def {
-    font-size: 15px; color: #888; margin-top: 14px; line-height: 1.5; display: none;
-  }
-  .deck-card.flipped .deck-word { font-size: 18px; color: #888; font-weight: 400; }
-  .deck-card.flipped .deck-def { display: block; color: #1a1a1a; }
-  .deck-card .deck-flip-hint {
-    position: absolute; bottom: 14px; font-size: 11px; color: #888; opacity: .7;
-  }
-  .deck-card.flipped .deck-flip-hint { display: none; }
-
-  .deck-stamp {
-    position: absolute; top: 24px;
-    font-weight: 700; font-size: 20px; letter-spacing: .06em;
-    border: 3px solid; border-radius: 8px; padding: 4px 14px;
-    text-transform: uppercase; opacity: 0; pointer-events: none;
-  }
-  .deck-stamp.right { right: 26px; color: #16a34a; border-color: #16a34a; transform: rotate(-8deg); }
-  .deck-stamp.left { left: 26px; color: #4A5B7A; border-color: #4A5B7A; transform: rotate(8deg); }
-
-  .deck-controls {
-    display: flex; gap: 24px; margin-top: 22px; justify-content: center;
-  }
-  .deck-ctrl-btn {
-    width: 72px; height: 72px; border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 32px; font-weight: 700;
-    border: 3px solid; background: white; cursor: pointer;
-    font-family: inherit; transition: transform 0.1s, box-shadow 0.1s;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-  }
-  .deck-ctrl-btn:active { transform: scale(0.92); }
-  .deck-ctrl-btn.miss { color: #dc2626; border-color: #fca5a5; }
-  .deck-ctrl-btn.miss:active { background: #fef2f2; box-shadow: 0 0 0 4px #fee2e2; }
-  .deck-ctrl-btn.correct { color: #16a34a; border-color: #86efac; }
-  .deck-ctrl-btn.correct:active { background: #f0fdf4; box-shadow: 0 0 0 4px #dcfce7; }
-  .deck-ctrl-btn:disabled { opacity: .35; cursor: default; }
-
-  .deck-done {
-    flex: 1; display: flex; flex-direction: column; align-items: center;
-    justify-content: center; text-align: center; gap: 10px; min-height: 300px;
-  }
-  .deck-done .deck-done-big { font-weight: 700; font-size: 24px; }
-  .deck-done p { color: #888; font-size: 14px; margin: 0 0 10px; }
-
-  /* Dark mode for deck */
-  body.dark-mode .deck-card { background: #2a2a3e; border-color: #3a3a4e; box-shadow: 0 1px 2px rgba(0,0,0,0.15), 0 8px 24px rgba(0,0,0,0.25); }
-  body.dark-mode .deck-card::before { background: #3a3a4e; }
-  body.dark-mode .deck-card .deck-word { color: #e0e0e0; }
-  body.dark-mode .deck-card.flipped .deck-word { color: #999; }
-  body.dark-mode .deck-card.flipped .deck-def { color: #e0e0e0; }
-  body.dark-mode .deck-ctrl-btn { background: #2a2a3e; }
-  body.dark-mode .deck-ctrl-btn.miss { border-color: #7f1d1d; }
-  body.dark-mode .deck-ctrl-btn.miss:active { background: #2e1a1a; }
-  body.dark-mode .deck-ctrl-btn.correct { border-color: #166534; }
-  body.dark-mode .deck-ctrl-btn.correct:active { background: #1a2e1a; }
-  .hidden { display: none !important; }
-
   /* ── TABLE PLAY BUTTON ── */
   .tbl-play-btn {
     background: #2563eb; color: white; border: none; border-radius: 6px;
@@ -726,7 +608,7 @@
     <button class="btn outline sm" id="darkModeBtn" onclick="toggleDarkMode()">&#9790; Dark</button>
     <span class="toggle-chip on" id="toggleTableView" onclick="toggleTableView()">Table</span>
     <span class="tbl-nav-hint">,&nbsp;up&nbsp;&nbsp;.&nbsp;down&nbsp;&nbsp;/&nbsp;play&nbsp;&nbsp;;&nbsp;stop</span>
-    <span class="toggle-chip" id="toggleDeckView" onclick="toggleDeckView()">Deck</span>
+    <span class="toggle-chip" id="toggleRandomize" onclick="toggleRandomize()">Randomize</span>
     <select id="filterSel" onchange="filterAndRender()" style="display:none">
       <option value="all">All cards</option>
       <option value="unanswered">Unanswered</option>
@@ -780,57 +662,6 @@
   <div style="height: calc(20 * 2.5em);"></div>
 </div>
 
-<!-- ── DECK VIEW (Mango-style swipe review) ── -->
-<div id="deckViewContainer">
-  <div class="deck-progress-row">
-    <div class="deck-progress-track"><div class="deck-progress-fill" id="deckProgressFill"></div></div>
-    <div class="deck-progress-label" id="deckProgressLabel">0 / 0</div>
-  </div>
-  <div class="deck-stage" id="deckStage">
-    <div class="deck-stamp right" id="deckStampRight">Got it</div>
-    <div class="deck-stamp left" id="deckStampLeft">Again</div>
-    <div class="deck-side-col right">
-      <button class="deck-side-btn miss">✗</button>
-      <button class="deck-side-btn reveal" id="deckRevealBtn">↻</button>
-      <button class="deck-side-btn correct">✓</button>
-    </div>
-    <div class="deck-card" id="deckCard">
-      <span class="deck-eyebrow" id="deckEyebrow">1 of 1</span>
-      <span class="deck-word" id="deckWordText">word</span>
-      <span class="deck-def" id="deckDefText">definition</span>
-      <span class="deck-flip-hint">tap to reveal</span>
-    </div>
-  </div>
-  <div style="display:flex; justify-content:center; gap:48px; margin-top:8px;">
-    <span style="font-size:11px; color:#aaa;"><kbd style="background:#f0f0f0; border:1px solid #ccc; border-radius:3px; padding:1px 5px; font-size:10px; color:#555;">←</kbd> again</span>
-    <span style="font-size:11px; color:#aaa;"><kbd style="background:#f0f0f0; border:1px solid #ccc; border-radius:3px; padding:1px 5px; font-size:10px; color:#555;">↑</kbd> flip</span>
-    <span style="font-size:11px; color:#aaa;"><kbd style="background:#f0f0f0; border:1px solid #ccc; border-radius:3px; padding:1px 5px; font-size:10px; color:#555;">→</kbd> got it</span>
-  </div>
-  <div style="text-align:center; margin-top:14px;">
-    <span id="deckMissedCount" style="font-size:12px; color:#dc2626; display:none;">0 missed</span>
-    <span id="deckRemainingCount" style="font-size:12px; color:#888; margin-left:10px; display:none;">0 remaining</span>
-  </div>
-  <div id="deckSaveArea" style="display:flex; flex-direction:column; align-items:center; gap:8px; margin-top:8px;">
-    <button class="btn primary" id="deckSaveMissedBtn" style="padding:10px 18px; font-size:13px; background:#16a34a; width:100%; max-width:280px;" onclick="deckSaveMissedToSheet('missed')">Copy missed CSV</button>
-    <button class="btn primary" id="deckSaveBothBtn" style="padding:10px 18px; font-size:13px; background:#2563eb; width:100%; max-width:280px;" onclick="deckSaveMissedToSheet('both')">Copy missed + remaining</button>
-    <div style="display:flex; gap:6px; width:100%; max-width:280px;">
-      <select id="dbxPushBucketNum" style="padding:8px 7px; border:1px solid #ddd; border-radius:6px; font-size:12px; font-family:inherit; background:white; min-width:96px;"></select>
-      <button id="dbxPushBtn" style="flex:1; padding:10px 10px; font-size:13px; background:#0061fe; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:600; font-family:inherit; white-space:nowrap;">↑ Push</button>
-    </div>
-    <div id="dbxPushStatus" style="font-size:12px; color:#888; min-height:18px;"></div>
-    <div id="deckSaveStatus" style="font-size:12px; color:#888; margin-top:6px; min-height:18px;"></div>
-    <textarea id="deckCsvTextarea" style="width:100%; max-width:280px; height:120px; font-size:11px; font-family:monospace; border:1px solid #ddd; border-radius:6px; padding:6px; box-sizing:border-box; resize:vertical;" readonly></textarea>
-  </div>
-  <div class="deck-done hidden" id="deckDoneScreen">
-    <div class="deck-done-big">Deck cleared!</div>
-    <p id="deckDoneStats"></p>
-    <p id="deckMissedStats" style="font-size:13px; color:#dc2626;"></p>
-    <button class="btn primary" id="deckDoneSaveBtn" style="padding:12px 20px; display:none; background:#16a34a;" onclick="deckSaveMissedToSheet('missed')">Copy missed CSV</button>
-    <div id="deckDoneSaveStatus" style="font-size:12px; color:#888; margin-top:6px; min-height:18px;"></div>
-    <button class="btn primary" id="deckRestartBtn" style="padding:12px 20px;">Review again</button>
-  </div>
-</div>
-
 <!-- ── COMPARISON MODAL ── -->
 <div class="modal-overlay" id="modalOverlay" onclick="onOverlayClick(event)">
   <div class="modal-box" onclick="event.stopPropagation()">
@@ -876,14 +707,18 @@ var darkModeOn   = localStorage.getItem('darkMode') === 'true';
 var tableViewOn  = true;
 var dataTableInstance = null;
 var tblCurrentDataIdx = -1; // tracks highlighted row by data-row-idx; survives DataTables redraws
-var deckViewOn   = false;
 var ttsPlaying   = null;  // current SpeechSynthesisUtterance chain cancel fn
-var deckQueue    = [];
-var deckTotal    = 0;
-var deckCleared  = 0;
-var deckCurrent  = null;
-var deckFlipped  = false;
-var deckMissedSet = new Set();
+var randomizeOn  = false;
+var displayOrder = []; // indices into filteredVocab: identity order, or shuffled when randomizeOn
+
+// Recompute displayOrder from the current filteredVocab + randomizeOn state.
+// Called whenever filteredVocab changes (filterAndRender) or randomizeOn is toggled —
+// NOT on a plain Cards/Table view switch, so switching views reuses the same order.
+function computeDisplayOrder() {
+  var identity = [];
+  for (var i = 0; i < filteredVocab.length; i++) identity.push(i);
+  displayOrder = randomizeOn ? shuffleArray(identity) : identity;
+}
 
 // ── DARK MODE ──
 function toggleDarkMode() {
@@ -967,6 +802,7 @@ function filterAndRender() {
     return true;
   });
 
+  computeDisplayOrder();
   renderCards();
   if (tableViewOn) renderTableView();
 }
@@ -985,8 +821,8 @@ function renderCards() {
     return;
   }
 
-  filteredVocab.forEach(function(row, fi) {
-    container.appendChild(buildCard(row, fi));
+  displayOrder.forEach(function(fi) {
+    container.appendChild(buildCard(filteredVocab[fi], fi));
   });
 
   updateScorePills();
@@ -1518,7 +1354,6 @@ function loadPastedCsv() {
     document.getElementById('downloadCsvBtn').style.display = '';
     document.getElementById('uploadZone').style.display = 'none';
     filterAndRender();
-    activateDeckView();
   } catch(err) { statusEl.textContent = 'Parse error: ' + err.message; }
 }
 
@@ -1668,7 +1503,6 @@ function sbLoadDeck() {
     document.getElementById('downloadCsvBtn').style.display = '';
     document.getElementById('uploadZone').style.display     = 'none';
     filterAndRender();
-    activateDeckView();
   }).catch(function(e) { document.getElementById('sbStatus').textContent = 'Load failed: ' + e.message; });
 }
 
@@ -1953,15 +1787,8 @@ function toggleTableView() {
 
   var cardsArea = document.getElementById('cardsArea');
   var tableContainer = document.getElementById('tableViewContainer');
-  var deckContainer = document.getElementById('deckViewContainer');
 
   if (tableViewOn) {
-    // Turn off deck view if it's on
-    if (deckViewOn) {
-      deckViewOn = false;
-      document.getElementById('toggleDeckView').className = 'toggle-chip';
-      deckContainer.classList.remove('active');
-    }
     cardsArea.style.display = 'none';
     tableContainer.classList.add('active');
     renderTableView();
@@ -1973,6 +1800,7 @@ function toggleTableView() {
       dataTableInstance = null;
     }
     document.getElementById('tableViewInner').innerHTML = '';
+    renderCards(); // keep in sync with the current Display Order — Cards may have been hidden (stale) while Randomize was toggled in Table mode
   }
 }
 
@@ -1992,10 +1820,11 @@ function renderTableView() {
   html += '<th style="width:54%;">Definition</th>';
   html += '</tr></thead><tbody>';
 
-  filteredVocab.forEach(function(row, n) {
-    html += '<tr data-row-idx="' + n + '">';
-    html += '<td>' + (n + 1) + '</td>';
-    html += '<td><button class="tbl-play-btn" onclick="tblSpeak(' + n + ', this)" title="Speak term">&#9654;</button></td>';
+  displayOrder.forEach(function(fi, k) {
+    var row = filteredVocab[fi];
+    html += '<tr data-row-idx="' + fi + '">';
+    html += '<td>' + (k + 1) + '</td>';
+    html += '<td><button class="tbl-play-btn" onclick="tblSpeak(' + fi + ', this)" title="Speak term">&#9654;</button></td>';
     html += '<td style="font-weight:600;">' + escHtml(row.term) + '</td>';
     html += '<td>' + escHtml(row.definition) + '</td>';
     html += '</tr>';
@@ -2155,53 +1984,11 @@ document.addEventListener('keydown', function(e) {
   tblNavRow(e.key === '.' ? 1 : -1);
 });
 
-// ── DECK VIEW (Mango-style swipe review) ──
-function activateDeckView() {
-  if (!deckViewOn) {
-    deckViewOn = true;
-    document.getElementById('toggleDeckView').className = 'toggle-chip on';
-    var cardsArea = document.getElementById('cardsArea');
-    var tableContainer = document.getElementById('tableViewContainer');
-    var deckContainer = document.getElementById('deckViewContainer');
-    if (tableViewOn) {
-      tableViewOn = false;
-      document.getElementById('toggleTableView').className = 'toggle-chip';
-      tableContainer.classList.remove('active');
-      if (dataTableInstance) { dataTableInstance.destroy(); dataTableInstance = null; }
-      document.getElementById('tableViewInner').innerHTML = '';
-    }
-    cardsArea.style.display = 'none';
-    deckContainer.classList.add('active');
-    startDeckSession();
-  } else {
-    startDeckSession();
-  }
-}
-
-function toggleDeckView() {
-  deckViewOn = !deckViewOn;
-  document.getElementById('toggleDeckView').className = 'toggle-chip' + (deckViewOn ? ' on' : '');
-
-  var cardsArea = document.getElementById('cardsArea');
-  var tableContainer = document.getElementById('tableViewContainer');
-  var deckContainer = document.getElementById('deckViewContainer');
-
-  if (deckViewOn) {
-    // Turn off table view if it's on
-    if (tableViewOn) {
-      tableViewOn = false;
-      document.getElementById('toggleTableView').className = 'toggle-chip';
-      tableContainer.classList.remove('active');
-      if (dataTableInstance) { dataTableInstance.destroy(); dataTableInstance = null; }
-      document.getElementById('tableViewInner').innerHTML = '';
-    }
-    cardsArea.style.display = 'none';
-    deckContainer.classList.add('active');
-    startDeckSession();
-  } else {
-    cardsArea.style.display = '';
-    deckContainer.classList.remove('active');
-  }
+function toggleRandomize() {
+  randomizeOn = !randomizeOn;
+  document.getElementById('toggleRandomize').className = 'toggle-chip' + (randomizeOn ? ' on' : '');
+  computeDisplayOrder();
+  if (tableViewOn) renderTableView(); else renderCards();
 }
 
 function shuffleArray(arr) {
@@ -2211,206 +1998,6 @@ function shuffleArray(arr) {
     var tmp = a[i]; a[i] = a[j]; a[j] = tmp;
   }
   return a;
-}
-
-function startDeckSession() {
-  if (filteredVocab.length === 0) return;
-  deckQueue = shuffleArray(filteredVocab.map(function(_, i) { return i; }));
-  deckTotal = deckQueue.length;
-  deckCleared = 0;
-  deckFlipped = false;
-  deckMissedSet = new Set();
-
-  // Show review UI, hide done screen
-  document.getElementById('deckStage').style.display = '';
-  document.querySelector('.deck-progress-row').style.display = '';
-  document.getElementById('deckDoneScreen').classList.add('hidden');
-
-  // Reset save buttons
-  document.getElementById('deckSaveStatus').textContent = '';
-  var saveMissedBtn = document.getElementById('deckSaveMissedBtn');
-  var saveBothBtn = document.getElementById('deckSaveBothBtn');
-  saveMissedBtn.textContent = 'Copy missed CSV';
-  saveMissedBtn.style.background = '#16a34a';
-  saveMissedBtn.disabled = false;
-  saveBothBtn.textContent = 'Copy missed + remaining';
-  saveBothBtn.style.background = '#2563eb';
-  saveBothBtn.disabled = false;
-
-  deckNextCard();
-}
-
-function deckUpdateProgress() {
-  document.getElementById('deckProgressLabel').textContent = deckCleared + ' / ' + deckTotal;
-  var pct = deckTotal ? (deckCleared / deckTotal) * 100 : 0;
-  document.getElementById('deckProgressFill').style.width = pct + '%';
-}
-
-function deckNextCard() {
-  deckFlipped = false;
-  var cardEl = document.getElementById('deckCard');
-  cardEl.classList.remove('flipped');
-  cardEl.style.transform = '';
-  cardEl.style.opacity = '';
-  cardEl.style.transition = 'none';
-
-  if (deckQueue.length === 0) {
-    deckCurrent = null;
-    deckUpdateProgress();
-    deckFinish();
-    return;
-  }
-  deckCurrent = deckQueue.shift();
-  var item = filteredVocab[deckCurrent];
-  document.getElementById('deckWordText').textContent = item.term;
-  document.getElementById('deckDefText').textContent = item.definition;
-  document.getElementById('deckEyebrow').textContent = 'in queue: ' + (deckQueue.length + 1);
-  deckUpdateProgress();
-}
-
-function deckFinish() {
-  document.getElementById('deckStage').style.display = 'none';
-  document.querySelector('.deck-progress-row').style.display = 'none';
-  var doneEl = document.getElementById('deckDoneScreen');
-  doneEl.classList.remove('hidden');
-  document.getElementById('deckDoneStats').textContent =
-    'You cleared all ' + deckTotal + ' words in this deck.';
-
-  // Hide mid-review save area counts
-  document.getElementById('deckSaveArea').style.display = 'none'; // hide during done screen
-  document.getElementById('deckMissedCount').style.display = 'none';
-  document.getElementById('deckRemainingCount').style.display = 'none';
-
-  // Show missed stats and save button on done screen
-  var missedEl = document.getElementById('deckMissedStats');
-  var saveBtn = document.getElementById('deckDoneSaveBtn');
-  document.getElementById('deckDoneSaveStatus').textContent = '';
-  if (deckMissedSet.size > 0) {
-    missedEl.textContent = deckMissedSet.size + ' word(s) you missed at least once.';
-    saveBtn.style.display = '';
-    saveBtn.textContent = 'Copy missed CSV';
-    saveBtn.style.background = '#16a34a';
-    saveBtn.disabled = false;
-  } else {
-    missedEl.textContent = 'Perfect run — no misses!';
-    saveBtn.style.display = 'none';
-  }
-}
-
-function deckUpdateSaveButtons() {
-  var hasMissed = deckMissedSet.size > 0;
-  var hasRemaining = deckQueue.length > 0;
-
-  // Missed count label
-  var missedCountEl = document.getElementById('deckMissedCount');
-  if (hasMissed) {
-    missedCountEl.style.display = '';
-    missedCountEl.textContent = deckMissedSet.size + ' missed';
-  } else {
-    missedCountEl.style.display = 'none';
-  }
-
-  // Remaining count label
-  var remainingEl = document.getElementById('deckRemainingCount');
-  if (hasRemaining) {
-    remainingEl.style.display = '';
-    remainingEl.textContent = deckQueue.length + ' remaining';
-  } else {
-    remainingEl.style.display = 'none';
-  }
-
-  var saveBothBtn = document.getElementById('deckSaveBothBtn');
-  saveBothBtn.style.display = hasRemaining ? '' : 'none';
-}
-
-function deckFlipCard() {
-  if (deckFlipped) return;
-  deckFlipped = true;
-  document.getElementById('deckCard').classList.add('flipped');
-}
-
-function deckGrade(correct) {
-  if (deckCurrent === null) return;
-  if (!correct) {
-    deckQueue.push(deckCurrent); // recycle to end
-    deckMissedSet.add(deckCurrent);
-  } else {
-    deckCleared++;
-  }
-  deckFlashStamp(correct);
-  deckAnimateOut(correct, function() {
-    deckNextCard();
-    deckUpdateSaveButtons();
-  });
-}
-
-function deckFlashStamp(correct) {
-  var el = document.getElementById(correct ? 'deckStampRight' : 'deckStampLeft');
-  el.style.transition = 'none';
-  el.style.opacity = '1';
-  requestAnimationFrame(function() {
-    el.style.transition = 'opacity .4s ease';
-    el.style.opacity = '0';
-  });
-}
-
-function deckAnimateOut(correct, cb) {
-  var cardEl = document.getElementById('deckCard');
-  cardEl.style.transition = 'transform .25s ease, opacity .25s ease';
-  cardEl.style.transform = 'translateX(' + (correct ? '120%' : '-120%') + ') rotate(' + (correct ? 10 : -10) + 'deg)';
-  cardEl.style.opacity = '0';
-  setTimeout(function() {
-    cardEl.style.transition = 'none';
-    cb();
-  }, 220);
-}
-
-// Deck card tap to flip
-document.getElementById('deckCard').addEventListener('click', function() { deckFlipCard(); });
-
-// Deck side buttons
-document.querySelectorAll('.deck-side-btn.correct').forEach(function(btn) {
-  btn.addEventListener('click', function() { deckGrade(true); });
-});
-document.querySelectorAll('.deck-side-btn.miss').forEach(function(btn) {
-  btn.addEventListener('click', function() { deckGrade(false); });
-});
-document.getElementById('deckRevealBtn').addEventListener('click', function() { deckFlipCard(); });
-
-// Deck button handlers
-document.getElementById('deckRestartBtn').addEventListener('click', function() { startDeckSession(); });
-
-// ── SAVE MISSED TO GOOGLE SHEET ──
-function deckSaveMissedToSheet(mode) {
-  if (mode === 'missed' && deckMissedSet.size === 0) return;
-  if (mode === 'both' && deckMissedSet.size === 0 && deckQueue.length === 0 && deckCurrent === null) return;
-  var csvRows = [], added = new Set();
-  var sortedMissed = Array.from(deckMissedSet).sort(function(a, b) { return a - b; });
-  sortedMissed.forEach(function(fi) {
-    var item = filteredVocab[fi];
-    if (item) { csvRows.push([item.term, item.definition]); added.add(fi); }
-  });
-  if (mode === 'both') {
-    deckQueue.forEach(function(fi) {
-      if (!added.has(fi)) { var item = filteredVocab[fi]; if (item) { csvRows.push([item.term, item.definition]); added.add(fi); } }
-    });
-    if (deckCurrent !== null && !added.has(deckCurrent)) {
-      var item = filteredVocab[deckCurrent]; if (item) { csvRows.push([item.term, item.definition]); added.add(deckCurrent); }
-    }
-  }
-  function csvEsc(s) { s = String(s); return (s.indexOf(',') >= 0 || s.indexOf('"') >= 0 || s.indexOf('\n') >= 0) ? '"' + s.replace(/"/g, '""') + '"' : s; }
-  var lines = [];
-  csvRows.forEach(function(r) { lines.push(r.map(csvEsc).join(',')); });
-  var csv = lines.join('\n');
-  var statusEl = document.getElementById('deckSaveStatus');
-  var textarea = document.getElementById('deckCsvTextarea');
-  textarea.value = csv;
-  navigator.clipboard.writeText(csv).then(function() {
-    statusEl.textContent = '\u2705 Copied ' + csvRows.length + ' term' + (csvRows.length === 1 ? '' : 's') + ' to clipboard';
-    setTimeout(function() { statusEl.textContent = ''; }, 3000);
-  }).catch(function() {
-    statusEl.textContent = 'Tap and select all in the box below to copy';
-  });
 }
 
 // ── DROPBOX BUCKET PUSH / PULL ──
@@ -2537,7 +2124,7 @@ async function dbxUpload(path, content) {
 }
 
 function dbxPopulateBucketSelects() {
-  ['dbxPullBucketNum', 'dbxPushBucketNum'].forEach(function(id) {
+  ['dbxPullBucketNum'].forEach(function(id) {
     var sel = document.getElementById(id);
     if (!sel) return;
     sel.innerHTML = '';
@@ -2577,37 +2164,6 @@ document.getElementById('dbxPullBtn').addEventListener('click', async function()
   }
 });
 
-document.getElementById('dbxPushBtn').addEventListener('click', async function() {
-  var n = document.getElementById('dbxPushBucketNum').value;
-  var statusEl = document.getElementById('dbxPushStatus');
-  // Build CSV of missed + remaining (same logic as deckSaveMissedToSheet('both'))
-  var csvRows = [], added = new Set();
-  Array.from(deckMissedSet).sort(function(a, b) { return a - b; }).forEach(function(fi) {
-    var item = filteredVocab[fi]; if (item) { csvRows.push([item.term, item.definition]); added.add(fi); }
-  });
-  deckQueue.forEach(function(fi) {
-    if (!added.has(fi)) { var item = filteredVocab[fi]; if (item) { csvRows.push([item.term, item.definition]); added.add(fi); } }
-  });
-  if (deckCurrent !== null && !added.has(deckCurrent)) {
-    var item = filteredVocab[deckCurrent]; if (item) { csvRows.push([item.term, item.definition]); added.add(deckCurrent); }
-  }
-  if (csvRows.length === 0) { statusEl.textContent = 'Nothing to push — no missed or remaining cards.'; return; }
-  function csvEsc(s) { s = String(s); return (s.indexOf(',') >= 0 || s.indexOf('"') >= 0 || s.indexOf('\n') >= 0) ? '"' + s.replace(/"/g, '""') + '"' : s; }
-  var csv = csvRows.map(function(r) { return r.map(csvEsc).join(','); }).join('\n');
-  if (!DBX_TOKEN) { statusEl.textContent = 'Signing in…'; await dbxSignIn('push:' + n); return; }
-  var btn = this;
-  btn.disabled = true; btn.textContent = 'Pushing…'; statusEl.textContent = '';
-  try {
-    await dbxUpload(dbxBucketPath(n), csv);
-    statusEl.textContent = '✅ Pushed ' + csvRows.length + ' terms → bucket ' + n;
-    setTimeout(function() { statusEl.textContent = ''; }, 3000);
-  } catch(e) {
-    statusEl.textContent = '❌ ' + e.message;
-  } finally {
-    btn.disabled = false; btn.textContent = '↑ Push';
-  }
-});
-
 function dbxResumePending() {
   var pending = sessionStorage.getItem('dbx_pending');
   if (!pending) return;
@@ -2615,9 +2171,6 @@ function dbxResumePending() {
   if (pending.startsWith('pull:')) {
     document.getElementById('dbxPullBucketNum').value = pending.slice(5);
     document.getElementById('dbxPullBtn').click();
-  } else if (pending.startsWith('push:')) {
-    document.getElementById('dbxPushBucketNum').value = pending.slice(5);
-    document.getElementById('dbxPushBtn').click();
   }
 }
 
@@ -2802,14 +2355,6 @@ document.addEventListener('keydown', function(e) {
     if (e.key === 'ArrowLeft') { e.preventDefault(); pracNavigate(-1); return; }
     if (e.key === 'ArrowRight') { e.preventDefault(); pracNavigate(1); return; }
     if (e.key === 'Escape') { e.preventDefault(); closePracticeModal(); return; }
-    return;
-  }
-
-  // Deck view keys
-  if (deckViewOn && deckCurrent !== null) {
-    if (e.key === 'ArrowLeft') { e.preventDefault(); deckGrade(false); return; }
-    if (e.key === 'ArrowRight') { e.preventDefault(); deckGrade(true); return; }
-    if (e.key === ' ' || e.key === 'ArrowUp') { e.preventDefault(); deckFlipCard(); return; }
     return;
   }
 
