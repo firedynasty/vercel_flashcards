@@ -478,9 +478,14 @@
         });
 
         document.addEventListener('keydown', function(e) {
-            if (e.target === pathInput || e.target === jumpSelect) return; // don't steal arrows while editing
+            if (e.target === pathInput || e.target === jumpSelect || e.target === presetSelect) return; // don't steal arrows while editing
             if (e.key === 'ArrowLeft') { e.preventDefault(); showImage(currentIndex - 1); }
             else if (e.key === 'ArrowRight') { e.preventDefault(); showImage(currentIndex + 1); }
+            else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+                if (jumpSelect.disabled) return;
+                e.preventDefault();
+                jumpSelect.focus(); // once focused, ↑/↓ step through images natively
+            }
         });
 
         // Folder from URL: supports ?/images/foo (bare path) and ?path=/images/foo
