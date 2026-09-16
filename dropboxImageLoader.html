@@ -516,14 +516,13 @@
         (async function dbxBoot() {
             await dbxHandleRedirect();
             dbxSetAuthBtn();
-            // URL param takes priority: auto-load the folder it names
+            // URL param only pre-fills the input; user presses Load explicitly
             var urlFolder = getFolderFromUrl();
             if (urlFolder) {
                 pathInput.value = urlFolder;
-                loadFolder(); // signs in first if needed; pending-folder flow resumes after auth
-                return;
+            } else {
+                try { pathInput.value = localStorage.getItem(DBX_LAST_PATH_KEY) || ''; } catch(e) {}
             }
-            try { pathInput.value = localStorage.getItem(DBX_LAST_PATH_KEY) || ''; } catch(e) {}
             // Returned from a full-page OAuth redirect with a pending load
             if (DBX_TOKEN && sessionStorage.getItem('dbx_pending') === 'load-folder') {
                 sessionStorage.removeItem('dbx_pending');
