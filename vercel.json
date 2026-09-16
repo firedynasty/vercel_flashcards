@@ -34,6 +34,8 @@
     { "source": "/paste-and-preview", "destination": "/paste-and-preview.html" },
     { "source": "/googlenotes.html", "destination": "/googlenotes.html" },
     { "source": "/googlenotes", "destination": "/googlenotes.html" },
+    { "source": "/dropboxImageLoader.html", "destination": "/dropboxImageLoader.html" },
+    { "source": "/dropboxImageLoader", "destination": "/dropboxImageLoader.html" },
     { "source": "/(.*)", "destination": "/flashcards.html" }
   ]
 }
