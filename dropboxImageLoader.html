@@ -411,6 +411,10 @@
                 loadToken++;
                 currentIndex = -1;
                 try { localStorage.setItem(DBX_LAST_PATH_KEY, folder || '/'); } catch(e) {}
+                // Reflect the loaded folder in the URL so it's bookmarkable/shareable
+                try {
+                    if (folder) window.history.replaceState({}, document.title, window.location.pathname + '?' + encodeURI(folder));
+                } catch(e) {}
 
                 jumpSelect.innerHTML = '';
                 images.forEach(function(im, i) {
@@ -479,6 +483,20 @@
             else if (e.key === 'ArrowRight') { e.preventDefault(); showImage(currentIndex + 1); }
         });
 
+        // Folder from URL: supports ?/images/foo (bare path) and ?path=/images/foo
+        function getFolderFromUrl() {
+            var search = window.location.search || '';
+            if (!search) return '';
+            var params = new URLSearchParams(search);
+            var named = params.get('path') || params.get('folder');
+            if (named) return named;
+            var raw = search.slice(1);
+            if (raw && raw.indexOf('=') === -1) { // ignore ?code=... from OAuth redirect
+                try { return decodeURIComponent(raw); } catch(e) { return raw; }
+            }
+            return '';
+        }
+
         function runPendingLoad() {
             var pf = sessionStorage.getItem('dbx_pending_folder');
             if (pf !== null) { sessionStorage.removeItem('dbx_pending_folder'); pathInput.value = pf; }
@@ -498,6 +516,13 @@
         (async function dbxBoot() {
             await dbxHandleRedirect();
             dbxSetAuthBtn();
+            // URL param takes priority: auto-load the folder it names
+            var urlFolder = getFolderFromUrl();
+            if (urlFolder) {
+                pathInput.value = urlFolder;
+                loadFolder(); // signs in first if needed; pending-folder flow resumes after auth
+                return;
+            }
             try { pathInput.value = localStorage.getItem(DBX_LAST_PATH_KEY) || ''; } catch(e) {}
             // Returned from a full-page OAuth redirect with a pending load
             if (DBX_TOKEN && sessionStorage.getItem('dbx_pending') === 'load-folder') {
