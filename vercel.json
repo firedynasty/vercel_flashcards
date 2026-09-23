@@ -4,6 +4,7 @@
     { "source": "/role-playing.html", "destination": "/role-playing.html" },
     { "source": "/learn-chinese.html", "destination": "/learn-chinese.html" },
     { "source": "/learn-chinese-tts.html", "destination": "/learn-chinese-tts.html" },
+    { "source": "/learn-chinese-tts", "destination": "/learn-chinese-tts.html" },
     { "source": "/chinese-csv-to-table.html", "destination": "/chinese-csv-to-table.html" },
     { "source": "/chinese-csv-to-table", "destination": "/chinese-csv-to-table.html" },
     { "source": "/musicindex.html", "destination": "/musicindex.html" },
@@ -36,6 +37,8 @@
     { "source": "/googlenotes", "destination": "/googlenotes.html" },
     { "source": "/dropboxImageLoader.html", "destination": "/dropboxImageLoader.html" },
     { "source": "/dropboxImageLoader", "destination": "/dropboxImageLoader.html" },
+    { "source": "/anki_manager.html", "destination": "/anki_manager.html" },
+    { "source": "/anki_manager", "destination": "/anki_manager.html" },
     { "source": "/(.*)", "destination": "/flashcards.html" }
   ]
 }
