@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Image Notes</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <style>
         * {
             margin: 0;
@@ -185,12 +186,24 @@
         <button class="tool-btn" id="scrollUpBtn" title="Scroll up">↑</button>
         <button class="tool-btn" id="scrollDownBtn" title="Scroll down">↓</button>
         <input type="range" id="strokeSize" min="2" max="20" value="2" style="width:75px; height:24px;">
-        <button class="ml-2 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold bg-amber-500 text-white hover:bg-amber-600" id="notesBtn" title="Open notes (synced to Dropbox)">save *</button>
+        <button style="display:none;" class="ml-2 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold bg-amber-500 text-white hover:bg-amber-600" id="notesBtn" title="Open notes (synced to Dropbox)">save *</button>
         <button class="ml-2 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700" id="ocrBtn" title="Extract text (English)">OCR</button>
         <button class="ml-2 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700" id="ocrChinBtn" title="Extract text (Chinese)">中文</button>
-        <button class="ml-2 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700" id="txtNotesBtn" title="Open text notes (synced to Dropbox)">Notes</button>
+        <button style="display:none;" class="ml-2 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700" id="txtNotesBtn" title="Open text notes (synced to Dropbox)">Notes</button>
+        <button class="ml-2 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-700" id="gnSignInBtn" title="Sign in with Google">G Sign In</button>
+        <button class="ml-2 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold bg-indigo-500 text-white hover:bg-indigo-600 disabled:opacity-50" id="gnRecentBtn" disabled title="Pick a recent Google Doc">Recent ▾</button>
+        <span id="gnDocName" style="font-size:11px; color:#94a3b8; align-self:center; max-width:140px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></span>
+        <button class="ml-2 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50" id="gnSaveBtn" title="Extract text from the canvas and append it to the target Doc">Save</button>
+        <span id="gnStatus" style="font-size:10px; color:#94a3b8; align-self:center; max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></span>
         <button class="ml-2 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold bg-teal-500 text-white hover:bg-teal-600" id="savePngBtn" title="Save drawing as PNG to device">&#8595; PNG</button>
     </div>
+
+    <!-- Google "Recent" dropdown — deliberately NOT nested inside .toolbar: that
+         element sets overflow-x:auto, which per the CSS spec computes overflow-y
+         to auto too, clipping anything (even position:absolute, even a high
+         z-index) that extends below it. position:fixed here, with its screen
+         coordinates set from gnRecentBtn's own rect in JS, escapes that clip. -->
+    <div id="gnRecentDropdown" hidden style="position:fixed; z-index:500; background:#1e293b; border:1px solid #334155; border-radius:8px; box-shadow:0 4px 14px rgba(0,0,0,0.35); min-width:220px; max-width:320px; max-height:240px; overflow-y:auto;"></div>
 
     <!-- OCR result overlay -->
     <div id="ocrOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.72); z-index:300; align-items:flex-start; justify-content:center; padding:16px; overflow-y:auto;">
@@ -210,7 +223,7 @@
           <button id="ocrCopyBtn" style="flex:2; padding:10px 0; font-size:14px; border:none; border-radius:8px; background:#2563eb; color:white; cursor:pointer; font-weight:600;">Copy to clipboard</button>
           <button id="ocrClearBtn" style="flex:1; padding:10px 0; font-size:14px; border:none; border-radius:8px; background:#dc2626; color:white; cursor:pointer; font-weight:600;">Clear</button>
         </div>
-        <button id="ocrAppendNotesBtn" style="width:100%; padding:10px 0; font-size:14px; border:none; border-radius:8px; background:#059669; color:white; cursor:pointer; font-weight:600;">Append to Notes</button>
+        <button id="ocrAppendNotesBtn" style="width:100%; padding:10px 0; font-size:14px; border:none; border-radius:8px; background:#059669; color:white; cursor:pointer; font-weight:600;">Append to Doc</button>
       </div>
     </div>
 
@@ -882,6 +895,182 @@
             }
         });
 
+        // ── GOOGLE DOCS (sign in / recent / append target) ──────────────────────
+        // Same OAuth client ID already used by learn-google.html / learn-chinese-tts.html / googlenotes.html in this repo.
+        var GDRIVE_CLIENT_ID = '1095683227908-7ro25k16mprkf408i3lf583gti8v759b.apps.googleusercontent.com';
+        var GN_LAST_DOC_KEY = 'imageNotes:lastGDoc'; // {id, name} — remembered across reloads via localStorage
+        var gnAccessToken = null;
+        var gnTokenClient = null;
+        var gnTargetDoc = null; // { id, name } — append TARGET only; its content is never fetched or shown
+
+        function gnSetStatus(msg) {
+            // Written to both sinks: the toolbar's own status (scrolled into
+            // view below, since .toolbar horizontally scrolls and this tiny
+            // span can otherwise land off-screen unnoticed) and the OCR
+            // overlay's status (visible when that overlay is open).
+            var toolbarEl = document.getElementById('gnStatus');
+            if (toolbarEl) {
+                toolbarEl.textContent = msg || '';
+                if (msg) toolbarEl.scrollIntoView({ behavior: 'smooth', inline: 'nearest', block: 'nearest' });
+            }
+            var overlayEl = document.getElementById('ocrStatus');
+            if (overlayEl) overlayEl.textContent = msg || '';
+        }
+
+        function gnInitClient() {
+            if (window.google && window.google.accounts) {
+                gnTokenClient = window.google.accounts.oauth2.initTokenClient({
+                    client_id: GDRIVE_CLIENT_ID,
+                    scope: 'https://www.googleapis.com/auth/drive',
+                    callback: function(resp) {
+                        if (resp.access_token) {
+                            gnAccessToken = resp.access_token;
+                            document.getElementById('gnSignInBtn').textContent = 'G Sign Out';
+                            document.getElementById('gnRecentBtn').disabled = false;
+                            gnSetStatus('Signed in to Google');
+                            gnRestoreLastTargetDoc();
+                        } else {
+                            gnSetStatus('Google sign-in failed: ' + (resp.error || 'unknown error'));
+                        }
+                    }
+                });
+            } else {
+                setTimeout(gnInitClient, 100);
+            }
+        }
+        gnInitClient();
+
+        function gnRestoreLastTargetDoc() {
+            try {
+                var last = JSON.parse(localStorage.getItem(GN_LAST_DOC_KEY) || 'null');
+                if (last && last.id) {
+                    gnTargetDoc = last;
+                    document.getElementById('gnDocName').textContent = '→ ' + last.name;
+                }
+            } catch (e) {}
+        }
+        gnRestoreLastTargetDoc();
+
+        document.getElementById('gnSignInBtn').addEventListener('click', function() {
+            if (gnAccessToken) {
+                try { window.google.accounts.oauth2.revoke(gnAccessToken); } catch (e) {}
+                gnAccessToken = null;
+                document.getElementById('gnSignInBtn').textContent = 'G Sign In';
+                document.getElementById('gnRecentBtn').disabled = true;
+                gnCloseRecentDropdown();
+                gnSetStatus('Signed out of Google');
+                // gnTargetDoc / imageNotes:lastGDoc are left alone — signing back in resumes the same target.
+            } else if (gnTokenClient) {
+                gnTokenClient.requestAccessToken();
+            }
+        });
+
+        var gnDismissListener = null;
+        document.getElementById('gnRecentBtn').addEventListener('click', function() {
+            var dropdown = document.getElementById('gnRecentDropdown');
+            if (!dropdown.hidden) { gnCloseRecentDropdown(); return; }
+            gnFetchRecentFiles();
+        });
+
+        function gnFetchRecentFiles() {
+            var btn = document.getElementById('gnRecentBtn');
+            btn.textContent = 'Loading…';
+            var q = encodeURIComponent("mimeType='application/vnd.google-apps.document' and trashed=false");
+            var url = 'https://www.googleapis.com/drive/v3/files?q=' + q +
+                '&orderBy=viewedByMeTime+desc&pageSize=10&fields=files(id,name,viewedByMeTime)';
+            fetch(url, { headers: { Authorization: 'Bearer ' + gnAccessToken } })
+                .then(function(r) { return r.json(); })
+                .then(function(data) { gnOpenRecentDropdown(data.files || []); })
+                .catch(function(err) { gnSetStatus('Error fetching recent files: ' + err.message); })
+                .finally(function() { btn.textContent = 'Recent ▾'; });
+        }
+
+        function gnOpenRecentDropdown(files) {
+            var dropdown = document.getElementById('gnRecentDropdown');
+            dropdown.innerHTML = '';
+            // Positioned from the button's actual screen coordinates (not CSS
+            // top/left relative to a parent) since the dropdown is fixed and
+            // lives outside .toolbar specifically to escape its overflow clip.
+            var rect = document.getElementById('gnRecentBtn').getBoundingClientRect();
+            var left = Math.min(rect.left, window.innerWidth - 320 - 8); // keep the 320px-wide dropdown on-screen
+            dropdown.style.top = (rect.bottom + 4) + 'px';
+            dropdown.style.left = Math.max(8, left) + 'px';
+            if (files.length === 0) {
+                var empty = document.createElement('div');
+                empty.style.cssText = 'padding:8px 10px; font-size:12px; color:#94a3b8;';
+                empty.textContent = 'No recent Docs found';
+                dropdown.appendChild(empty);
+            } else {
+                files.forEach(function(f) {
+                    var item = document.createElement('button');
+                    item.type = 'button';
+                    item.textContent = f.name;
+                    item.style.cssText = 'display:block; width:100%; text-align:left; padding:8px 10px; border:none; border-bottom:1px solid #334155; background:#1e293b; color:#e2e8f0; font-size:12px; cursor:pointer; word-break:break-word;';
+                    item.addEventListener('click', function() {
+                        gnSelectTargetDoc(f.id, f.name);
+                        gnCloseRecentDropdown();
+                    });
+                    dropdown.appendChild(item);
+                });
+            }
+            dropdown.hidden = false;
+            if (!gnDismissListener) {
+                setTimeout(function() {
+                    gnDismissListener = function(e) {
+                        var dd = document.getElementById('gnRecentDropdown');
+                        var btn = document.getElementById('gnRecentBtn');
+                        if (dd && !dd.contains(e.target) && e.target !== btn) gnCloseRecentDropdown();
+                    };
+                    document.addEventListener('click', gnDismissListener);
+                }, 0);
+            }
+        }
+        function gnCloseRecentDropdown() {
+            var dropdown = document.getElementById('gnRecentDropdown');
+            dropdown.hidden = true;
+            if (gnDismissListener) {
+                document.removeEventListener('click', gnDismissListener);
+                gnDismissListener = null;
+            }
+        }
+
+        // Sets the append TARGET only — no content is fetched or shown.
+        function gnSelectTargetDoc(fileId, fileName) {
+            gnTargetDoc = { id: fileId, name: fileName };
+            document.getElementById('gnDocName').textContent = '→ ' + fileName;
+            try { localStorage.setItem(GN_LAST_DOC_KEY, JSON.stringify(gnTargetDoc)); } catch (e) {}
+            gnSetStatus('Ready to append to "' + fileName + '"');
+        }
+
+        // Appends text to the END of the target Doc (Docs API "insert right
+        // before the final newline" trick) — never touches or replaces
+        // whatever's already in the doc. Returns a Promise.
+        function gnAppendToGoogleDoc(text) {
+            if (!gnAccessToken) return Promise.reject(new Error('Sign in with Google first'));
+            if (!gnTargetDoc) return Promise.reject(new Error('Pick a Recent Google Doc first'));
+            return fetch('https://docs.googleapis.com/v1/documents/' + gnTargetDoc.id, {
+                headers: { Authorization: 'Bearer ' + gnAccessToken }
+            })
+                .then(function(r) {
+                    if (!r.ok) throw new Error('Doc read failed (HTTP ' + r.status + ')');
+                    return r.json();
+                })
+                .then(function(doc) {
+                    var endIndex = doc.body.content[doc.body.content.length - 1].endIndex;
+                    var normalized = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+                    var insertAt = Math.max(1, endIndex - 1);
+                    var toInsert = (endIndex > 2 ? '\n\n' : '') + normalized;
+                    return fetch('https://docs.googleapis.com/v1/documents/' + gnTargetDoc.id + ':batchUpdate', {
+                        method: 'POST',
+                        headers: { Authorization: 'Bearer ' + gnAccessToken, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ requests: [{ insertText: { location: { index: insertAt }, text: toInsert } }] }),
+                    });
+                })
+                .then(function(r) {
+                    if (!r.ok) return r.json().then(function(err) { throw new Error((err.error && err.error.message) || ('HTTP ' + r.status)); });
+                });
+        }
+
         // ── OCR ──
         const ocrOverlay = document.getElementById('ocrOverlay');
         document.getElementById('ocrBtn').addEventListener('click', () => ocrRun(false));
@@ -906,25 +1095,40 @@
                 if (pe) pe.style.display = '';
             }
         });
-        document.getElementById('ocrAppendNotesBtn').addEventListener('click', () => {
+        // Shared by both the overlay's "Append to Doc" button and the toolbar's
+        // Used by the OCR overlay's "Append to Doc" button — appends whatever
+        // text is currently sitting in the OCR result box (from a prior OCR/
+        // 中文 run), letting you review/edit it before committing.
+        function gnAppendCurrentOcrText(btn) {
             const text = document.getElementById('ocrResult').value;
-            if (!text) return;
-            try {
-                const existing = localStorage.getItem('imageNotesText') || '';
-                const updated = existing ? existing.trimEnd() + '\n\n' + text : text;
-                localStorage.setItem('imageNotesText', updated);
-                // Keep textarea in sync if Notes modal is already open
-                if (txtNotesArea) txtNotesArea.value = updated;
-                // Clear canvas
+            if (!text) { gnSetStatus('Nothing to save — run OCR first'); return; }
+            if (!gnAccessToken) { gnSetStatus('❌ Sign in with Google first'); return; }
+            if (!gnTargetDoc) { gnSetStatus('❌ Pick a Recent Google Doc first'); return; }
+            const restoreLabel = btn.textContent;
+            btn.disabled = true;
+            gnSetStatus('Appending to "' + gnTargetDoc.name + '"…');
+            gnAppendToGoogleDoc(text).then(() => {
+                // Clear canvas only on a confirmed successful append — OCR text stays visible to copy.
                 strokes = [];
                 ctx.clearRect(0, 0, cssW, cssH);
                 updateUndoBtn();
-                const btn = document.getElementById('ocrAppendNotesBtn');
+                gnSetStatus('✅ Appended to "' + gnTargetDoc.name + '"');
                 btn.textContent = 'Appended ✓';
-                setTimeout(() => { btn.textContent = 'Append to Notes'; }, 1800);
-            } catch(e) {
-                document.getElementById('ocrStatus').textContent = '❌ Could not save to localStorage';
-            }
+                setTimeout(() => { btn.textContent = restoreLabel; }, 1800);
+            }).catch((e) => {
+                // Nothing is cleared on failure — retry by clicking again.
+                gnSetStatus('❌ ' + e.message);
+            }).finally(() => { btn.disabled = false; });
+        }
+        document.getElementById('ocrAppendNotesBtn').addEventListener('click', function() {
+            gnAppendCurrentOcrText(this);
+        });
+        // Toolbar "Save": one click — extract text from the canvas (silently,
+        // no overlay) and append it straight to the target Doc. gnSaveViaOcr
+        // is defined further down (function declarations are hoisted), next
+        // to the OCR helpers it shares with ocrRun().
+        document.getElementById('gnSaveBtn').addEventListener('click', function() {
+            gnSaveViaOcr(this);
         });
 
         // ── SAVE PNG TO DEVICE ──
@@ -994,10 +1198,13 @@
             setTimeout(function() { document.body.removeChild(a); URL.revokeObjectURL(url); }, 1000);
         });
 
-        async function ocrRun(chinese) {
-            if (strokes.length === 0) { alert('Nothing drawn yet.'); return; }
+        // Crops the canvas to its drawn content (+padding) and returns
+        // { dataUrl, base64 }, or null (having already alerted) if there's
+        // nothing to crop. Shared by ocrRun() (overlay flow) and
+        // gnSaveViaOcr() (one-click toolbar flow).
+        function cropCanvasForOcr() {
+            if (strokes.length === 0) { alert('Nothing drawn yet.'); return null; }
 
-            // Compute bounding box of all stroke points
             let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
             strokes.forEach(s => s.points.forEach(p => {
                 if (p.x < minX) minX = p.x;
@@ -1012,9 +1219,8 @@
             maxY = Math.min(cssH, maxY + PAD);
             const cropW = maxX - minX;
             const cropH = maxY - minY;
-            if (cropW < 2 || cropH < 2) { alert('Drawing area too small.'); return; }
+            if (cropW < 2 || cropH < 2) { alert('Drawing area too small.'); return null; }
 
-            // Copy cropped region to a temp canvas (white bg) and export as base64
             const dpr = Math.min(window.devicePixelRatio || 1, 2);
             const tmp = document.createElement('canvas');
             tmp.width = Math.round(cropW * dpr);
@@ -1023,7 +1229,6 @@
             tmpCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
             tmpCtx.fillStyle = isDark ? '#374151' : '#ffffff';
             tmpCtx.fillRect(0, 0, cropW, cropH);
-            // Replay strokes offset by bounding box
             strokes.forEach(s => {
                 if (s.points.length === 0) return;
                 tmpCtx.strokeStyle = s.color;
@@ -1044,24 +1249,56 @@
             });
 
             const dataUrl = tmp.toDataURL('image/png');
-            const base64 = dataUrl.split(',')[1];
+            return { dataUrl, base64: dataUrl.split(',')[1] };
+        }
+
+        // Returns the cached access code, or prompts for one (the ONE
+        // user-facing prompt in this whole flow) and caches it. Returns ''
+        // if the user cancels the prompt.
+        function getOrPromptAccessCode() {
+            var accessCode = localStorage.getItem('ocr-access-code') || '';
+            if (!accessCode) {
+                accessCode = prompt('Enter access code:') || '';
+                if (accessCode) localStorage.setItem('ocr-access-code', accessCode);
+            }
+            return accessCode;
+        }
+
+        // Calls /api/ocr and returns the extracted text, or throws an Error
+        // with a message suitable to show directly to the user. On an
+        // invalid access code (401), also clears it so the next attempt
+        // re-prompts instead of failing silently forever.
+        async function ocrExtractText(base64, chinese, accessCode) {
+            const resp = await fetch('/api/ocr', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ accessCode, imageBase64: base64, chinese }),
+            });
+            const data = await resp.json();
+            if (!resp.ok) {
+                if (resp.status === 401) {
+                    localStorage.removeItem('ocr-access-code');
+                    throw new Error('Invalid access code — cleared, try again.');
+                }
+                throw new Error(data.error || 'Request failed');
+            }
+            return data.text || '';
+        }
+
+        async function ocrRun(chinese) {
+            const cropped = cropCanvasForOcr();
+            if (!cropped) return;
 
             // Show cropped canvas in the OCR overlay preview
             const ocrPreview = document.getElementById('ocrPreview');
             const ocrPreviewEmpty = document.getElementById('ocrPreviewEmpty');
-            ocrPreview.src = dataUrl;
+            ocrPreview.src = cropped.dataUrl;
             ocrPreview.style.display = 'block';
             if (ocrPreviewEmpty) ocrPreviewEmpty.style.display = 'none';
 
-            // Get / prompt for access code
-            var accessCode = localStorage.getItem('ocr-access-code') || '';
-            if (!accessCode) {
-                accessCode = prompt('Enter access code:') || '';
-                if (!accessCode) return;
-                localStorage.setItem('ocr-access-code', accessCode);
-            }
+            const accessCode = getOrPromptAccessCode();
+            if (!accessCode) return;
 
-            // Show overlay and call /api/ocr
             ocrOverlay.style.display = 'flex';
             const statusEl = document.getElementById('ocrStatus');
             const resultEl = document.getElementById('ocrResult');
@@ -1069,25 +1306,49 @@
             resultEl.value = '';
 
             try {
-                const resp = await fetch('/api/ocr', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ accessCode, imageBase64: base64, chinese }),
-                });
-                const data = await resp.json();
-                if (!resp.ok) {
-                    if (resp.status === 401) {
-                        localStorage.removeItem('ocr-access-code');
-                        statusEl.textContent = '❌ Invalid access code — cleared, try again.';
-                    } else {
-                        statusEl.textContent = '❌ ' + (data.error || 'Request failed');
-                    }
-                    return;
-                }
+                const text = await ocrExtractText(cropped.base64, chinese, accessCode);
                 statusEl.textContent = '';
-                resultEl.value = data.text || '(no text found)';
+                resultEl.value = text || '(no text found)';
             } catch (e) {
                 statusEl.textContent = '❌ ' + e.message;
+            }
+        }
+
+        // One-click toolbar "Save": crop → OCR → append to the target Doc —
+        // entirely without opening the OCR overlay. The access-code prompt
+        // (inside getOrPromptAccessCode, only when not already cached) is the
+        // only prompt this flow ever shows.
+        async function gnSaveViaOcr(btn) {
+            if (!gnAccessToken) { gnSetStatus('❌ Sign in with Google first'); return; }
+            if (!gnTargetDoc) { gnSetStatus('❌ Pick a Recent Google Doc first'); return; }
+
+            const cropped = cropCanvasForOcr();
+            if (!cropped) return;
+
+            const accessCode = getOrPromptAccessCode();
+            if (!accessCode) return;
+
+            const restoreLabel = btn.textContent;
+            btn.disabled = true;
+            gnSetStatus('Extracting text…');
+            try {
+                const text = await ocrExtractText(cropped.base64, false, accessCode);
+                if (!text) { gnSetStatus('No text found in the drawing'); return; }
+                gnSetStatus('Appending to "' + gnTargetDoc.name + '"…');
+                await gnAppendToGoogleDoc(text);
+                // Clear canvas only on a confirmed successful append.
+                strokes = [];
+                ctx.clearRect(0, 0, cssW, cssH);
+                updateUndoBtn();
+                gnSetStatus('✅ Appended to "' + gnTargetDoc.name + '"');
+                btn.textContent = 'Appended ✓';
+                setTimeout(() => { btn.textContent = restoreLabel; }, 1800);
+            } catch (e) {
+                // Nothing is cleared on failure — canvas and access code (unless
+                // it was itself invalid) are left as-is; just click Save again.
+                gnSetStatus('❌ ' + e.message);
+            } finally {
+                btn.disabled = false;
             }
         }
     </script>
