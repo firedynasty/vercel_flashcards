@@ -316,7 +316,7 @@ td.col-due .due-badge {
         <button id="btnViewCards" onclick="setMainView('cards')">Cards</button>
       </div>
       <button class="btn outline sm" onclick="exportCsv()">⬇ Export CSV</button>
-      <button class="btn outline sm" onclick="openImportModal()">↑ Import CSV</button>
+      <button class="btn outline sm" onclick="openImportModal()">↑ Import / GSheets</button>
       <button class="btn primary" onclick="openAddModal()">+ New card</button>
     </div>
 
@@ -383,7 +383,7 @@ td.col-due .due-badge {
 <div class="overlay" id="importOverlay" onclick="if(event.target===this)closeImportModal()">
   <div class="modal" style="max-width:660px">
     <div class="modal-header">
-      <h2>Import CSV</h2>
+      <h2>Import / GSheets</h2>
       <button class="modal-close" onclick="closeImportModal()">&times;</button>
     </div>
     <div class="modal-body">
@@ -404,6 +404,9 @@ td.col-due .due-badge {
           <option value="">Sign in first</option>
         </select>
         <div id="gsheetHint" style="font-size:11px;color:var(--muted);margin-top:4px">Reads any spreadsheet you can open in Drive — picking a sheet fills the paste box below, same front/back rule applies.</div>
+        <button class="btn primary sm" id="gsheetAllBtn" style="margin-top:6px;align-self:flex-start;display:none" onclick="importAllTabs()"></button>
+        <div id="gsheetAllStatus" style="font-size:12px;margin-top:4px;white-space:pre-wrap"></div>
+        <div id="gsheetAllHint" style="font-size:11px;color:var(--muted);margin-top:4px;display:none">Every tab becomes a subdeck (spreadsheet::tab), like anki_working_directory.py: new rows are added, changed backs updated, nothing is ever deleted. Tabs ending in _glossed are skipped.</div>
       </div>
       <div class="field-group">
         <label>Destination deck</label>
@@ -1047,6 +1050,8 @@ var GDRIVE_SCOPES = 'https://www.googleapis.com/auth/drive.readonly';
 var gdriveAccessToken = null;
 var gdriveTokenClient = null;
 var gdriveWorkbook = null;
+var gdriveFileName = '';
+var allTabsPlan = null;   // computed by the first click of "Import all tabs", run by the second
 var _gsheetDismissListener = null;
 
 var _checkGoogle = setInterval(function() {
@@ -1090,6 +1095,7 @@ function gsheetSignIn() {
     window.google.accounts.oauth2.revoke(gdriveAccessToken, function() {});
     gdriveAccessToken = null;
     gdriveWorkbook = null;
+    resetAllTabsBtn();
     closeGsheetRecent();
     refreshGsheetAuthUI();
     var sel = document.getElementById('sheetSelect');
@@ -1162,6 +1168,8 @@ function loadGsheetWorkbook(fileId, fileName) {
     .then(function(r) { return r.arrayBuffer(); })
     .then(function(buf) {
       gdriveWorkbook = XLSX.read(new Uint8Array(buf), { type: 'array' });
+      gdriveFileName = fileName;
+      resetAllTabsBtn();
       var sheets = gdriveWorkbook.SheetNames;
       var sel = document.getElementById('sheetSelect');
       sel.innerHTML = '<option value="">-- select sheet --</option>';
@@ -1188,6 +1196,128 @@ function onGsheetSheetSelect() {
   setStatus('Loaded sheet "' + name + '" — ' + importParsed.length + ' card(s) parsed.', 'ok');
 }
 
+// ── IMPORT ALL TABS ──────────────────────────────────────────────────────────
+// Same rules as anki-skill/anki_working_directory.py, so a sheet imported here
+// and the same rows synced from a CSV produce identical cards: text is
+// HTML-escaped, back columns join with <br>, cards match on Front, and
+// nothing is deleted.
+function ankiText(s) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\r?\n/g, '<br>');
+}
+
+function deckPart(name) { return name.replace(/[\/\\:]/g, '-').trim(); }
+
+function allTabs() {
+  return gdriveWorkbook.SheetNames.filter(function(t) { return !/_glossed$/.test(t); });
+}
+
+// The page status bar sits behind the modal, so mirror messages under the button.
+function allTabsStatus(msg, type) {
+  setStatus(msg.replace(/\n/g, ' '), type);
+  var el = document.getElementById('gsheetAllStatus');
+  el.textContent = msg;
+  el.style.color = type === 'err' ? 'var(--danger)' : type === 'ok' ? 'var(--success)' : 'var(--muted)';
+}
+
+function resetAllTabsBtn() {
+  allTabsPlan = null;
+  var btn = document.getElementById('gsheetAllBtn');
+  var hint = document.getElementById('gsheetAllHint');
+  if (!gdriveWorkbook) { btn.style.display = hint.style.display = 'none'; allTabsStatus(''); return; }
+  var n = allTabs().length;
+  btn.disabled = false;
+  btn.textContent = 'Import all ' + n + ' tab' + (n !== 1 ? 's' : '') + ' as decks';
+  btn.style.display = hint.style.display = '';
+}
+
+// Cards in exactly this deck (not its subdecks), keyed by Front.
+function readDeckFronts(deck) {
+  return anki('findNotes', { query: '"deck:' + deck + '" -"deck:' + deck + '::*"' })
+    .then(function(ids) { return ids.length ? anki('notesInfo', { notes: ids }) : []; })
+    .then(function(infos) {
+      var have = {};
+      infos.forEach(function(n) {
+        if (n.modelName === 'Basic') have[n.fields.Front.value] = { id: n.noteId, back: n.fields.Back.value };
+      });
+      return have;
+    });
+}
+
+function planAllTabs() {
+  var parent = deckPart(gdriveFileName);
+  var decks = allTabs().map(function(tab) {
+    var cards = {};
+    parseImportText(XLSX.utils.sheet_to_csv(gdriveWorkbook.Sheets[tab], { blankrows: false })).forEach(function(c) {
+      cards[ankiText(c.front)] = c.back.split('\n').map(ankiText).join('<br>');
+    });
+    return { deck: parent + '::' + deckPart(tab), cards: cards };
+  });
+  return Promise.all(decks.map(function(d) { return readDeckFronts(d.deck); })).then(function(haves) {
+    var plan = { decks: [], add: 0, update: 0, kept: 0 };
+    decks.forEach(function(d, i) {
+      var have = haves[i], add = [], update = [];
+      Object.keys(d.cards).forEach(function(f) {
+        if (!have[f]) add.push(f);
+        else if (have[f].back !== d.cards[f]) update.push({ id: have[f].id, back: d.cards[f] });
+      });
+      plan.kept += Object.keys(have).filter(function(f) { return !(f in d.cards); }).length;
+      plan.add += add.length; plan.update += update.length;
+      plan.decks.push({ deck: d.deck, cards: d.cards, add: add, update: update });
+    });
+    return plan;
+  });
+}
+
+function importAllTabs() {
+  var btn = document.getElementById('gsheetAllBtn');
+  if (!gdriveWorkbook) return;
+  btn.disabled = true;
+
+  // First click: work out what would change and ask to confirm.
+  if (!allTabsPlan) {
+    btn.textContent = 'Checking Anki…';
+    planAllTabs().then(function(plan) {
+      allTabsPlan = plan;
+      btn.disabled = !(plan.add || plan.update);
+      btn.textContent = plan.add || plan.update
+        ? 'Confirm: add ' + plan.add + ', update ' + plan.update + ' in ' + plan.decks.length + ' decks'
+        : 'Already up to date';
+      allTabsStatus(plan.decks.map(function(d) {
+        return d.deck + ': ' + Object.keys(d.cards).length + ' rows → +' + d.add.length + ' add' +
+               (d.update.length ? ', ~' + d.update.length + ' update' : '');
+      }).join('\n') + (plan.kept ? '\n' + plan.kept + ' card(s) only in Anki are kept' : '') +
+      (plan.add || plan.update ? '\nClick Confirm to import.' : ''), 'ok');
+    }).catch(function(e) { allTabsStatus('Import all failed: ' + e.message, 'err'); resetAllTabsBtn(); });
+    return;
+  }
+
+  // Second click: apply the plan.
+  var plan = allTabsPlan;
+  btn.textContent = 'Importing…';
+  var run = Promise.resolve();
+  plan.decks.forEach(function(d) {
+    run = run.then(function() {
+      var steps = [];
+      if (d.add.length) steps.push(anki('createDeck', { deck: d.deck }).then(function() {
+        return anki('addNotes', { notes: d.add.map(function(f) {
+          return { deckName: d.deck, modelName: 'Basic', fields: { Front: f, Back: d.cards[f] },
+                   options: { allowDuplicate: true }, tags: [] };
+        }) });
+      }));
+      if (d.update.length) steps.push(anki('multi', { actions: d.update.map(function(u) {
+        return { action: 'updateNoteFields', params: { note: { id: u.id, fields: { Back: u.back } } } };
+      }) }));
+      return Promise.all(steps);
+    });
+  });
+  run.then(function() {
+    allTabsStatus('Imported "' + gdriveFileName + '": ' + plan.add + ' added, ' + plan.update + ' updated across ' +
+                  plan.decks.length + ' decks. Sync Anki to get them on your phone.', 'ok');
+    resetAllTabsBtn();
+    loadDecks();
+  }).catch(function(e) { allTabsStatus('Import all failed: ' + e.message, 'err'); resetAllTabsBtn(); });
+}
+
 // ── IMPORT CSV ────────────────────────────────────────────────────────────────
 var importParsed = []; // [{front, back}]
 
@@ -1206,6 +1336,7 @@ function openImportModal() {
   importViewMode = 'table';
   populateImportDecks();
   refreshGsheetAuthUI();
+  if (gdriveWorkbook) resetAllTabsBtn();
   document.getElementById('importOverlay').classList.add('open');
 }
 
