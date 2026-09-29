@@ -217,6 +217,7 @@
   }
   .btn-delete:hover { background: #962f2f; }
 </style>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
 
@@ -254,21 +255,18 @@
       <span class="status-text" id="statusText">Loading…</span>
     </div>
     <div style="display:flex; gap:6px;">
-      <button class="file-btn" id="dbxBtn">Dropbox</button>
-      <button class="file-btn" id="downloadBtn">Download .csv</button>
-      <button class="file-btn" id="clearBtn">Clear</button>
+      <button class="file-btn" id="dbxBtn" style="display:none;">Dropbox</button>
+      <button class="file-btn" id="gsBtn">Sheets</button>
+      <button class="file-btn" id="downloadBtn" style="display:none;">Download .csv</button>
     </div>
   </div>
-</div>
-
-<div class="dialog-overlay" id="dialogOverlay">
-  <div class="dialog">
-    <p>Delete <strong>all entries</strong> from localStorage and Dropbox?<br>This cannot be undone.</p>
-    <div class="dialog-btns">
-      <button class="btn-cancel" id="dialogCancel">Cancel</button>
-      <button class="btn-delete" id="dialogConfirm">Delete</button>
-    </div>
+  <div class="footer" style="border-top: 1px dashed var(--line); padding-top: 10px;">
+    <input type="text" id="gsSheetNameInput" value="trips" placeholder="Sheet name"
+      style="flex:1; min-width:0; margin-right:8px; padding:6px 8px; font-family:inherit; font-size:11px;
+             border:1px solid var(--line); border-radius:6px; background:transparent; color:var(--ink);" />
+    <button class="file-btn" id="gsConnectBtn" disabled style="font-size:11px;" title="Find or create a Google Sheet with this name and sync to it">Connect</button>
   </div>
+  <div style="padding: 0 24px 10px; font-size:11px; color:var(--muted);" id="gsStatusText"></div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -284,10 +282,6 @@
   const offsetB     = document.getElementById('offsetB');
   const dbxBtn        = document.getElementById('dbxBtn');
   const downloadBtn   = document.getElementById('downloadBtn');
-  const clearBtn      = document.getElementById('clearBtn');
-  const dialogOverlay = document.getElementById('dialogOverlay');
-  const dialogCancel  = document.getElementById('dialogCancel');
-  const dialogConfirm = document.getElementById('dialogConfirm');
   const statusDot     = document.getElementById('statusDot');
   const statusText    = document.getElementById('statusText');
   const toast         = document.getElementById('toast');
@@ -435,6 +429,182 @@
     return true;
   }
 
+  // ── Google Sheets sync ───────────────────────────────────────────────────
+  // The sheet name doubles as both the spreadsheet FILE name and the tab name
+  // inside it — found by search, created if missing. Defaults to "trips", but
+  // it's a plain text input so it can be repointed at a different name later.
+  const GS_CLIENT_ID = '1095683227908-7ro25k16mprkf408i3lf583gti8v759b.apps.googleusercontent.com';
+  const GS_SHEET_NAME_KEY = 'tallyLogger:gsSheetName';
+  let gsAccessToken = null;
+  let gsTokenClient = null;
+  let gsSheetName = 'trips';
+  let gsTargetSheet = null; // { id, name } — resolved spreadsheet file, once connected
+  const gsBtn = document.getElementById('gsBtn');
+  const gsConnectBtn = document.getElementById('gsConnectBtn');
+  const gsSheetNameInput = document.getElementById('gsSheetNameInput');
+  const gsStatusText = document.getElementById('gsStatusText');
+
+  try {
+    gsSheetName = localStorage.getItem(GS_SHEET_NAME_KEY) || 'trips';
+  } catch (e) { /* ignore */ }
+  gsSheetNameInput.value = gsSheetName;
+
+  function gsSetStatus(msg) { gsStatusText.textContent = msg || ''; }
+
+  function updateGsBtn() {
+    if (gsAccessToken) {
+      gsBtn.textContent = '● Sheets';
+      gsBtn.classList.add('connected');
+      gsBtn.title = 'Connected — click to sign out';
+    } else {
+      gsBtn.textContent = 'Sheets';
+      gsBtn.classList.remove('connected');
+      gsBtn.title = 'Sign in to Google Sheets to sync across devices';
+    }
+  }
+
+  function gsInitClient() {
+    if (window.google && window.google.accounts) {
+      gsTokenClient = window.google.accounts.oauth2.initTokenClient({
+        client_id: GS_CLIENT_ID,
+        scope: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.readonly',
+        callback: (resp) => {
+          if (resp.access_token) {
+            gsAccessToken = resp.access_token;
+            updateGsBtn();
+            gsConnectBtn.disabled = false;
+            gsConnect();
+          } else {
+            gsSetStatus('Google sign-in failed: ' + (resp.error || 'unknown error'));
+          }
+        }
+      });
+    } else {
+      setTimeout(gsInitClient, 100);
+    }
+  }
+  gsInitClient();
+
+  async function gsSignIn() {
+    if (gsAccessToken) {
+      try { await fetch('https://oauth2.googleapis.com/revoke?token=' + gsAccessToken, { method: 'POST' }); } catch (e) { /* ignore */ }
+      gsAccessToken = null;
+      gsTargetSheet = null;
+      updateGsBtn();
+      gsConnectBtn.disabled = true;
+      gsSetStatus('Signed out of Google');
+    } else if (gsTokenClient) {
+      gsTokenClient.requestAccessToken();
+    } else {
+      gsSetStatus('Google API not loaded yet. Try again.');
+    }
+  }
+
+  // Re-reads the name from the input, finds or creates a spreadsheet with
+  // that name (tab included), then loads/merges and renders.
+  async function gsConnect() {
+    if (!gsAccessToken) { gsSetStatus('Sign in to Google first'); return; }
+    const name = gsSheetNameInput.value.trim() || 'trips';
+    gsSheetName = name;
+    try { localStorage.setItem(GS_SHEET_NAME_KEY, name); } catch (e) { /* ignore */ }
+    gsSetStatus('Connecting to "' + name + '"…');
+    try {
+      gsTargetSheet = await gsFindOrCreateSheet(name);
+      gsSetStatus('→ ' + name);
+      const source = await loadLog();
+      render();
+      showToast('Synced from ' + source);
+    } catch (e) {
+      gsSetStatus('Sheets connect failed: ' + e.message);
+    }
+  }
+
+  function gsHandle401() {
+    gsAccessToken = null;
+    gsTargetSheet = null;
+    updateGsBtn();
+    gsConnectBtn.disabled = true;
+    gsSetStatus('Google session expired — sign in again');
+  }
+
+  // Finds a spreadsheet FILE named `name`; creates one (with a matching first
+  // tab) if none exists yet.
+  async function gsFindOrCreateSheet(name) {
+    const q = encodeURIComponent("mimeType='application/vnd.google-apps.spreadsheet' and name='" +
+      name.replace(/\\/g, '\\\\').replace(/'/g, "\\'") + "' and trashed=false");
+    const res = await fetch('https://www.googleapis.com/drive/v3/files?q=' + q + '&pageSize=1&fields=files(id,name)', {
+      headers: { Authorization: 'Bearer ' + gsAccessToken }
+    });
+    if (res.status === 401) { gsHandle401(); throw new Error('Session expired'); }
+    if (!res.ok) throw new Error('Sheets search failed (' + res.status + ')');
+    const data = await res.json();
+    if (data.files && data.files.length) {
+      const found = { id: data.files[0].id, name: data.files[0].name };
+      await gsEnsureTabExists(found, name);
+      return found;
+    }
+    const createRes = await fetch('https://sheets.googleapis.com/v4/spreadsheets', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + gsAccessToken, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ properties: { title: name }, sheets: [{ properties: { title: name } }] }),
+    });
+    if (!createRes.ok) throw new Error('Sheets create failed (' + createRes.status + ')');
+    const created = await createRes.json();
+    return { id: created.spreadsheetId, name };
+  }
+
+  // Ensures `sheet` has a tab named `tabName`; creates it if missing.
+  async function gsEnsureTabExists(sheet, tabName) {
+    const res = await fetch('https://sheets.googleapis.com/v4/spreadsheets/' + sheet.id + '?fields=sheets.properties.title', {
+      headers: { Authorization: 'Bearer ' + gsAccessToken }
+    });
+    if (res.status === 401) { gsHandle401(); throw new Error('Session expired'); }
+    if (!res.ok) throw new Error('Sheets read failed (' + res.status + ')');
+    const meta = await res.json();
+    const titles = (meta.sheets || []).map(s => s.properties.title);
+    if (titles.includes(tabName)) return;
+    await fetch('https://sheets.googleapis.com/v4/spreadsheets/' + sheet.id + ':batchUpdate', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + gsAccessToken, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ requests: [{ addSheet: { properties: { title: tabName } } }] }),
+    });
+  }
+
+  async function gsReadEntries() {
+    if (!gsAccessToken || !gsTargetSheet) return [];
+    const range = encodeURIComponent(gsSheetName + '!A2:C');
+    const res = await fetch('https://sheets.googleapis.com/v4/spreadsheets/' + gsTargetSheet.id + '/values/' + range, {
+      headers: { Authorization: 'Bearer ' + gsAccessToken }
+    });
+    if (res.status === 401) { gsHandle401(); throw new Error('Session expired'); }
+    if (!res.ok) throw new Error('Sheets read failed (' + res.status + ')');
+    const data = await res.json();
+    return (data.values || [])
+      .filter(row => row[0])
+      .map(row => ({ date: row[0] || '', tracker_a: row[1] || '', tracker_b: row[2] || '' }));
+  }
+
+  // Full overwrite of the target tab — mirrors how Dropbox overwrites the whole JSON file each save.
+  async function gsWriteEntries(allEntries) {
+    if (!gsAccessToken || !gsTargetSheet) return;
+    await gsEnsureTabExists(gsTargetSheet, gsSheetName);
+    const rows = [['date', 'tracker_a', 'tracker_b']].concat(
+      allEntries.map(e => [e.date, e.tracker_a || '', e.tracker_b || ''])
+    );
+    await fetch('https://sheets.googleapis.com/v4/spreadsheets/' + gsTargetSheet.id + '/values/' + encodeURIComponent(gsSheetName) + ':clear', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + gsAccessToken },
+    });
+    const range = encodeURIComponent(gsSheetName + '!A1');
+    const res = await fetch('https://sheets.googleapis.com/v4/spreadsheets/' + gsTargetSheet.id + '/values/' + range + '?valueInputOption=RAW', {
+      method: 'PUT',
+      headers: { Authorization: 'Bearer ' + gsAccessToken, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ values: rows }),
+    });
+    if (res.status === 401) { gsHandle401(); throw new Error('Session expired'); }
+    if (!res.ok) throw new Error('Sheets write failed (' + res.status + ')');
+  }
+
   // ── Merge / save / load ───────────────────────────────────────────────────
   function entryKey(e) {
     return (e.date || '') + '|' + (e.tracker_a || '') + '|' + (e.tracker_b || '');
@@ -457,43 +627,58 @@
     return merged;
   }
 
-  function saveLocal() {
-    localStorage.setItem('tally_log_entries', JSON.stringify(entries));
-  }
-
+  // No local caching — Google Sheets (or Dropbox, if ever unhidden) is the
+  // only place entries live. Without a remote connected, entries only exist
+  // in memory for the current page session.
   async function loadLog() {
+    let source = null;
     if (dropboxAccessToken) {
       try {
         const data = JSON.parse(await dropboxDownloadFile(DROPBOX_LOG_PATH));
         if (Array.isArray(data)) entries = mergeEntries(entries, data);
-        return 'Dropbox';
+        source = 'Dropbox';
       } catch (e) { console.warn('Dropbox load failed:', e.message); }
     }
-    try {
-      const local = JSON.parse(localStorage.getItem('tally_log_entries') || '[]');
-      if (Array.isArray(local)) entries = mergeEntries(entries, local);
-    } catch (e) { /* ignore */ }
-    return 'local';
+    if (gsAccessToken && gsTargetSheet) {
+      try {
+        const remote = await gsReadEntries();
+        entries = mergeEntries(entries, remote);
+        if (!source) source = 'Sheets';
+      } catch (e) { console.warn('Sheets load failed:', e.message); }
+    }
+    return source || 'none';
   }
 
   async function saveLog({ mergeRemote }) {
-    saveLocal();
-    if (!dropboxAccessToken) return;
-    try {
-      if (mergeRemote) {
-        let remote = [];
-        try {
-          const data = JSON.parse(await dropboxDownloadFile(DROPBOX_LOG_PATH));
-          if (Array.isArray(data)) remote = data;
-        } catch (e) { /* first upload */ }
-        entries = mergeEntries(entries, remote);
-        saveLocal();
+    if (dropboxAccessToken) {
+      try {
+        if (mergeRemote) {
+          let remote = [];
+          try {
+            const data = JSON.parse(await dropboxDownloadFile(DROPBOX_LOG_PATH));
+            if (Array.isArray(data)) remote = data;
+          } catch (e) { /* first upload */ }
+          entries = mergeEntries(entries, remote);
+        }
+        await dropboxUploadFile(DROPBOX_LOG_PATH, JSON.stringify(entries, null, 2));
+        setStatus('Dropbox · tally-log.json', true);
+      } catch (e) {
+        console.error('Dropbox save failed:', e);
+        showToast('Dropbox save failed');
       }
-      await dropboxUploadFile(DROPBOX_LOG_PATH, JSON.stringify(entries, null, 2));
-      setStatus('Dropbox · tally-log.json', true);
-    } catch (e) {
-      console.error('Dropbox save failed:', e);
-      showToast('Dropbox save failed — kept on this device');
+    }
+    if (gsAccessToken && gsTargetSheet) {
+      try {
+        if (mergeRemote) {
+          const remote = await gsReadEntries();
+          entries = mergeEntries(entries, remote);
+        }
+        await gsWriteEntries(entries);
+        gsSetStatus('✓ synced · ' + gsTargetSheet.name);
+      } catch (e) {
+        console.error('Sheets save failed:', e);
+        gsSetStatus('Sheets save failed');
+      }
     }
   }
 
@@ -596,38 +781,15 @@
   undoBtnA.addEventListener('click', () => undoEntry('a'));
   undoBtnB.addEventListener('click', () => undoEntry('b'));
   dbxBtn.addEventListener('click', () => dropboxAccessToken ? dbxSignOut() : dbxSignIn());
+  gsBtn.addEventListener('click', gsSignIn);
+  gsConnectBtn.addEventListener('click', gsConnect);
   downloadBtn.addEventListener('click', downloadCSV);
-
-  clearBtn.addEventListener('click', () => {
-    dialogOverlay.classList.add('show');
-    dialogConfirm.focus();
-  });
-  dialogCancel.addEventListener('click', () => dialogOverlay.classList.remove('show'));
-  dialogOverlay.addEventListener('click', (e) => {
-    if (e.target === dialogOverlay) dialogOverlay.classList.remove('show');
-  });
-  dialogConfirm.addEventListener('click', async () => {
-    dialogOverlay.classList.remove('show');
-    entries = [];
-    localStorage.removeItem('tally_log_entries');
-    render();
-    if (dropboxAccessToken) {
-      try {
-        await dropboxUploadFile(DROPBOX_LOG_PATH, JSON.stringify([], null, 2));
-        setStatus('Dropbox · tally-log.json', true);
-        showToast('All entries deleted from Dropbox');
-      } catch (e) {
-        showToast('Local cleared — Dropbox delete failed');
-      }
-    } else {
-      showToast('All entries cleared');
-    }
-  });
 
   // ── Boot ──────────────────────────────────────────────────────────────────
   (async function boot() {
     await dbxHandleOAuthRedirect();
     updateDbxBtn();
+    updateGsBtn();
 
     let pending = null;
     try { pending = JSON.parse(sessionStorage.getItem('tally_logger_pending')); } catch (e) { /* ignore */ }
@@ -638,7 +800,7 @@
     const source = await loadLog();
     render();
     setStatus(
-      source === 'Dropbox' ? 'Dropbox · tally-log.json' : 'Saved on this device — sign in to sync',
+      source === 'Dropbox' ? 'Dropbox · tally-log.json' : 'Not connected — sign in to Sheets',
       !!dropboxAccessToken
     );
 
