@@ -75,6 +75,11 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; b
 .deck-count { font-size: 11px; color: var(--muted); flex-shrink: 0; }
 .deck-item.child { padding-left: 24px; font-size: 12px; }
 .deck-item.grandchild { padding-left: 36px; }
+.deck-menu { position: fixed; z-index: 300; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 6px 20px rgba(0,0,0,.15); padding: 4px; }
+.deck-menu-item { display: block; width: 100%; text-align: left; background: none; border: none; border-radius: 5px; padding: 6px 10px; font: inherit; font-size: 12px; color: var(--danger); cursor: pointer; white-space: nowrap; }
+.deck-menu-item:hover:not(:disabled) { background: #fee2e2; }
+.deck-menu-item:disabled { color: var(--muted); cursor: default; }
+.deck-menu-item.armed { background: var(--danger); color: #fff; font-weight: 600; }
 
 /* ── MAIN ── */
 .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
@@ -576,7 +581,15 @@ function loadDecks() {
 }
 
 function renderDeckList(decks, stats) {
-  var names = Object.keys(decks).sort();
+  // Sort by path parts, case-insensitive like Anki, so "spiritual::x" stays under
+  // "spiritual" instead of after "spiritual-test::…" ("-" sorts before ":").
+  var names = Object.keys(decks).sort(function(a, b) {
+    var pa = a.toLowerCase().split('::'), pb = b.toLowerCase().split('::');
+    for (var i = 0; i < Math.min(pa.length, pb.length); i++) {
+      if (pa[i] !== pb[i]) return pa[i] < pb[i] ? -1 : 1;
+    }
+    return pa.length - pb.length;
+  });
   var html = '';
   names.forEach(function(name) {
     var depth = (name.match(/::/g) || []).length;
@@ -590,14 +603,84 @@ function renderDeckList(decks, stats) {
     if (total !== '') html += '<span class="deck-count">' + total + '</span>';
     html += '</div>';
   });
-  document.getElementById('deckList').innerHTML = html || '<div class="loading">No decks found</div>';
+  var list = document.getElementById('deckList');
+  list.innerHTML = html || '<div class="loading">No decks found</div>';
 
-  // Event delegation — no inline onclick so deck names with quotes/special chars are safe
-  document.getElementById('deckList').addEventListener('click', function(e) {
+  // Event delegation — no inline onclick so deck names with quotes/special chars are safe.
+  // Wired once: renderDeckList runs on every reload and would otherwise stack listeners.
+  if (list.dataset.wired) return;
+  list.dataset.wired = '1';
+  list.addEventListener('click', function(e) {
     var item = e.target.closest('[data-deck]');
     if (item) loadDeck(item.getAttribute('data-deck'));
   });
+  list.addEventListener('contextmenu', function(e) {
+    var item = e.target.closest('[data-deck]');
+    if (!item) return;
+    e.preventDefault();
+    confirmDeleteDeck(item.getAttribute('data-deck'), e.clientX, e.clientY);
+  });
 }
+
+// Right-click a deck: small menu at the cursor. First click on "Delete" arms it,
+// second click deletes the deck, its subdecks, and all their cards.
+function confirmDeleteDeck(deck, x, y) {
+  closeDeckMenu();
+  var menu = document.createElement('div');
+  menu.className = 'deck-menu';
+  menu.id = 'deckMenu';
+  var item = document.createElement('button');
+  item.type = 'button';
+  item.className = 'deck-menu-item';
+  item.textContent = 'Counting cards…';
+  item.disabled = true;
+  menu.appendChild(item);
+  document.body.appendChild(menu);
+  // Keep it on screen near the right/bottom edges.
+  menu.style.left = Math.min(x, window.innerWidth - menu.offsetWidth - 8) + 'px';
+  menu.style.top  = Math.min(y, window.innerHeight - menu.offsetHeight - 8) + 'px';
+
+  var subdecks = Object.keys(allDecks).filter(function(n) { return n.indexOf(deck + '::') === 0; }).length;
+  var armed = false, count = 0;
+  anki('findCards', { query: 'deck:"' + deck + '"' }).then(function(cards) {
+    count = cards.length;
+    item.disabled = false;
+    item.textContent = '🗑 Delete deck' + (subdecks ? ' + ' + subdecks + ' subdeck' + (subdecks !== 1 ? 's' : '') : '') +
+                       ' (' + count + ' card' + (count !== 1 ? 's' : '') + ')';
+  }).catch(function(e) { item.textContent = 'Error: ' + e.message; });
+
+  item.onclick = function(e) {
+    e.stopPropagation();
+    if (!armed) {
+      armed = true;
+      item.classList.add('armed');
+      item.textContent = 'Click again to delete ' + count + ' card' + (count !== 1 ? 's' : '');
+      return;
+    }
+    closeDeckMenu();
+    setStatus('Deleting deck "' + deck + '"…');
+    anki('deleteDecks', { decks: [deck], cardsToo: true }).then(function() {
+      if (currentDeck === deck || currentDeck.indexOf(deck + '::') === 0) {
+        currentDeck = '';
+        currentNotes = [];
+        document.getElementById('deckTitle').textContent = 'All cards';
+        document.getElementById('cardsBody').innerHTML =
+          '<tr><td colspan="6" class="empty-state">Select a deck or search to view cards.</td></tr>';
+      }
+      setStatus('Deleted deck "' + deck + '" (' + count + ' cards).', 'ok');
+      return loadDecks();
+    }).catch(function(e) { setStatus('Delete failed: ' + e.message, 'err'); });
+  };
+}
+
+function closeDeckMenu() {
+  var m = document.getElementById('deckMenu');
+  if (m) m.remove();
+}
+document.addEventListener('click', function(e) { if (!e.target.closest('#deckMenu')) closeDeckMenu(); });
+document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeDeckMenu(); });
+window.addEventListener('blur', closeDeckMenu);
+document.addEventListener('scroll', closeDeckMenu, true);
 
 function loadDeck(deckName) {
   currentDeck = deckName;
