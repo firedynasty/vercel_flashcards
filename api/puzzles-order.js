@@ -1,5 +1,6 @@
 // Vercel Serverless Function — view and reorder fen-saver's Supabase `puzzles` table,
-// used by supabase_fen_chess.html. Only reads and changes `position`; never deletes.
+// used by supabase_fen_chess.html. Reads puzzles, changes `position`, and deletes one
+// puzzle at a time (the page asks for two clicks first).
 //
 // The table lives in fen-saver's Supabase project, so this uses its own env vars
 // (SUPABASE_URL / SUPABASE_KEY here belong to the flashcards table):
@@ -14,6 +15,7 @@
 //   GET  /api/puzzles-order?action=categories
 //   GET  /api/puzzles-order?action=list&category=X      -> rows in position order
 //   POST /api/puzzles-order { action: "move", id, direction: "up" | "down" }
+//   POST /api/puzzles-order { action: "delete", id }                -> remaining rows in the category
 
 const COLUMNS = 'id,category,note,fen,position,created_at';
 const ORDER = 'position.asc.nullslast,id.asc';
@@ -57,6 +59,12 @@ export default async function handler(req, res) {
 
     if (req.method === 'POST') {
       const { action, id, direction } = req.body || {};
+      if (action === 'delete') {
+        if (!/^\d+$/.test(String(id))) return res.status(400).json({ error: 'A numeric id is required' });
+        const deleted = await sb(`puzzles?id=eq.${id}`, { method: 'DELETE', headers: { Prefer: 'return=representation' } });
+        if (!deleted.length) return res.status(404).json({ error: 'Puzzle not found' });
+        return res.status(200).json(await listCategory(deleted[0].category));
+      }
       if (action !== 'move' || !['up', 'down'].includes(direction) || !/^\d+$/.test(String(id))) {
         return res.status(400).json({ error: 'Send { action: "move", id, direction: "up" | "down" }' });
       }

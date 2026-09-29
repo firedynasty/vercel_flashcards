@@ -30,6 +30,8 @@ li.moved { outline: 2px solid var(--accent); }
 .id { font-size: 11px; color: var(--muted); font-family: monospace; }
 .arrows { display: flex; gap: 4px; }
 .arrows button { padding: 4px 10px; }
+.trash { padding: 4px 10px; }
+.trash.armed { background: var(--err); border-color: var(--err); color: #fff; }
 </style>
 </head>
 <body>
@@ -49,6 +51,7 @@ li.moved { outline: 2px solid var(--accent); }
 var API = '/api/puzzles-order';
 var rows = [];
 var busy = false;
+var armedId = null;   // puzzle whose trash button was clicked once
 
 function $(id) { return document.getElementById(id); }
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function(c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
@@ -95,12 +98,15 @@ function render(movedId) {
       '<span class="arrows">' +
         '<button title="Move up" ' + (i === 0 ? 'disabled ' : '') + 'onclick="move(' + r.id + ',\'up\')">▲</button>' +
         '<button title="Move down" ' + (i === rows.length - 1 ? 'disabled ' : '') + 'onclick="move(' + r.id + ',\'down\')">▼</button>' +
-      '</span></li>';
+      '</span>' +
+      '<button class="trash' + (r.id === armedId ? ' armed' : '') + '" title="Delete (click twice)" onclick="trash(' + r.id + ')">' +
+        (r.id === armedId ? 'Delete?' : '🗑') + '</button></li>';
   }).join('');
 }
 
 function move(id, direction) {
   if (busy) return;
+  armedId = null;
   busy = true;
   status('Saving…');
   api('', { action: 'move', id: id, direction: direction }).then(function(r) {
@@ -110,6 +116,27 @@ function move(id, direction) {
   }).catch(function(e) { status('Move failed: ' + e.message, 'err'); })
     .finally(function() { busy = false; });
 }
+
+// First click arms the button ("Delete?"), second click on the same puzzle deletes it.
+function trash(id) {
+  if (busy) return;
+  if (armedId !== id) { armedId = id; render(); return; }
+  armedId = null;
+  busy = true;
+  status('Deleting id ' + id + '…');
+  api('', { action: 'delete', id: id }).then(function(r) {
+    rows = r;
+    render();
+    status('Deleted id ' + id + '. ' + rows.length + ' puzzle' + (rows.length !== 1 ? 's' : '') + ' left in "' + $('category').value + '".', 'ok');
+    if (!rows.length) loadCategories();
+  }).catch(function(e) { status('Delete failed: ' + e.message, 'err'); render(); })
+    .finally(function() { busy = false; });
+}
+
+// Clicking anywhere else disarms a pending delete.
+document.addEventListener('click', function(e) {
+  if (armedId !== null && !e.target.closest('.trash')) { armedId = null; render(); }
+});
 
 loadCategories();
 </script>
