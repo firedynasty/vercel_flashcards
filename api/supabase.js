@@ -7,7 +7,9 @@
 //
 // Endpoints:
 //   GET /api/supabase?action=decks          → list of deck names
-//   GET /api/supabase?action=cards&deck=xxx → cards for a deck
+//   GET /api/supabase?action=cards&deck=xxx → cards for exactly that deck
+//   GET /api/supabase?action=cards&deck=xxx&subdecks=1
+//                                           → that deck plus all its subdecks (xxx::*)
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -19,7 +21,7 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'Supabase env vars not set on server.' });
   }
 
-  const { action, deck } = req.query;
+  const { action, deck, subdecks } = req.query;
   const headers = { 'apikey': key, 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' };
 
   try {
@@ -34,11 +36,16 @@ export default async function handler(req, res) {
 
     if (action === 'cards') {
       if (!deck) return res.status(400).json({ error: 'deck param required' });
-      const encoded = encodeURIComponent(deck);
+      // Quoted so deck names with commas/parens survive PostgREST's filter syntax.
+      const q = JSON.stringify(deck);
+      const filter = subdecks
+        ? 'or=' + encodeURIComponent(`(deck.eq.${q},deck.like.${JSON.stringify(deck + '::*')})`)
+        : 'deck=eq.' + encodeURIComponent(deck);
       const r = await fetch(
-        `${url}/rest/v1/flashcards?deck=eq.${encoded}&select=front,back&order=id&limit=1000`,
+        `${url}/rest/v1/flashcards?${filter}&select=front,back,deck&order=deck,id&limit=1000`,
         { headers }
       );
+      if (!r.ok) return res.status(502).json({ error: 'Supabase error ' + r.status + ': ' + (await r.text()) });
       const rows = await r.json();
       return res.status(200).json(rows);
     }
