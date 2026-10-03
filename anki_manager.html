@@ -1862,10 +1862,10 @@ function doImport() {
 
 // ── UPLOAD BY DECK (phone → Supabase → Mac) ──────────────────────────────
 // When Anki isn't reachable (e.g. on the phone), CSVs are uploaded to
-// /api/anki-inbox, which upserts them into Supabase by full deck name. On the
+// /api/supabase?action=inbox, which upserts them into Supabase by full deck name. On the
 // Mac, `anki_working_directory.py --download` writes each deck to
 // anki_working_directory/<deck path>.csv and syncs it into Anki.
-var INBOX_API = '/api/anki-inbox';
+var INBOX_API = '/api/supabase?action=inbox';
 
 // 'supabase' (upload, picked up by --download) or 'anki' (import directly).
 // Without a reachable Anki only 'supabase' is possible.
