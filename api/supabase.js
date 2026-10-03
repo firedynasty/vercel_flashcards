@@ -1,9 +1,9 @@
 // Vercel Serverless Function — Supabase proxy
-// Keeps SUPABASE_URL and SUPABASE_KEY server-side, never exposed to the browser.
+// Keeps FLASHCARDS_SUPABASE_URL and FLASHCARDS_SUPABASE_KEY server-side, never exposed to the browser.
 //
 // Set in Vercel dashboard → Settings → Environment Variables:
-//   SUPABASE_URL = https://xxxx.supabase.co
-//   SUPABASE_KEY = your-anon-key
+//   FLASHCARDS_SUPABASE_URL = https://xxxx.supabase.co
+//   FLASHCARDS_SUPABASE_KEY = service_role key (bypasses RLS; server-only)
 //
 // Endpoints:
 //   GET /api/supabase?action=decks          → list of deck names
@@ -14,8 +14,8 @@
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
 
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_KEY;
+  const url = process.env.FLASHCARDS_SUPABASE_URL;
+  const key = process.env.FLASHCARDS_SUPABASE_KEY;
 
   if (!url || !key) {
     return res.status(500).json({ error: 'Supabase env vars not set on server.' });

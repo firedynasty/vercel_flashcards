@@ -5,7 +5,7 @@
 // writes each deck to anki_working_directory/<deck path>.csv and syncs Anki.
 //
 // Set in Vercel dashboard → Settings → Environment Variables:
-//   SUPABASE_URL, SUPABASE_KEY  (same as api/supabase.js)
+//   FLASHCARDS_SUPABASE_URL, FLASHCARDS_SUPABASE_KEY  (same as api/supabase.js)
 //   ANKI_INBOX_TOKEN            any long random string; the page asks for it once
 //
 // Endpoints (header x-inbox-token required):
@@ -23,11 +23,11 @@ function tokenOk(given, expected) {
 }
 
 export default async function handler(req, res) {
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_KEY;
+  const url = process.env.FLASHCARDS_SUPABASE_URL;
+  const key = process.env.FLASHCARDS_SUPABASE_KEY;
   const token = process.env.ANKI_INBOX_TOKEN;
   if (!url || !key || !token) {
-    return res.status(500).json({ error: 'SUPABASE_URL, SUPABASE_KEY and ANKI_INBOX_TOKEN must be set on the server.' });
+    return res.status(500).json({ error: 'FLASHCARDS_SUPABASE_URL, FLASHCARDS_SUPABASE_KEY and ANKI_INBOX_TOKEN must be set on the server.' });
   }
   if (!tokenOk(req.headers['x-inbox-token'], token)) {
     return res.status(401).json({ error: 'Wrong inbox token' });

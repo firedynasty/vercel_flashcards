@@ -3,7 +3,7 @@
 // puzzle at a time (the page asks for two clicks first).
 //
 // The table lives in fen-saver's Supabase project, so this uses its own env vars
-// (SUPABASE_URL / SUPABASE_KEY here belong to the flashcards table):
+// (FLASHCARDS_SUPABASE_URL / FLASHCARDS_SUPABASE_KEY here belong to the flashcards table):
 //   PUZZLES_SUPABASE_URL              = https://xxxx.supabase.co
 //   PUZZLES_SUPABASE_SERVICE_ROLE_KEY = service-role key (RLS has no anon policies)
 //
