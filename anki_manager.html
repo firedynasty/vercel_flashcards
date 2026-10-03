@@ -536,8 +536,7 @@ function onAnkiDisconnected() {
   if (ankiReconnectTimer) return;
   showToast("Anki isn't running — open Anki and this page will reconnect automatically.", 'err');
   ankiReconnectTimer = setInterval(function() {
-    fetch(ANKI, { method: 'POST', body: JSON.stringify({ action: 'version', version: 6 }) })
-      .then(function(r) { return r.json(); })
+    fetch(ANKI, { method: 'POST', body: JSON.stringify({ action: 'deckNames', version: 6 }) })
       .then(function() {
         clearInterval(ankiReconnectTimer);
         ankiReconnectTimer = null;
@@ -553,18 +552,53 @@ window.addEventListener('DOMContentLoaded', function() {
   refreshAll();
 });
 
+// AnkiConnect Android (AnkiDroid on the phone) only implements a subset of
+// AnkiConnect: no version, addNotes, createDeck, deleteNotes or cardsInfo.
+// In that mode the page sticks to browsing + importing into existing decks.
+var ankiLite = false;
+
 function refreshAll() {
   setStatus('Connecting to Anki…');
   anki('version')
     .then(function(v) {
+      ankiLite = false;
       setStatus('Connected — AnkiConnect v' + v, 'ok');
-      return loadDecks();
     })
+    .catch(function(e) {
+      if (ankiReconnectTimer) throw e;  // network failure: Anki not running
+      // Something answered but doesn't know `version` → AnkiConnect Android
+      return anki('deckNames').then(function() {
+        ankiLite = true;
+        setStatus('Connected — AnkiDroid (import mode: create decks in AnkiDroid, then import here)', 'ok');
+      });
+    })
+    .then(function() { return loadDecks(); })
     .catch(function() {
       setStatus('Cannot reach Anki. Make sure Anki is open and AnkiConnect is installed.', 'err');
       document.getElementById('deckList').innerHTML = '<div class="loading" style="color:#dc2626">Not connected</div>';
     });
   loadModels();
+}
+
+// addNotes isn't available on AnkiConnect Android: add one at a time instead.
+// Resolves to the same shape as addNotes — an array of note ids or null.
+function addNotesCompat(notes) {
+  if (!ankiLite) return anki('addNotes', { notes: notes });
+  var results = [];
+  return notes.reduce(function(run, note, i) {
+    return run.then(function() {
+      setStatus('Adding card ' + (i + 1) + ' of ' + notes.length + '…');
+      return anki('addNote', { note: note })
+        .then(function(id) { results.push(id); })
+        .catch(function() { results.push(null); });
+    });
+  }, Promise.resolve()).then(function() { return results; });
+}
+
+function liteNoNewDeck() {
+  if (!ankiLite) return false;
+  setStatus('Create the deck in AnkiDroid, then tap ↺ Refresh — this page can\'t create decks on the phone.', 'err');
+  return true;
 }
 
 // ── DECKS ──────────────────────────────────────────────────────────────────────
@@ -1008,6 +1042,7 @@ function deleteSelected() {
 
 // ── NEW DECK ───────────────────────────────────────────────────────────────────
 function promptNewDeck() {
+  if (liteNoNewDeck()) return;
   var name = prompt('New deck name (use :: for sub-decks, e.g. Claude::Vocab):');
   if (!name || !name.trim()) return;
   anki('createDeck', { deck: name.trim() })
@@ -1381,12 +1416,18 @@ function importAllTabs() {
   plan.decks.forEach(function(d) {
     run = run.then(function() {
       var steps = [];
-      if (d.add.length) steps.push(anki('createDeck', { deck: d.deck }).then(function() {
-        return anki('addNotes', { notes: d.add.map(function(f) {
-          return { deckName: d.deck, modelName: 'Basic', fields: { Front: f, Back: d.cards[f] },
-                   options: { allowDuplicate: true }, tags: [] };
-        }) });
-      }));
+      if (d.add.length) {
+        var ensureDeck = ankiLite
+          ? (allDecks[d.deck] ? Promise.resolve()
+              : Promise.reject(new Error('create deck "' + d.deck + '" in AnkiDroid first, then tap ↺ Refresh')))
+          : anki('createDeck', { deck: d.deck });
+        steps.push(ensureDeck.then(function() {
+          return addNotesCompat(d.add.map(function(f) {
+            return { deckName: d.deck, modelName: 'Basic', fields: { Front: f, Back: d.cards[f] },
+                     options: { allowDuplicate: true }, tags: [] };
+          }));
+        }));
+      }
       if (d.update.length) steps.push(anki('multi', { actions: d.update.map(function(u) {
         return { action: 'updateNoteFields', params: { note: { id: u.id, fields: { Back: u.back } } } };
       }) }));
@@ -1701,6 +1742,7 @@ function importDropped(e) {
 }
 
 function promptImportNewDeck() {
+  if (liteNoNewDeck()) return;
   var name = prompt('New deck name (use :: for sub-decks, e.g. Chinese::Grammar):');
   if (!name || !name.trim()) return;
   name = name.trim();
@@ -1768,7 +1810,7 @@ function doImport() {
         resetBtn();
         return;
       }
-      return anki('addNotes', { notes: toAdd }).then(function(results) {
+      return addNotesCompat(toAdd).then(function(results) {
         var added = results.filter(function(id) { return id !== null; }).length;
         var msg = 'Imported ' + added + ' card' + (added !== 1 ? 's' : '') + ' into "' + deck + '"';
         if (removed) msg += ' (' + removed + ' duplicate' + (removed !== 1 ? 's' : '') + ' removed)';
