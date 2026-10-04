@@ -2722,7 +2722,6 @@ function readDropCsvFile(file) {
 }
 
 // ── DROPBOX FILE BROWSER MODAL ──
-var DBX_FILE_LAST_PATH = 'chinese-tts-dbx-last-path';
 
 function openDbxFileModal(startPath) {
   document.getElementById('dbxFileOverlay').classList.add('open');
@@ -2732,8 +2731,8 @@ function openDbxFileModal(startPath) {
     document.getElementById('dbxFileStatus').textContent = 'Not signed in';
     return;
   }
-  var path = startPath || document.getElementById('dbxFilePath').value.trim() || '/';
-  dbxFileBrowse(path);
+  // Always start at the Anki decks folder; breadcrumbs / Anki / Go move from there.
+  dbxFileBrowse(startPath || DBX_ANKI_ROOT);
 }
 
 function closeDbxFileModal() {
@@ -2748,7 +2747,7 @@ function dbxFileSignIn() {
 }
 
 async function loadFromDbxFile() {
-  var lastPath = localStorage.getItem(DBX_FILE_LAST_PATH) || '/';
+  var lastPath = DBX_ANKI_ROOT;
   if (!DBX_TOKEN) {
     window._dbxReopenBrowser = true;
     await dbxSignIn('');
@@ -2763,10 +2762,10 @@ async function dbxFileBrowse(path) {
   goBtn.disabled = true;
   document.getElementById('dbxFileStatus').textContent = 'Loading\u2026';
   document.getElementById('dbxFileList').innerHTML = '';
+  document.getElementById('dbxFolderLoadBar').style.display = 'none';
 
   var normPath = (!path || path === '/') ? '' : ('/' + path.replace(/^\/+|\/+$/g, ''));
   document.getElementById('dbxFilePath').value = normPath || '/';
-  localStorage.setItem(DBX_FILE_LAST_PATH, normPath || '/');
 
   try {
     var res = await fetch('https://api.dropboxapi.com/2/files/list_folder', {
@@ -2775,8 +2774,11 @@ async function dbxFileBrowse(path) {
       body: JSON.stringify({ path: normPath })
     });
     if (res.status === 401) { DBX_TOKEN = null; dbxSetAuthBtn(); openDbxFileModal(); return; }
+    if (res.status === 409) throw new Error('Folder not found: ' + (normPath || '/') +
+      (normPath === DBX_ANKI_ROOT ? ' (if it exists in your Dropbox, this Dropbox app may only see its own App folder)' : ''));
     if (!res.ok) throw new Error('List failed (' + res.status + ')');
     var data = await res.json();
+    window._dbxCurrentFolder = normPath;
 
     var entries = (data.entries || [])
       .map(function(e) { return { name: e.name, path: e.path_lower || e.path_display, isFolder: e['.tag'] === 'folder' }; })
@@ -2796,6 +2798,7 @@ async function dbxFileBrowse(path) {
 
     dbxFileRenderBreadcrumb(normPath);
     dbxFileRenderList(entries);
+    if (normPath && entries.length) document.getElementById('dbxFolderLoadBar').style.display = '';
   } catch(err) {
     document.getElementById('dbxFileStatus').textContent = 'Error: ' + err.message;
   } finally {
@@ -2805,9 +2808,8 @@ async function dbxFileBrowse(path) {
 
 function dbxFileRenderBreadcrumb(path) {
   var el = document.getElementById('dbxFileBreadcrumb');
-  if (!path) { el.innerHTML = ''; return; }
-  var parts = path.replace(/^\//, '').split('/').filter(Boolean);
-  var html = '<span style="color:#888">\u25b8</span>';
+  var parts = (path || '').replace(/^\//, '').split('/').filter(Boolean);
+  var html = '<span style="color:#888">\u25b8 </span><button class="dbx-crumb-btn" onclick="dbxFileBrowse(\'/\')">Dropbox</button>';
   parts.forEach(function(part, i) {
     var crumbPath = '/' + parts.slice(0, i + 1).join('/');
     html += '<span style="color:#888"> / </span><button class="dbx-crumb-btn" onclick="dbxFileBrowse(\'' + crumbPath.replace(/'/g, "\\'") + '\')">' + escHtml(part) + '</button>';
@@ -2868,6 +2870,121 @@ async function dbxFileLoad(path, name) {
 }
 
 // Close on backdrop click; Go on Enter
+
+// ── LOAD A WHOLE DROPBOX FOLDER (Anki deck) ──────────────────────────────────
+// Anki decks live in Dropbox at /study/anki/<deck>/<subdeck>.csv (the folder
+// anki_working_directory.py syncs into Anki). "Load whole folder" loads every
+// CSV under the current folder, so opening /study/anki/switchboard loads all
+// of switchboard's subdecks at once. _glossed.csv files are skipped, like the sync.
+var DBX_ANKI_ROOT = '/study/anki';
+var DBX_HEADER_WORDS = ['chinese','pinyin','definition','term','front','back','english','word','vocab',
+                        'vocabulary','language','pronunciation','中文','translation','tags'];
+
+// Anki's optional import header lines, e.g. "#separator:comma", "#html:false".
+function dbxStripAnkiDirectives(text) {
+  return text.replace(/\r\n?/g, '\n').split('\n').filter(function(l) { return !/^#[^,]*:/.test(l); }).join('\n');
+}
+
+function dbxLooksLikeHeader(cells) {
+  return cells.some(function(c) { return DBX_HEADER_WORDS.indexOf(String(c).trim().toLowerCase()) >= 0; });
+}
+
+// Dropbox-API-Arg is an HTTP header, so non-ASCII (e.g. Chinese file names) must be \u-escaped.
+function dbxApiArg(obj) {
+  return JSON.stringify(obj).replace(/[\u007f-￿]/g, function(c) {
+    return '\\u' + ('000' + c.charCodeAt(0).toString(16)).slice(-4);
+  });
+}
+
+async function dbxListCsvsRecursive(path) {
+  var files = [];
+  var url = 'https://api.dropboxapi.com/2/files/list_folder';
+  var body = { path: path, recursive: true };
+  while (true) {
+    var r = await fetch(url, {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + DBX_TOKEN, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if (r.status === 401) { DBX_TOKEN = null; dbxSetAuthBtn(); throw new Error('Session expired — sign in again'); }
+    if (!r.ok) throw new Error('List failed (' + r.status + ')');
+    var d = await r.json();
+    (d.entries || []).forEach(function(e) {
+      if (e['.tag'] === 'file' && /\.csv$/i.test(e.name) && !/_glossed\.csv$/i.test(e.name)) files.push(e.path_display);
+    });
+    if (!d.has_more) break;
+    url = 'https://api.dropboxapi.com/2/files/list_folder/continue';
+    body = { cursor: d.cursor };
+  }
+  return files.sort(function(a, b) { return a.localeCompare(b, undefined, { numeric: true }); });
+}
+
+async function dbxLoadWholeFolder() {
+  var folder = window._dbxCurrentFolder;
+  if (!folder) return;
+  var statusEl = document.getElementById('dbxFileStatus');
+  var btn = document.getElementById('dbxFolderLoadBtn');
+  btn.disabled = true;
+  try {
+    statusEl.textContent = 'Finding CSV files…';
+    var paths = await dbxListCsvsRecursive(folder);
+    if (!paths.length) { statusEl.textContent = 'No CSV files in this folder.'; return; }
+    var done = 0;
+    var parts = await Promise.all(paths.map(function(p) {
+      return fetch('https://content.dropboxapi.com/2/files/download', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + DBX_TOKEN, 'Dropbox-API-Arg': dbxApiArg({ path: p }) }
+      }).then(function(r) {
+        if (!r.ok) throw new Error('Download failed (' + r.status + ') for ' + p);
+        return r.text();
+      }).then(function(text) {
+        statusEl.textContent = 'Downloading ' + (++done) + ' of ' + paths.length + '…';
+        // "switchboard/safety.csv" under the folder -> "safety"; deeper -> "a::b"
+        var rel = p.slice(folder.length).replace(/^\//, '').replace(/\.csv$/i, '');
+        return { name: rel.split('/').join('::'), text: dbxStripAnkiDirectives(text) };
+      });
+    }));
+    var label = folder.split('/').pop();
+    dbxFinishFolderLoad(parts);
+    closeDbxFileModal();
+    document.getElementById('dbxPullStatus').textContent =
+      '✅ Loaded ' + label + ' (' + parts.length + ' CSV' + (parts.length !== 1 ? 's' : '') + ')';
+    setTimeout(function() { document.getElementById('dbxPullStatus').textContent = ''; }, 3000);
+  } catch (err) {
+    statusEl.textContent = 'Error: ' + err.message;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// Combine the folder's CSVs into one, with a "Section <subdeck>" header before
+// each file (each file's header row dropped), and load it like a paste.
+function dbxCsvCell(s) {
+  s = String(s == null ? '' : s);
+  return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+
+function dbxFinishFolderLoad(parts) {
+  var out = ['front,back,extra'];  // loadCsvText always skips the first row
+  var firstData = null;
+  parts.forEach(function(p) {
+    var rows = parseCsv(p.text).filter(function(r) { return r.some(function(c) { return String(c).trim(); }); });
+    if (rows.length && dbxLooksLikeHeader(rows[0])) rows.shift();
+    if (!rows.length) return;
+    if (!firstData) firstData = rows[0];
+    out.push(dbxCsvCell('Section ' + p.name));
+    rows.forEach(function(r) { out.push(r.map(dbxCsvCell).join(',')); });
+  });
+  // Same column-mode auto-detect as loading a single file
+  if (firstData) {
+    var detected = firstData.filter(function(c) { return String(c).trim(); }).length >= 3 ? '3' : '2';
+    var rCol = document.querySelector('input[name="csvColMode"][value="' + detected + '"]');
+    if (rCol && !rCol.checked) rCol.click();
+  }
+  document.getElementById('pasteCsvInput').value = out.join('\n');
+  loadPastedCsv();
+}
+
 document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('dbxFileOverlay').addEventListener('click', function(e) {
     if (e.target === document.getElementById('dbxFileOverlay')) closeDbxFileModal();
@@ -2883,7 +3000,7 @@ window.addEventListener('message', function(event) {
   if (event.origin !== window.location.origin) return;
   if (event.data && event.data.dropboxToken && window._dbxReopenBrowser) {
     window._dbxReopenBrowser = false;
-    setTimeout(function() { openDbxFileModal(localStorage.getItem(DBX_FILE_LAST_PATH) || '/'); }, 200);
+    setTimeout(function() { openDbxFileModal(DBX_ANKI_ROOT); }, 200);
   }
 });
 
@@ -2911,11 +3028,16 @@ if (window.EMBEDDED_CSV_TEXT) {
       <button class="dbx-modal-close" onclick="closeDbxFileModal()">✕</button>
     </div>
     <div class="dbx-modal-toolbar">
-      <input class="dbx-modal-path" id="dbxFilePath" value="/" placeholder="/ (root)">
+      <input class="dbx-modal-path" id="dbxFilePath" value="/study/anki" placeholder="/ (root)">
       <button class="dbx-modal-go" id="dbxFileGo" onclick="dbxFileBrowse(document.getElementById('dbxFilePath').value)">Go</button>
+      <button class="dbx-modal-go" onclick="dbxFileBrowse(DBX_ANKI_ROOT)" title="Anki decks: /study/anki">Anki</button>
     </div>
     <div class="dbx-modal-breadcrumb" id="dbxFileBreadcrumb"></div>
     <div class="dbx-modal-status" id="dbxFileStatus">Not signed in</div>
+    <div id="dbxFolderLoadBar" style="display:none;padding:0 14px 8px;">
+      <button class="dbx-item-action" id="dbxFolderLoadBtn" onclick="dbxLoadWholeFolder()">Load whole folder</button>
+      <span style="font-size:11px;color:#888;margin-left:6px;">every CSV here and in subfolders</span>
+    </div>
     <div class="dbx-modal-list" id="dbxFileList"></div>
   </div>
 </div>

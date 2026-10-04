@@ -414,27 +414,10 @@ td.col-due .due-badge {
         <div id="gsheetAllHint" style="font-size:11px;color:var(--muted);margin-top:4px;display:none">Every tab becomes a subdeck (spreadsheet::tab), like anki_working_directory.py: new rows are added, changed backs updated, nothing is ever deleted. Tabs ending in _glossed are skipped.</div>
       </div>
       <div class="field-group">
-        <label>Send cards to</label>
-        <div class="import-view-toggle">
-          <button id="targetSupabaseBtn" onclick="setImportTarget('supabase')">Supabase → folder</button>
-          <button id="targetAnkiBtn" onclick="setImportTarget('anki')">Anki directly</button>
-        </div>
-      </div>
-      <div class="field-group">
         <label>Destination deck</label>
         <div id="importDeckRow" style="display:flex;gap:6px;align-items:center">
           <select id="importDeck" style="flex:1" onchange="checkImportDuplicates()"></select>
           <button class="btn outline sm" onclick="promptImportNewDeck()">+ New</button>
-        </div>
-        <div id="inboxDeckRow" style="display:none">
-          <div style="display:flex;gap:6px;align-items:center">
-            <input type="text" id="inboxParent" list="inboxParentList" placeholder="Deck, e.g. switchboard" autocapitalize="off" autocomplete="off" style="flex:1;min-width:0" oninput="fillInboxSubdecks()">
-            <span style="color:var(--muted)">::</span>
-            <input type="text" id="inboxSub" list="inboxSubList" placeholder="Subdeck, e.g. safety" autocapitalize="off" autocomplete="off" style="flex:1;min-width:0">
-          </div>
-          <datalist id="inboxParentList"></datalist>
-          <datalist id="inboxSubList"></datalist>
-          <div id="inboxHint" style="font-size:11px;color:var(--muted);margin-top:4px">Uploads to Supabase as deck::subdeck; uploading the same deck::subdeck again replaces it. On your Mac run <code>python anki_working_directory.py --download</code> to write it to <code>anki_working_directory/parent/subdeck.csv</code> and sync Anki.</div>
         </div>
       </div>
       <div class="field-group">
@@ -475,7 +458,6 @@ td.col-due .due-badge {
       <span id="importCountLabel" style="font-size:12px;color:var(--muted);margin-right:auto"></span>
       <button class="btn outline" onclick="closeImportModal()">Cancel</button>
       <button class="btn primary" id="importDoBtn" onclick="doImport()" disabled>Import</button>
-      <button class="btn primary" id="inboxSendBtn" onclick="sendToInbox()" style="display:none" disabled>Upload</button>
     </div>
   </div>
 </div>
@@ -553,8 +535,7 @@ function hideToast() {
 function onAnkiDisconnected() {
   if (ankiReconnectTimer) return;
   ankiConnected = false;
-  updateInboxMode();
-  showToast("Anki isn't reachable — open Anki to reconnect, or use Import CSV → Upload.", 'err');
+  showToast("Anki isn't reachable — open Anki and this page will reconnect automatically.", 'err');
   ankiReconnectTimer = setInterval(function() {
     fetch(ANKI, { method: 'POST', body: JSON.stringify({ action: 'deckNames', version: 6 }) })
       .then(function() {
@@ -595,7 +576,6 @@ function refreshAll() {
     })
     .then(function() {
       ankiConnected = true;
-      updateInboxMode();
       return loadDecks();
     })
     .catch(function() {
@@ -1369,8 +1349,7 @@ function resetAllTabsBtn() {
   if (!gdriveWorkbook) { btn.style.display = hint.style.display = 'none'; allTabsStatus(''); return; }
   var n = allTabs().length;
   btn.disabled = false;
-  btn.dataset.label = 'all ' + n + ' tab' + (n !== 1 ? 's' : '') + ' as decks';
-  btn.textContent = (inboxModeOn() ? 'Upload ' : 'Import ') + btn.dataset.label;
+  btn.textContent = 'Import all ' + n + ' tab' + (n !== 1 ? 's' : '') + ' as decks';
   btn.style.display = hint.style.display = '';
 }
 
@@ -1415,7 +1394,6 @@ function planAllTabs() {
 function importAllTabs() {
   var btn = document.getElementById('gsheetAllBtn');
   if (!gdriveWorkbook) return;
-  if (inboxModeOn()) return sendAllTabsToInbox();
   btn.disabled = true;
 
   // First click: work out what would change and ask to confirm.
@@ -1488,7 +1466,6 @@ function openImportModal() {
   populateImportDecks();
   refreshGsheetAuthUI();
   if (gdriveWorkbook) resetAllTabsBtn();
-  updateInboxMode();
   document.getElementById('importOverlay').classList.add('open');
 }
 
@@ -1599,11 +1576,6 @@ function checkImportDuplicates() {
     return null;
   });
 
-  if (inboxModeOn()) {  // upload mode: only repeats inside the CSV can be checked here
-    importDupReasons = reasons;
-    updateImportPreview();
-    return;
-  }
   document.getElementById('importDupStatus').textContent = 'Checking for duplicates…';
   anki('canAddNotesWithErrorDetail', { notes: buildImportNotes(deck, false) })
     .then(function(checks) {
@@ -1655,7 +1627,6 @@ function updateImportPreview() {
     countEl.textContent = '';
     btn.disabled = true;
     btn.textContent = 'Import';
-    document.getElementById('inboxSendBtn').disabled = true;
     return;
   }
 
@@ -1745,7 +1716,6 @@ function updateImportPreview() {
   label.textContent = 'Preview — ' + n + ' card' + (n !== 1 ? 's' : '') + ' · ✦F = Front · ✦B = Back';
   countEl.textContent = k + ' card' + (k !== 1 ? 's' : '') + ' ready';
   btn.disabled = k === 0;
-  document.getElementById('inboxSendBtn').disabled = k === 0;
   btn.textContent = 'Import ' + k + ' card' + (k !== 1 ? 's' : '');
   wrap.style.display = '';
   setImportView(importViewMode);
@@ -1858,161 +1828,6 @@ function doImport() {
       setStatus('Import failed: ' + e.message, 'err');
       resetBtn();
     });
-}
-
-// ── UPLOAD BY DECK (phone → Supabase → Mac) ──────────────────────────────
-// When Anki isn't reachable (e.g. on the phone), CSVs are uploaded to
-// /api/supabase?action=inbox, which upserts them into Supabase by full deck name. On the
-// Mac, `anki_working_directory.py --download` writes each deck to
-// anki_working_directory/<deck path>.csv and syncs it into Anki.
-var INBOX_API = '/api/supabase?action=inbox';
-
-// 'supabase' (upload, picked up by --download) or 'anki' (import directly).
-// Without a reachable Anki only 'supabase' is possible.
-var importTarget = 'supabase';
-try { importTarget = localStorage.getItem('ankiImportTarget') || 'supabase'; } catch (e) {}
-
-function inboxModeOn() { return !ankiConnected || importTarget === 'supabase'; }
-
-function setImportTarget(t) {
-  if (t === 'anki' && !ankiConnected) return;
-  importTarget = t;
-  try { localStorage.setItem('ankiImportTarget', t); } catch (e) {}
-  updateInboxMode();
-  checkImportDuplicates();
-}
-
-function updateInboxMode() {
-  var inbox = inboxModeOn();
-  document.getElementById('targetSupabaseBtn').classList.toggle('active', inbox);
-  document.getElementById('targetAnkiBtn').classList.toggle('active', !inbox);
-  document.getElementById('targetAnkiBtn').disabled = !ankiConnected;
-  document.getElementById('targetAnkiBtn').title = ankiConnected ? '' : "Anki isn't reachable";
-  document.getElementById('importDeckRow').style.display = inbox ? 'none' : 'flex';
-  document.getElementById('inboxDeckRow').style.display  = inbox ? '' : 'none';
-  document.getElementById('importDoBtn').style.display   = inbox ? 'none' : '';
-  document.getElementById('inboxSendBtn').style.display  = inbox ? '' : 'none';
-  if (inbox) {
-    var p = document.getElementById('inboxParent'), sub = document.getElementById('inboxSub');
-    if (!p.value && !sub.value) {
-      var last = '';
-      try { last = localStorage.getItem('ankiInboxDeck') || ''; } catch (e) {}
-      var i = last.lastIndexOf('::');
-      if (i > 0) { p.value = last.slice(0, i); sub.value = last.slice(i + 2); }
-    }
-    loadInboxDeckOptions();
-  }
-  var all = document.getElementById('gsheetAllBtn');
-  if (all && all.dataset.label) all.textContent = (inbox ? 'Upload ' : 'Import ') + all.dataset.label;
-}
-
-// Deck/subdeck suggestions: decks in Anki (if connected) + decks already in
-// the Supabase flashcards table. Typing a new name is fine too.
-var inboxKnownDecks = [];
-
-function loadInboxDeckOptions() {
-  var names = Object.keys(allDecks || {});
-  fetch('/api/supabase?action=decks')
-    .then(function(r) { return r.ok ? r.json() : []; })
-    .catch(function() { return []; })
-    .then(function(remote) {
-      inboxKnownDecks = names.concat(Array.isArray(remote) ? remote : []);
-      var parents = {};
-      inboxKnownDecks.forEach(function(d) {
-        var i = d.lastIndexOf('::');
-        if (i > 0) parents[d.slice(0, i)] = true;
-      });
-      document.getElementById('inboxParentList').innerHTML = Object.keys(parents).sort()
-        .map(function(p) { return '<option value="' + escH(p) + '">'; }).join('');
-      fillInboxSubdecks();
-    });
-}
-
-function fillInboxSubdecks() {
-  var parent = document.getElementById('inboxParent').value.trim().replace(/\s*::\s*/g, '::');
-  var subs = {};
-  inboxKnownDecks.forEach(function(d) {
-    if (d.indexOf(parent + '::') === 0) subs[d.slice(parent.length + 2)] = true;
-  });
-  document.getElementById('inboxSubList').innerHTML = Object.keys(subs).sort()
-    .map(function(s) { return '<option value="' + escH(s) + '">'; }).join('');
-}
-
-function inboxToken(forceAsk) {
-  var t = null;
-  try { t = forceAsk ? null : localStorage.getItem('ankiInboxToken'); } catch (e) {}
-  if (!t) {
-    t = prompt('Upload token (the ANKI_INBOX_TOKEN set in Vercel). Asked once per device:');
-    if (t) { t = t.trim(); try { localStorage.setItem('ankiInboxToken', t); } catch (e) {} }
-  }
-  return t;
-}
-
-function inboxPost(deck, csv, retried) {
-  var token = inboxToken(retried);
-  if (!token) return Promise.reject(new Error('no inbox token'));
-  return fetch(INBOX_API, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-inbox-token': token },
-    body: JSON.stringify({ deck: deck, csv: csv })
-  }).then(function(r) {
-    return r.json().catch(function() { return {}; }).then(function(body) {
-      if (r.status === 401 && !retried) return inboxPost(deck, csv, true);
-      if (!r.ok) throw new Error(body.error || ('HTTP ' + r.status));
-      return body;
-    });
-  });
-}
-
-function sendToInbox() {
-  var clean = function(id) { return document.getElementById(id).value.trim().replace(/\s*::\s*/g, '::'); };
-  var parent = clean('inboxParent'), sub = clean('inboxSub');
-  var csv = document.getElementById('importPasteArea').value;
-  if (!parent || !sub) {
-    setStatus('Fill in both Deck and Subdeck, e.g. switchboard :: safety.', 'err');
-    document.getElementById(parent ? 'inboxSub' : 'inboxParent').focus();
-    return;
-  }
-  var deck = parent + '::' + sub;
-  if (!csv.trim()) return;
-  try { localStorage.setItem('ankiInboxDeck', deck); } catch (e) {}
-
-  var btn = document.getElementById('inboxSendBtn');
-  btn.disabled = true;
-  btn.textContent = 'Uploading…';
-  inboxPost(deck, csv)
-    .then(function() {
-      var n = importParsed.length;
-      setStatus('Uploaded ' + n + ' card' + (n !== 1 ? 's' : '') + ' to "' + deck + '". On your Mac: python anki_working_directory.py --download', 'ok');
-      showToast('Uploaded "' + deck + '" — run --download on your Mac', 'ok', 4000);
-      closeImportModal();
-    })
-    .catch(function(e) { setStatus('Upload failed: ' + e.message, 'err'); })
-    .finally(function() { btn.disabled = false; btn.textContent = 'Upload'; });
-}
-
-function sendAllTabsToInbox() {
-  var btn = document.getElementById('gsheetAllBtn');
-  var parent = deckPart(gdriveFileName);
-  var tabs = allTabs();
-  btn.disabled = true;
-  var sent = [];
-  tabs.reduce(function(run, tab) {
-    return run.then(function() {
-      var deck = parent + '::' + deckPart(tab);
-      allTabsStatus('Uploading ' + deck + '…');
-      return inboxPost(deck, XLSX.utils.sheet_to_csv(gdriveWorkbook.Sheets[tab], { blankrows: false }))
-        .then(function() { sent.push(deck); });
-    });
-  }, Promise.resolve())
-    .then(function() {
-      allTabsStatus('Uploaded ' + sent.length + ' tab(s):\n' + sent.join('\n') +
-                    '\nOn your Mac: python anki_working_directory.py --download', 'ok');
-    })
-    .catch(function(e) {
-      allTabsStatus('Upload failed after ' + sent.length + ' tab(s): ' + e.message, 'err');
-    })
-    .finally(function() { btn.disabled = false; });
 }
 
 // Keyboard shortcuts

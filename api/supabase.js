@@ -10,12 +10,8 @@
 //   GET /api/supabase?action=cards&deck=xxx → cards for exactly that deck
 //   GET /api/supabase?action=cards&deck=xxx&subdecks=1
 //                                           → that deck plus all its subdecks (xxx::*)
-//   GET/POST /api/supabase?action=inbox     → CSV uploads by deck, see lib/anki-inbox.js
-
-import inboxHandler from '../lib/anki-inbox.js';
 
 export default async function handler(req, res) {
-  if (req.query.action === 'inbox') return inboxHandler(req, res);
   res.setHeader('Access-Control-Allow-Origin', '*');
 
   const url = process.env.FLASHCARDS_SUPABASE_URL;
