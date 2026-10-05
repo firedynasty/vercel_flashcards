@@ -858,6 +858,7 @@ function speakSuggestopedia(term, definition, termEl) {
       ttsPlaying = null;
       return;
     }
+    console.log('[tts] speakSuggestopedia step=' + step + ':', JSON.stringify(texts[step]));
     var utt = new SpeechSynthesisUtterance(texts[step]);
     utt.rate = rates[step];
     utt.lang = 'en-US';
@@ -1898,6 +1899,7 @@ function renderTableView() {
 // ── TTS ──
 function speakText(text) {
   if (!text) return;
+  console.log('[tts] speakText:', JSON.stringify(text));
   window.speechSynthesis.cancel();
   var utterance = new SpeechSynthesisUtterance(text);
   utterance.rate = 1;
@@ -1920,6 +1922,7 @@ function tblSpeak(n, btnEl) {
   window.speechSynthesis.cancel();
   btnEl.classList.add('speaking');
 
+  console.log('[tts] tblSpeak: term=', JSON.stringify(row.term), ' definition=', JSON.stringify(row.definition));
   var u1 = new SpeechSynthesisUtterance(row.term);
   u1.rate = 1;
   var u2 = new SpeechSynthesisUtterance(row.definition || '');
