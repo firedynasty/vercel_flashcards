@@ -157,11 +157,9 @@
 <body>
     <div class="toolbar">
         <button class="tool-btn" id="dbxAuthBtn" title="Sign in to Dropbox">Dropbox</button>
-        <select class="preset-select" id="presetSelect">
-            <option value="">-- Presets --</option>
-        </select>
-        <input class="path-input" id="pathInput" placeholder="/images/pythonlearning" spellcheck="false">
+        <input class="path-input" id="pathInput" placeholder="/images_for_render" spellcheck="false">
         <button class="tool-btn" id="loadBtn">Load</button>
+        <button class="tool-btn" id="slideshowBtn" disabled>▶ Slideshow</button>
     </div>
 
     <div class="stage" id="stage">
@@ -178,6 +176,9 @@
 
     <div class="filename" id="filenameLabel"></div>
     <div class="status" id="statusLabel"></div>
+    <div style="text-align:center; font-size:11px; color:#445; flex-shrink:0; padding: 4px 0;">
+        ← → navigate &nbsp;|&nbsp; / toggle slideshow
+    </div>
 
     <script>
         // ── Folder presets: friendly label → Dropbox path ──
@@ -410,6 +411,7 @@
                 revokeAllBlobs();
                 loadToken++;
                 currentIndex = -1;
+                slideshowStop();
                 try { localStorage.setItem(DBX_LAST_PATH_KEY, folder || '/'); } catch(e) {}
                 // Reflect the loaded folder in the URL so it's bookmarkable/shareable
                 try {
@@ -433,6 +435,7 @@
                     return;
                 }
                 statusLabel.textContent = '';
+                document.getElementById('slideshowBtn').disabled = false;
                 await showImage(0);
             } catch(e) {
                 statusLabel.textContent = '❌ ' + e.message;
@@ -451,22 +454,33 @@
 
         document.getElementById('loadBtn').addEventListener('click', loadFolder);
 
-        pathInput.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') loadFolder();
+        var slideshowTimer = null;
+        var slideshowBtn = document.getElementById('slideshowBtn');
+
+        function slideshowStop() {
+            clearInterval(slideshowTimer);
+            slideshowTimer = null;
+            slideshowBtn.textContent = '▶ Slideshow';
+            slideshowBtn.style.borderColor = '';
+            slideshowBtn.style.color = '';
+        }
+
+        function slideshowStart() {
+            slideshowTimer = setInterval(function() {
+                var next = (currentIndex + 1) % images.length;
+                showImage(next);
+            }, 4000);
+            slideshowBtn.textContent = '⏹ Slideshow';
+            slideshowBtn.style.borderColor = '#4da3ff';
+            slideshowBtn.style.color = '#4da3ff';
+        }
+
+        slideshowBtn.addEventListener('click', function() {
+            if (slideshowTimer) { slideshowStop(); } else { slideshowStart(); }
         });
 
-        var presetSelect = document.getElementById('presetSelect');
-        Object.entries(DBX_FOLDER_PRESETS).forEach(function([label, path]) {
-            var opt = document.createElement('option');
-            opt.value = path;
-            opt.textContent = label;
-            presetSelect.appendChild(opt);
-        });
-        presetSelect.addEventListener('change', function() {
-            if (!this.value) return;
-            pathInput.value = this.value;
-            this.value = '';
-            loadFolder();
+        pathInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') loadFolder();
         });
 
         prevBtn.addEventListener('click', function() { showImage(currentIndex - 1); });
@@ -478,14 +492,16 @@
         });
 
         document.addEventListener('keydown', function(e) {
-            if (e.target === pathInput || e.target === jumpSelect || e.target === presetSelect) return; // don't steal arrows while editing
+            if (e.target === pathInput) return;
             if (e.key === 'ArrowLeft') { e.preventDefault(); showImage(currentIndex - 1); }
             else if (e.key === 'ArrowRight') { e.preventDefault(); showImage(currentIndex + 1); }
             else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+                if (e.target === jumpSelect) return; // let select handle ↑/↓ natively
                 if (jumpSelect.disabled) return;
                 e.preventDefault();
-                jumpSelect.focus(); // once focused, ↑/↓ step through images natively
+                jumpSelect.focus();
             }
+            else if (e.key === '/') { e.preventDefault(); slideshowBtn.click(); }
         });
 
         // Folder from URL: supports ?/images/foo (bare path) and ?path=/images/foo
@@ -526,7 +542,7 @@
             if (urlFolder) {
                 pathInput.value = urlFolder;
             } else {
-                try { pathInput.value = localStorage.getItem(DBX_LAST_PATH_KEY) || ''; } catch(e) {}
+                try { pathInput.value = localStorage.getItem(DBX_LAST_PATH_KEY) || '/images_for_render'; } catch(e) {}
             }
             // Returned from a full-page OAuth redirect with a pending load
             if (DBX_TOKEN && sessionStorage.getItem('dbx_pending') === 'load-folder') {
