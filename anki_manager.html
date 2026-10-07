@@ -80,6 +80,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; b
 .deck-menu-item:hover:not(:disabled) { background: #fee2e2; }
 .deck-menu-item:disabled { color: var(--muted); cursor: default; }
 .deck-menu-item.armed { background: var(--danger); color: #fff; font-weight: 600; }
+.deck-menu-item.neutral { color: var(--text); }
+.deck-menu-item.neutral:hover:not(:disabled) { background: var(--accent-bg); }
 
 /* ── MAIN ── */
 .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
@@ -320,6 +322,7 @@ td.col-due .due-badge {
         <button id="btnViewTable" class="active" onclick="setMainView('table')">Table</button>
         <button id="btnViewCards" onclick="setMainView('cards')">Cards</button>
       </div>
+      <button class="btn outline sm" onclick="knownWordsForCurrentDeck()" title="This deck's cards as text, to paste into Claude">📋 Known cards</button>
       <button class="btn outline sm" onclick="exportCsv()">⬇ Export CSV</button>
       <button class="btn outline sm" onclick="openImportModal()">↑ Import / GSheets</button>
       <button class="btn primary" onclick="openAddModal()">+ New card</button>
@@ -355,6 +358,30 @@ td.col-due .due-badge {
 </div>
 
 <!-- ── ADD / EDIT MODAL ── -->
+<!-- ── KNOWN WORDS ── -->
+<div class="overlay" id="knownOverlay" onclick="if(event.target===this)closeKnownWords()">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="knownTitle">Known cards</h2>
+      <button class="modal-close" onclick="closeKnownWords()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="import-view-toggle">
+        <button id="knownModeAll" class="active" onclick="setKnownMode('all')">All cards</button>
+        <button id="knownModeMature" onclick="setKnownMode('good')">Known</button>
+        <button id="knownModeLearning" onclick="setKnownMode('learning')">Still learning</button>
+      </div>
+      <textarea id="knownText" rows="8" style="font-size:12px"></textarea>
+      <div id="knownInfo" style="font-size:11px;color:var(--muted)"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn outline" onclick="closeKnownWords()">Close</button>
+      <button class="btn outline" id="knownCopyBtn" onclick="copyKnownWords()">Copy</button>
+      <button class="btn primary" id="knownPromptBtn" onclick="copyKnownWithPrompt()" title="Socratic tutoring prompt with this list filled in">Copy + prompt</button>
+    </div>
+  </div>
+</div>
+
 <div class="overlay" id="cardOverlay" onclick="if(event.target===this)closeCardModal()">
   <div class="modal">
     <div class="modal-header">
@@ -668,6 +695,13 @@ function confirmDeleteDeck(deck, x, y) {
   var menu = document.createElement('div');
   menu.className = 'deck-menu';
   menu.id = 'deckMenu';
+  var known = document.createElement('button');
+  known.type = 'button';
+  known.className = 'deck-menu-item neutral';
+  known.textContent = '📋 Known cards…';
+  known.onclick = function(e) { e.stopPropagation(); closeDeckMenu(); openKnownWords(deck); };
+  menu.appendChild(known);
+
   var item = document.createElement('button');
   item.type = 'button';
   item.className = 'deck-menu-item';
@@ -720,6 +754,163 @@ document.addEventListener('click', function(e) { if (!e.target.closest('#deckMen
 document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeDeckMenu(); });
 window.addEventListener('blur', closeDeckMenu);
 document.addEventListener('scroll', closeDeckMenu, true);
+
+// ── KNOWN CARDS ───────────────────────────────────────────────────────────────
+// Toolbar "📋 Known cards" (or right-click a deck): every card in the deck (and
+// its subdecks) as "Q → A", to paste into Claude so it knows what's already
+// covered, e.g. the Socratic prompt's "WORDS I ALREADY KNOW" slot. Vocabulary
+// cards read as "profligate → recklessly wasteful", so the words are in there too.
+// The filters follow Anki's own card states, the same ones its deck list counts:
+//   "Known" = graduated (is:review, not relearning): every card of the note.
+//   "Still learning" = in the learning or relearning steps (is:learn), the red
+//   Learn count in Anki, even if the last answer was Good.
+//   Not studied yet = new; shown only under "All cards".
+var knownDeck = '', knownMode = 'all';
+var knownCards = null;  // [{front, back, good (known), learning, studied}]
+
+function oneLine(t) { return (t || '').replace(/\s*\n\s*/g, ' / ').replace(/\s+/g, ' ').trim(); }
+
+function openKnownWords(deck) {
+  knownDeck = deck;
+  knownCards = null;
+  document.getElementById('knownTitle').textContent = 'Known cards — ' + deck;
+  document.getElementById('knownText').value = '';
+  document.getElementById('knownInfo').textContent = 'Reading cards…';
+  document.getElementById('knownCopyBtn').textContent = 'Copy';
+  document.getElementById('knownPromptBtn').textContent = 'Copy + prompt';
+  document.getElementById('knownOverlay').classList.add('open');
+
+  anki('findNotes', { query: 'deck:"' + deck + '"' })
+    .then(function(ids) { return ids.length ? anki('notesInfo', { notes: ids }) : []; })
+    .then(function(notes) {
+      var q = 'deck:"' + deck + '"';
+      return Promise.all([
+        anki('findCards', { query: q + ' is:learn' }),
+        anki('findCards', { query: q + ' is:review -is:learn' })
+      ]).then(function(res) {
+        var inLearn = {}, graduated = {};
+        res[0].forEach(function(id) { inLearn[id] = true; });
+        res[1].forEach(function(id) { graduated[id] = true; });
+        var text = function(v) { return stripHtml(String(v || '').replace(/<br\s*\/?>|<\/div>|<\/p>/gi, '\n')).trim(); };
+        knownCards = notes.map(function(n) {
+          var f = n.fields || {};
+          var keys = Object.keys(f);
+          var ids = n.cards || [];
+          return {
+            front: oneLine(text((f.Front || f[keys[0]] || {}).value)),
+            back:  oneLine(text((f.Back  || f[keys[1]] || {}).value)),
+            good: ids.length > 0 && ids.every(function(id) { return graduated[id]; }),
+            learning: ids.some(function(id) { return inLearn[id]; }),
+            studied: ids.some(function(id) { return inLearn[id] || graduated[id]; })
+          };
+        });
+        renderKnownWords();
+      });
+    })
+    .catch(function(e) { document.getElementById('knownInfo').textContent = 'Error: ' + e.message; });
+}
+
+function setKnownMode(mode) {
+  knownMode = mode;
+  document.getElementById('knownModeAll').classList.toggle('active', mode === 'all');
+  document.getElementById('knownModeMature').classList.toggle('active', mode === 'good');
+  document.getElementById('knownModeLearning').classList.toggle('active', mode === 'learning');
+  if (knownCards) renderKnownWords();
+}
+
+function renderKnownWords() {
+  var cards = knownCards.filter(function(c) {
+    return knownMode === 'all' || (knownMode === 'good' ? c.good : c.learning);
+  });
+  var good = knownCards.filter(function(c) { return c.good; }).length;
+  var unstudied = knownCards.filter(function(c) { return !c.studied; }).length;
+  var learning = knownCards.filter(function(c) { return c.learning; }).length;
+  document.getElementById('knownText').value = (knownMode === 'learning'
+    ? 'CARDS I\'M STILL LEARNING in "' + knownDeck + '" — focus on these:\n'
+    : 'CARDS I ALREADY HAVE in "' + knownDeck + '"' + (knownMode === 'good' ? ' (ones I know: graduated in Anki)' : '') +
+      ' — use as context, don\'t repeat these:\n') +
+    (cards.length ? cards.map(function(c) { return '- ' + c.front + ' → ' + c.back; }).join('\n') : 'none');
+  document.getElementById('knownInfo').textContent =
+    cards.length + ' card' + (cards.length !== 1 ? 's' : '') + ' listed · ' + good + ' of ' + knownCards.length +
+    ' known · ' + learning + ' still learning' + (unstudied ? ' · ' + unstudied + ' not studied yet' : '');
+}
+
+function copyKnownWords() {
+  copyText(document.getElementById('knownText').value, document.getElementById('knownCopyBtn'), 'Copy');
+}
+
+// Toolbar button: the open deck, or ask to pick one first.
+function knownWordsForCurrentDeck() {
+  if (!currentDeck) { setStatus('Pick a deck in the sidebar first, then click 📋 Known cards.', 'err'); return; }
+  openKnownWords(currentDeck);
+}
+
+// "Copy + prompt": the Socratic tutoring prompt with the list above (as edited
+// in the box) in place of {{KNOWN}}. Paste into Claude chat: the cards are the
+// source material, so Claude starts right away. Edit the prompt text here.
+var SOCRATIC_PROMPT = [
+  "You are running a Socratic tutoring dialogue with a vocabulary layer. The source material is my Anki cards below. Start the setup right away; don't wait for more. If I paste extra material later, fold it in.",
+  "",
+  "{{KNOWN}}",
+  "",
+  "SETUP (do this first, then stop):",
+  "1. Read the cards and derive 3-5 learning objectives, phrased as",
+  "   \"Identify X / Describe Y / Explain Z.\"",
+  "2. Pick 8-10 key words from the cards (SAT-level or subject terms) that I should be able to use, and that don't already have a card of their own (a card whose Front is just that word). Show only the words, with no definitions yet.",
+  "3. Show me the objectives and the word list, then say: \"Reply 'start' when ready.\"",
+  "4. Do not teach anything yet.",
+  "",
+  "DIALOGUE RULES:",
+  "- Ask exactly ONE question per turn. Never two.",
+  "- Never explain a concept before I have attempted it.",
+  "- Max 4 sentences of your own content before your next question.",
+  "- Work the objectives in order. Track which are covered.",
+  "- Every question should invite me to answer using at least one word from the list. If I use a list word correctly, note it as \"produced.\" If I describe the idea without the word, note it as \"not produced.\"",
+  "",
+  "RESPONSE FORMULA (every time I answer):",
+  "- Name the specific part I got right. Be precise, not generic praise.",
+  "- Add ONLY the missing piece or correction. One idea, not a summary.",
+  "- Ask the next question.",
+  "",
+  "WHEN I'M WRONG OR VAGUE, escalate across turns. Do not loop:",
+  "  Turn 1: reframe the question or narrow its scope",
+  "  Turn 2: give a concrete hint or partial answer, re-ask",
+  "  Turn 3: state the answer plainly, note it as a gap, move on",
+  "If I say \"stuck,\" jump straight to a hint, a nudge rather than the answer.",
+  "",
+  "ENDING:",
+  "When all objectives are covered, say so, then output:",
+  "  - Strengths: what I demonstrated, with specifics, including words I produced",
+  "  - Gaps: what I could not produce unaided, and what to review, including words I did not produce",
+  "Tie both to the objectives you declared at the start.",
+  "",
+  "Then, without being asked, output an Anki CSV file for the words I did NOT produce:",
+  "  - Two columns only: Front and Back",
+  "  - No header row, no tags column, every field in double quotes",
+  "  - Per word, two cards in a row:",
+  "    1. Production: Front = fill-in-the-blank sentence from the cards, Back = the word",
+  "    2. Recognition: Front = the word, Back = the definition",
+  "  - Don't make a card that's already in my list above",
+  "  - Save as a downloadable .csv file"
+].join('\n');
+
+function copyText(text, btn, label) {
+  var done = function() { btn.textContent = 'Copied ✓'; setTimeout(function() { btn.textContent = label; }, 1500); };
+  var fallback = function() {
+    var ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); done();
+  };
+  if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(text).then(done, fallback);
+  else fallback();
+}
+
+function copyKnownWithPrompt() {
+  var list = document.getElementById('knownText').value.trim() || 'WORDS I ALREADY KNOW (skip these): none';
+  copyText(SOCRATIC_PROMPT.replace('{{KNOWN}}', list), document.getElementById('knownPromptBtn'), 'Copy + prompt');
+}
+
+function closeKnownWords() { document.getElementById('knownOverlay').classList.remove('open'); }
 
 function loadDeck(deckName) {
   currentDeck = deckName;
@@ -1451,7 +1642,7 @@ function importAllTabs() {
 var importParsed = []; // [{front, back}]
 
 var HEADER_WORDS = ['chinese','pinyin','definition','term','front','back','english','word',
-                    'vocab','vocabulary','language','pronunciation','中文','translation'];
+                    'vocab','vocabulary','language','pronunciation','中文','translation','question','answer'];
 
 function openImportModal() {
   document.getElementById('importPasteArea').value = '';
@@ -1832,7 +2023,7 @@ function doImport() {
 
 // Keyboard shortcuts
 document.addEventListener('keydown', function(e) {
-  if (e.key === 'Escape') { closeCardModal(); closeConfirm(); }
+  if (e.key === 'Escape') { closeCardModal(); closeConfirm(); closeKnownWords(); }
   if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
     e.preventDefault(); document.getElementById('searchInput').focus();
   }
