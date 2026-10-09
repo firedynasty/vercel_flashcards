@@ -194,6 +194,36 @@ td.col-due .due-badge {
 /* dynamic extra fields */
 .extra-fields { display: flex; flex-direction: column; gap: 10px; }
 
+/* ── GAME (real Anki reviews) ── */
+.game-modal { max-width: 640px; }
+.game-hud { display: flex; align-items: center; gap: 12px; font-size: 12px; font-weight: 700; color: #555; }
+.game-level { background: #7c3aed; color: #fff; border-radius: 999px; padding: 3px 10px; }
+.game-xpbar { flex: 1; height: 8px; background: #ede9fe; border-radius: 999px; overflow: hidden; }
+.game-xpbar > div { height: 100%; background: #7c3aed; width: 0; transition: width .4s; }
+.game-combo { color: #ea580c; min-width: 60px; text-align: right; }
+.game-card { border: 1px solid var(--border); border-radius: 12px; padding: 20px; min-height: 180px; display: flex; flex-direction: column; gap: 14px; }
+.game-q { font-size: 20px; font-weight: 600; text-align: center; white-space: pre-wrap; }
+.game-a { font-size: 16px; text-align: center; white-space: pre-wrap; border-top: 1px dashed var(--border); padding-top: 14px; }
+.game-msg { text-align: center; color: var(--muted); font-size: 13px; padding: 30px 0; white-space: pre-wrap; }
+.game-reveal { align-self: center; }
+.game-answers { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.game-ans { border: 1px solid var(--ans-border); background: var(--ans-bg); color: var(--ans-fg); border-radius: 10px; padding: 8px 4px; cursor: pointer; font-family: inherit; font-weight: 700; font-size: 14px; transition: filter .15s; }
+.game-ans:hover:not(:disabled) { filter: brightness(.96); }
+.game-ans small { display: block; font-size: 11px; font-weight: 600; opacity: .85; }
+.game-ans kbd { font-size: 10px; opacity: .7; font-family: inherit; }
+.game-ans[data-ease="1"] { --ans-bg: #fef2f2; --ans-fg: #b91c1c; --ans-border: #fecaca; }
+.game-ans[data-ease="2"] { --ans-bg: #fffbeb; --ans-fg: #b45309; --ans-border: #fde68a; }
+.game-ans[data-ease="3"] { --ans-bg: #f0fdf4; --ans-fg: #15803d; --ans-border: #bbf7d0; }
+.game-ans[data-ease="4"] { --ans-bg: #eff6ff; --ans-fg: #1d4ed8; --ans-border: #bfdbfe; }
+.game-ans:disabled { opacity: .5; cursor: wait; }
+.game-saved { font-size: 12px; min-height: 16px; text-align: center; }
+.game-saved.ok { color: var(--success); }
+.game-saved.err { color: var(--danger); }
+.game-pop { position: absolute; left: 50%; top: 40%; transform: translateX(-50%); font-size: 22px; font-weight: 800; color: #7c3aed; pointer-events: none; animation: gamePop .9s ease-out forwards; }
+@keyframes gamePop { from { opacity: 1; transform: translate(-50%, 0); } to { opacity: 0; transform: translate(-50%, -40px); } }
+.game-summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; text-align: center; font-size: 12px; }
+.game-summary b { display: block; font-size: 20px; }
+
 /* ── CONFIRM DIALOG ── */
 .confirm-overlay { display: none; position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,.6); align-items: center; justify-content: center; }
 .confirm-overlay.open { display: flex; }
@@ -285,7 +315,66 @@ td.col-due .due-badge {
 .import-card-label.front-lbl { color: var(--accent); }
 .import-card-label.back-lbl  { color: var(--success); }
 .import-card-value { padding: 6px 10px; color: var(--text); white-space: pre-wrap; word-break: break-word; }
+
+/* ── DARK MODE (🌙 button in the top bar; html[data-theme="dark"]) ── */
+html[data-theme="dark"] {
+  --bg: #0f1115; --surface: #181b21; --border: #2a2f38; --muted: #8b93a1; --text: #e5e7eb;
+  --accent: #3b82f6; --accent-bg: #1e293b; --danger: #ef4444; --success: #22c55e;
+  color-scheme: dark;
+}
+html[data-theme="dark"] input, html[data-theme="dark"] textarea, html[data-theme="dark"] select {
+  background: var(--bg); color: var(--text); border-color: var(--border);
+}
+html[data-theme="dark"] .btn.outline,
+html[data-theme="dark"] .edit-btn,
+html[data-theme="dark"] .view-toggle-bar button,
+html[data-theme="dark"] .import-view-toggle button,
+html[data-theme="dark"] .game-hud { color: #cbd5e1; }
+html[data-theme="dark"] .view-toggle-bar button.active,
+html[data-theme="dark"] .import-view-toggle button.active { color: #fff; }
+html[data-theme="dark"] .btn.outline:hover { background: #222733; }
+html[data-theme="dark"] .count-pill { background: #0c2a3d; color: #7dd3fc; }
+html[data-theme="dark"] thead th,
+html[data-theme="dark"] .preview-table th { background: #1f232b; color: #cbd5e1; }
+html[data-theme="dark"] tbody tr,
+html[data-theme="dark"] .preview-table td,
+html[data-theme="dark"] .anki-card-header,
+html[data-theme="dark"] .anki-card-footer,
+html[data-theme="dark"] .import-card-row { border-color: #23272f; }
+html[data-theme="dark"] tbody tr:hover { background: #1f232b; }
+html[data-theme="dark"] tbody tr.selected-row,
+html[data-theme="dark"] .anki-card.selected-row { background: #1e3a5f !important; }
+html[data-theme="dark"] .anki-card-header,
+html[data-theme="dark"] .import-card-num,
+html[data-theme="dark"] .import-card-label { background: #1f232b; }
+html[data-theme="dark"] .anki-card-back { color: #94a3b8; }
+html[data-theme="dark"] .due-new      { background: #172554; color: #93c5fd; }
+html[data-theme="dark"] .due-today    { background: #052e16; color: #86efac; }
+html[data-theme="dark"] .due-overdue  { background: #450a0a; color: #fca5a5; }
+html[data-theme="dark"] .due-learning { background: #451a03; color: #fcd34d; }
+html[data-theme="dark"] .due-future   { background: #1f232b; color: #94a3b8; }
+html[data-theme="dark"] .deck-menu-item:hover:not(:disabled),
+html[data-theme="dark"] .preview-table tr.dup-row td { background: #3b1d1d; }
+html[data-theme="dark"] .dup-badge { background: #3b1d1d; }
+html[data-theme="dark"] .preview-table th.col-highlight,
+html[data-theme="dark"] .preview-table td.col-highlight { background: #1e293b; }
+html[data-theme="dark"] .game-xpbar { background: #2e1065; }
+html[data-theme="dark"] .game-pop { color: #c4b5fd; }
+html[data-theme="dark"] .game-ans[data-ease="1"] { --ans-bg: #2a1215; --ans-fg: #fca5a5; --ans-border: #4c1d1d; }
+html[data-theme="dark"] .game-ans[data-ease="2"] { --ans-bg: #2a1d0b; --ans-fg: #fcd34d; --ans-border: #4a3410; }
+html[data-theme="dark"] .game-ans[data-ease="3"] { --ans-bg: #0f2418; --ans-fg: #86efac; --ans-border: #1c4530; }
+html[data-theme="dark"] .game-ans[data-ease="4"] { --ans-bg: #111c33; --ans-fg: #93c5fd; --ans-border: #1e3a6b; }
+html[data-theme="dark"] .game-ans:hover:not(:disabled) { filter: brightness(1.15); }
 </style>
+<script>
+// Apply the saved theme before the page paints (default: follow the system setting)
+(function() {
+  var t = null;
+  try { t = localStorage.getItem('ankiManager-theme'); } catch (e) {}
+  if (!t) t = window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  document.documentElement.setAttribute('data-theme', t);
+})();
+</script>
 </head>
 <body>
 
@@ -295,6 +384,7 @@ td.col-due .due-badge {
   <input type="text" id="searchInput" placeholder="Search notes (Anki syntax: tag:foo, deck:name, front:*word*…)" onkeydown="if(event.key==='Enter') searchNotes()">
   <button class="btn primary" onclick="searchNotes()">Search</button>
   <button class="btn outline" onclick="refreshAll()">↺ Refresh</button>
+  <button class="btn outline" id="themeBtn" onclick="toggleTheme()" title="Switch dark / light mode"></button>
   <span style="font-size:11px;color:var(--muted)">see /Users/stanleytan/Documents/technical/claude_skills/anki-skill</span>
 </div>
 
@@ -323,6 +413,7 @@ td.col-due .due-badge {
         <button id="btnViewCards" onclick="setMainView('cards')">Cards</button>
       </div>
       <button class="btn outline sm" onclick="knownWordsForCurrentDeck()" title="This deck's cards as text, to paste into Claude">📋 Known cards</button>
+      <button class="btn primary sm" onclick="openGame()" title="Review this deck as a game: answers are saved to Anki as real reviews">🎮 Play</button>
       <button class="btn outline sm" onclick="exportCsv()">⬇ Export CSV</button>
       <button class="btn outline sm" onclick="openImportModal()">↑ Import / GSheets</button>
       <button class="btn primary" onclick="openAddModal()">+ New card</button>
@@ -378,6 +469,30 @@ td.col-due .due-badge {
       <button class="btn outline" onclick="closeKnownWords()">Close</button>
       <button class="btn outline" id="knownCopyBtn" onclick="copyKnownWords()">Copy</button>
       <button class="btn primary" id="knownPromptBtn" onclick="copyKnownWithPrompt()" title="Socratic tutoring prompt with this list filled in">Copy + prompt</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── GAME ── -->
+<div class="overlay" id="gameOverlay" onclick="if(event.target===this)closeGame()">
+  <div class="modal game-modal">
+    <div class="modal-header">
+      <h2 id="gameTitle">🎮 Play</h2>
+      <button class="modal-close" onclick="closeGame()">&times;</button>
+    </div>
+    <div class="modal-body" style="position:relative">
+      <div class="game-hud">
+        <span class="game-level" id="gameLevel">Lv 1</span>
+        <div class="game-xpbar" title="XP to next level"><div id="gameXpFill"></div></div>
+        <span id="gameXpText">0 XP</span>
+        <span class="game-combo" id="gameCombo"></span>
+      </div>
+      <div class="game-card" id="gameCard"></div>
+      <div class="game-saved" id="gameSaved"></div>
+    </div>
+    <div class="modal-footer">
+      <span id="gameDayStreak" style="margin-right:auto;font-size:12px;color:var(--muted);align-self:center"></span>
+      <button class="btn outline" onclick="closeGame()">Done</button>
     </div>
   </div>
 </div>
@@ -909,6 +1024,220 @@ function copyKnownWithPrompt() {
   var list = document.getElementById('knownText').value.trim() || 'WORDS I ALREADY KNOW (skip these): none';
   copyText(SOCRATIC_PROMPT.replace('{{KNOWN}}', list), document.getElementById('knownPromptBtn'), 'Copy + prompt');
 }
+
+// ── DARK / LIGHT MODE ─────────────────────────────────────────────────────────
+function themeBtnLabel() {
+  var dark = document.documentElement.getAttribute('data-theme') === 'dark';
+  document.getElementById('themeBtn').textContent = dark ? '☀ Light' : '🌙 Dark';
+}
+function toggleTheme() {
+  var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  try { localStorage.setItem('ankiManager-theme', next); } catch (e) {}
+  themeBtnLabel();
+}
+themeBtnLabel();
+
+// ── GAME: review the open deck as a game ─────────────────────────────────────────
+// Drives Anki's own reviewer through AnkiConnect (guiDeckReview → guiCurrentCard →
+// guiShowAnswer → guiAnswerCard), so every answer is a real Anki review: same card
+// order, daily limits and Again/Hard/Good/Easy intervals as in Anki. After each answer
+// the review log (getReviewsOfCards) is read back to confirm it was saved.
+// XP, level and day streak are game-only and live in localStorage.
+var GAME_KEY = 'ankiManager-game';
+var GAME_EASE = { 1: 'Again', 2: 'Hard', 3: 'Good', 4: 'Easy' };
+var GAME_XP = { 1: 1, 2: 5, 3: 10, 4: 12 };
+var game = null;  // { card, revealed, busy, combo, bestCombo, xpGained, counts, saved, failed }
+
+function gameLoadStats() {
+  try { return JSON.parse(localStorage.getItem(GAME_KEY)) || {}; } catch (e) { return {}; }
+}
+function gameSaveStats(st) {
+  try { localStorage.setItem(GAME_KEY, JSON.stringify(st)); } catch (e) {}
+}
+// Level L needs 100 + 50*(L-1) XP to pass
+function gameLevelInfo(xp) {
+  var lvl = 1, need = 100;
+  while (xp >= need) { xp -= need; lvl++; need = 100 + 50 * (lvl - 1); }
+  return { level: lvl, into: xp, need: need };
+}
+function gameToday() {
+  var d = new Date();
+  return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
+}
+
+function gameRenderHud() {
+  var st = gameLoadStats();
+  var li = gameLevelInfo(st.xp || 0);
+  document.getElementById('gameLevel').textContent = 'Lv ' + li.level;
+  document.getElementById('gameXpFill').style.width = Math.round(100 * li.into / li.need) + '%';
+  document.getElementById('gameXpText').textContent = li.into + ' / ' + li.need + ' XP';
+  document.getElementById('gameCombo').textContent = game && game.combo > 1 ? '🔥 x' + game.combo : '';
+  document.getElementById('gameDayStreak').textContent =
+    (st.dayStreak ? '📅 ' + st.dayStreak + '-day streak · ' : '') + 'best combo ' + (st.bestCombo || 0);
+}
+
+function gamePop(text) {
+  var el = document.createElement('div');
+  el.className = 'game-pop';
+  el.textContent = text;
+  document.querySelector('#gameOverlay .modal-body').appendChild(el);
+  setTimeout(function() { el.remove(); }, 900);
+}
+
+// Strip the card template's <style> and HTML; for the answer keep only the part after <hr id=answer>
+function gameCardText(html, isAnswer) {
+  html = String(html || '').replace(/<style[\s\S]*?<\/style>/gi, '');
+  if (isAnswer) {
+    var i = html.search(/<hr id=["']?answer["']?>/i);
+    if (i >= 0) html = html.slice(html.indexOf('>', i) + 1);
+  }
+  return stripHtml(html.replace(/<br\s*\/?>|<\/div>|<\/p>/gi, '\n')).replace(/\n{3,}/g, '\n\n').trim();
+}
+function gameCleanInterval(s) { return String(s || '').replace(/[\u2066-\u2069]/g, ''); }
+
+function openGame() {
+  if (!currentDeck) { setStatus('Pick a deck in the sidebar first, then click 🎮 Play.', 'err'); return; }
+  game = { card: null, revealed: false, busy: false, combo: 0, bestCombo: 0, xpGained: 0,
+           counts: { 1: 0, 2: 0, 3: 0, 4: 0 }, saved: 0, failed: 0 };
+  document.getElementById('gameTitle').textContent = '🎮 ' + currentDeck;
+  document.getElementById('gameSaved').textContent = '';
+  document.getElementById('gameSaved').className = 'game-saved';
+  document.getElementById('gameOverlay').classList.add('open');
+  gameRenderHud();
+  gameMessage('Opening "' + currentDeck + '" in Anki…');
+  anki('guiDeckReview', { name: currentDeck })
+    .then(function() { return gameNextCard(); })
+    .catch(function(e) { gameMessage('Could not start a review in Anki: ' + e.message); });
+}
+
+function gameMessage(msg) {
+  document.getElementById('gameCard').innerHTML = '<div class="game-msg">' + escH(msg) + '</div>';
+}
+
+function gameNextCard() {
+  return anki('guiCurrentCard').then(function(card) {
+    if (!card) { game.card = null; gameShowSummary(); return; }
+    game.card = card;
+    game.revealed = false;
+    var q = gameCardText(card.question, false);
+    document.getElementById('gameCard').innerHTML =
+      '<div class="game-q">' + escH(q) + '</div>' +
+      '<button class="btn primary game-reveal" onclick="gameReveal()">Show answer <kbd>Space</kbd></button>';
+  }).catch(function(e) {
+    // Anki left the reviewer (finished, or you navigated away in Anki)
+    game.card = null;
+    if (/not currently active|not in review/i.test(e.message)) gameShowSummary();
+    else gameMessage('Error reading the card from Anki: ' + e.message);
+  });
+}
+
+function gameReveal() {
+  if (!game || !game.card || game.revealed) return;
+  game.revealed = true;
+  anki('guiShowAnswer').catch(function() {});  // keep Anki's own window in step
+  var card = game.card;
+  var labels = card.nextReviews || [];
+  var btns = (card.buttons || [1, 2, 3, 4]).map(function(ease) {
+    return '<button class="game-ans" data-ease="' + ease + '" onclick="gameAnswer(' + ease + ')">' +
+      '<small>' + escH(gameCleanInterval(labels[ease - 1])) + '</small>' + GAME_EASE[ease] + ' <kbd>' + ease + '</kbd></button>';
+  }).join('');
+  document.getElementById('gameCard').innerHTML =
+    '<div class="game-q">' + escH(gameCardText(card.question, false)) + '</div>' +
+    '<div class="game-a">' + escH(gameCardText(card.answer, true)) + '</div>' +
+    '<div class="game-answers">' + btns + '</div>';
+}
+
+function gameAnswer(ease) {
+  if (!game || !game.card || !game.revealed || game.busy) return;
+  game.busy = true;
+  document.querySelectorAll('.game-ans').forEach(function(b) { b.disabled = true; });
+  var card = game.card;
+  var label = gameCleanInterval((card.nextReviews || [])[ease - 1]);
+  var started = Date.now();
+  var savedEl = document.getElementById('gameSaved');
+
+  anki('guiAnswerCard', { ease: ease })
+    .then(function(ok) {
+      if (!ok) throw new Error('Anki did not accept the answer');
+      // card ids must be numbers here: as strings AnkiConnect returns an empty history
+      return anki('getReviewsOfCards', { cards: [card.cardId] });
+    })
+    .then(function(res) {
+      var log = (res && (res[card.cardId] || res[String(card.cardId)])) || [];
+      var last = log[log.length - 1];
+      if (!last || last.id < started - 10000) throw new Error('no new entry in Anki\'s review log');
+      game.saved++;
+      savedEl.className = 'game-saved ok';
+      savedEl.textContent = '✓ Saved to Anki: ' + GAME_EASE[last.ease || ease] + (label ? ' · next in ' + label : '') +
+        ' (' + game.saved + ' saved this round)';
+      gameScore(ease);
+    })
+    .catch(function(e) {
+      game.failed++;
+      savedEl.className = 'game-saved err';
+      savedEl.textContent = '✗ Not confirmed in Anki: ' + e.message;
+    })
+    .then(function() {
+      game.busy = false;
+      return gameNextCard();
+    });
+}
+
+function gameScore(ease) {
+  var st = gameLoadStats();
+  var before = gameLevelInfo(st.xp || 0).level;
+  game.counts[ease]++;
+  if (ease === 1) game.combo = 0;
+  else if (ease >= 3) game.combo++;
+  var xp = GAME_XP[ease] + (ease >= 3 ? Math.min(game.combo, 10) : 0);
+  game.xpGained += xp;
+  game.bestCombo = Math.max(game.bestCombo, game.combo);
+  st.xp = (st.xp || 0) + xp;
+  st.bestCombo = Math.max(st.bestCombo || 0, game.combo);
+  st.reviews = (st.reviews || 0) + 1;
+  var today = gameToday();
+  if (st.lastDay !== today) {
+    var y = new Date(); y.setDate(y.getDate() - 1);
+    var yesterday = y.getFullYear() + '-' + (y.getMonth() + 1) + '-' + y.getDate();
+    st.dayStreak = st.lastDay === yesterday ? (st.dayStreak || 0) + 1 : 1;
+    st.lastDay = today;
+  }
+  gameSaveStats(st);
+  var after = gameLevelInfo(st.xp).level;
+  gamePop(after > before ? '⭐ Level ' + after + '!' : '+' + xp + ' XP');
+  gameRenderHud();
+}
+
+function gameShowSummary() {
+  var c = game.counts;
+  var total = c[1] + c[2] + c[3] + c[4];
+  document.getElementById('gameCard').innerHTML =
+    '<div class="game-msg">' + (total ? '🎉 Round done: no more cards due in this deck today.' : 'Nothing due in this deck today. 🎉') +
+    (total ? '\n+' + game.xpGained + ' XP · best combo ' + game.bestCombo +
+      ' · ' + game.saved + ' saved to Anki' + (game.failed ? ', ' + game.failed + ' not confirmed' : '') : '') + '</div>' +
+    (total ? '<div class="game-summary">' + [1, 2, 3, 4].map(function(e) {
+      return '<div><b>' + c[e] + '</b>' + GAME_EASE[e] + '</div>';
+    }).join('') + '</div>' : '');
+}
+
+function closeGame() {
+  document.getElementById('gameOverlay').classList.remove('open');
+  var played = game && (game.counts[1] + game.counts[2] + game.counts[3] + game.counts[4]) > 0;
+  game = null;
+  if (played && currentDeck) loadDeck(currentDeck);  // refresh Due column
+}
+
+// Keys like Anki: Space/Enter shows the answer, then 1-4 answer (Space/Enter = Good)
+document.addEventListener('keydown', function(e) {
+  if (!game || !document.getElementById('gameOverlay').classList.contains('open')) return;
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  if (e.key === 'Escape') { closeGame(); return; }
+  if (!game.card) return;
+  if (!game.revealed && (e.key === ' ' || e.key === 'Enter')) { e.preventDefault(); gameReveal(); return; }
+  if (game.revealed && /^[1-4]$/.test(e.key)) { e.preventDefault(); gameAnswer(parseInt(e.key, 10)); return; }
+  if (game.revealed && (e.key === ' ' || e.key === 'Enter')) { e.preventDefault(); gameAnswer(3); }
+});
 
 function closeKnownWords() { document.getElementById('knownOverlay').classList.remove('open'); }
 
