@@ -629,6 +629,31 @@
     <script>
         var qrOpenBtn = document.getElementById('qrOpenBtn');
 
+        // Decode qr_bridge hash (base64 → real content)
+        function decodeQrBridgeHash(hash) {
+            try {
+                var binary = atob(hash);
+                var bytes = new Uint8Array(binary.length);
+                for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+                return new TextDecoder().decode(bytes);
+            } catch(e) {
+                try { return decodeURIComponent(hash); } catch(e2) { return hash; }
+            }
+        }
+
+        // Resolve a QR value: strip qr_bridge wrapper if present, return final URL
+        function resolveQrValue(raw) {
+            var m = raw.match(/^(https?:\/\/[^/]+)\/qr#(.+)$/);
+            if (m) {
+                var decoded = decodeQrBridgeHash(m[2]);
+                // decoded may be a full URL or a bare path
+                if (/^https?:\/\//i.test(decoded)) return decoded;
+                if (decoded.charAt(0) === '/') return m[1] + decoded;
+                return decoded;
+            }
+            return raw;
+        }
+
         function scanImageForQr() {
             qrOpenBtn.style.display = 'none';
             try {
@@ -639,9 +664,12 @@
                 ctx.drawImage(imageView, 0, 0);
                 var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
                 var code = jsQR(imageData.data, imageData.width, imageData.height);
-                if (code && /^https?:\/\//i.test(code.data)) {
-                    qrOpenBtn.href = code.data;
-                    qrOpenBtn.style.display = '';
+                if (code && code.data) {
+                    var resolved = resolveQrValue(code.data);
+                    if (/^https?:\/\//i.test(resolved)) {
+                        qrOpenBtn.href = resolved;
+                        qrOpenBtn.style.display = '';
+                    }
                 }
             } catch(e) {}
         }
