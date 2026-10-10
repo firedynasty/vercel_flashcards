@@ -179,7 +179,8 @@
 
     <div class="toolbar">
         <button class="tool-btn" id="loadImgBtn">Img</button>
-        <button class="tool-btn" id="clearBtn">Clear</button>
+        <button class="tool-btn" id="clearImgBtn" title="Remove the loaded reference image">Clear Img</button>
+        <button class="tool-btn" id="clearBtn" title="Clear your hand-drawn strokes">Clear</button>
         <button class="tool-btn" id="darkBtn">Dark</button>
         <button class="tool-btn" id="gridBtn">Grid</button>
         <button class="tool-btn" id="undoBtn" title="Undo last stroke (Ctrl+Z)" disabled>Undo</button>
@@ -187,13 +188,13 @@
         <button class="tool-btn" id="scrollDownBtn" title="Scroll down">↓</button>
         <input type="range" id="strokeSize" min="2" max="20" value="2" style="width:75px; height:24px;">
         <button style="display:none;" class="ml-2 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold bg-amber-500 text-white hover:bg-amber-600" id="notesBtn" title="Open notes (synced to Dropbox)">save *</button>
-        <button class="ml-2 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700" id="ocrBtn" title="Extract text (English)">OCR</button>
-        <button class="ml-2 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700" id="ocrChinBtn" title="Extract text (Chinese)">中文</button>
+        <button class="ml-2 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700" id="ocrBtn" title="Extract text (English) — asks canvas or image if one is loaded">OCR</button>
+        <button class="ml-2 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700" id="ocrChinBtn" title="Extract text (Chinese) — asks canvas or image if one is loaded">中文</button>
         <button style="display:none;" class="ml-2 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700" id="txtNotesBtn" title="Open text notes (synced to Dropbox)">Notes</button>
         <button class="ml-2 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-700" id="gnSignInBtn" title="Sign in with Google">G Sign In</button>
         <button class="ml-2 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold bg-indigo-500 text-white hover:bg-indigo-600 disabled:opacity-50" id="gnRecentBtn" disabled title="Pick a recent Google Doc">Recent ▾</button>
         <span id="gnDocName" style="font-size:11px; color:#94a3b8; align-self:center; max-width:140px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></span>
-        <button class="ml-2 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50" id="gnSaveBtn" title="Extract text from the canvas and append it to the target Doc">Save</button>
+        <button class="ml-2 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50" id="gnSaveBtn" title="Extract text from the canvas or loaded image and append it to the target Doc">Save</button>
         <span id="gnStatus" style="font-size:10px; color:#94a3b8; align-self:center; max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></span>
         <button class="ml-2 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold bg-teal-500 text-white hover:bg-teal-600" id="savePngBtn" title="Save drawing as PNG to device">&#8595; PNG</button>
     </div>
@@ -204,6 +205,18 @@
          z-index) that extends below it. position:fixed here, with its screen
          coordinates set from gnRecentBtn's own rect in JS, escapes that clip. -->
     <div id="gnRecentDropdown" hidden style="position:fixed; z-index:500; background:#1e293b; border:1px solid #334155; border-radius:8px; box-shadow:0 4px 14px rgba(0,0,0,0.35); min-width:220px; max-width:320px; max-height:240px; overflow-y:auto;"></div>
+
+    <!-- OCR source picker: asks "canvas or loaded image?" before running OCR.
+         Only shown when a reference image is actually loaded — otherwise
+         there's no real choice, so OCR just runs on the canvas directly. -->
+    <div id="ocrSourceOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.72); z-index:310; align-items:center; justify-content:center; padding:20px;">
+      <div style="background:#1e293b; border-radius:16px; width:100%; max-width:320px; padding:20px; display:flex; flex-direction:column; gap:12px;">
+        <span style="color:#a8d8ea; font-weight:700; font-size:1rem;">OCR which one?</span>
+        <button id="ocrSourceCanvasBtn" style="padding:12px 0; font-size:14px; border:none; border-radius:8px; background:#2563eb; color:white; cursor:pointer; font-weight:600;">📝 Canvas (my drawing)</button>
+        <button id="ocrSourceImageBtn" style="padding:12px 0; font-size:14px; border:none; border-radius:8px; background:#2563eb; color:white; cursor:pointer; font-weight:600;">🖼️ Loaded image</button>
+        <button id="ocrSourceCancelBtn" style="padding:10px 0; font-size:13px; border:none; border-radius:8px; background:#334155; color:#e2e8f0; cursor:pointer;">Cancel</button>
+      </div>
+    </div>
 
     <!-- OCR result overlay -->
     <div id="ocrOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.72); z-index:300; align-items:flex-start; justify-content:center; padding:16px; overflow-y:auto;">
@@ -547,6 +560,21 @@
             imgCaption.textContent = file.name;
             e.target.value = '';
         });
+
+        function hasRefImage() {
+            return !!(refImg.src && refImg.style.display !== 'none');
+        }
+
+        function clearRefImage() {
+            if (imgURL) { URL.revokeObjectURL(imgURL); imgURL = null; }
+            refImg.src = '';
+            refImg.style.display = 'none';
+            refImg.classList.remove('expanded');
+            imgCaption.textContent = '';
+            imgPlaceholder.style.display = '';
+        }
+
+        document.getElementById('clearImgBtn').addEventListener('click', clearRefImage);
 
         refImg.addEventListener('load', () => {
             imgPlaceholder.style.display = 'none';
@@ -1252,6 +1280,49 @@
             return { dataUrl, base64: dataUrl.split(',')[1] };
         }
 
+        // Same shape as cropCanvasForOcr(), but sources the loaded reference
+        // image instead of the hand-drawn strokes.
+        function cropRefImageForOcr() {
+            if (!hasRefImage()) { alert('No image loaded. Tap "Img" to load one.'); return null; }
+            const tmp = document.createElement('canvas');
+            tmp.width = refImg.naturalWidth;
+            tmp.height = refImg.naturalHeight;
+            tmp.getContext('2d').drawImage(refImg, 0, 0);
+            const dataUrl = tmp.toDataURL('image/png');
+            return { dataUrl, base64: dataUrl.split(',')[1] };
+        }
+
+        // Asks "canvas or loaded image?" via the ocrSourceOverlay modal, and
+        // resolves to 'canvas' | 'image' | null (cancelled). Skips the modal
+        // and resolves straight to 'canvas' when no image is loaded — there's
+        // no real choice to make in that case.
+        function pickOcrSource() {
+            return new Promise((resolve) => {
+                if (!hasRefImage()) { resolve('canvas'); return; }
+                const overlay = document.getElementById('ocrSourceOverlay');
+                const canvasBtn = document.getElementById('ocrSourceCanvasBtn');
+                const imageBtn = document.getElementById('ocrSourceImageBtn');
+                const cancelBtn = document.getElementById('ocrSourceCancelBtn');
+                function cleanup(choice) {
+                    overlay.style.display = 'none';
+                    canvasBtn.removeEventListener('click', onCanvas);
+                    imageBtn.removeEventListener('click', onImage);
+                    cancelBtn.removeEventListener('click', onCancel);
+                    overlay.removeEventListener('click', onBackdrop);
+                    resolve(choice);
+                }
+                function onCanvas() { cleanup('canvas'); }
+                function onImage() { cleanup('image'); }
+                function onCancel() { cleanup(null); }
+                function onBackdrop(e) { if (e.target === overlay) cleanup(null); }
+                canvasBtn.addEventListener('click', onCanvas);
+                imageBtn.addEventListener('click', onImage);
+                cancelBtn.addEventListener('click', onCancel);
+                overlay.addEventListener('click', onBackdrop);
+                overlay.style.display = 'flex';
+            });
+        }
+
         // Returns the cached access code, or prompts for one (the ONE
         // user-facing prompt in this whole flow) and caches it. Returns ''
         // if the user cancels the prompt.
@@ -1286,10 +1357,12 @@
         }
 
         async function ocrRun(chinese) {
-            const cropped = cropCanvasForOcr();
+            const source = await pickOcrSource();
+            if (!source) return;
+            const cropped = source === 'image' ? cropRefImageForOcr() : cropCanvasForOcr();
             if (!cropped) return;
 
-            // Show cropped canvas in the OCR overlay preview
+            // Show cropped source in the OCR overlay preview
             const ocrPreview = document.getElementById('ocrPreview');
             const ocrPreviewEmpty = document.getElementById('ocrPreviewEmpty');
             ocrPreview.src = cropped.dataUrl;
@@ -1314,15 +1387,18 @@
             }
         }
 
-        // One-click toolbar "Save": crop → OCR → append to the target Doc —
-        // entirely without opening the OCR overlay. The access-code prompt
-        // (inside getOrPromptAccessCode, only when not already cached) is the
-        // only prompt this flow ever shows.
+        // One-click toolbar "Save": pick source → crop → OCR → append to the
+        // target Doc — entirely without opening the OCR overlay. The
+        // access-code prompt (inside getOrPromptAccessCode, only when not
+        // already cached) is the only prompt this flow ever shows besides
+        // the canvas/image picker.
         async function gnSaveViaOcr(btn) {
             if (!gnAccessToken) { gnSetStatus('❌ Sign in with Google first'); return; }
             if (!gnTargetDoc) { gnSetStatus('❌ Pick a Recent Google Doc first'); return; }
 
-            const cropped = cropCanvasForOcr();
+            const source = await pickOcrSource();
+            if (!source) return;
+            const cropped = source === 'image' ? cropRefImageForOcr() : cropCanvasForOcr();
             if (!cropped) return;
 
             const accessCode = getOrPromptAccessCode();
@@ -1333,19 +1409,23 @@
             gnSetStatus('Extracting text…');
             try {
                 const text = await ocrExtractText(cropped.base64, false, accessCode);
-                if (!text) { gnSetStatus('No text found in the drawing'); return; }
+                if (!text) { gnSetStatus('No text found in the ' + (source === 'image' ? 'image' : 'drawing')); return; }
                 gnSetStatus('Appending to "' + gnTargetDoc.name + '"…');
                 await gnAppendToGoogleDoc(text);
-                // Clear canvas only on a confirmed successful append.
-                strokes = [];
-                ctx.clearRect(0, 0, cssW, cssH);
-                updateUndoBtn();
+                // Clear whichever source was used, only on a confirmed successful append.
+                if (source === 'image') {
+                    clearRefImage();
+                } else {
+                    strokes = [];
+                    ctx.clearRect(0, 0, cssW, cssH);
+                    updateUndoBtn();
+                }
                 gnSetStatus('✅ Appended to "' + gnTargetDoc.name + '"');
                 btn.textContent = 'Appended ✓';
                 setTimeout(() => { btn.textContent = restoreLabel; }, 1800);
             } catch (e) {
-                // Nothing is cleared on failure — canvas and access code (unless
-                // it was itself invalid) are left as-is; just click Save again.
+                // Nothing is cleared on failure — canvas/image and access code
+                // (unless it was itself invalid) are left as-is; just click Save again.
                 gnSetStatus('❌ ' + e.message);
             } finally {
                 btn.disabled = false;
