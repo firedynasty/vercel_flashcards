@@ -936,36 +936,9 @@
     <div class="main-content">
         <h1>Language Study Flashcards Loader</h1>
         <span id="dbxCurrentFileName" style="display: none; font-size: 0.75rem; color: #a8d8ea; margin-bottom: 6px; text-align: center;"></span>
-        <p style="font-size: 0.75rem; color: #666; margin: 0 0 10px 0;">Back and Next & Speak only speak when Auto Reveal is on</p>
-
-        <!-- Language Selector & Controls -->
-        <div class="language-selector">
-            <label>Language:</label>
-            <select id="languageSelect">
-                <option value="zh-CN">Mandarin</option>
-                <option value="zh-HK">Cantonese</option>
-                <option value="en-US">English</option>
-                <option value="es-ES">Spanish</option>
-                <option value="fr-FR">French</option>
-            </select>
-            <select id="speechRate">
-                <option value="0.7">0.7x</option>
-                <option value="1" selected>1x</option>
-            </select>
-            <button class="mode-toggle-btn" id="autoRevealBtn">Reveal</button>
-            <button class="mode-toggle-btn" id="autoSpeakBtn">Speak</button>
-            <button class="speak-btn" id="speakRevealBtn" style="display:none">Back</button>
-            <button class="speak-btn" id="nextSpeakBtn" style="display:none">Next & Speak</button>
-            <div style="flex-basis:100%;display:flex;gap:10px;align-items:center;">
-                <input type="text" id="dictateInput" placeholder="Dictate answer here..." style="flex:1;padding:8px 12px;border:none;border-radius:8px;background:rgba(255,255,255,0.15);color:#fff;font-size:0.9rem;">
-                <button class="speak-btn" id="grabClipBtn" style="background:#1a3a1a;border-color:#52c97a;color:#52c97a">Grab</button>
-                <button class="speak-btn" id="clearDictateBtn" style="background:#3a1a1a;border-color:#c95252;color:#c95252">Clr</button>
-                <button class="speak-btn" id="exportAnswersBtn" style="background:#1a1a3a;border-color:#4fc3c3;color:#4fc3c3">Export</button>
-            </div>
-        </div>
 
         <!-- Flashcard Section -->
-        <div class="flashcard-container" id="flashcardSection">
+        <div class="flashcard-container" id="flashcardSection" style="display:none;">
             <div class="flashcard" id="flashcard">
                 <div class="chinese-text" id="chineseText">Load flashcards to begin</div>
                 <div class="english-text" id="englishText"></div>
@@ -978,7 +951,7 @@
         </div>
 
         <!-- Canvas Section (below flashcard for writing practice) -->
-        <div class="canvas-section" id="canvasSection">
+        <div class="canvas-section" id="canvasSection" style="display:none;">
             <div class="canvas-controls">
                 <button class="clear-btn" onclick="clearCanvas()">Clear</button>
                 <button class="dark-btn" onclick="toggleDarkCanvas()">Dark</button>
@@ -1036,6 +1009,7 @@
         <button class="paste-btn" id="readNonfictionBtn" title="Open Read Nonfiction" style="border: 2px solid #0369a1; color: #0369a1;" onclick="window.open('read-nonfiction.html', '_blank')">Read Nonfiction</button>
         <button class="paste-btn" id="googleNotesBtn" title="Open Google Doc Voice Notes" style="border: 2px solid #0d9488; color: #0d9488;" onclick="window.open('googlenotes.html', '_blank')">Google Notes</button>
         <button class="paste-btn" id="dropboxImageLoaderBtn" title="Open Dropbox Image Loader" style="border: 2px solid #0061fe; color: #0061fe;" onclick="window.open('dropboxImageLoader.html', '_blank')">Dropbox Images</button>
+        <button class="paste-btn" id="tutorBtn" title="Open Live Tutor" style="border: 2px solid #7c3aed; color: #7c3aed;" onclick="window.open('tutor.html', '_blank')">Tutor</button>
 
         <!-- Input Section -->
         <div class="input-section" id="inputSection">
@@ -2023,10 +1997,11 @@ God loves the world
             if (allCards.length === 0) return;
 
             const card = allCards[currentIndex];
+            // Language/rate selectors were removed (see removed_functionalities/) — defaults: Mandarin, 1x
             const languageSelect = document.getElementById('languageSelect');
             const speechRateSelect = document.getElementById('speechRate');
-            const selectedLang = languageSelect.value;
-            const selectedRate = parseFloat(speechRateSelect.value);
+            const selectedLang = languageSelect ? languageSelect.value : 'zh-CN';
+            const selectedRate = speechRateSelect ? parseFloat(speechRateSelect.value) : 1;
 
             // Cancel any ongoing speech
             speechSynthesis.cancel();
@@ -2372,59 +2347,6 @@ God loves the world
             document.getElementById('flashcard').addEventListener('click', handleFlashcardClick);
 
 
-            // Control buttons
-            document.getElementById('speakRevealBtn').addEventListener('click', goBackAndSpeak);
-            document.getElementById('nextSpeakBtn').addEventListener('click', nextAndSpeak);
-
-            // Grab from dictate input (preferred) or clipboard fallback
-            document.getElementById('grabClipBtn').addEventListener('click', async () => {
-                if (allCards.length === 0) return;
-                const input = document.getElementById('dictateInput');
-                const inputText = input.value.trim();
-                if (inputText) {
-                    userAnswers[currentIndex] = inputText;
-                    input.value = '';
-                } else {
-                    try {
-                        const clipText = await navigator.clipboard.readText();
-                        if (clipText && clipText.trim()) {
-                            userAnswers[currentIndex] = clipText.trim();
-                        }
-                    } catch (err) {
-                        console.error('Clipboard read failed:', err);
-                    }
-                }
-                navigate(1);
-            });
-
-            // Clear dictate input
-            document.getElementById('clearDictateBtn').addEventListener('click', () => {
-                document.getElementById('dictateInput').value = '';
-            });
-
-            // Export all answers to clipboard for AI grading
-            document.getElementById('exportAnswersBtn').addEventListener('click', async () => {
-                if (allCards.length === 0) return;
-                const lines = [];
-                lines.push('Grade my answers for accuracy:\n');
-                allCards.forEach((card, i) => {
-                    const q = card.chinese || '(no prompt)';
-                    const expected = card.english || '';
-                    const answer = userAnswers[i] || '(no answer)';
-                    lines.push(`Q${i+1}: ${q}`);
-                    if (expected) lines.push(`Expected: ${expected}`);
-                    lines.push(`My Answer: ${answer}`);
-                    lines.push('');
-                });
-                const output = lines.join('\n');
-                try {
-                    await navigator.clipboard.writeText(output);
-                    alert('Answers copied to clipboard! Paste into AI chat for grading.');
-                } catch (err) {
-                    console.error('Clipboard write failed:', err);
-                    alert('Could not copy. Check clipboard permissions.');
-                }
-            });
             document.getElementById('pasteBtn').addEventListener('click', pasteFromClipboard);
             document.getElementById('updateTextareaBtn').addEventListener('click', updateTextarea);
             document.getElementById('resetRatingsBtn').addEventListener('click', resetAllRatings);
@@ -2553,33 +2475,6 @@ God loves the world
                 textarea.value = contents.join('\n\n');
                 loadFlashcards();
                 this.value = '';
-            });
-
-            // Auto-reveal and auto-speak toggle buttons
-            const autoRevealBtn = document.getElementById('autoRevealBtn');
-            const autoSpeakBtn = document.getElementById('autoSpeakBtn');
-
-            // Load saved preferences
-            if (localStorage.getItem('flashcard-autoReveal') === 'true') {
-                autoReveal = true;
-                autoRevealBtn.classList.add('reveal-active');
-            }
-            if (localStorage.getItem('flashcard-autoSpeak') === 'true') {
-                autoSpeak = true;
-                autoSpeakBtn.classList.add('speak-active');
-            }
-
-            autoRevealBtn.addEventListener('click', function() {
-                autoReveal = !autoReveal;
-                this.classList.toggle('reveal-active', autoReveal);
-                localStorage.setItem('flashcard-autoReveal', autoReveal.toString());
-                updateDisplay();
-            });
-
-            autoSpeakBtn.addEventListener('click', function() {
-                autoSpeak = !autoSpeak;
-                this.classList.toggle('speak-active', autoSpeak);
-                localStorage.setItem('flashcard-autoSpeak', autoSpeak.toString());
             });
 
             // Keyboard shortcuts

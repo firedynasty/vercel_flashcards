@@ -1,0 +1,28 @@
+        <!-- Dictate / type answer (prominent, focused on load) -->
+        <div class="dictate-row">
+            <input type="text" id="dictateInput" placeholder="Type or dictate your answer here..." autofocus autocomplete="off">
+            <button class="speak-btn" id="grabClipBtn" style="background:#1a3a1a;border-color:#52c97a;color:#52c97a">Grab</button>
+            <button class="speak-btn" id="clearDictateBtn" style="background:#3a1a1a;border-color:#c95252;color:#c95252">Clr</button>
+            <button class="speak-btn" id="exportAnswersBtn" style="background:#1a1a3a;border-color:#4fc3c3;color:#4fc3c3">Export</button>
+        </div>
+
+        <!-- Language Selector & Controls -->
+        <div class="language-selector">
+            <label>Language:</label>
+            <select id="languageSelect">
+                <option value="zh-CN">Mandarin</option>
+                <option value="zh-HK">Cantonese</option>
+                <option value="en-US">English</option>
+                <option value="es-ES">Spanish</option>
+                <option value="fr-FR">French</option>
+            </select>
+            <select id="speechRate">
+                <option value="0.7">0.7x</option>
+                <option value="1" selected>1x</option>
+            </select>
+            <button class="mode-toggle-btn" id="autoRevealBtn">Reveal</button>
+            <button class="mode-toggle-btn" id="autoSpeakBtn">Speak</button>
+            <button class="speak-btn" id="speakRevealBtn" style="display:none">Back</button>
+            <button class="speak-btn" id="nextSpeakBtn" style="display:none">Next & Speak</button>
+        </div>
+

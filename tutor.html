@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Live Tutor</title>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+  :root { color-scheme: dark; --bg:#111; --fg:#eee; --muted:#aaa; --dim:#888; --ctl:#1c1c1c; --line:#444; --line2:#333; --accent:#4da3ff;
+          --user:#1d3b66; --asst:#232323; --err:#5a1f1f; --prev:#000; --ph:#666; }
+  :root[data-theme="light"] { color-scheme: light; --bg:#f6f6f4; --fg:#1a1a1a; --muted:#555; --dim:#777; --ctl:#fff; --line:#c8c8c4; --line2:#ddd;
+          --accent:#1a73e8; --user:#d6e6ff; --asst:#ececea; --err:#ffd9d9; --prev:#e9e9e6; --ph:#888; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, system-ui, sans-serif; background: var(--bg); color: var(--fg); height: 100vh; display: flex; flex-direction: column; }
+  .bar { display: flex; gap: 8px; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--line2); flex-wrap: wrap; }
+  .bar input:not([type=checkbox]), select, button { background: var(--ctl); color: var(--fg); border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; font-size: 13px; }
+  select option { background: var(--ctl); color: var(--fg); }
+  .bar input:not([type=checkbox]) { width: 150px; }
+  input[type=checkbox] { width: 14px; height: 14px; padding: 0; accent-color: var(--accent); vertical-align: middle; }
+  button { cursor: pointer; }
+  button:hover { border-color: var(--accent); }
+  button.primary { background: #2a6fd6; border-color: #2a6fd6; color: #fff; }
+  button:disabled { opacity: .5; cursor: default; }
+  .status { font-size: 12px; color: var(--dim); margin-left: auto; }
+  .main { flex: 1; display: flex; min-height: 0; }
+  .left { width: 42%; min-width: 280px; border-right: 1px solid var(--line2); display: flex; flex-direction: column; padding: 10px; gap: 8px; }
+  .right { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+  .preview { flex: 1; min-height: 120px; background: var(--prev); border-radius: 6px; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; }
+  .preview img { max-width: 100%; max-height: 100%; object-fit: contain; }
+  .preview .ph { color: var(--ph); font-size: 13px; text-align: center; padding: 12px; }
+  .strip { display: flex; gap: 6px; overflow-x: auto; min-height: 56px; }
+  .strip img { height: 52px; border-radius: 4px; border: 2px solid transparent; cursor: pointer; }
+  .strip img.sel { border-color: var(--accent); }
+  textarea { width: 100%; background: var(--ctl); color: var(--fg); border: 1px solid var(--line); border-radius: 6px; padding: 8px; font: 14px/1.5 inherit; resize: vertical; }
+  #note { min-height: 110px; }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .chat { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+  .msg { max-width: 92%; padding: 8px 12px; border-radius: 10px; white-space: pre-wrap; word-break: break-word; font-size: 14px; line-height: 1.55; }
+  .msg.user { align-self: flex-end; background: var(--user); }
+  .msg.assistant { align-self: flex-start; background: var(--asst); }
+  .msg img { max-height: 90px; display: block; margin-bottom: 6px; border-radius: 4px; }
+  .msg.err { background: var(--err); }
+  details { font-size: 12px; color: var(--muted); }
+  label { font-size: 12px; color: var(--muted); }
+  #recent { max-width: 190px; }
+  @media (max-width: 800px) { .main { flex-direction: column; } .left { width: 100%; border-right: 0; border-bottom: 1px solid var(--line2); } }
+</style>
+</head>
+<body>
+<div class="bar">
+  <button id="dbxBtn">Dropbox</button>
+  <label>Model <input id="model" list="models" value="gpt-4.1-mini" spellcheck="false"></label>
+  <datalist id="models">
+    <option value="gpt-4.1-mini"><option value="gpt-4.1"><option value="gpt-4o-mini"><option value="gpt-4o">
+    <option value="gpt-5-mini"><option value="gpt-5"><option value="o4-mini">
+  </datalist>
+  <label>Access code <input id="code" type="password" autocomplete="off"></label>
+  <button id="gBtn">Google</button>
+  <select id="recent" disabled><option value="">Recent docs…</option></select>
+  <button id="saveDocBtn" disabled>Save chat → doc</button>
+  <label><input type="checkbox" id="autoSave"> auto-save</label>
+  <button id="clearBtn">New chat</button>
+  <button id="themeBtn" title="Light / dark">☀︎</button>
+  <span class="status" id="status"></span>
+</div>
+<div class="main">
+  <div class="left">
+    <div class="preview" id="preview"><div class="ph">Sign in to Dropbox — new photos in <b>/images_for_render/phone</b> appear here automatically.<br>You can also paste an image into the box below.</div></div>
+    <div class="strip" id="strip"></div>
+    <textarea id="note" placeholder="Write / brainstorm here. Ctrl/Cmd+Enter to send. Paste images with Cmd+V."></textarea>
+    <div class="row">
+      <button class="primary" id="sendBtn">Send to tutor</button>
+      <label><input type="checkbox" id="withImg" checked> attach selected photo</label>
+      <label><input type="checkbox" id="auto"> auto-send new photos</label>
+    </div>
+<select id="preset" title="Coach prompt"><option value="Tutor">Tutor</option><option value="Job-search coach">Job-search coach</option><option value="No coach / prompt">No coach / prompt</option></select>
+  </div>
+  <div class="right"><div class="chat" id="chat"></div></div>
+</div>
+
+<script>
+const INBOX = (new URLSearchParams(location.search).get('path')) || '/images_for_render/phone';
+const POLL_MS = 5000;
+const MAX_SIDE = 1500;
+const IMAGE_EXTS = ['jpg','jpeg','png','gif','webp','heic'];
+const PRESETS = {
+  'Tutor': "You are a patient, Socratic live tutor. The student is thinking on paper and on screen; they send you their typed notes and/or photos of handwritten work. React to what they just wrote: point out mistakes, ask one guiding question, give short hints rather than full answers unless asked. Keep replies concise. If an image is unclear, say what you can't read.",
+  'Job-search coach': "You are a practical, Socratic job-search coach. The user is working through interview prep live: they send typed answers, resume bullets, or photos of notes and whiteboard practice. React to what they just wrote: point out weak spots (vague claims, missing results, rambling structure), ask one guiding question, and give short hints rather than rewritten answers unless asked. Keep replies concise. If an image is unclear, say what you can't read.",
+  'No coach / prompt': "",
+};
+
+const $ = id => document.getElementById(id);
+const ls = { get(k, d) { try { return localStorage.getItem(k) ?? d; } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+
+$('model').value = ls.get('tutor-model', 'gpt-4.1-mini');
+$('code').value = ls.get('ocr-access-code', '');  // shared with imageNotes.html
+$('model').onchange = () => ls.set('tutor-model', $('model').value.trim());
+$('code').onchange = () => ls.set('ocr-access-code', $('code').value.trim());
+// ── Prompt dropdown ──
+$('preset').value = PRESETS[ls.get('tutor-preset', '')] !== undefined ? ls.get('tutor-preset', '') : 'Tutor';
+$('preset').onchange = () => ls.set('tutor-preset', $('preset').value);
+
+// ── Light / dark ──
+function applyTheme(t) { document.documentElement.dataset.theme = t; $('themeBtn').textContent = t === 'light' ? '☾' : '☀︎'; ls.set('tutor-theme', t); }
+applyTheme(ls.get('tutor-theme', 'dark'));
+$('themeBtn').onclick = () => applyTheme(document.documentElement.dataset.theme === 'light' ? 'dark' : 'light');
+
+// ── Dropbox auth (same pattern as dropboxImageLoader.html) ──
+let TOKEN = null;
+function setBtn() { const b = $('dbxBtn'); b.textContent = TOKEN ? '● Dropbox' : 'Dropbox'; b.style.color = TOKEN ? '#4da3ff' : '#eee'; }
+async function appKey() {
+  if (['localhost', '127.0.0.1'].includes(location.hostname)) {
+    let k = ls.get('dropbox-app-key', '');
+    if (!k) { k = prompt('Dropbox App Key:') || ''; if (k) ls.set('dropbox-app-key', k); }
+    return k;
+  }
+  try { return (await (await fetch('/api/dropbox-key')).json()).key || ''; } catch (e) { return ''; }
+}
+function verifier() { const a = new Uint8Array(64); crypto.getRandomValues(a); return btoa(String.fromCharCode(...a)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
+async function challenge(v) { const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(v)); return btoa(String.fromCharCode(...new Uint8Array(d))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
+async function signIn() {
+  const key = await appKey(); if (!key) { alert('Dropbox App Key not configured'); return; }
+  const v = verifier(), c = await challenge(v);
+  const uri = location.origin + location.pathname;
+  const url = 'https://www.dropbox.com/oauth2/authorize?client_id=' + key + '&response_type=code&code_challenge=' + c + '&code_challenge_method=S256&redirect_uri=' + encodeURIComponent(uri) + '&token_access_type=online';
+  localStorage.setItem('dbx_verifier', v);
+  const popup = window.open(url, 'dropbox_auth', 'width=520,height=680');
+  if (!popup) { localStorage.removeItem('dbx_verifier'); sessionStorage.setItem('dbx_verifier', v); location.href = url; }
+}
+async function handleRedirect() {
+  const code = new URLSearchParams(location.search).get('code'); if (!code) return;
+  const v = localStorage.getItem('dbx_verifier') || sessionStorage.getItem('dbx_verifier'); const key = await appKey();
+  if (!v || !key) return;
+  try {
+    const r = await fetch('https://api.dropboxapi.com/oauth2/token', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ code, grant_type: 'authorization_code', client_id: key, redirect_uri: location.origin + location.pathname, code_verifier: v }).toString() });
+    const d = await r.json();
+    localStorage.removeItem('dbx_verifier'); sessionStorage.removeItem('dbx_verifier');
+    if (d.access_token) {
+      if (window.opener && !window.opener.closed) { window.opener.postMessage({ dropboxToken: d.access_token }, location.origin); window.close(); return; }
+      TOKEN = d.access_token; history.replaceState({}, document.title, location.pathname); onSignedIn();
+    } else if (window.opener) window.close();
+  } catch (e) { console.error(e); }
+}
+window.addEventListener('message', e => { if (e.origin === location.origin && e.data && e.data.dropboxToken) { TOKEN = e.data.dropboxToken; onSignedIn(); } });
+$('dbxBtn').onclick = () => { if (TOKEN) { TOKEN = null; stopWatch(); setBtn(); setStatus('Signed out'); } else signIn(); };
+
+const dbxJson = async (url, body) => {
+  const r = await fetch(url, { method: 'POST', headers: { Authorization: 'Bearer ' + TOKEN, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  if (r.status === 401) { TOKEN = null; stopWatch(); setBtn(); throw new Error('Dropbox session expired — sign in again'); }
+  if (r.status === 409) { const e = new Error('NOT_FOUND'); e.notFound = true; throw e; }
+  if (!r.ok) throw new Error('Dropbox error ' + r.status);
+  return r.json();
+};
+const dbxArg = o => JSON.stringify(o).replace(/[^\x00-\x7F]/g, c => '\\u' + c.charCodeAt(0).toString(16).padStart(4, '0'));
+async function download(path) {
+  const r = await fetch('https://content.dropboxapi.com/2/files/download', { method: 'POST', headers: { Authorization: 'Bearer ' + TOKEN, 'Dropbox-API-Arg': dbxArg({ path }) } });
+  if (!r.ok) throw new Error('Download failed (' + r.status + ')');
+  return r.blob();
+}
+
+// ── Folder watcher: take a cursor now, poll for new files after ──
+let cursor = null, timer = null;
+const photos = []; // { name, path, blob, url }
+let selected = null;
+const isImg = n => IMAGE_EXTS.includes(n.split('.').pop().toLowerCase());
+function setStatus(t) { $('status').textContent = t; }
+
+async function onSignedIn() {
+  setBtn(); setStatus('Connecting to ' + INBOX + '…');
+  try {
+    // Show the most recent existing photo (if any), but only auto-process photos arriving from now on
+    const listing = await dbxJson('https://api.dropboxapi.com/2/files/list_folder', { path: INBOX, limit: 200 });
+    let entries = listing.entries; let d = listing;
+    while (d.has_more) { d = await dbxJson('https://api.dropboxapi.com/2/files/list_folder/continue', { cursor: d.cursor }); entries = entries.concat(d.entries); }
+    cursor = d.cursor;
+    const files = entries.filter(e => e['.tag'] === 'file' && isImg(e.name)).sort((a, b) => a.server_modified < b.server_modified ? -1 : 1);
+    for (const f of files.slice(-3)) await addPhoto(f, false);
+    setStatus('Watching ' + INBOX);
+    startWatch();
+  } catch (e) {
+    if (e.notFound) setStatus('Create the folder ' + INBOX + ' in Dropbox first (and point your phone upload at it).');
+    else setStatus(e.message);
+  }
+}
+function startWatch() { stopWatch(); timer = setInterval(poll, POLL_MS); }
+function stopWatch() { if (timer) clearInterval(timer); timer = null; }
+let polling = false;
+async function poll() {
+  if (polling || !TOKEN || !cursor) return; polling = true;
+  try {
+    let d = await dbxJson('https://api.dropboxapi.com/2/files/list_folder/continue', { cursor });
+    let fresh = d.entries;
+    while (d.has_more) { d = await dbxJson('https://api.dropboxapi.com/2/files/list_folder/continue', { cursor: d.cursor }); fresh = fresh.concat(d.entries); }
+    cursor = d.cursor;
+    for (const f of fresh.filter(e => e['.tag'] === 'file' && isImg(e.name))) {
+      if (photos.some(p => p.path === f.path_lower)) continue;
+      await addPhoto(f, true);
+    }
+  } catch (e) { setStatus(e.message); } finally { polling = false; }
+}
+async function addPhoto(f, isNew) {
+  const blob = await download(f.path_lower);
+  const p = { name: f.name, path: f.path_lower, blob, url: URL.createObjectURL(blob) };
+  photos.push(p); renderStrip(); select(p);
+  if (isNew) { setStatus('New photo: ' + f.name); if ($('auto').checked) send(true); }
+}
+function renderStrip() {
+  const s = $('strip'); s.innerHTML = '';
+  for (const p of photos) { const i = document.createElement('img'); i.src = p.url; i.title = p.name; if (p === selected) i.className = 'sel'; i.onclick = () => select(p); s.appendChild(i); }
+  s.scrollLeft = s.scrollWidth;
+}
+function select(p) { selected = p; $('preview').innerHTML = ''; const i = document.createElement('img'); i.src = p.url; $('preview').appendChild(i); renderStrip(); }
+
+// Paste an image into the note box
+$('note').addEventListener('paste', e => {
+  for (const it of e.clipboardData.items) if (it.type.startsWith('image/')) {
+    const blob = it.getAsFile(); const p = { name: 'pasted', path: 'pasted-' + Date.now(), blob, url: URL.createObjectURL(blob) };
+    photos.push(p); select(p); e.preventDefault();
+  }
+});
+
+// ── Resize via canvas → JPEG base64 ──
+function resizeToBase64(blob) {
+  return new Promise((resolve, reject) => {
+    const img = new Image(); const url = URL.createObjectURL(blob);
+    img.onload = () => {
+      const k = Math.min(1, MAX_SIDE / Math.max(img.naturalWidth, img.naturalHeight));
+      const c = document.createElement('canvas'); c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
+      const ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height); ctx.drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url); resolve(c.toDataURL('image/jpeg', 0.8).split(',')[1]);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Could not decode image (HEIC? set phone to save JPEG)')); };
+    img.src = url;
+  });
+}
+
+
+// ── Google sign-in, recent docs, context + save-back (same client/scope as googlenotes.html) ──
+const GDRIVE_CLIENT_ID = '1095683227908-7ro25k16mprkf408i3lf583gti8v759b.apps.googleusercontent.com';
+const GDOC = 'application/vnd.google-apps.document';
+const MAX_CTX_CHARS = 60000;
+let ctxText = '', gToken = null, gClient = null, gDoc = null, savedCount = 0; // gDoc = { id, name }
+const gAuth = () => ({ Authorization: 'Bearer ' + gToken });
+
+function gInit() {
+  if (!(window.google && google.accounts)) { setTimeout(gInit, 150); return; }
+  gClient = google.accounts.oauth2.initTokenClient({
+    client_id: GDRIVE_CLIENT_ID, scope: 'https://www.googleapis.com/auth/drive',
+    callback: resp => {
+      if (!resp.access_token) { setStatus('Google sign-in failed: ' + (resp.error || 'unknown')); return; }
+      gToken = resp.access_token; $('gBtn').textContent = '● Google'; $('gBtn').style.color = '#4da3ff'; $('recent').disabled = false;
+      setStatus('Google signed in'); loadRecent();
+    }
+  });
+}
+function gExpired() { gToken = null; $('gBtn').textContent = 'Google'; $('gBtn').style.color = '#eee'; $('recent').disabled = true; $('saveDocBtn').disabled = true; return new Error('Google session expired — sign in again'); }
+$('gBtn').onclick = () => {
+  if (gToken) { google.accounts.oauth2.revoke(gToken); gExpired(); setStatus('Google signed out'); }
+  else if (gClient) gClient.requestAccessToken();
+};
+async function loadRecent() {
+  try {
+    const q = encodeURIComponent("mimeType='" + GDOC + "' and trashed=false");
+    const r = await fetch('https://www.googleapis.com/drive/v3/files?q=' + q + '&orderBy=viewedByMeTime+desc&pageSize=15&fields=files(id,name)', { headers: gAuth() });
+    if (r.status === 401) throw gExpired();
+    const d = await r.json();
+    const sel = $('recent'); sel.innerHTML = '<option value="">Recent docs…</option>';
+    for (const f of d.files || []) { const o = document.createElement('option'); o.value = f.id; o.textContent = f.name; sel.appendChild(o); }
+  } catch (e) { setStatus(e.message); }
+}
+$('recent').onchange = async () => {
+  const id = $('recent').value; if (!id) return;
+  const name = $('recent').selectedOptions[0].textContent;
+  setStatus('Loading "' + name + '"…');
+  try {
+    const r = await fetch('https://www.googleapis.com/drive/v3/files/' + id + '/export?mimeType=text/plain', { headers: gAuth() });
+    if (r.status === 401) throw gExpired();
+    if (!r.ok) throw new Error('Could not read doc (HTTP ' + r.status + ')');
+    let t = (await r.text()).replace(/^﻿/, '');
+    const cut = t.length > MAX_CTX_CHARS; if (cut) t = t.slice(0, MAX_CTX_CHARS);
+    ctxText = t; gDoc = { id, name }; savedCount = chatHistory.length;
+    $('saveDocBtn').disabled = false; setStatus('Loaded "' + name + '" as context (' + t.length + ' chars' + (cut ? ', truncated' : '') + ')');
+  } catch (e) { setStatus(e.message); }
+};
+function fullSystem() {
+  const c = ctxText.trim();
+  return PRESETS[$('preset').value] + (c ? '\n\n--- Starting context from the student\'s document' + (gDoc ? ' "' + gDoc.name + '"' : '') + ' ---\n' + c : '');
+}
+// Append only the messages not yet saved, at the end of the doc
+async function saveChatToDoc() {
+  if (!gToken || !gDoc) { setStatus('Sign in to Google and pick a doc first'); return; }
+  const fresh = chatHistory.slice(savedCount); if (!fresh.length) { setStatus('Nothing new to save'); return; }
+  const stamp = new Date().toLocaleString();
+  const block = '\n\n--- Tutor chat ' + stamp + ' ---\n' + fresh.map(m => (m.role === 'user' ? 'Me: ' : 'Tutor: ') + (m.text || (m.images ? '(photo)' : ''))).join('\n\n') + '\n';
+  try {
+    const dr = await fetch('https://docs.googleapis.com/v1/documents/' + gDoc.id + '?fields=body.content.endIndex', { headers: gAuth() });
+    if (dr.status === 401) throw gExpired();
+    if (!dr.ok) throw new Error('Doc read failed (HTTP ' + dr.status + ')');
+    const c = (await dr.json()).body.content; const end = c[c.length - 1].endIndex;
+    const r = await fetch('https://docs.googleapis.com/v1/documents/' + gDoc.id + ':batchUpdate', { method: 'POST', headers: { ...gAuth(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ requests: [{ insertText: { location: { index: end - 1 }, text: block } }] }) });
+    if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.error && e.error.message || 'HTTP ' + r.status); }
+    savedCount = chatHistory.length; setStatus('Saved chat to "' + gDoc.name + '"');
+  } catch (e) { setStatus('Save failed: ' + e.message); }
+}
+$('saveDocBtn').onclick = saveChatToDoc;
+gInit();
+
+// ── Chat ──
+const chatHistory = []; // { role, text, images? }
+let busy = false;
+function bubble(role, text, imgUrl) {
+  const d = document.createElement('div'); d.className = 'msg ' + role;
+  if (imgUrl) { const i = document.createElement('img'); i.src = imgUrl; d.appendChild(i); }
+  const t = document.createElement('span'); t.textContent = text; d.appendChild(t);
+  $('chat').appendChild(d); $('chat').scrollTop = $('chat').scrollHeight; return t;
+}
+async function send(fromAuto) {
+  if (busy) return;
+  const text = $('note').value.trim();
+  const attach = $('withImg').checked && selected && !selected.sent;
+  if (!text && !attach) return;
+  if (!$('code').value) { setStatus('Enter the access code'); return; }
+  busy = true; $('sendBtn').disabled = true;
+  const msg = { role: 'user', text };
+  let thumb = null;
+  try {
+    if (attach) { msg.images = [await resizeToBase64(selected.blob)]; thumb = selected.url; selected.sent = true; }
+    chatHistory.push(msg); bubble('user', text || '(photo)', thumb); $('note').value = '';
+    const out = bubble('assistant', '…'); let acc = '';
+    const r = await fetch('/api/tutor', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accessCode: $('code').value.trim(), model: $('model').value.trim(), system: fullSystem(), messages: chatHistory }) });
+    if (r.status === 401) { ls.set('ocr-access-code', ''); $('code').value = ''; }
+    if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.error || ('HTTP ' + r.status)); }
+    const reader = r.body.getReader(); const dec = new TextDecoder();
+    while (true) { const { done, value } = await reader.read(); if (done) break; acc += dec.decode(value, { stream: true }); out.textContent = acc; $('chat').scrollTop = $('chat').scrollHeight; }
+    chatHistory.push({ role: 'assistant', text: acc });
+    // Keep payload small: only the latest user image stays attached
+    for (const m of chatHistory.slice(0, -2)) delete m.images;
+    if ($('autoSave').checked && gDoc && gToken) saveChatToDoc();
+  } catch (e) { bubble('assistant err', 'Error: ' + e.message); chatHistory.pop(); }
+  finally { busy = false; $('sendBtn').disabled = false; }
+}
+$('sendBtn').onclick = () => send(false);
+$('note').addEventListener('keydown', e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) send(false); });
+$('clearBtn').onclick = () => { chatHistory.length = 0; savedCount = 0; $('chat').innerHTML = ''; photos.forEach(p => p.sent = false); };
+
+setBtn(); handleRedirect();
+</script>
+</body>
+</html>
