@@ -39,6 +39,8 @@
     { "source": "/dropboxImageLoader", "destination": "/dropboxImageLoader.html" },
     { "source": "/anki_manager.html", "destination": "/anki_manager.html" },
     { "source": "/anki_manager", "destination": "/anki_manager.html" },
+    { "source": "/drama.html", "destination": "/drama.html" },
+    { "source": "/drama", "destination": "/drama.html" },
     { "source": "/tutor.html", "destination": "/tutor.html" },
     { "source": "/tutor", "destination": "/tutor.html" },
     { "source": "/(.*)", "destination": "/flashcards.html" }

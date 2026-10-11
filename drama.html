@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Drama Rehearsal</title>
+<style>
+  :root { color-scheme: dark; --bg:#111; --fg:#eee; --muted:#aaa; --dim:#888; --ctl:#1c1c1c; --line:#444; --line2:#333; --accent:#4da3ff;
+          --me:#1d3b66; --them:#2b2236; --note:#9a8fb0; --ok:#4cc38a; --bad:#ff7a7a; --hint:#3a3210; --hintfg:#f3d77a; --err:#5a1f1f; }
+  :root[data-theme="light"] { color-scheme: light; --bg:#f6f6f4; --fg:#1a1a1a; --muted:#555; --dim:#777; --ctl:#fff; --line:#c8c8c4; --line2:#ddd;
+          --accent:#1a73e8; --me:#d6e6ff; --them:#eadff5; --note:#7a6f92; --ok:#14804a; --bad:#c62828; --hint:#fff3c4; --hintfg:#6b5200; --err:#ffd9d9; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, system-ui, sans-serif; background: var(--bg); color: var(--fg); height: 100vh; height: 100dvh; display: flex; flex-direction: column; }
+  .bar { display: flex; gap: 8px; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--line2); flex-wrap: wrap; }
+  .bar input:not([type=checkbox]), select, button, textarea { background: var(--ctl); color: var(--fg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; font-size: 14px; }
+  select option { background: var(--ctl); color: var(--fg); }
+  .bar input:not([type=checkbox]) { width: 130px; }
+  button { cursor: pointer; min-height: 38px; }
+  button:hover { border-color: var(--accent); }
+  button.primary { background: #2a6fd6; border-color: #2a6fd6; color: #fff; }
+  button:disabled { opacity: .45; cursor: default; }
+  label { font-size: 12px; color: var(--muted); }
+  .status { font-size: 12px; color: var(--dim); margin-left: auto; }
+  details.editor { border-bottom: 1px solid var(--line2); padding: 6px 12px; font-size: 13px; color: var(--muted); }
+  details.editor textarea { width: 100%; min-height: 200px; margin-top: 8px; font: 13px/1.5 ui-monospace, monospace; resize: vertical; }
+  .scene { padding: 10px 14px; border-bottom: 1px solid var(--line2); font-size: 13px; color: var(--muted); line-height: 1.5; }
+  .scene b { color: var(--fg); }
+  .log { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+  .msg { max-width: 90%; padding: 10px 14px; border-radius: 12px; font-size: 16px; line-height: 1.55; word-break: break-word; white-space: pre-wrap; }
+  .msg.me { align-self: flex-end; background: var(--me); }
+  .msg.them { align-self: flex-start; background: var(--them); }
+  .msg .who { display: block; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-bottom: 3px; }
+  .msg .note { display: block; font-size: 12px; font-style: italic; color: var(--note); margin-top: 4px; }
+  .msg.sys { align-self: center; background: transparent; color: var(--dim); font-size: 13px; text-align: center; }
+  .msg.err { background: var(--err); align-self: center; }
+  .w-ok { color: var(--ok); }
+  .w-miss { color: var(--bad); text-decoration: underline; }
+  .score { display: block; font-size: 12px; margin-top: 6px; color: var(--muted); }
+  .hintbox { margin: 0 12px 8px; padding: 10px 14px; border-radius: 10px; background: var(--hint); color: var(--hintfg); font-size: 16px; line-height: 1.5; display: none; white-space: pre-wrap; }
+  .cue { margin: 0 12px; font-size: 12px; color: var(--dim); min-height: 16px; }
+  .input { display: flex; gap: 8px; padding: 8px 12px 12px; align-items: flex-end; flex-wrap: wrap; }
+  .input textarea { flex: 1 1 240px; min-height: 52px; max-height: 160px; font-size: 16px; resize: none; font-family: inherit; }
+  .input .btns { display: flex; gap: 8px; }
+</style>
+</head>
+<body>
+<div class="bar">
+  <label>I play <select id="role"></select></label>
+  <label>Mode <select id="mode">
+    <option value="script">Script rehearsal</option>
+    <option value="improv">Improv with AI</option>
+  </select></label>
+  <button class="primary" id="startBtn">Start scene</button>
+  <label id="aiOnly" style="display:none">Model <input id="model" list="models" value="gpt-4o-mini" spellcheck="false"></label>
+  <datalist id="models"><option value="gpt-4.1-mini"><option value="gpt-4.1"><option value="gpt-4o-mini"><option value="gpt-4o"><option value="gpt-5-mini"><option value="gpt-5"></datalist>
+  <label id="aiCode" style="display:none">Access code <input id="code" type="password" autocomplete="off"></label>
+  <button id="themeBtn" title="Light / dark">☀︎</button>
+  <span class="status" id="status"></span>
+</div>
+
+<details class="editor"><summary>Edit scene script</summary>
+  <textarea id="script" spellcheck="false"></textarea>
+  <div style="margin-top:8px"><button id="loadBtn">Use this script</button> <button id="resetBtn">Restore example</button></div>
+  <div style="margin-top:6px">Format: <code>SCENE:</code>, <code>CHARACTERS:</code>, <code>GOAL:</code> headers, then <code>NAME: line (stage direction)</code>. Text in (parentheses) is shown as direction and not scored.</div>
+</details>
+
+<div class="scene" id="scene"></div>
+<div class="log" id="log"></div>
+<div class="hintbox" id="hintbox"></div>
+<div class="cue" id="cue"></div>
+<div class="input">
+  <textarea id="entry" placeholder="Start the scene, then say your line…" disabled></textarea>
+  <div class="btns">
+    <button class="primary" id="sendBtn" disabled>Say it</button>
+    <button id="hintBtn" disabled>Stuck? Hint</button>
+    <button id="skipBtn" disabled>Show &amp; skip</button>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const ls = { get(k, d) { try { return localStorage.getItem(k) ?? d; } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+
+const DEFAULT_SCRIPT = `SCENE: Capulet's orchard, night. Juliet appears at her balcony, unaware that Romeo is hiding below.
+CHARACTERS: ROMEO, JULIET
+GOAL (improv mode): Romeo wants to be sure Juliet loves him back. Juliet wants to be sure he's serious, and safe.
+
+ROMEO: But soft, what light through yonder window breaks? It is the east, and Juliet is the sun. (He speaks to himself, awestruck, not yet to her.)
+JULIET: Ay me! (She sighs, thinking she's alone.)
+ROMEO: She speaks. O, speak again, bright angel!
+JULIET: O Romeo, Romeo, wherefore art thou Romeo? Deny thy father and refuse thy name. (Wherefore means "why", not "where". She's asking why he has to be a Montague.)
+ROMEO: Shall I hear more, or shall I speak at this? (An aside. He can't decide whether to stay hidden.)
+JULIET: 'Tis but thy name that is my enemy. What's in a name? That which we call a rose by any other word would smell as sweet.
+ROMEO: I take thee at thy word. Call me but love, and I'll be new baptized. Henceforth I never will be Romeo. (He steps out of the shadows.)
+JULIET: What man art thou that, thus bescreened in night, so stumblest on my counsel? (She's startled and afraid.)
+ROMEO: By a name I know not how to tell thee who I am. My name, dear saint, is hateful to myself because it is an enemy to thee.
+JULIET: My ears have yet not drunk a hundred words of that tongue's utterance, yet I know the sound. Art thou not Romeo, and a Montague?
+ROMEO: Neither, fair maid, if either thee dislike.
+JULIET: How camest thou hither, tell me, and wherefore? The orchard walls are high and hard to climb, and the place death, considering who thou art, if any of my kinsmen find thee here. (Her worry is for his life, not her own.)
+ROMEO: With love's light wings did I o'erperch these walls, for stony limits cannot hold love out.
+JULIET: If they do see thee, they will murder thee.
+ROMEO: Alack, there lies more peril in thine eye than twenty of their swords. Look thou but sweet, and I am proof against their enmity.
+JULIET: I would not for the world they saw thee here.
+ROMEO: I have night's cloak to hide me from their eyes. And but thou love me, let them find me here. My life were better ended by their hate than death prorogued, wanting of thy love.
+JULIET: Thou know'st the mask of night is on my face, else would a maiden blush bepaint my cheek for that which thou hast heard me speak tonight.
+JULIET: Fain would I dwell on form, fain, fain deny what I have spoke. But farewell compliment! Dost thou love me? (She's admitting she said too much.)
+ROMEO: Lady, by yonder blessed moon I swear that tips with silver all these fruit-tree tops.
+JULIET: O, swear not by the moon, th' inconstant moon, that monthly changes in her circled orb, lest that thy love prove likewise variable. (She tests him: don't promise on something that changes.)
+ROMEO: What shall I swear by?
+JULIET: Do not swear at all; or if thou wilt, swear by thy gracious self, which is the god of my idolatry, and I'll believe thee.
+ROMEO: If my heart's dear love
+JULIET: Well, do not swear. Although I joy in thee, I have no joy of this contract tonight. It is too rash, too unadvised, too sudden, too like the lightning, which doth cease to be ere one can say "It lightens." (She loves him but fears they are moving too fast.)
+JULIET: Sweet, good night. This bud of love, by summer's ripening breath, may prove a beauteous flower when next we meet.
+ROMEO: O, wilt thou leave me so unsatisfied?
+JULIET: What satisfaction canst thou have tonight?
+ROMEO: The exchange of thy love's faithful vow for mine.
+JULIET: I gave thee mine before thou didst request it. (Her honesty undercuts her caution.)
+JULIET: Good night, good night! Parting is such sweet sorrow that I shall say good night till it be morrow.
+ROMEO: Sleep dwell upon thine eyes, peace in thy breast. Would I were sleep and peace, so sweet to rest!`;
+
+// ── Light / dark (shares the tutor page's setting) ──
+function applyTheme(t) { document.documentElement.dataset.theme = t; $('themeBtn').textContent = t === 'light' ? '☾' : '☀︎'; ls.set('tutor-theme', t); }
+applyTheme(ls.get('tutor-theme', 'dark'));
+$('themeBtn').onclick = () => applyTheme(document.documentElement.dataset.theme === 'light' ? 'dark' : 'light');
+
+// ── Script parsing ──
+function parseScript(text) {
+  const out = { scene: '', goal: '', characters: [], lines: [] };
+  let last = null;
+  for (const raw of text.split(/\r?\n/)) {
+    const l = raw.trim(); if (!l) continue;
+    let m;
+    if ((m = l.match(/^SCENE\s*:\s*(.*)$/i))) { out.scene = m[1]; last = null; continue; }
+    if ((m = l.match(/^CHARACTERS?\s*:\s*(.*)$/i))) { out.characters = m[1].split(',').map(s => s.trim().toUpperCase()).filter(Boolean); last = null; continue; }
+    if ((m = l.match(/^GOALS?[^:]*:\s*(.*)$/i))) { out.goal = m[1]; last = null; continue; }
+    if ((m = l.match(/^([A-Z][A-Z0-9 .'-]{0,30}):\s*(.*)$/))) { last = { who: m[1].trim(), raw: m[2] }; out.lines.push(last); continue; }
+    if (last) last.raw += ' ' + l; // continuation of the previous speech
+  }
+  for (const ln of out.lines) {
+    const notes = [...ln.raw.matchAll(/\(([^)]*)\)/g)].map(x => x[1].trim());
+    ln.text = ln.raw.replace(/\s*\([^)]*\)/g, '').replace(/\s+/g, ' ').trim();
+    ln.note = notes.join(' ');
+  }
+  out.lines = out.lines.filter(l => l.text);
+  if (!out.characters.length) out.characters = [...new Set(out.lines.map(l => l.who))];
+  return out;
+}
+
+// ── Matching ──
+const norm = w => w.toLowerCase().replace(/[^a-z0-9À-￿]/g, '');
+function compare(scriptText, said) {
+  const sw = scriptText.split(/\s+/);
+  const sn = sw.map(norm), un = said.split(/\s+/).map(norm).filter(Boolean);
+  const n = sn.length, m = un.length;
+  const dp = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0));
+  for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--)
+    dp[i][j] = sn[i] && sn[i] === un[j] ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
+  const hit = new Array(n).fill(false), usedU = new Array(m).fill(false);
+  let i = 0, j = 0;
+  while (i < n && j < m) {
+    if (sn[i] && sn[i] === un[j]) { hit[i] = true; usedU[j] = true; i++; j++; }
+    else if (dp[i + 1][j] >= dp[i][j + 1]) i++; else j++;
+  }
+  const total = sn.filter(Boolean).length || 1;
+  return { words: sw, hit, score: dp[0][0] / total, extra: un.filter((_, k) => !usedU[k]) };
+}
+
+// ── State ──
+let sc = parseScript(DEFAULT_SCRIPT);
+let st = null; // { role, partner, mode, idx, hintLevel, stats, messages }
+const log = $('log');
+
+function setStatus(t) { $('status').textContent = t || ''; }
+function scrollLog() { log.scrollTop = log.scrollHeight; }
+function bubble(cls, who, text, note) {
+  const d = document.createElement('div'); d.className = 'msg ' + cls;
+  if (who) { const w = document.createElement('span'); w.className = 'who'; w.textContent = who; d.appendChild(w); }
+  const t = document.createElement('span'); t.textContent = text; d.appendChild(t);
+  if (note) { const n = document.createElement('span'); n.className = 'note'; n.textContent = '(' + note + ')'; d.appendChild(n); }
+  log.appendChild(d); scrollLog(); return t;
+}
+function setEnabled(on) { for (const id of ['entry', 'sendBtn', 'hintBtn', 'skipBtn']) $(id).disabled = !on; $('skipBtn').style.display = st && st.mode === 'script' ? '' : 'none'; if (on) $('entry').focus(); }
+function hideHint() { $('hintbox').style.display = 'none'; $('hintbox').textContent = ''; }
+
+function loadScene() {
+  const roles = sc.characters;
+  const prev = ls.get('drama-role', '');
+  $('role').innerHTML = '';
+  for (const c of roles) { const o = document.createElement('option'); o.value = c; o.textContent = c[0] + c.slice(1).toLowerCase(); $('role').appendChild(o); }
+  if (roles.includes(prev)) $('role').value = prev;
+  $('scene').innerHTML = '';
+  const s = document.createElement('div'); s.innerHTML = '<b>Scene:</b> '; s.appendChild(document.createTextNode(sc.scene || '(none)')); $('scene').appendChild(s);
+  if (sc.goal) { const g = document.createElement('div'); g.innerHTML = '<b>Goal:</b> '; g.appendChild(document.createTextNode(sc.goal)); $('scene').appendChild(g); }
+}
+
+$('script').value = ls.get('drama-script', DEFAULT_SCRIPT);
+$('loadBtn').onclick = () => {
+  const p = parseScript($('script').value);
+  if (p.lines.length < 2 || p.characters.length < 2) { setStatus('Need at least two characters with lines (NAME: line)'); return; }
+  sc = p; ls.set('drama-script', $('script').value); loadScene(); resetStage(); setStatus('Script loaded: ' + sc.lines.length + ' lines');
+};
+$('resetBtn').onclick = () => { $('script').value = DEFAULT_SCRIPT; ls.set('drama-script', DEFAULT_SCRIPT); $('loadBtn').click(); };
+$('role').onchange = () => ls.set('drama-role', $('role').value);
+$('model').value = ls.get('drama-model', 'gpt-4o-mini'); $('model').onchange = () => ls.set('drama-model', $('model').value.trim());
+$('code').value = ls.get('ocr-access-code', ''); $('code').onchange = () => ls.set('ocr-access-code', $('code').value.trim());
+$('mode').value = ls.get('drama-mode', 'script');
+function syncMode() { const ai = $('mode').value === 'improv'; $('aiOnly').style.display = ai ? '' : 'none'; $('aiCode').style.display = ai ? '' : 'none'; ls.set('drama-mode', $('mode').value); }
+$('mode').onchange = syncMode; syncMode();
+
+function resetStage() { st = null; log.innerHTML = ''; hideHint(); $('cue').textContent = ''; $('entry').value = ''; setEnabled(false); $('entry').placeholder = 'Start the scene, then say your line…'; }
+
+// ── Start ──
+$('startBtn').onclick = () => {
+  resetStage();
+  const role = $('role').value, mode = $('mode').value;
+  const partner = sc.characters.find(c => c !== role) || sc.characters[0];
+  st = { role, partner, mode, idx: 0, hintLevel: 0, stats: { done: 0, scoreSum: 0, hints: 0, skipped: 0 }, messages: [], busy: false };
+  bubble('sys', '', 'You are ' + role + '. ' + (mode === 'script' ? 'Say your lines from memory — tap Hint if you get stuck.' : 'The AI plays ' + partner + '. Improvise with the scene goal in mind.'));
+  if (mode === 'script') playPartner(); else startImprov();
+};
+
+// ── Script rehearsal ──
+function playPartner() {
+  while (st.idx < sc.lines.length && sc.lines[st.idx].who !== st.role) {
+    const l = sc.lines[st.idx]; bubble('them', l.who, l.text, l.note); st.idx++;
+  }
+  if (st.idx >= sc.lines.length) return finish();
+  const l = sc.lines[st.idx];
+  const mine = sc.lines.filter(x => x.who === st.role);
+  $('cue').textContent = 'Your line ' + (mine.indexOf(l) + 1) + ' of ' + mine.length + (l.note ? ' · direction: ' + l.note : '');
+  $('entry').placeholder = 'Say your line from memory…'; st.hintLevel = 0; hideHint(); setEnabled(true);
+}
+function finish() {
+  setEnabled(false); $('cue').textContent = '';
+  const s = st.stats, avg = s.done ? Math.round(100 * s.scoreSum / s.done) : 0;
+  bubble('sys', '', 'Scene complete — ' + s.done + ' of your lines, average match ' + avg + '%, ' + s.hints + ' hint' + (s.hints === 1 ? '' : 's') + ', ' + s.skipped + ' skipped.');
+}
+function hintText(line, level) {
+  const w = line.text.split(/\s+/);
+  if (level <= 1) return w.slice(0, Math.min(3, w.length)).join(' ') + (w.length > 3 ? ' …' : '');
+  if (level === 2) return w.slice(0, Math.ceil(w.length / 2)).join(' ') + (w.length > 1 ? ' …' : '');
+  return line.text;
+}
+function submitScript() {
+  const said = $('entry').value.trim(); if (!said || !st) return;
+  const line = sc.lines[st.idx], r = compare(line.text, said);
+  // your attempt, then the true line with hit/miss colouring
+  bubble('me', st.role, said);
+  const d = document.createElement('div'); d.className = 'msg me';
+  const w = document.createElement('span'); w.className = 'who'; w.textContent = 'Script'; d.appendChild(w);
+  r.words.forEach((word, i) => { const sp = document.createElement('span'); sp.className = r.hit[i] || !norm(word) ? 'w-ok' : 'w-miss'; sp.textContent = word + ' '; d.appendChild(sp); });
+  const sc2 = document.createElement('span'); sc2.className = 'score';
+  sc2.textContent = Math.round(r.score * 100) + '% — ' + (r.score >= 0.95 ? 'word perfect' : r.score >= 0.75 ? 'close' : 'needs work') + (st.hintLevel ? ' · used hint' : '') + (r.extra.length ? ' · extra: ' + r.extra.join(' ') : '');
+  d.appendChild(sc2); log.appendChild(d);
+  st.stats.done++; st.stats.scoreSum += r.score; $('entry').value = ''; st.idx++; setEnabled(false); hideHint(); scrollLog();
+  setTimeout(playPartner, 350);
+}
+function skipScript() {
+  const line = sc.lines[st.idx];
+  bubble('me', st.role + ' (revealed)', line.text, line.note);
+  st.stats.skipped++; st.stats.done++; st.idx++; $('entry').value = ''; setEnabled(false); hideHint();
+  setTimeout(playPartner, 350);
+}
+
+// ── Improv (AI plays the other role) ──
+function improvSystem() {
+  const script = sc.lines.map(l => l.who + ': ' + l.text).join('\n');
+  return 'You are ' + st.partner + ' in a live scene rehearsal with a human actor who plays ' + st.role + '.\n' +
+    'Scene: ' + sc.scene + '\nGoal (play your own side): ' + sc.goal + '\n' +
+    'Stay strictly in character. Reply with only ' + st.partner + '\'s spoken words: 1–3 sentences, optionally a very short stage direction in parentheses. Match the register and period language of the script. Never mention being an AI or break the fourth wall. React to what the human actually says; if they stumble or go off-script, adapt naturally and steer back toward the story beats.\n' +
+    'Reference script (tone and story beats; follow loosely, not word for word):\n' + script;
+}
+async function ask(messages, onDelta) {
+  if (!$('code').value.trim()) throw new Error('Enter the access code');
+  const r = await fetch('/api/tutor', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ accessCode: $('code').value.trim(), model: $('model').value.trim(), system: improvSystem(), messages }) });
+  if (r.status === 401) { ls.set('ocr-access-code', ''); $('code').value = ''; }
+  if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.error || 'HTTP ' + r.status); }
+  const reader = r.body.getReader(), dec = new TextDecoder(); let acc = '';
+  while (true) { const { done, value } = await reader.read(); if (done) break; acc += dec.decode(value, { stream: true }); if (onDelta) onDelta(acc); }
+  return acc.trim();
+}
+async function partnerSpeaks(userText) {
+  st.busy = true; setEnabled(false);
+  const msgs = st.messages.concat([{ role: 'user', text: userText }]);
+  const out = bubble('them', st.partner, '…');
+  try {
+    const reply = await ask(msgs, t => { out.textContent = t; scrollLog(); });
+    st.messages = msgs.concat([{ role: 'assistant', text: reply }]);
+  } catch (e) { out.parentElement.remove(); bubble('err', '', 'Error: ' + e.message); }
+  st.busy = false; hideHint(); $('entry').placeholder = 'Your line (improvise)…'; setEnabled(true);
+}
+function startImprov() {
+  $('cue').textContent = 'Improv: say anything in character as ' + st.role + '.';
+  if (sc.lines[0] && sc.lines[0].who === st.partner) partnerSpeaks('(The scene begins. Speak your opening line.)');
+  else { $('entry').placeholder = 'Your opening line…'; setEnabled(true); }
+}
+function submitImprov() {
+  const said = $('entry').value.trim(); if (!said || st.busy) return;
+  bubble('me', st.role, said); $('entry').value = ''; partnerSpeaks(said);
+}
+
+// ── Shared handlers ──
+$('sendBtn').onclick = () => { if (!st) return; st.mode === 'script' ? submitScript() : submitImprov(); };
+$('skipBtn').onclick = () => { if (st && st.mode === 'script') skipScript(); };
+$('entry').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('sendBtn').click(); } });
+$('hintBtn').onclick = async () => {
+  if (!st) return;
+  const hb = $('hintbox'); hb.style.display = 'block';
+  if (st.mode === 'script') {
+    st.hintLevel = Math.min(3, st.hintLevel + 1); if (st.hintLevel === 1) st.stats.hints++;
+    hb.textContent = 'Hint ' + st.hintLevel + '/3: ' + hintText(sc.lines[st.idx], st.hintLevel);
+  } else {
+    if (st.busy) return;
+    hb.textContent = 'Thinking of a line…'; st.busy = true; $('hintBtn').disabled = true;
+    try {
+      const q = '(Director, out of character: I am stuck as ' + st.role + '. Suggest one short line I could say next, in character. Output only the line.)';
+      hb.textContent = 'Try: ' + await ask(st.messages.concat([{ role: 'user', text: q }]));
+    } catch (e) { hb.textContent = 'Hint failed: ' + e.message; }
+    st.busy = false; $('hintBtn').disabled = false;
+  }
+};
+
+loadScene(); resetStage();
+</script>
+</body>
+</html>
