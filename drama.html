@@ -267,7 +267,7 @@ function improvSystem() {
   const script = sc.lines.map(l => l.who + ': ' + l.text).join('\n');
   return 'You are ' + st.partner + ' in a live scene rehearsal with a human actor who plays ' + st.role + '.\n' +
     'Scene: ' + sc.scene + '\nGoal (play your own side): ' + sc.goal + '\n' +
-    'Stay strictly in character. Reply with only ' + st.partner + '\'s spoken words: 1–3 sentences, optionally a very short stage direction in parentheses. Vary your turns: do not end every reply with a question. Mix statements, reactions, teasing, doubt, or warmth with an occasional question, and let the scene move forward through its story beats. Match the register and period language of the script. Never mention being an AI or break the fourth wall. React to what the human actually says; if they stumble or go off-script, adapt naturally and steer back toward the story beats.\n' +
+    'Stay strictly in character. Reply with only ' + st.partner + '\'s spoken words: 1–3 sentences, optionally a very short stage direction in parentheses. Vary your turns: do not end every reply with a question. Mix statements, reactions, teasing, doubt, or warmth with an occasional question, and let the scene move forward through its story beats. Match the register and period language of the script. If a message ends with a bracketed [Director note: …], it is out-of-character information that the actor needed a prompt for that line; never mention or quote it, but you may let ' + st.partner + ' react naturally to a moment of hesitation. Never mention being an AI or break the fourth wall. React to what the human actually says; if they stumble or go off-script, adapt naturally and steer back toward the story beats.\n' +
     'Reference script (tone and story beats; follow loosely, not word for word):\n' + script;
 }
 async function ask(messages, onDelta) {
@@ -297,7 +297,9 @@ function startImprov() {
 }
 function submitImprov() {
   const said = $('entry').value.trim(); if (!said || st.busy) return;
-  bubble('me', st.role, said); $('entry').value = ''; partnerSpeaks(said);
+  const hint = st.pendingHint; st.pendingHint = null;
+  bubble('me', st.role + (hint ? ' · 💡 hint used' : ''), said, hint ? 'hint: ' + hint : ''); $('entry').value = '';
+  partnerSpeaks(hint ? said + '\n[Director note: the actor used a hint for this line. Suggested line was: "' + hint + '"]' : said);
 }
 
 // ── Shared handlers ──
@@ -319,7 +321,9 @@ $('hintBtn').onclick = async () => {
     hb.textContent = 'Thinking of a line…'; st.busy = true; $('hintBtn').disabled = true;
     try {
       const q = '(Director, out of character: I am stuck as ' + st.role + '. Suggest one short line I could say next, in character. Output only the line.)';
-      hb.textContent = 'Try: ' + await ask(st.messages.concat([{ role: 'user', text: q }]));
+      const h = await ask(st.messages.concat([{ role: 'user', text: q }]));
+      hb.textContent = 'Try: ' + h; st.pendingHint = h; st.stats.hints++;
+      bubble('sys', '', '💡 Hint used: ' + h);
     } catch (e) { hb.textContent = 'Hint failed: ' + e.message; }
     st.busy = false; $('hintBtn').disabled = false;
   }
