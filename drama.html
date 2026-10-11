@@ -267,7 +267,7 @@ function improvSystem() {
   const script = sc.lines.map(l => l.who + ': ' + l.text).join('\n');
   return 'You are ' + st.partner + ' in a live scene rehearsal with a human actor who plays ' + st.role + '.\n' +
     'Scene: ' + sc.scene + '\nGoal (play your own side): ' + sc.goal + '\n' +
-    'Stay strictly in character. Reply with only ' + st.partner + '\'s spoken words: 1–3 sentences, optionally a very short stage direction in parentheses. Match the register and period language of the script. Never mention being an AI or break the fourth wall. React to what the human actually says; if they stumble or go off-script, adapt naturally and steer back toward the story beats.\n' +
+    'Stay strictly in character. Reply with only ' + st.partner + '\'s spoken words: 1–3 sentences, optionally a very short stage direction in parentheses. Vary your turns: do not end every reply with a question. Mix statements, reactions, teasing, doubt, or warmth with an occasional question, and let the scene move forward through its story beats. Match the register and period language of the script. Never mention being an AI or break the fourth wall. React to what the human actually says; if they stumble or go off-script, adapt naturally and steer back toward the story beats.\n' +
     'Reference script (tone and story beats; follow loosely, not word for word):\n' + script;
 }
 async function ask(messages, onDelta) {
@@ -301,7 +301,11 @@ function submitImprov() {
 }
 
 // ── Shared handlers ──
-$('sendBtn').onclick = () => { if (!st) return; st.mode === 'script' ? submitScript() : submitImprov(); };
+$('sendBtn').onclick = () => {
+  if (!st) return;
+  if (/^(hint|\?)$/i.test($('entry').value.trim())) { $('entry').value = ''; $('hintBtn').click(); return; } // typing "hint" or "?" = Hint button
+  st.mode === 'script' ? submitScript() : submitImprov();
+};
 $('skipBtn').onclick = () => { if (st && st.mode === 'script') skipScript(); };
 $('entry').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('sendBtn').click(); } });
 $('hintBtn').onclick = async () => {
