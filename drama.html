@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Drama Rehearsal</title>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
   :root { color-scheme: dark; --bg:#111; --fg:#eee; --muted:#aaa; --dim:#888; --ctl:#1c1c1c; --line:#444; --line2:#333; --accent:#4da3ff;
           --me:#1d3b66; --them:#2b2236; --note:#9a8fb0; --ok:#4cc38a; --bad:#ff7a7a; --hint:#3a3210; --hintfg:#f3d77a; --err:#5a1f1f; }
@@ -51,9 +52,12 @@
     <option value="improv">Improv with AI</option>
   </select></label>
   <button class="primary" id="startBtn">Start scene</button>
+  <button id="promptBtn" title="Copy a prompt that makes Claude/ChatGPT write a scene in this page's format">Prompt</button>
   <label id="aiOnly" style="display:none">Model <input id="model" list="models" value="gpt-4o-mini" spellcheck="false"></label>
   <datalist id="models"><option value="gpt-4.1-mini"><option value="gpt-4.1"><option value="gpt-4o-mini"><option value="gpt-4o"><option value="gpt-5-mini"><option value="gpt-5"></datalist>
   <label id="aiCode" style="display:none">Access code <input id="code" type="password" autocomplete="off"></label>
+  <button id="gBtn" title="Sign in to load a script from a Google Doc">Google</button>
+  <select id="recent" disabled><option value="">Script from Google Doc…</option></select>
   <button id="themeBtn" title="Light / dark">☀︎</button>
   <span class="status" id="status"></span>
 </div>
@@ -74,6 +78,7 @@
     <button class="primary" id="sendBtn" disabled>Say it</button>
     <button id="hintBtn" disabled>Stuck? Hint</button>
     <button id="skipBtn" disabled>Show &amp; skip</button>
+    <button id="copyBtn">Copy for review</button>
   </div>
 </div>
 
@@ -214,7 +219,7 @@ $('startBtn').onclick = () => {
   resetStage();
   const role = $('role').value, mode = $('mode').value;
   const partner = sc.characters.find(c => c !== role) || sc.characters[0];
-  st = { role, partner, mode, idx: 0, hintLevel: 0, stats: { done: 0, scoreSum: 0, hints: 0, skipped: 0 }, messages: [], busy: false };
+  st = { role, partner, mode, idx: 0, hintLevel: 0, stats: { done: 0, scoreSum: 0, hints: 0, skipped: 0 }, messages: [], busy: false, transcript: [] };
   bubble('sys', '', 'You are ' + role + '. ' + (mode === 'script' ? 'Say your lines from memory — tap Hint if you get stuck.' : 'The AI plays ' + partner + '. Improvise with the scene goal in mind.'));
   if (mode === 'script') playPartner(); else startImprov();
 };
@@ -222,7 +227,7 @@ $('startBtn').onclick = () => {
 // ── Script rehearsal ──
 function playPartner() {
   while (st.idx < sc.lines.length && sc.lines[st.idx].who !== st.role) {
-    const l = sc.lines[st.idx]; bubble('them', l.who, l.text, l.note); st.idx++;
+    const l = sc.lines[st.idx]; bubble('them', l.who, l.text, l.note); tr(l.who, l.text); st.idx++;
   }
   if (st.idx >= sc.lines.length) return finish();
   const l = sc.lines[st.idx];
@@ -252,12 +257,14 @@ function submitScript() {
   const sc2 = document.createElement('span'); sc2.className = 'score';
   sc2.textContent = Math.round(r.score * 100) + '% — ' + (r.score >= 0.95 ? 'word perfect' : r.score >= 0.75 ? 'close' : 'needs work') + (st.hintLevel ? ' · used hint' : '') + (r.extra.length ? ' · extra: ' + r.extra.join(' ') : '');
   d.appendChild(sc2); log.appendChild(d);
+  tr(st.role, said, (st.hintLevel ? 'hint used, level ' + st.hintLevel + '/3; ' : '') + 'match ' + Math.round(r.score * 100) + '%; script line: "' + line.text + '"');
   st.stats.done++; st.stats.scoreSum += r.score; $('entry').value = ''; st.idx++; setEnabled(false); hideHint(); scrollLog();
   setTimeout(playPartner, 350);
 }
 function skipScript() {
   const line = sc.lines[st.idx];
   bubble('me', st.role + ' (revealed)', line.text, line.note);
+  tr(st.role, '(could not recall)', 'skipped; script line: "' + line.text + '"');
   st.stats.skipped++; st.stats.done++; st.idx++; $('entry').value = ''; setEnabled(false); hideHint();
   setTimeout(playPartner, 350);
 }
@@ -267,7 +274,7 @@ function improvSystem() {
   const script = sc.lines.map(l => l.who + ': ' + l.text).join('\n');
   return 'You are ' + st.partner + ' in a live scene rehearsal with a human actor who plays ' + st.role + '.\n' +
     'Scene: ' + sc.scene + '\nGoal (play your own side): ' + sc.goal + '\n' +
-    'Stay strictly in character. Reply with only ' + st.partner + '\'s spoken words: 1–3 sentences, optionally a very short stage direction in parentheses. Vary your turns: do not end every reply with a question. Mix statements, reactions, teasing, doubt, or warmth with an occasional question, and let the scene move forward through its story beats. Match the register and period language of the script. If a message ends with a bracketed [Director note: …], it is out-of-character information that the actor needed a prompt for that line; never mention or quote it, but you may let ' + st.partner + ' react naturally to a moment of hesitation. Never mention being an AI or break the fourth wall. React to what the human actually says; if they stumble or go off-script, adapt naturally and steer back toward the story beats.\n' +
+    'Stay strictly in character. Reply with only ' + st.partner + '\'s spoken words: 1–3 sentences, optionally a stage direction in parentheses of at most 4 words, with no character name in it (e.g. "(softly)" or "(steps closer)"), and often none at all. Vary your turns: do not end every reply with a question. Mix statements, reactions, teasing, doubt, or warmth with an occasional question, and let the scene move forward through its story beats. Match the register and period language of the script. If a message ends with a bracketed [Director note: …], it is out-of-character information that the actor needed a prompt for that line; never mention or quote it, but you may let ' + st.partner + ' react naturally to a moment of hesitation. Never mention being an AI or break the fourth wall. React to what the human actually says; if they stumble or go off-script, adapt naturally and steer back toward the story beats.\n' +
     'Reference script (tone and story beats; follow loosely, not word for word):\n' + script;
 }
 async function ask(messages, onDelta) {
@@ -286,7 +293,7 @@ async function partnerSpeaks(userText) {
   const out = bubble('them', st.partner, '…');
   try {
     const reply = await ask(msgs, t => { out.textContent = t; scrollLog(); });
-    st.messages = msgs.concat([{ role: 'assistant', text: reply }]);
+    st.messages = msgs.concat([{ role: 'assistant', text: reply }]); tr(st.partner, reply);
   } catch (e) { out.parentElement.remove(); bubble('err', '', 'Error: ' + e.message); }
   st.busy = false; hideHint(); $('entry').placeholder = 'Your line (improvise)…'; setEnabled(true);
 }
@@ -298,9 +305,60 @@ function startImprov() {
 function submitImprov() {
   const said = $('entry').value.trim(); if (!said || st.busy) return;
   const hint = st.pendingHint; st.pendingHint = null;
-  bubble('me', st.role + (hint ? ' · 💡 hint used' : ''), said, hint ? 'hint: ' + hint : ''); $('entry').value = '';
+  bubble('me', st.role + (hint ? ' · 💡 hint used' : ''), said, hint ? 'hint: ' + hint : '');
+  tr(st.role, said, hint ? 'hint used; suggested line: "' + hint + '"' : ''); $('entry').value = '';
   partnerSpeaks(hint ? said + '\n[Director note: the actor used a hint for this line. Suggested line was: "' + hint + '"]' : said);
 }
+
+async function copyText(text, okMsg) {
+  try { await navigator.clipboard.writeText(text); setStatus(okMsg); }
+  catch (e) {
+    const ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select();
+    let ok = false; try { ok = document.execCommand('copy'); } catch (e2) {}
+    ta.remove(); setStatus(ok ? okMsg : 'Copy failed — clipboard is blocked in this browser');
+  }
+}
+const SCENE_PROMPT = `Write a two-person scene I can rehearse and memorize. Output ONLY the scene in
+exactly this plain-text format (no markdown, no commentary before or after):
+
+SCENE: <one sentence: setting, time, and what just happened>
+CHARACTERS: <NAME1>, <NAME2>
+GOAL (improv mode): <NAME1> wants ...  <NAME2> wants ...
+
+NAME1: spoken line (short stage direction in parentheses, optional)
+NAME2: spoken line
+...
+
+Rules:
+- Character names in ALL CAPS, one word each, followed by a colon. Nothing else
+  on the page may start with an ALL-CAPS word and a colon (no "NOTE:", no "ACT I:").
+- One speaker per line. Alternate speakers mostly, but a character may speak twice in a row.
+- 20–30 lines. Each line 1–3 sentences, short enough to memorize.
+- Put stage directions or translations in (parentheses) at the end of the line.
+  Everything in parentheses is not scored, so keep spoken words outside them.
+- The goals must pull against each other so the scene works as improv too.`;
+$('promptBtn').onclick = () => copyText(SCENE_PROMPT, 'Copied scene-writing prompt — paste it into Claude chat and add your topic');
+
+// ── Copy for review (prompt + transcript → clipboard) ──
+function tr(who, text, tag) { if (st) st.transcript.push({ who, text, tag: tag || '' }); }
+const REVIEW_PROMPT = `Below is a transcript of me rehearsing a scene against an AI partner. Lines
+marked "hint used" are where I got stuck. Please:
+1. Say what I did well, in two lines.
+2. List the 3 places I was weakest (include the hinted lines) and why.
+3. Give me a "what I could have said" rewrite for each weak line.
+4. Write a NEW harder scene in the exact /drama format (SCENE:, CHARACTERS:,
+   GOAL (improv mode):, then NAME: line lines) that practises those weak spots.
+   Same two characters or a new pair, your choice.`;
+$('copyBtn').onclick = () => {
+  if (!st || !st.transcript.length) { setStatus('Nothing to copy yet — start the scene first'); return; }
+  const head = 'Scene: ' + sc.scene + (sc.goal ? '\nGoal: ' + sc.goal : '') + '\nI played ' + st.role + '; the AI/script played ' + st.partner + ' (' + (st.mode === 'script' ? 'script rehearsal — I was trying to recall exact lines' : 'improv') + ').\n';
+  const body = st.transcript.map(t => t.who + (t.tag ? ' [' + t.tag + ']' : '') + ': ' + t.text).join('\n');
+  const original = st.mode === 'improv'
+    ? '\n\nFor comparison, here is the ORIGINAL scripted scene (the improv above was free, so note where I drifted from these story beats):\n' + sc.lines.map(l => l.who + ': ' + l.text).join('\n')
+    : '';
+  const out = REVIEW_PROMPT + '\n\n' + head + '\n' + body + original;
+  copyText(out, 'Copied review prompt + transcript (' + st.transcript.length + ' lines)');
+};
 
 // ── Shared handlers ──
 $('sendBtn').onclick = () => {
@@ -328,6 +386,47 @@ $('hintBtn').onclick = async () => {
     st.busy = false; $('hintBtn').disabled = false;
   }
 };
+
+// ── Load a script from a recent Google Doc (read-only) ──
+const GDRIVE_CLIENT_ID = '1095683227908-7ro25k16mprkf408i3lf583gti8v759b.apps.googleusercontent.com'; // same client as googlenotes.html / tutor.html
+let gToken = null, gClient = null;
+const gAuth = () => ({ Authorization: 'Bearer ' + gToken });
+function gInit() {
+  if (!(window.google && google.accounts)) { setTimeout(gInit, 150); return; }
+  gClient = google.accounts.oauth2.initTokenClient({
+    client_id: GDRIVE_CLIENT_ID, scope: 'https://www.googleapis.com/auth/drive.readonly',
+    callback: resp => {
+      if (!resp.access_token) { setStatus('Google sign-in failed: ' + (resp.error || 'unknown')); return; }
+      gToken = resp.access_token; $('gBtn').textContent = '● Google'; $('gBtn').style.color = '#4da3ff'; $('recent').disabled = false;
+      setStatus('Google signed in'); loadRecent();
+    }
+  });
+}
+function gExpired() { gToken = null; $('gBtn').textContent = 'Google'; $('gBtn').style.color = ''; $('recent').disabled = true; return new Error('Google session expired — sign in again'); }
+$('gBtn').onclick = () => { if (gToken) { google.accounts.oauth2.revoke(gToken); gExpired(); setStatus('Google signed out'); } else if (gClient) gClient.requestAccessToken(); };
+async function loadRecent() {
+  try {
+    const q = encodeURIComponent("mimeType='application/vnd.google-apps.document' and trashed=false");
+    const r = await fetch('https://www.googleapis.com/drive/v3/files?q=' + q + '&orderBy=viewedByMeTime+desc&pageSize=15&fields=files(id,name)', { headers: gAuth() });
+    if (r.status === 401) throw gExpired();
+    const d = await r.json(); const sel = $('recent'); sel.innerHTML = '<option value="">Script from Google Doc…</option>';
+    for (const f of d.files || []) { const o = document.createElement('option'); o.value = f.id; o.textContent = f.name; sel.appendChild(o); }
+  } catch (e) { setStatus(e.message); }
+}
+$('recent').onchange = async () => {
+  const id = $('recent').value; if (!id) return; const name = $('recent').selectedOptions[0].textContent;
+  setStatus('Loading "' + name + '"…');
+  try {
+    const r = await fetch('https://www.googleapis.com/drive/v3/files/' + id + '/export?mimeType=text/plain', { headers: gAuth() });
+    if (r.status === 401) throw gExpired();
+    if (!r.ok) throw new Error('Could not read doc (HTTP ' + r.status + ')');
+    $('script').value = (await r.text()).replace(/^﻿/, '').replace(/[‘’]/g, "'").replace(/[“”]/g, '"');
+    $('loadBtn').click(); // parses, saves, resets the stage
+    if (st === null && sc.lines.length) setStatus('Loaded "' + name + '": ' + sc.lines.length + ' lines, roles ' + sc.characters.join(' / '));
+  } catch (e) { setStatus(e.message); }
+  $('recent').value = '';
+};
+gInit();
 
 loadScene(); resetStage();
 </script>
