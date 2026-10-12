@@ -36,6 +36,12 @@
   .msg.err { background: var(--err); align-self: center; }
   .hintbox { margin: 0 12px 8px; padding: 10px 14px; border-radius: 10px; background: var(--hint); color: var(--hintfg); font-size: 16px; line-height: 1.5; display: none; white-space: pre-wrap; }
   .cue { margin: 0 12px; font-size: 12px; color: var(--dim); min-height: 16px; }
+  .info { display: none; position: fixed; top: 52px; right: 12px; left: 12px; max-width: 520px; margin-left: auto; z-index: 10; background: var(--ctl); color: var(--fg); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; font-size: 14px; line-height: 1.55; box-shadow: 0 8px 28px rgba(0,0,0,.35); max-height: 80vh; overflow-y: auto; }
+  .info.open { display: block; }
+  .info h3 { font-size: 14px; margin-bottom: 6px; }
+  .info ol { margin: 6px 0 10px 20px; }
+  .info code { background: var(--bg); border: 1px solid var(--line2); border-radius: 5px; padding: 1px 6px; font-size: 13px; }
+  .info .x { float: right; min-height: 0; padding: 2px 9px; }
   .input { display: flex; gap: 8px; padding: 8px 12px 12px; align-items: flex-end; flex-wrap: wrap; }
   .input textarea { flex: 1 1 240px; min-height: 52px; max-height: 160px; font-size: 16px; resize: none; font-family: inherit; }
   .input .btns { display: flex; gap: 8px; }
@@ -52,6 +58,7 @@
   <button id="gBtn" title="Sign in to load a script from a Google Doc">Google</button>
   <input id="folder" type="text" placeholder="Drive folder link (blank = recent docs)" spellcheck="false" autocomplete="off" style="width:230px">
   <select id="recent" disabled><option value="">Script from Google Doc…</option></select>
+  <button id="infoBtn" title="How to load scripts from Google Docs / Drive">ⓘ</button>
   <button id="themeBtn" title="Light / dark">☀︎</button>
   <span class="status" id="status"></span>
 </div>
@@ -61,6 +68,20 @@
   <div style="margin-top:8px"><button id="loadBtn">Use this script</button> <button id="resetBtn">Restore example</button></div>
   <div style="margin-top:6px">Format: <code>SCENE:</code>, <code>CHARACTERS:</code>, <code>GOAL:</code> headers, then <code>NAME: line (stage direction)</code>. Text in (parentheses) is shown as a stage direction.</div>
 </details>
+
+<div class="info" id="info">
+  <button class="x" id="infoClose">✕</button>
+  <h3>Load a script from Google Docs / Drive</h3>
+  <ol>
+    <li>Put the scene in a Google Doc in the <code>SCENE:</code> / <code>CHARACTERS:</code> / <code>NAME: line</code> format (use the <b>Prompt</b> button to have Claude write one).</li>
+    <li>In the terminal, jump into your Drive and go to the folder: <code>gdocs</code> (alias for <code>cd</code> into My Drive), then <code>cd</code> to the folder.</li>
+    <li>Get the folder's web link: <code>gdopen</code> opens it in Chrome and prints the URL. To copy it instead, run <code>gdopen -n | pbcopy</code>. For one doc, <code>gdopen scene.gdoc</code> gives that doc's link.</li>
+    <li>Click <b>Google</b> here and sign in (read-only).</li>
+    <li>Paste the folder link in the box. The dropdown now lists the Docs in that folder. Leave the box blank to see your 15 most recent docs.</li>
+    <li>Pick the scene, choose <b>I play</b>, press <b>Start scene</b>.</li>
+  </ol>
+  <div style="color:var(--muted);font-size:12px">Only Google Docs are listed (not .txt or Word files), and only those directly in the folder, not subfolders. <code>googledrive</code> and <code>gd</code> are the same alias as <code>gdocs</code>.</div>
+</div>
 
 <div class="scene" id="scene"></div>
 <div class="log" id="log"></div>
@@ -115,6 +136,11 @@ ROMEO: The exchange of thy love's faithful vow for mine.
 JULIET: I gave thee mine before thou didst request it. (Her honesty undercuts her caution.)
 JULIET: Good night, good night! Parting is such sweet sorrow that I shall say good night till it be morrow.
 ROMEO: Sleep dwell upon thine eyes, peace in thy breast. Would I were sleep and peace, so sweet to rest!`;
+
+// ── Info panel ──
+$('infoBtn').onclick = () => $('info').classList.toggle('open');
+$('infoClose').onclick = () => $('info').classList.remove('open');
+document.addEventListener('keydown', e => { if (e.key === 'Escape') $('info').classList.remove('open'); });
 
 // ── Light / dark (shares the tutor page's setting) ──
 function applyTheme(t) { document.documentElement.dataset.theme = t; $('themeBtn').textContent = t === 'light' ? '☾' : '☀︎'; ls.set('tutor-theme', t); }
