@@ -34,9 +34,6 @@
   .msg .note { display: block; font-size: 12px; font-style: italic; color: var(--note); margin-top: 4px; }
   .msg.sys { align-self: center; background: transparent; color: var(--dim); font-size: 13px; text-align: center; }
   .msg.err { background: var(--err); align-self: center; }
-  .w-ok { color: var(--ok); }
-  .w-miss { color: var(--bad); text-decoration: underline; }
-  .score { display: block; font-size: 12px; margin-top: 6px; color: var(--muted); }
   .hintbox { margin: 0 12px 8px; padding: 10px 14px; border-radius: 10px; background: var(--hint); color: var(--hintfg); font-size: 16px; line-height: 1.5; display: none; white-space: pre-wrap; }
   .cue { margin: 0 12px; font-size: 12px; color: var(--dim); min-height: 16px; }
   .input { display: flex; gap: 8px; padding: 8px 12px 12px; align-items: flex-end; flex-wrap: wrap; }
@@ -47,16 +44,13 @@
 <body>
 <div class="bar">
   <label>I play <select id="role"></select></label>
-  <label>Mode <select id="mode">
-    <option value="script">Script rehearsal</option>
-    <option value="improv">Improv with AI</option>
-  </select></label>
   <button class="primary" id="startBtn">Start scene</button>
   <button id="promptBtn" title="Copy a prompt that makes Claude/ChatGPT write a scene in this page's format">Prompt</button>
-  <label id="aiOnly" style="display:none">Model <input id="model" list="models" value="gpt-4o-mini" spellcheck="false"></label>
+  <label>Model <input id="model" list="models" value="gpt-4o-mini" spellcheck="false"></label>
   <datalist id="models"><option value="gpt-4.1-mini"><option value="gpt-4.1"><option value="gpt-4o-mini"><option value="gpt-4o"><option value="gpt-5-mini"><option value="gpt-5"></datalist>
-  <label id="aiCode" style="display:none">Access code <input id="code" type="password" autocomplete="off"></label>
+  <label>Access code <input id="code" type="password" autocomplete="off"></label>
   <button id="gBtn" title="Sign in to load a script from a Google Doc">Google</button>
+  <input id="folder" type="text" placeholder="Drive folder link (blank = recent docs)" spellcheck="false" autocomplete="off" style="width:230px">
   <select id="recent" disabled><option value="">Script from Google Doc…</option></select>
   <button id="themeBtn" title="Light / dark">☀︎</button>
   <span class="status" id="status"></span>
@@ -65,7 +59,7 @@
 <details class="editor"><summary>Edit scene script</summary>
   <textarea id="script" spellcheck="false"></textarea>
   <div style="margin-top:8px"><button id="loadBtn">Use this script</button> <button id="resetBtn">Restore example</button></div>
-  <div style="margin-top:6px">Format: <code>SCENE:</code>, <code>CHARACTERS:</code>, <code>GOAL:</code> headers, then <code>NAME: line (stage direction)</code>. Text in (parentheses) is shown as direction and not scored.</div>
+  <div style="margin-top:6px">Format: <code>SCENE:</code>, <code>CHARACTERS:</code>, <code>GOAL:</code> headers, then <code>NAME: line (stage direction)</code>. Text in (parentheses) is shown as a stage direction.</div>
 </details>
 
 <div class="scene" id="scene"></div>
@@ -77,7 +71,6 @@
   <div class="btns">
     <button class="primary" id="sendBtn" disabled>Say it</button>
     <button id="hintBtn" disabled>Stuck? Hint</button>
-    <button id="skipBtn" disabled>Show &amp; skip</button>
     <button id="copyBtn">Copy for review</button>
   </div>
 </div>
@@ -151,28 +144,9 @@ function parseScript(text) {
   return out;
 }
 
-// ── Matching ──
-const norm = w => w.toLowerCase().replace(/[^a-z0-9À-￿]/g, '');
-function compare(scriptText, said) {
-  const sw = scriptText.split(/\s+/);
-  const sn = sw.map(norm), un = said.split(/\s+/).map(norm).filter(Boolean);
-  const n = sn.length, m = un.length;
-  const dp = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0));
-  for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--)
-    dp[i][j] = sn[i] && sn[i] === un[j] ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
-  const hit = new Array(n).fill(false), usedU = new Array(m).fill(false);
-  let i = 0, j = 0;
-  while (i < n && j < m) {
-    if (sn[i] && sn[i] === un[j]) { hit[i] = true; usedU[j] = true; i++; j++; }
-    else if (dp[i + 1][j] >= dp[i][j + 1]) i++; else j++;
-  }
-  const total = sn.filter(Boolean).length || 1;
-  return { words: sw, hit, score: dp[0][0] / total, extra: un.filter((_, k) => !usedU[k]) };
-}
-
 // ── State ──
 let sc = parseScript(DEFAULT_SCRIPT);
-let st = null; // { role, partner, mode, idx, hintLevel, stats, messages }
+let st = null; // { role, partner, stats, messages, transcript, busy, pendingHint }
 const log = $('log');
 
 function setStatus(t) { $('status').textContent = t || ''; }
@@ -184,7 +158,7 @@ function bubble(cls, who, text, note) {
   if (note) { const n = document.createElement('span'); n.className = 'note'; n.textContent = '(' + note + ')'; d.appendChild(n); }
   log.appendChild(d); scrollLog(); return t;
 }
-function setEnabled(on) { for (const id of ['entry', 'sendBtn', 'hintBtn', 'skipBtn']) $(id).disabled = !on; $('skipBtn').style.display = st && st.mode === 'script' ? '' : 'none'; if (on) $('entry').focus(); }
+function setEnabled(on) { for (const id of ['entry', 'sendBtn', 'hintBtn']) $(id).disabled = !on; if (on) $('entry').focus(); }
 function hideHint() { $('hintbox').style.display = 'none'; $('hintbox').textContent = ''; }
 
 function loadScene() {
@@ -208,66 +182,18 @@ $('resetBtn').onclick = () => { $('script').value = DEFAULT_SCRIPT; ls.set('dram
 $('role').onchange = () => ls.set('drama-role', $('role').value);
 $('model').value = ls.get('drama-model', 'gpt-4o-mini'); $('model').onchange = () => ls.set('drama-model', $('model').value.trim());
 $('code').value = ls.get('ocr-access-code', ''); $('code').onchange = () => ls.set('ocr-access-code', $('code').value.trim());
-$('mode').value = ls.get('drama-mode', 'script');
-function syncMode() { const ai = $('mode').value === 'improv'; $('aiOnly').style.display = ai ? '' : 'none'; $('aiCode').style.display = ai ? '' : 'none'; ls.set('drama-mode', $('mode').value); }
-$('mode').onchange = syncMode; syncMode();
 
 function resetStage() { st = null; log.innerHTML = ''; hideHint(); $('cue').textContent = ''; $('entry').value = ''; setEnabled(false); $('entry').placeholder = 'Start the scene, then say your line…'; }
 
 // ── Start ──
 $('startBtn').onclick = () => {
   resetStage();
-  const role = $('role').value, mode = $('mode').value;
+  const role = $('role').value;
   const partner = sc.characters.find(c => c !== role) || sc.characters[0];
-  st = { role, partner, mode, idx: 0, hintLevel: 0, stats: { done: 0, scoreSum: 0, hints: 0, skipped: 0 }, messages: [], busy: false, transcript: [] };
-  bubble('sys', '', 'You are ' + role + '. ' + (mode === 'script' ? 'Say your lines from memory — tap Hint if you get stuck.' : 'The AI plays ' + partner + '. Improvise with the scene goal in mind.'));
-  if (mode === 'script') playPartner(); else startImprov();
+  st = { role, partner, stats: { hints: 0 }, messages: [], busy: false, transcript: [] };
+  bubble('sys', '', 'You are ' + role + '. The AI plays ' + partner + '. Improvise with the scene goal in mind. Type "hint" or tap Hint if you get stuck.');
+  startImprov();
 };
-
-// ── Script rehearsal ──
-function playPartner() {
-  while (st.idx < sc.lines.length && sc.lines[st.idx].who !== st.role) {
-    const l = sc.lines[st.idx]; bubble('them', l.who, l.text, l.note); tr(l.who, l.text); st.idx++;
-  }
-  if (st.idx >= sc.lines.length) return finish();
-  const l = sc.lines[st.idx];
-  const mine = sc.lines.filter(x => x.who === st.role);
-  $('cue').textContent = 'Your line ' + (mine.indexOf(l) + 1) + ' of ' + mine.length + (l.note ? ' · direction: ' + l.note : '');
-  $('entry').placeholder = 'Say your line from memory…'; st.hintLevel = 0; hideHint(); setEnabled(true);
-}
-function finish() {
-  setEnabled(false); $('cue').textContent = '';
-  const s = st.stats, avg = s.done ? Math.round(100 * s.scoreSum / s.done) : 0;
-  bubble('sys', '', 'Scene complete — ' + s.done + ' of your lines, average match ' + avg + '%, ' + s.hints + ' hint' + (s.hints === 1 ? '' : 's') + ', ' + s.skipped + ' skipped.');
-}
-function hintText(line, level) {
-  const w = line.text.split(/\s+/);
-  if (level <= 1) return w.slice(0, Math.min(3, w.length)).join(' ') + (w.length > 3 ? ' …' : '');
-  if (level === 2) return w.slice(0, Math.ceil(w.length / 2)).join(' ') + (w.length > 1 ? ' …' : '');
-  return line.text;
-}
-function submitScript() {
-  const said = $('entry').value.trim(); if (!said || !st) return;
-  const line = sc.lines[st.idx], r = compare(line.text, said);
-  // your attempt, then the true line with hit/miss colouring
-  bubble('me', st.role, said);
-  const d = document.createElement('div'); d.className = 'msg me';
-  const w = document.createElement('span'); w.className = 'who'; w.textContent = 'Script'; d.appendChild(w);
-  r.words.forEach((word, i) => { const sp = document.createElement('span'); sp.className = r.hit[i] || !norm(word) ? 'w-ok' : 'w-miss'; sp.textContent = word + ' '; d.appendChild(sp); });
-  const sc2 = document.createElement('span'); sc2.className = 'score';
-  sc2.textContent = Math.round(r.score * 100) + '% — ' + (r.score >= 0.95 ? 'word perfect' : r.score >= 0.75 ? 'close' : 'needs work') + (st.hintLevel ? ' · used hint' : '') + (r.extra.length ? ' · extra: ' + r.extra.join(' ') : '');
-  d.appendChild(sc2); log.appendChild(d);
-  tr(st.role, said, (st.hintLevel ? 'hint used, level ' + st.hintLevel + '/3; ' : '') + 'match ' + Math.round(r.score * 100) + '%; script line: "' + line.text + '"');
-  st.stats.done++; st.stats.scoreSum += r.score; $('entry').value = ''; st.idx++; setEnabled(false); hideHint(); scrollLog();
-  setTimeout(playPartner, 350);
-}
-function skipScript() {
-  const line = sc.lines[st.idx];
-  bubble('me', st.role + ' (revealed)', line.text, line.note);
-  tr(st.role, '(could not recall)', 'skipped; script line: "' + line.text + '"');
-  st.stats.skipped++; st.stats.done++; st.idx++; $('entry').value = ''; setEnabled(false); hideHint();
-  setTimeout(playPartner, 350);
-}
 
 // ── Improv (AI plays the other role) ──
 function improvSystem() {
@@ -335,7 +261,7 @@ Rules:
 - One speaker per line. Alternate speakers mostly, but a character may speak twice in a row.
 - 20–30 lines. Each line 1–3 sentences, short enough to memorize.
 - Put stage directions or translations in (parentheses) at the end of the line.
-  Everything in parentheses is not scored, so keep spoken words outside them.
+  Everything in parentheses is a stage direction and is not spoken, so keep spoken words outside them.
 - The goals must pull against each other so the scene works as improv too.`;
 $('promptBtn').onclick = () => copyText(SCENE_PROMPT, 'Copied scene-writing prompt — paste it into Claude chat and add your topic');
 
@@ -351,11 +277,9 @@ marked "hint used" are where I got stuck. Please:
    Same two characters or a new pair, your choice.`;
 $('copyBtn').onclick = () => {
   if (!st || !st.transcript.length) { setStatus('Nothing to copy yet — start the scene first'); return; }
-  const head = 'Scene: ' + sc.scene + (sc.goal ? '\nGoal: ' + sc.goal : '') + '\nI played ' + st.role + '; the AI/script played ' + st.partner + ' (' + (st.mode === 'script' ? 'script rehearsal — I was trying to recall exact lines' : 'improv') + ').\n';
+  const head = 'Scene: ' + sc.scene + (sc.goal ? '\nGoal: ' + sc.goal : '') + '\nI played ' + st.role + '; the AI played ' + st.partner + ' (improv).\n';
   const body = st.transcript.map(t => t.who + (t.tag ? ' [' + t.tag + ']' : '') + ': ' + t.text).join('\n');
-  const original = st.mode === 'improv'
-    ? '\n\nFor comparison, here is the ORIGINAL scripted scene (the improv above was free, so note where I drifted from these story beats):\n' + sc.lines.map(l => l.who + ': ' + l.text).join('\n')
-    : '';
+  const original = '\n\nFor comparison, here is the ORIGINAL scripted scene (the improv above was free, so note where I drifted from these story beats):\n' + sc.lines.map(l => l.who + ': ' + l.text).join('\n');
   const out = REVIEW_PROMPT + '\n\n' + head + '\n' + body + original;
   copyText(out, 'Copied review prompt + transcript (' + st.transcript.length + ' lines)');
 };
@@ -364,18 +288,13 @@ $('copyBtn').onclick = () => {
 $('sendBtn').onclick = () => {
   if (!st) return;
   if (/^(hint|\?)$/i.test($('entry').value.trim())) { $('entry').value = ''; $('hintBtn').click(); return; } // typing "hint" or "?" = Hint button
-  st.mode === 'script' ? submitScript() : submitImprov();
+  submitImprov();
 };
-$('skipBtn').onclick = () => { if (st && st.mode === 'script') skipScript(); };
 $('entry').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('sendBtn').click(); } });
 $('hintBtn').onclick = async () => {
   if (!st) return;
   const hb = $('hintbox'); hb.style.display = 'block';
-  if (st.mode === 'script') {
-    st.hintLevel = Math.min(3, st.hintLevel + 1); if (st.hintLevel === 1) st.stats.hints++;
-    hb.textContent = 'Hint ' + st.hintLevel + '/3: ' + hintText(sc.lines[st.idx], st.hintLevel);
-  } else {
-    if (st.busy) return;
+  if (!st.busy) {
     hb.textContent = 'Thinking of a line…'; st.busy = true; $('hintBtn').disabled = true;
     try {
       const q = '(Director, out of character: I am stuck as ' + st.role + '. Suggest one short line I could say next, in character. Output only the line.)';
@@ -404,15 +323,32 @@ function gInit() {
 }
 function gExpired() { gToken = null; $('gBtn').textContent = 'Google'; $('gBtn').style.color = ''; $('recent').disabled = true; return new Error('Google session expired — sign in again'); }
 $('gBtn').onclick = () => { if (gToken) { google.accounts.oauth2.revoke(gToken); gExpired(); setStatus('Google signed out'); } else if (gClient) gClient.requestAccessToken(); };
+// Folder link / URL / bare ID -> folder ID (blank = recent docs)
+function folderId(v) {
+  v = (v || '').trim(); if (!v) return '';
+  const m = v.match(/\/folders\/([\w-]+)/) || v.match(/[?&]id=([\w-]+)/) || v.match(/^([\w-]{20,})$/);
+  return m ? m[1] : null;
+}
 async function loadRecent() {
+  const raw = $('folder').value, fid = folderId(raw);
+  if (fid === null) { setStatus('Could not find a folder ID in that link'); return; }
   try {
-    const q = encodeURIComponent("mimeType='application/vnd.google-apps.document' and trashed=false");
-    const r = await fetch('https://www.googleapis.com/drive/v3/files?q=' + q + '&orderBy=viewedByMeTime+desc&pageSize=15&fields=files(id,name)', { headers: gAuth() });
+    const base = "mimeType='application/vnd.google-apps.document' and trashed=false";
+    const q = encodeURIComponent(fid ? "'" + fid + "' in parents and " + base : base);
+    const order = fid ? 'modifiedTime+desc&pageSize=100' : 'viewedByMeTime+desc&pageSize=15';
+    const r = await fetch('https://www.googleapis.com/drive/v3/files?q=' + q + '&orderBy=' + order + '&supportsAllDrives=true&includeItemsFromAllDrives=true&fields=files(id,name)', { headers: gAuth() });
     if (r.status === 401) throw gExpired();
-    const d = await r.json(); const sel = $('recent'); sel.innerHTML = '<option value="">Script from Google Doc…</option>';
+    if (!r.ok) throw new Error('Could not list ' + (fid ? 'folder' : 'recent docs') + ' (HTTP ' + r.status + ')');
+    const d = await r.json(); const sel = $('recent');
+    sel.innerHTML = '<option value="">' + (fid ? 'Docs in folder…' : 'Script from Google Doc…') + '</option>';
     for (const f of d.files || []) { const o = document.createElement('option'); o.value = f.id; o.textContent = f.name; sel.appendChild(o); }
+    ls.set('drama-folder', raw.trim());
+    setStatus((d.files || []).length ? (fid ? 'Folder: ' : 'Recent: ') + d.files.length + ' docs' : (fid ? 'No Google Docs in that folder' : 'No recent docs'));
   } catch (e) { setStatus(e.message); }
 }
+$('folder').value = ls.get('drama-folder', '');
+$('folder').addEventListener('change', () => { if (gToken) loadRecent(); });
+$('folder').addEventListener('paste', () => setTimeout(() => { if (gToken) loadRecent(); }, 0));
 $('recent').onchange = async () => {
   const id = $('recent').value; if (!id) return; const name = $('recent').selectedOptions[0].textContent;
   setStatus('Loading "' + name + '"…');
