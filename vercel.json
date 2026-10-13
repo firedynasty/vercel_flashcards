@@ -45,6 +45,8 @@
     { "source": "/tutor", "destination": "/tutor.html" },
     { "source": "/translator.html", "destination": "/translator.html" },
     { "source": "/translator", "destination": "/translator.html" },
+    { "source": "/spiritual_teacher.html", "destination": "/spiritual_teacher.html" },
+    { "source": "/spiritual_teacher", "destination": "/spiritual_teacher.html" },
     { "source": "/(.*)", "destination": "/flashcards.html" }
   ]
 }
