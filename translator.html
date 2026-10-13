@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Live Translator</title>
+<style>
+  :root { color-scheme: dark; --bg:#111; --fg:#eee; --muted:#aaa; --dim:#888; --ctl:#1c1c1c; --line:#444; --line2:#2c2c2c; --accent:#4da3ff;
+          --card:#1a1a1a; --zh:#fff; --err:#5a1f1f; }
+  @media (prefers-color-scheme: light) {
+    :root { color-scheme: light; --bg:#f6f6f4; --fg:#1a1a1a; --muted:#555; --dim:#777; --ctl:#fff; --line:#c8c8c4; --line2:#ddd;
+            --accent:#1a73e8; --card:#fff; --zh:#000; --err:#ffd9d9; }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; }
+  body { font-family: -apple-system, system-ui, sans-serif; background: var(--bg); color: var(--fg); display: flex; flex-direction: column; overflow: hidden; }
+  .bar { display: flex; gap: 6px; align-items: center; padding: 8px 10px; border-bottom: 1px solid var(--line2); flex-wrap: wrap; }
+  select, button, input, textarea { background: var(--ctl); color: var(--fg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font-size: 14px; font-family: inherit; }
+  button { cursor: pointer; min-height: 40px; }
+  button.on { border-color: var(--accent); color: var(--accent); }
+  button.primary { background: #2a6fd6; border-color: #2a6fd6; color: #fff; font-weight: 600; }
+  button:disabled { opacity: .5; }
+  #code { width: 110px; }
+  details.settings { padding: 0 10px; font-size: 13px; color: var(--muted); }
+  details.settings summary { padding: 6px 0; cursor: pointer; }
+  .setrow { display: flex; gap: 6px; flex-wrap: wrap; padding-bottom: 8px; align-items: center; }
+  .reader { flex: 1; display: none; flex-direction: column; min-height: 0; padding: 10px; gap: 8px; }
+  .reader textarea { width: 100%; min-height: 70px; max-height: 30vh; resize: vertical; font-size: 14px; line-height: 1.5; }
+  .lines { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; overscroll-behavior: contain; }
+  .ln { padding: 8px 12px; border-radius: 8px; font-size: 15px; line-height: 1.5; color: var(--dim); white-space: pre-wrap; word-break: break-word; }
+  .ln.zh { font-size: 24px; color: var(--zh); background: var(--card); border: 1px solid var(--line2); cursor: pointer; }
+  .ln.zh.on { border-color: var(--accent); background: rgba(77,163,255,.15); }
+  .ln.rom { color: var(--accent); }
+  body.reading .feed { display: none; }
+  body.reading .reader { display: flex; }
+  .presetbar { display: flex; gap: 6px; align-items: center; padding: 6px 10px 0; border-top: 1px solid var(--line2); flex-wrap: wrap; }
+  .presetbar select { max-width: 170px; }
+  .presetbar button { min-height: 36px; padding: 4px 12px; }
+  .chip { display: none; align-items: center; gap: 6px; font-size: 12px; padding: 4px 6px 4px 10px; border: 1px solid var(--accent); color: var(--accent); border-radius: 999px; max-width: 100%; }
+  .chip.show { display: inline-flex; }
+  .chip button { border: 0; background: transparent; color: inherit; min-height: 24px; padding: 0 6px; font-size: 14px; }
+  .pair.them { border-left: 3px solid var(--accent); padding-left: 10px; margin-top: 10px; }
+  .pair.them .zh { font-size: 26px; }
+  .who { font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--accent); margin-top: 12px; }
+  .card .zh { cursor: pointer; }
+  .tip { margin-top: 10px; padding: 8px 10px; border-radius: 8px; background: rgba(255,200,0,.12); font-size: 13px; line-height: 1.5; color: var(--fg); }
+  .modal { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: none; align-items: center; justify-content: center; z-index: 10; padding: 16px; }
+  .modal.show { display: flex; }
+  .sheet { background: var(--card); color: var(--fg); border: 1px solid var(--line); border-radius: 12px; max-width: 520px; width: 100%; max-height: 85vh; overflow-y: auto; padding: 14px 16px; font-size: 14px; line-height: 1.55; }
+  .sheet h3 { font-size: 16px; margin-bottom: 8px; }
+  .sheet h4 { font-size: 13px; margin: 10px 0 2px; color: var(--accent); }
+  .sheet ul, .sheet ol { padding-left: 20px; }
+  .sheet .x { float: right; min-height: 32px; padding: 2px 10px; }
+  .sheet .ex { background: var(--ctl); border-radius: 8px; padding: 8px 10px; margin-top: 6px; font-size: 13px; }
+  .status { font-size: 12px; color: var(--dim); margin-left: auto; }
+  .feed { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 10px; overscroll-behavior: contain; }
+  .empty { color: var(--dim); font-size: 14px; text-align: center; margin: auto; padding: 20px; line-height: 1.6; }
+  .me { align-self: flex-end; max-width: 90%; background: #1d3b66; color: #fff; padding: 8px 12px; border-radius: 12px; font-size: 14px; white-space: pre-wrap; }
+  @media (prefers-color-scheme: light) { .me { background: #d6e6ff; color: #1a1a1a; } }
+  .card { background: var(--card); border: 1px solid var(--line2); border-radius: 12px; padding: 12px 14px; }
+  .card .zh { font-size: 28px; line-height: 1.4; color: var(--zh); word-break: break-word; }
+  .card .rom { font-size: 16px; color: var(--accent); margin-top: 4px; }
+  .card .en { font-size: 14px; color: var(--muted); margin-top: 4px; }
+  .card .note { font-size: 12px; color: var(--dim); margin-top: 6px; font-style: italic; }
+  .card .acts { display: flex; gap: 6px; margin-top: 8px; }
+  .card .acts button { min-height: 34px; padding: 4px 12px; font-size: 13px; }
+  .pair + .pair { border-top: 1px dashed var(--line2); margin-top: 10px; padding-top: 10px; }
+  .raw { font-size: 14px; color: var(--dim); white-space: pre-wrap; }
+  .err { background: var(--err); border-radius: 10px; padding: 8px 12px; font-size: 13px; }
+  .composer { border-top: 1px solid var(--line2); padding: 8px 10px calc(8px + env(safe-area-inset-bottom)); display: flex; gap: 8px; align-items: flex-end; }
+  .composer textarea { flex: 1; min-height: 48px; max-height: 140px; resize: none; font-size: 16px; line-height: 1.4; }
+  .composer button { min-height: 48px; padding: 0 18px; }
+</style>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+<div class="bar">
+  <button id="dBtn" title="Output language"></button>
+  <button id="sBtn" title="Output script"></button>
+  <button id="autoBtn" title="Speak each reply automatically">🔊 auto</button>
+  <button id="viewBtn" title="Switch between chat and reader">Reader</button>
+  <button id="clearBtn">New</button>
+  <button id="gBtn" title="Sign in to Google to export / load conversations">Google</button>
+  <select id="recent" disabled title="Which Google Doc to save into"><option value="">＋ New doc</option></select>
+  <button id="exportBtn" title="Save this conversation to the chosen doc (new doc if ＋ New doc is selected)">Save → Doc</button>
+  <button id="importBtn" title="Load the chosen doc into the Reader, replacing its text">Import</button>
+  <span class="status" id="status"></span>
+</div>
+<details class="settings">
+  <summary>Settings</summary>
+  <div class="setrow">
+    <label>Folder <input id="folder" type="text" placeholder="Drive folder link (blank = My Drive / recent)" spellcheck="false" autocomplete="off" style="width:260px"></label>
+    <input id="code" type="password" placeholder="Access code" autocomplete="off" style="width:130px">
+  </div>
+  <div class="setrow">
+    <label><input type="checkbox" id="drift"> Drift: other side moves to new topics every few turns</label>
+    <label>Rate <select id="rate"><option>0.6</option><option>0.7</option><option>0.8</option><option selected>0.9</option><option>1.0</option><option>1.1</option></select></label>
+    <label>Model <input id="model" list="models" value="gpt-4.1-mini" spellcheck="false" style="width:130px">
+      <datalist id="models"><option value="gpt-4.1-mini"><option value="gpt-4.1"><option value="gpt-4o-mini"><option value="gpt-5-mini"><option value="gpt-5"></datalist></label>
+  </div>
+</details>
+<div class="feed" id="feed">
+  <div class="empty" id="empty">Type what you want to say, in romanization or English, and get Chinese back.<br><br>
+    <b>ngo gum yut ho ho</b> → 我今日好好<br>
+    <b>jintian tianqi hen hao</b> → 今天天气很好<br><br>
+    Use the buttons above to switch Cantonese (Jyutping) / Mandarin (Pinyin).</div>
+</div>
+<div class="reader" id="reader">
+  <textarea id="readerText" placeholder="Load a doc, or paste text here. Tap any Chinese line to hear it." spellcheck="false"></textarea>
+  <div class="lines" id="lines"></div>
+</div>
+<div class="presetbar" id="presetbar">
+  <select id="persona" title="Who is on the other side?"></select>
+  <button id="infoBtn" title="What do these do?">ⓘ</button>
+  <button id="diceBtn" title="Random topic: the other side opens with it">🎲 Topic</button>
+  <button id="profBtn" title="What the interviewer has learned about you">Profile (0)</button>
+  <span class="chip" id="chip"><span id="chipTxt"></span><button id="chipX" title="Drop topic">✕</button></span>
+</div>
+<div class="composer">
+  <textarea id="inp" rows="1" placeholder="ngo gum yut ho ho…" autocapitalize="off" autocorrect="off" spellcheck="false"></textarea>
+  <button id="go" title="Translate only">Send</button>
+  <button class="primary" id="talk" title="Translate, then the other side replies">Talk</button>
+</div>
+<div class="modal" id="modal"><div class="sheet"><button class="x" id="modalX">✕</button><div id="modalBody"></div></div></div>
+
+<script>
+const $ = id => document.getElementById(id);
+const ls = { get(k, d) { try { return localStorage.getItem(k) ?? d; } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+
+// ── Settings ──
+let dialect = ls.get('tr-dialect', 'cantonese');   // cantonese | mandarin
+let script  = ls.get('tr-script', 'auto');         // auto | trad | simp
+let autoSpeak = ls.get('tr-auto', '1') === '1';
+$('code').value = ls.get('ocr-access-code', '');   // shared with tutor.html / imageNotes.html
+$('model').value = ls.get('tr-model', 'gpt-4.1-mini');
+$('rate').value = ls.get('tr-rate', '0.9');
+$('code').onchange = () => ls.set('ocr-access-code', $('code').value.trim());
+$('model').onchange = () => ls.set('tr-model', $('model').value.trim());
+$('rate').onchange = () => ls.set('tr-rate', $('rate').value);
+
+function effScript() { return script === 'auto' ? (dialect === 'cantonese' ? 'trad' : 'simp') : script; }
+function paint() {
+  $('dBtn').textContent = dialect === 'cantonese' ? '粵 Cantonese · Jyutping' : '普 Mandarin · Pinyin';
+  $('sBtn').textContent = script === 'auto' ? '字 Auto' : (script === 'trad' ? '繁 Trad' : '简 Simp');
+  $('autoBtn').classList.toggle('on', autoSpeak);
+}
+$('dBtn').onclick = () => { dialect = dialect === 'cantonese' ? 'mandarin' : 'cantonese'; ls.set('tr-dialect', dialect); paint(); };
+$('sBtn').onclick = () => { script = { auto: 'trad', trad: 'simp', simp: 'auto' }[script]; ls.set('tr-script', script); paint(); };
+$('autoBtn').onclick = () => { autoSpeak = !autoSpeak; ls.set('tr-auto', autoSpeak ? '1' : '0'); paint(); };
+paint();
+
+// ── Prompt ──
+function systemPrompt() {
+  const canto = dialect === 'cantonese';
+  return [
+    'You are a live translator for a learner who speaks ' + (canto ? 'Cantonese' : 'Mandarin') + ' fairly well but cannot write Chinese characters.',
+    'The user types what they want to say, as ' + (canto ? 'Jyutping (often sloppy: tones missing, spelling approximate, e.g. "ngo gum yut ho ho" = ngo5 gam1 jat6 hou2 hou2)' : 'pinyin (often without tone marks, e.g. "jintian tianqi hen hao")') + ', as English, or a mix. Work out what they mean.',
+    'Reply with the natural, spoken ' + (canto ? 'Cantonese (use colloquial written Cantonese characters such as 我今日好好, 係, 嘅, 咗, 唔, not standard written Chinese)' : 'Mandarin') + ' they would say, in ' + (effScript() === 'trad' ? 'Traditional' : 'Simplified') + ' characters.',
+    'Output format, exactly these labelled lines and nothing else. For each sentence repeat the three lines:',
+    'ZH: <Chinese characters>',
+    'ROM: <' + (canto ? 'Jyutping with tone numbers' : 'Pinyin with tone marks') + '>',
+    'EN: <natural English meaning>',
+    'If the user\'s input was ambiguous or contained a mistake, add one optional line: NOTE: <short note>.',
+    'Do not add greetings, explanations or markdown.'
+  ].join('\n');
+}
+
+// ── Personas, topics, profile ──
+const PERSONAS = {
+  '': { name: 'Translate only', desc: 'Just translates what you type. No reply from anyone.' },
+  interviewer: { name: 'Interviewer', desc: 'Gets to know you. Reacts to your answer, then asks ONE follow-up at a time and builds a profile of you (see Profile).',
+    sys: 'You are a warm, curious interviewer. Your goal is to get to know the learner and build up a profile of them: background, job, family, daily routine, tastes, opinions, goals. React briefly to their answer, then ask ONE new follow-up question that builds on it. Whenever the learner reveals a new fact about themselves, add one line per fact: PROFILE: <short fact in English, third person, e.g. "Works as a nurse in Vancouver">. Add no PROFILE line if nothing new was revealed.' },
+  devil: { name: "Devil's advocate", desc: 'Takes the opposite side of whatever you say and pushes back, so you practise defending your view. Friendly, never insulting.', pool: ['Opinions', 'Hypotheticals'],
+    sys: 'You are a friendly but firm devil\'s advocate. Take the opposite position to whatever the learner says and push back with a concrete reason or a challenging question, so they have to defend their view. Stay playful and respectful; never insult them. If they state no opinion, take a strong stance yourself and make them argue against it.' },
+  teacher: { name: 'Chinese teacher', desc: 'Keeps the conversation going, and adds a short English TIP on your line: a more natural wording, a useful particle, or a common mistake.',
+    sys: 'You are a patient Chinese teacher having a conversation with the learner. Reply naturally to what they said and keep the conversation going. Then add exactly one line TIP: <English, at most 2 sentences> that teaches something from their line: a more natural way to say it, a useful particle or measure word, or a common mistake to avoid.' }
+};
+const TOPICS = {
+  'Food': ['What did you eat today?', "Best meal you've had this year", "A dish you can cook and one you can't", "Dim sum order: what's non-negotiable?", 'Spicy or not spicy?'],
+  'Daily life': ['Your morning routine', 'What time do you wake up, and do you hate it?', 'Your commute', "What's on your phone's home screen?", 'Something that annoyed you this week'],
+  'Plans and weekends': ['Plans for this weekend', 'Why you\'re "too busy" to meet up', 'Last time you went out late', 'A place you keep meaning to visit'],
+  'Work and study': ["What's your job actually like?", "Worst meeting you've had", 'Something you\'re learning besides Chinese', 'If you could quit tomorrow, what would you do?'],
+  'Family and memories': ['Something your parents always say', 'Your favorite childhood food', 'A holiday tradition', 'Your first job'],
+  'Travel': ["A trip you'd take if money didn't matter", 'Worst travel mishap', 'Hong Kong versus your hometown'],
+  'Hobbies and entertainment': ["A show or movie you'd recommend", 'A song stuck in your head', 'A game you\'re addicted to', 'Something you collect'],
+  'Hypotheticals': ['If you won the lottery tomorrow', 'If you could live in any city', 'If you could have dinner with anyone', 'Would you rather be able to fly or be invisible?'],
+  'Opinions': ['Is pineapple on pizza acceptable?', 'Is working from home better?', 'Cats or dogs?', 'Is it rude to be late if you text first?'],
+  'Small talk staples': ['The weather and whether it\'s too hot', 'Traffic', 'Rising prices', 'Whether you\'ve been sleeping enough']
+};
+let persona = ls.get('tr-persona', 'interviewer'); if (!(persona in PERSONAS)) persona = 'interviewer';
+let topic = ls.get('tr-topic', '');
+let profile = []; try { profile = JSON.parse(ls.get('tr-profile', '[]')) || []; } catch (e) { profile = []; }
+function saveProfile() { ls.set('tr-profile', JSON.stringify(profile.slice(-80))); paintPersona(); }
+function paintPersona() {
+  $('persona').value = persona;
+  const on = persona !== '';
+  $('talk').style.display = on ? '' : 'none'; $('diceBtn').style.display = on ? '' : 'none';
+  $('profBtn').style.display = persona === 'interviewer' || profile.length ? '' : 'none';
+  $('profBtn').textContent = 'Profile (' + profile.length + ')';
+  $('chip').classList.toggle('show', on && !!topic); $('chipTxt').textContent = '🎲 ' + topic;
+  $('inp').placeholder = on ? 'Say it your way, then tap Talk…' : 'ngo gum yut ho ho…';
+}
+for (const k of Object.keys(PERSONAS)) { const o = document.createElement('option'); o.value = k; o.textContent = PERSONAS[k].name; $('persona').appendChild(o); }
+$('persona').onchange = () => { persona = $('persona').value; ls.set('tr-persona', persona); paintPersona(); };
+$('drift').checked = ls.get('tr-drift', '0') === '1';
+$('drift').onchange = () => ls.set('tr-drift', $('drift').checked ? '1' : '0');
+$('chipX').onclick = () => { topic = ''; ls.set('tr-topic', ''); paintPersona(); };
+function pickTopic() {
+  const groups = (PERSONAS[persona] && PERSONAS[persona].pool) || Object.keys(TOPICS);
+  const all = groups.flatMap(g => TOPICS[g] || []).filter(t => t !== topic);
+  return all[Math.floor(Math.random() * all.length)];
+}
+
+// Modal (info / profile)
+function openModal(node) { $('modalBody').innerHTML = ''; $('modalBody').appendChild(node); $('modal').classList.add('show'); }
+$('modalX').onclick = () => $('modal').classList.remove('show');
+$('modal').addEventListener('click', e => { if (e.target === $('modal')) $('modal').classList.remove('show'); });
+$('infoBtn').onclick = () => {
+  const d = document.createElement('div');
+  d.innerHTML = '<h3>Who is on the other side?</h3>' +
+    Object.keys(PERSONAS).map(k => '<h4>' + PERSONAS[k].name + '</h4><div>' + PERSONAS[k].desc + '</div>').join('') +
+    '<h4>How to use</h4><ol><li>Pick who you want to talk to.</li><li>Type what you want to say, in romanization, English, or a mix.</li><li><b>Send</b> only translates. <b>Talk</b> translates, then the other side replies in Chinese.</li><li>Tap any Chinese line to hear it.</li></ol>' +
+    '<h4>🎲 Topic</h4><div>Picks a random topic and the other side opens with it. ✕ on the topic chip drops it. Turn on <b>Drift</b> in Settings and they will move to new topics every few turns. Devil\'s advocate rolls from Opinions and Hypotheticals.</div>' +
+    '<div class="ex"><b>You:</b> ngo gum yut ho ho<br>你: 我今日好好<br><b>Interviewer:</b> 咁好呀！你今日做咗啲咩呀？</div>';
+  openModal(d);
+};
+$('profBtn').onclick = () => {
+  const d = document.createElement('div');
+  d.innerHTML = '<h3>Profile</h3>';
+  if (!profile.length) d.innerHTML += '<div>Nothing yet. Talk to the Interviewer and what you reveal is collected here. It is also given to every persona so replies feel personal.</div>';
+  else { const u = document.createElement('ul'); profile.forEach(f => { const li = document.createElement('li'); li.textContent = f; u.appendChild(li); }); d.appendChild(u); }
+  const row = document.createElement('div'); row.style.marginTop = '10px';
+  const cp = document.createElement('button'); cp.textContent = 'Copy'; cp.onclick = async () => { try { await navigator.clipboard.writeText(profile.join('\n')); cp.textContent = 'Copied'; } catch (e) {} };
+  const cl = document.createElement('button'); cl.textContent = 'Clear'; cl.style.marginLeft = '6px'; cl.onclick = () => { if (confirm('Clear the whole profile?')) { profile = []; saveProfile(); $('modal').classList.remove('show'); } };
+  row.append(cp, cl); d.appendChild(row); openModal(d);
+};
+paintPersona();
+
+function talkSystem() {
+  const canto = dialect === 'cantonese';
+  const D = canto ? 'Cantonese' : 'Mandarin';
+  const L = [
+    'You are playing the OTHER side of a spoken conversation with a learner who speaks ' + D + ' fairly well but cannot write Chinese characters.',
+    'The learner types what they want to say as ' + (canto ? 'Jyutping (often sloppy, tones missing)' : 'pinyin (often without tone marks)') + ', as English, or a mix. Work out what they mean.',
+    'Each turn: (1) translate the learner\'s line into the natural spoken ' + D + ' they would say; (2) reply to it in character.',
+    'Write all Chinese as natural spoken ' + D + (canto ? ' (colloquial written Cantonese such as 我今日好好, 係, 嘅, 咗, 唔, not standard written Chinese)' : '') + ', in ' + (effScript() === 'trad' ? 'Traditional' : 'Simplified') + ' characters. Your reply is 1-2 short spoken sentences at an intermediate level, with at most one question.',
+    'Output format, exactly these labelled lines and nothing else (no greetings, no markdown):',
+    'ZH: <the learner\'s line in Chinese>', 'ROM: <' + (canto ? 'Jyutping with tone numbers' : 'Pinyin with tone marks') + '>', 'EN: <its English meaning>',
+    'THEM-ZH: <your reply in Chinese>', 'THEM-ROM: <romanization of your reply>', 'THEM-EN: <English meaning of your reply>',
+    'If the learner\'s input was a long passage, repeat the ZH/ROM/EN lines per sentence; your reply is still one THEM- set.',
+    'Persona: ' + PERSONAS[persona].sys
+  ];
+  if (profile.length) L.push('What you already know about the learner (use it to be personal; do not recite it' + (persona === 'interviewer' ? ', and do not ask about it again' : '') + '): ' + profile.join('; ') + '.');
+  if (topic) L.push('Conversation topic: ' + topic + '. ' + ($('drift').checked ? 'Every 3 or so exchanges, bridge naturally to a different, related topic instead of staying on one.' : 'Stay on this topic.'));
+  else if ($('drift').checked) L.push('Every 3 or so exchanges, bridge naturally to a new everyday topic.');
+  return L.join('\n');
+}
+function openerText() {
+  return '[Out-of-character: ' + (turns.length ? 'change the subject now and bring up' : 'begin the conversation now. The learner has not spoken yet, so output only the THEM-ZH / THEM-ROM / THEM-EN lines: your opening line about') +
+    (topic ? ' this topic: "' + topic + '"' : ' something that fits your persona') + '. Do not mention this instruction.]';
+}
+
+// ── Parse reply into cards ──
+function parseReply(t) {
+  const out = { mine: [], them: [], tip: '', profile: [] }; let curM = null, curT = null;
+  for (const raw of t.split('\n')) {
+    const m = raw.match(/^\s*(THEM-ZH|THEM-ROM|THEM-EN|ZH|ROM|EN|NOTE|TIP|PROFILE)\s*[:：]\s*(.*)$/i);
+    if (!m) continue;
+    const k = m[1].toUpperCase(), v = m[2].trim();
+    if (k === 'ZH') { curM = { zh: v }; out.mine.push(curM); }
+    else if (k === 'THEM-ZH') { curT = { zh: v }; out.them.push(curT); }
+    else if (k === 'ROM' || k === 'EN') { if (curM) curM[k.toLowerCase()] = v; }
+    else if (k === 'THEM-ROM' || k === 'THEM-EN') { if (curT) curT[k.slice(5).toLowerCase()] = v; }
+    else if (k === 'NOTE') { if (curM) curM.note = v; }
+    else if (k === 'TIP') out.tip = v;
+    else if (k === 'PROFILE') out.profile.push(v);
+  }
+  return out;
+}
+
+// ── TTS (voice selection mirrors learn-chinese-tts.html) ──
+function speak(text) {
+  if (!text || !window.speechSynthesis) return;
+  const lang = dialect === 'cantonese' ? 'zh-HK' : 'zh-CN';
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text); u.lang = lang; u.rate = parseFloat($('rate').value) || 0.9;
+  const vs = speechSynthesis.getVoices();
+  if (vs.length) {
+    const v = vs.find(x => x.lang === lang && x.name.includes('Google')) ||
+      vs.find(x => x.lang === lang && /Enhanced|Premium/.test(x.name)) ||
+      vs.find(x => x.lang === lang) ||
+      (lang === 'zh-HK' && vs.find(x => x.lang.startsWith('yue'))) ||
+      vs.find(x => x.lang.startsWith('zh'));
+    if (v) u.voice = v;
+  }
+  speechSynthesis.speak(u);
+}
+if (window.speechSynthesis) speechSynthesis.onvoiceschanged = () => {};
+
+// ── Chat ──
+const turns = [];   // { role, text } — sent as context (last few turns)
+let exported = 0;   // how many turns are already in the Google Doc
+let gDoc = null;    // { id, name } — doc this conversation is saved to
+let busy = false;
+
+function setStatus(t) { $('status').textContent = t || ''; }
+function addMe(text) { $('empty') && $('empty').remove(); const d = document.createElement('div'); d.className = 'me'; d.textContent = text; $('feed').appendChild(d); scroll(); }
+function scroll() { $('feed').scrollTop = $('feed').scrollHeight; }
+function pairEl(p, cls) {
+  const w = document.createElement('div'); w.className = 'pair' + (cls ? ' ' + cls : '');
+  const zh = document.createElement('div'); zh.className = 'zh'; zh.textContent = p.zh; zh.onclick = () => speak(p.zh); w.appendChild(zh);
+  for (const [k, c] of [['rom', 'rom'], ['en', 'en'], ['note', 'note']]) if (p[k]) { const x = document.createElement('div'); x.className = c; x.textContent = p[k]; w.appendChild(x); }
+  return w;
+}
+function renderCard(el, text, final, label) {
+  const r = parseReply(text);
+  el.innerHTML = '';
+  if (!r.mine.length && !r.them.length) { const x = document.createElement('div'); x.className = 'raw'; x.textContent = text || '…'; el.appendChild(x); return r; }
+  r.mine.forEach(p => el.appendChild(pairEl(p)));
+  if (r.them.length) {
+    if (label) { const w = document.createElement('div'); w.className = 'who'; w.textContent = label; el.appendChild(w); }
+    r.them.forEach(p => el.appendChild(pairEl(p, 'them')));
+  }
+  if (r.tip) { const t = document.createElement('div'); t.className = 'tip'; t.textContent = '💡 ' + r.tip; el.appendChild(t); }
+  if (final) {
+    const acts = document.createElement('div'); acts.className = 'acts';
+    const all = (r.them.length ? r.them : r.mine).map(p => p.zh).join(' ');
+    const sp = document.createElement('button'); sp.textContent = '🔊 Play'; sp.onclick = () => speak(all);
+    const cp = document.createElement('button'); cp.textContent = 'Copy'; cp.onclick = async () => { try { await navigator.clipboard.writeText(all); cp.textContent = 'Copied'; setTimeout(() => cp.textContent = 'Copy', 1200); } catch (e) {} };
+    acts.append(sp, cp); el.appendChild(acts);
+  }
+  return r;
+}
+
+// kind: 'send' = translate only · 'talk' = translate + reply · 'open' = other side opens (random topic)
+async function run(kind, text) {
+  if (busy) return;
+  if (kind !== 'open' && !text) return;
+  if (document.body.classList.contains('reading')) setView(false);   // replies show in Chat
+  const code = $('code').value.trim();
+  if (!code) { addErr('Enter the access code (Settings)'); return; }
+  busy = true; for (const id of ['go', 'talk', 'diceBtn']) $(id).disabled = true;
+  if (kind !== 'open') { addMe(text); $('inp').value = ''; $('inp').style.height = ''; }
+  const card = document.createElement('div'); card.className = 'card'; card.innerHTML = '<div class="raw">…</div>';
+  $('feed').appendChild(card); scroll();
+  const userText = kind === 'open' ? openerText() : text;
+  const msgs = turns.slice(-6).map(t => ({ role: t.role, text: t.text })).concat([{ role: 'user', text: userText }]);
+  const label = PERSONAS[persona].name;
+  let acc = '';
+  try {
+    const r = await fetch('/api/tutor', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accessCode: code, model: $('model').value.trim(), system: kind === 'send' ? systemPrompt() : talkSystem(), messages: msgs }) });
+    if (r.status === 401) { ls.set('ocr-access-code', ''); $('code').value = ''; }
+    if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.error || ('HTTP ' + r.status)); }
+    const reader = r.body.getReader(); const dec = new TextDecoder();
+    while (true) { const { done, value } = await reader.read(); if (done) break; acc += dec.decode(value, { stream: true }); renderCard(card, acc, false, label); scroll(); }
+    const res = renderCard(card, acc, true, label); scroll();
+    turns.push({ role: 'user', text: userText, hidden: kind === 'open' }, { role: 'assistant', text: acc });
+    const fresh = res.profile.filter(f => f && !profile.includes(f));
+    if (fresh.length) { profile.push(...fresh); saveProfile(); setStatus('Profile +' + fresh.length + ': ' + fresh.join('; ')); }
+    const say = (res.them.length ? res.them : res.mine).map(p => p.zh).join(' ');
+    if (autoSpeak && say) speak(say);
+  } catch (e) { card.remove(); addErr('Error: ' + e.message); }
+  finally { busy = false; for (const id of ['go', 'talk', 'diceBtn']) $(id).disabled = false; $('inp').focus(); }
+}
+function addErr(m) { const d = document.createElement('div'); d.className = 'err'; d.textContent = m; $('feed').appendChild(d); scroll(); }
+
+$('go').onclick = () => run('send', $('inp').value.trim());
+$('talk').onclick = () => run('talk', $('inp').value.trim());
+$('diceBtn').onclick = () => { const t = pickTopic(); if (!t) return; topic = t; ls.set('tr-topic', t); paintPersona(); run('open'); };
+$('inp').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); run(persona ? 'talk' : 'send', $('inp').value.trim()); } });
+$('inp').addEventListener('input', e => { const t = e.target; t.style.height = 'auto'; t.style.height = Math.min(t.scrollHeight, 140) + 'px'; });
+$('clearBtn').onclick = () => { turns.length = 0; exported = 0; gDoc = null; $('recent').value = ''; $('feed').innerHTML = ''; speechSynthesis && speechSynthesis.cancel(); };
+
+// ── Google Docs: export / load a conversation (same client as drama.html / tutor.html) ──
+const GDRIVE_CLIENT_ID = '1095683227908-7ro25k16mprkf408i3lf583gti8v759b.apps.googleusercontent.com';
+let gToken = null, gClient = null;
+const gAuth = () => ({ Authorization: 'Bearer ' + gToken });
+function gInit() {
+  if (!(window.google && google.accounts)) { setTimeout(gInit, 150); return; }
+  gClient = google.accounts.oauth2.initTokenClient({
+    client_id: GDRIVE_CLIENT_ID, scope: 'https://www.googleapis.com/auth/drive',
+    callback: resp => {
+      if (!resp.access_token) { setStatus('Google sign-in failed: ' + (resp.error || 'unknown')); return; }
+      gToken = resp.access_token; $('gBtn').textContent = '● Google'; $('gBtn').style.color = '#4da3ff';
+      $('recent').disabled = false;
+      setStatus('Google signed in'); loadRecent();
+    }
+  });
+}
+function gExpired() { gToken = null; $('gBtn').textContent = 'Google'; $('gBtn').style.color = ''; $('recent').disabled = true; return new Error('Google session expired — sign in again'); }
+$('gBtn').onclick = () => { if (gToken) { google.accounts.oauth2.revoke(gToken); gExpired(); setStatus('Google signed out'); } else if (gClient) gClient.requestAccessToken(); };
+// Folder link / URL / bare ID -> folder ID ('' = none, null = unparseable)
+function folderId(v) {
+  v = (v || '').trim(); if (!v) return '';
+  const m = v.match(/\/folders\/([\w-]+)/) || v.match(/[?&]id=([\w-]+)/) || v.match(/^([\w-]{20,})$/);
+  return m ? m[1] : null;
+}
+async function loadRecent() {
+  const raw = $('folder').value, fid = folderId(raw);
+  if (fid === null) { setStatus('Could not find a folder ID in that link'); return; }
+  try {
+    const base = "mimeType='application/vnd.google-apps.document' and trashed=false";
+    const q = encodeURIComponent(fid ? "'" + fid + "' in parents and " + base : base);
+    const order = fid ? 'modifiedTime+desc&pageSize=100' : 'viewedByMeTime+desc&pageSize=15';
+    const r = await fetch('https://www.googleapis.com/drive/v3/files?q=' + q + '&orderBy=' + order + '&supportsAllDrives=true&includeItemsFromAllDrives=true&fields=files(id,name)', { headers: gAuth() });
+    if (r.status === 401) throw gExpired();
+    if (!r.ok) throw new Error('Could not list ' + (fid ? 'folder' : 'recent docs') + ' (HTTP ' + r.status + ')');
+    const d = await r.json(); const sel = $('recent');
+    sel.innerHTML = '<option value="">＋ New doc' + (fid ? ' in folder' : '') + '</option>';
+    const files = d.files || [];
+    if (gDoc && !files.some(f => f.id === gDoc.id)) files.unshift(gDoc);   // keep the current target selectable
+    for (const f of files) { const o = document.createElement('option'); o.value = f.id; o.textContent = f.name; sel.appendChild(o); }
+    sel.value = gDoc ? gDoc.id : '';
+    ls.set('tr-folder', raw.trim());
+    setStatus((d.files || []).length ? (fid ? 'Folder: ' : 'Recent: ') + d.files.length + ' docs' : (fid ? 'No Google Docs in that folder' : 'No recent docs'));
+  } catch (e) { setStatus(e.message); }
+}
+$('folder').value = ls.get('tr-folder', '');
+$('folder').addEventListener('change', () => { if (gToken) loadRecent(); });
+$('folder').addEventListener('paste', () => setTimeout(() => { if (gToken) loadRecent(); }, 0));
+
+// Doc format (re-loadable):
+//   TRANSLATOR: cantonese | trad
+//   ME: <what I typed>
+//   ZH: / ROM: / EN: / NOTE:   (one set per sentence, as returned)
+function serializeTurns(list, withHeader) {
+  const out = [];
+  if (withHeader) {
+    out.push('TRANSLATOR: ' + dialect + ' | ' + effScript(), '');
+    if (profile.length) { profile.forEach(f => out.push('PROFILE: ' + f)); out.push(''); }
+  }
+  for (const m of list) {
+    if (m.role === 'user') { if (!m.hidden) out.push('ME: ' + m.text.replace(/\n+/g, ' ')); continue; }
+    const r = parseReply(m.text);
+    for (const p of r.mine) {
+      out.push('ZH: ' + p.zh);
+      if (p.rom) out.push('ROM: ' + p.rom);
+      if (p.en) out.push('EN: ' + p.en);
+      if (p.note) out.push('NOTE: ' + p.note);
+    }
+    for (const p of r.them) {
+      out.push('THEM-ZH: ' + p.zh);
+      if (p.rom) out.push('THEM-ROM: ' + p.rom);
+      if (p.en) out.push('THEM-EN: ' + p.en);
+    }
+    if (r.tip) out.push('TIP: ' + r.tip);
+    out.push('');
+  }
+  return out.join('\n');
+}
+function docName() { const d = new Date(), z = n => String(n).padStart(2, '0'); return 'Translator ' + d.getFullYear() + '-' + z(d.getMonth() + 1) + '-' + z(d.getDate()) + ' ' + z(d.getHours()) + z(d.getMinutes()); }
+
+async function exportDoc() {
+  if (!gToken) { setStatus('Sign in to Google, then tap Save again'); if (gClient) gClient.requestAccessToken(); return; }
+  const fresh = turns.slice(exported);
+  if (!fresh.length) { setStatus('Nothing new to export'); return; }
+  $('exportBtn').disabled = true;
+  try {
+    if (!gDoc) {
+      const fid = folderId($('folder').value);
+      if (fid === null) throw new Error('Could not find a folder ID in that link');
+      const name = docName();
+      const meta = { name, mimeType: 'application/vnd.google-apps.document' };
+      if (fid) meta.parents = [fid];
+      const bnd = 'trbnd' + Math.random().toString(36).slice(2);
+      const body = '--' + bnd + '\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n' + JSON.stringify(meta) +
+        '\r\n--' + bnd + '\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n' + serializeTurns(fresh, true) + '\r\n--' + bnd + '--';
+      const r = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true&fields=id,name', {
+        method: 'POST', headers: { ...gAuth(), 'Content-Type': 'multipart/related; boundary=' + bnd }, body });
+      if (r.status === 401) throw gExpired();
+      if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error((e.error && e.error.message) || 'Export failed (HTTP ' + r.status + ')'); }
+      gDoc = await r.json();
+      const o = document.createElement('option'); o.value = gDoc.id; o.textContent = gDoc.name; $('recent').appendChild(o); $('recent').value = gDoc.id;
+      setStatus('Saved to new doc "' + gDoc.name + '"' + (fid ? ' in folder' : ' in My Drive') + ' — next saves append to it');
+    } else {
+      // A doc is selected (or was created earlier): append only the new turns
+      const dr = await fetch('https://docs.googleapis.com/v1/documents/' + gDoc.id + '?fields=body.content.endIndex', { headers: gAuth() });
+      if (dr.status === 401) throw gExpired();
+      if (!dr.ok) throw new Error('Doc read failed (HTTP ' + dr.status + ')');
+      const c = (await dr.json()).body.content; const end = c[c.length - 1].endIndex;
+      const r = await fetch('https://docs.googleapis.com/v1/documents/' + gDoc.id + ':batchUpdate', { method: 'POST', headers: { ...gAuth(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requests: [{ insertText: { location: { index: end - 1 }, text: '\n=== ' + new Date().toLocaleString() + ' ===\n' + serializeTurns(fresh, false) } }] }) });
+      if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error((e.error && e.error.message) || 'Append failed (HTTP ' + r.status + ')'); }
+      setStatus('Appended to "' + gDoc.name + '"');
+    }
+    exported = turns.length;
+  } catch (e) { setStatus(e.message); }
+  finally { $('exportBtn').disabled = false; }
+}
+$('exportBtn').onclick = exportDoc;
+
+// ── Reader: any text -> one row per line, Chinese lines tap-to-speak (dialect from the toggle) ──
+const hasCJK = t => /[㐀-鿿豈-﫿]/.test(t);
+function setView(reading) { document.body.classList.toggle('reading', reading); $('viewBtn').textContent = reading ? 'Chat' : 'Reader'; ls.set('tr-view', reading ? 'reader' : 'chat'); }
+$('viewBtn').onclick = () => setView(!document.body.classList.contains('reading'));
+function renderReader() {
+  const box = $('lines'); box.innerHTML = '';
+  for (const raw of $('readerText').value.split(/\r?\n/)) {
+    const l = raw.trim(); if (!l) continue;
+    const d = document.createElement('div');
+    if (hasCJK(l) && !/^(ME|EN|THEM-EN|NOTE|TIP|PROFILE)\s*[:：]/i.test(l)) {
+      const t = l.replace(/^(THEM-)?ZH\s*[:：]\s*/i, '');
+      d.className = 'ln zh'; d.textContent = t;
+      d.onclick = () => { box.querySelectorAll('.on').forEach(x => x.classList.remove('on')); d.classList.add('on'); speak(t); };
+    } else d.className = 'ln' + (/^(THEM-)?ROM\s*[:：]/i.test(l) ? ' rom' : ''), d.textContent = l;
+    box.appendChild(d);
+  }
+}
+$('readerText').addEventListener('input', renderReader);
+if (ls.get('tr-view', 'chat') === 'reader') setView(true);
+
+// Dropdown = where Save goes. It never loads anything, so the Reader text is safe.
+$('recent').onchange = () => {
+  const id = $('recent').value;
+  if (!id) { gDoc = null; exported = 0; setStatus('Save will create a new doc'); return; }
+  gDoc = { id, name: $('recent').selectedOptions[0].textContent };
+  exported = 0;   // a different doc gets the whole conversation so far
+  setStatus('Save → "' + gDoc.name + '" (appends)');
+};
+// Import = load the doc chosen in the dropdown into the Reader (replaces its text) and switch to Reader
+$('importBtn').onclick = async () => {
+  if (!gToken) { setStatus('Sign in to Google, then tap Import again'); if (gClient) gClient.requestAccessToken(); return; }
+  const id = $('recent').value; if (!id) { setStatus('Pick a doc in the dropdown first'); return; }
+  const name = $('recent').selectedOptions[0].textContent;
+  setStatus('Importing "' + name + '"…');
+  try {
+    const r = await fetch('https://www.googleapis.com/drive/v3/files/' + id + '/export?mimeType=text/plain', { headers: gAuth() });
+    if (r.status === 401) throw gExpired();
+    if (!r.ok) throw new Error('Could not read doc (HTTP ' + r.status + ')');
+    const text = (await r.text()).replace(/^﻿/, '');
+    const h = text.match(/^\s*TRANSLATOR\s*[:：]\s*(cantonese|mandarin)/i);   // header picks the voice
+    if (h) { dialect = h[1].toLowerCase(); ls.set('tr-dialect', dialect); paint(); }
+    $('readerText').value = text; renderReader(); setView(true);
+    setStatus('Imported "' + name + '" into Reader (' + (dialect === 'cantonese' ? 'Cantonese' : 'Mandarin') + ' voice)');
+  } catch (e) { setStatus(e.message); }
+};
+gInit();
+</script>
+</body>
+</html>

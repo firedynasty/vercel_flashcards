@@ -43,6 +43,8 @@
     { "source": "/drama", "destination": "/drama.html" },
     { "source": "/tutor.html", "destination": "/tutor.html" },
     { "source": "/tutor", "destination": "/tutor.html" },
+    { "source": "/translator.html", "destination": "/translator.html" },
+    { "source": "/translator", "destination": "/translator.html" },
     { "source": "/(.*)", "destination": "/flashcards.html" }
   ]
 }
