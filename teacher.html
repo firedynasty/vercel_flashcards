@@ -101,8 +101,11 @@ const STYLES = {
   researcher: { name: 'Researcher', sys: 'You are a careful researcher. Go deeper on the topic, separate well-established facts from interpretation, and list what the reader should verify (quotes, dates, sources) before relying on it.' }
 };
 const RULES = 'The reader\'s own context notes are given below. Treat them as the starting point: build on them, do not repeat them back, and respect the open items and questions they list. Never invent quotes, sources or statistics; if you are not sure something is accurate or a quotation is exact, say it is unverified and the reader should check it. Clearly separate what the notes say, what is well established, and your own suggestion. Be concise (a few short paragraphs at most) and speak to the reader directly.';
-const QUICK = ['Summarize where I am', 'Go deeper on the open items', 'Turn this into a plan', 'What should I verify?', 'Quiz me'];
+const QUICK = ['Summarize where I am', 'Go deeper on the open items', 'Turn this into a plan', 'What should I verify?', 'Quiz me',
+  ['Quiz one at a time', 'Quiz me on my notes. Ask ONE question at a time, wait for my answer, then say if I was right, give the correct answer from my notes, and ask the next question. Start with the easiest. After 5 questions, give my score and the topics I missed.']];
 
+// chip label -> full prompt (so a saved doc holds the short label and loading expands it again)
+const PRESETS = {}; for (const q of QUICK) if (Array.isArray(q)) PRESETS[q[0]] = q[1];
 const turns = []; let busy = false, gDoc = null, exported = 0;
 
 for (const k of Object.keys(STYLES)) { const o = document.createElement('option'); o.value = k; o.textContent = STYLES[k].name; $('style').appendChild(o); }
@@ -114,7 +117,7 @@ $('model').value = ls.get('tc-model', 'gpt-4.1-mini');
 $('model').onchange = () => ls.set('tc-model', $('model').value.trim());
 $('ctx').value = ls.get('tc-ctx', '');
 $('ctx').addEventListener('input', () => ls.set('tc-ctx', $('ctx').value));
-QUICK.forEach(q => { const b = document.createElement('button'); b.textContent = q; b.onclick = () => { $('inp').value = q; ask(); }; $('quick').appendChild(b); });
+QUICK.forEach(q => { const [label, text] = Array.isArray(q) ? q : [q, q]; const b = document.createElement('button'); b.textContent = label; b.onclick = () => ask(text, label); $('quick').appendChild(b); });
 
 let fs = Math.max(13, Math.min(30, parseInt(ls.get('tc-fs', '17'), 10) || 17));
 function applyFs() { document.documentElement.style.setProperty('--fs', fs); ls.set('tc-fs', fs); }
@@ -158,7 +161,7 @@ function loadContext(text, label) {
   const d = parseContextDoc(text);
   $('ctx').value = d.ctx || text.trim(); ls.set('tc-ctx', $('ctx').value);
   turns.length = 0; $('feed').innerHTML = '';
-  for (const t of d.chat) { turns.push(t); bubble(t.role, t.text); }
+  for (const t of d.chat) { const q = t.role === 'user' && PRESETS[t.text]; if (q) { t.shown = t.text; t.text = q; } turns.push(t); bubble(t.role, t.shown || t.text); }
   exported = turns.length; scrollFeed(); $('ctxwrap').classList.remove('collapsed');
   setStatus('Loaded "' + label + '"' + (d.chat.length ? ' with ' + d.chat.length + ' earlier messages' : '') + ' · ' + ctxTitle());
 }
@@ -174,12 +177,12 @@ function systemPrompt() {
   return STYLES[$('style').value].sys + '\n' + RULES + '\n\n--- Reader\'s context notes ---\n' + (c || '(none loaded; ask the reader what they are working on)');
 }
 function bubble(role, text) { $('empty') && $('empty').remove(); const d = document.createElement('div'); d.className = 'msg ' + role; const t = document.createElement('span'); t.textContent = text; d.appendChild(t); $('feed').appendChild(d); scrollFeed(); return t; }
-async function ask() {
+async function ask(preset, shown) {
   if (busy) return;
-  const text = $('inp').value.trim(); if (!text) return;
+  const text = (typeof preset === 'string' ? preset : $('inp').value).trim(); if (!text) return;
   const code = $('code').value.trim(); if (!code) { setStatus('Enter the access code in Settings'); return; }
   busy = true; $('go').disabled = true;
-  bubble('user', text); $('inp').value = ''; $('inp').style.height = '';
+  bubble('user', shown || text); if (typeof preset !== 'string') $('inp').value = ''; $('inp').style.height = '';
   const out = bubble('assistant', '…'); let acc = '';
   const msgs = turns.slice(-10).map(t => ({ role: t.role, text: t.text })).concat([{ role: 'user', text }]);
   try {
@@ -189,11 +192,11 @@ async function ask() {
     if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.error || ('HTTP ' + r.status)); }
     const reader = r.body.getReader(); const dec = new TextDecoder();
     while (true) { const { done, value } = await reader.read(); if (done) break; acc += dec.decode(value, { stream: true }); out.textContent = acc; scrollFeed(); }
-    turns.push({ role: 'user', text }, { role: 'assistant', text: acc });
+    turns.push({ role: 'user', text, shown }, { role: 'assistant', text: acc });
   } catch (e) { out.parentNode.remove(); bubble('assistant err', 'Error: ' + e.message); }
   finally { busy = false; $('go').disabled = false; $('inp').focus(); }
 }
-$('go').onclick = ask;
+$('go').onclick = () => ask();
 $('inp').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); ask(); } });
 $('inp').addEventListener('input', e => { const t = e.target; t.style.height = 'auto'; t.style.height = Math.min(t.scrollHeight, 140) + 'px'; });
 
@@ -248,7 +251,7 @@ $('folder').addEventListener('paste', () => setTimeout(() => { if (gToken) loadR
 
 
 // Save → Doc: new doc = the context + "## Chat log"; an existing doc gets only the new messages appended
-function chatLog(list) { return list.map(m => (m.role === 'user' ? 'ME: ' : 'TEACHER: ') + m.text.trim()).join('\n\n'); }
+function chatLog(list) { return list.map(m => (m.role === 'user' ? 'ME: ' : 'TEACHER: ') + (m.shown || m.text).trim()).join('\n\n'); }
 function docName() { const d = new Date(), z = n => String(n).padStart(2, '0'); return 'Teacher ' + ctxTitle() + ' ' + d.getFullYear() + '-' + z(d.getMonth() + 1) + '-' + z(d.getDate()); }
 async function exportDoc() {
   if (!gToken) { setStatus('Sign in to Google, then tap Save again'); if (gClient) gClient.requestAccessToken(); return; }
