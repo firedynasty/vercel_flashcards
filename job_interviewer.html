@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Job Interviewer</title>
+<style>
+  :root { color-scheme: dark; --bg:#111; --fg:#eee; --muted:#aaa; --dim:#888; --ctl:#1c1c1c; --line:#444; --line2:#2c2c2c; --accent:#d4a84b; --card:#1a1a1a; --me:#1d3b66; --asst:#232323; --err:#5a1f1f; }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) { color-scheme: light; --bg:#f6f6f4; --fg:#1a1a1a; --muted:#555; --dim:#777; --ctl:#fff; --line:#c8c8c4; --line2:#ddd; --accent:#8a6410; --card:#fff; --me:#d6e6ff; --asst:#ececea; --err:#ffd9d9; }
+  }
+  :root[data-theme="light"] { color-scheme: light; --bg:#f6f6f4; --fg:#1a1a1a; --muted:#555; --dim:#777; --ctl:#fff; --line:#c8c8c4; --line2:#ddd; --accent:#8a6410; --card:#fff; --me:#d6e6ff; --asst:#ececea; --err:#ffd9d9; }
+  :root[data-theme="dark"] { color-scheme: dark; --bg:#111; --fg:#eee; --muted:#aaa; --dim:#888; --ctl:#1c1c1c; --line:#444; --line2:#2c2c2c; --accent:#d4a84b; --card:#1a1a1a; --me:#1d3b66; --asst:#232323; --err:#5a1f1f; }
+  :root { --fs: 17; }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; }
+  body { font-family: -apple-system, system-ui, sans-serif; background: var(--bg); color: var(--fg); display: flex; flex-direction: column; overflow: hidden; }
+  select, button, input, textarea { background: var(--ctl); color: var(--fg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font-size: 14px; font-family: inherit; }
+  button { cursor: pointer; min-height: 40px; }
+  button.primary { background: #2a6fd6; border-color: #2a6fd6; color: #fff; font-weight: 600; }
+  button:disabled { opacity: .5; }
+  .bar { display: flex; gap: 6px; align-items: center; padding: 8px 10px; border-bottom: 1px solid var(--line2); flex-wrap: nowrap; overflow-x: auto; flex-shrink: 0; scrollbar-width: none; }
+  .bar::-webkit-scrollbar { display: none; }
+  .bar > * { flex-shrink: 0; }
+  .bar select { max-width: 150px; }
+  .bar input.num { width: 64px; }
+  .bar .sep { width: 1px; align-self: stretch; background: var(--line2); margin: 0 2px; }
+  .sub { display: flex; align-items: center; gap: 8px; padding: 4px 12px 0; font-size: 12px; color: var(--accent); letter-spacing: .5px; flex-shrink: 0; }
+  .status { font-size: 12px; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  details.settings { padding: 0 10px; font-size: 13px; color: var(--muted); border-bottom: 1px solid var(--line2); }
+  details.settings summary { padding: 6px 0; cursor: pointer; }
+  .setrow { display: flex; gap: 6px; flex-wrap: wrap; padding-bottom: 8px; align-items: center; }
+  .modal { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: none; align-items: center; justify-content: center; z-index: 10; padding: 16px; }
+  .modal.show { display: flex; }
+  .sheet { background: var(--card); color: var(--fg); border: 1px solid var(--line); border-radius: 12px; max-width: 520px; width: 100%; max-height: 85vh; overflow-y: auto; padding: 14px 16px; font-size: 14px; line-height: 1.55; }
+  .sheet h3 { font-size: 16px; margin-bottom: 8px; }
+  .sheet h4 { font-size: 13px; margin: 12px 0 2px; color: var(--accent); }
+  .sheet ul { padding-left: 20px; }
+  .sheet .x { float: right; min-height: 32px; padding: 2px 10px; }
+  .slots { display: flex; gap: 6px; align-items: center; padding: 6px 10px 0; flex-shrink: 0; overflow-x: auto; }
+  .slots > * { flex-shrink: 0; }
+  .slots button.tab { min-height: 36px; padding: 4px 14px; border-radius: 999px; }
+  .slots button.tab.on { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+  .slots button.small { min-height: 36px; padding: 4px 12px; font-size: 13px; }
+  .ctxwrap { margin: 6px 10px 0; flex-shrink: 0; }
+  .ctxwrap.collapsed, .slots.collapsed { display: none; }
+  #ctx { width: 100%; height: 24vh; resize: vertical; font-family: Georgia, 'Times New Roman', serif; font-size: calc(var(--fs) * 1px - 1px); line-height: 1.5; background: var(--card); }
+  .passage { margin: 6px 10px 0; border: 1px solid var(--line2); border-radius: 10px; background: var(--card); flex-shrink: 0; max-height: calc(6em + 16px); overflow-y: auto; padding: 8px 14px; font-family: Georgia, 'Times New Roman', serif; font-size: calc(var(--fs) * 1px); line-height: 1.5; overscroll-behavior: contain; }
+  .passage.collapsed { max-height: 0; padding: 0 14px; border-width: 0; margin-top: 0; overflow: hidden; }
+  .passage sup { color: var(--accent); font-size: 11px; margin-right: 3px; font-family: -apple-system, system-ui, sans-serif; }
+  .passage .v { cursor: pointer; }
+  .passage .v.sel { background: rgba(212,168,75,.25); border-radius: 3px; }
+  .feed { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 10px; overscroll-behavior: contain; }
+  .empty { color: var(--dim); font-size: 14px; text-align: center; margin: auto; padding: 20px; line-height: 1.6; }
+  .msg { max-width: 94%; padding: 8px 12px; border-radius: 12px; white-space: pre-wrap; word-break: break-word; font-size: calc(var(--fs) * 1px - 1px); line-height: 1.6; }
+  .msg.user { align-self: flex-end; background: var(--me); }
+  .msg.assistant { align-self: flex-start; background: var(--asst); }
+  .msg.err { background: var(--err); }
+  .divider { align-self: center; font-size: 11px; color: var(--dim); letter-spacing: 1px; text-transform: uppercase; }
+  .quick { display: flex; gap: 6px; padding: 0 10px 6px; overflow-x: auto; }
+  .quick button { white-space: nowrap; min-height: 34px; font-size: 13px; padding: 4px 12px; border-radius: 999px; }
+  .composer { border-top: 1px solid var(--line2); padding: 8px 10px calc(8px + env(safe-area-inset-bottom)); display: flex; gap: 8px; align-items: flex-end; }
+  .composer textarea { flex: 1; min-height: 48px; max-height: 140px; resize: none; font-size: 16px; line-height: 1.4; }
+  .composer button { min-height: 48px; padding: 0 18px; }
+</style>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+<div class="bar">
+  <button id="gBtn" title="Sign in to Google">Google</button>
+  <select id="recent" disabled title="Doc to import from / save into"><option value="">＋ New doc</option></select>
+  <button id="importBtn" title="Load the chosen Google Doc. A saved profile restores all three slots and the chat; any other doc goes into the selected slot">Import</button>
+  <button id="fileBtn" title="Load a .md / .txt file (a saved profile restores everything; otherwise it goes into the selected slot)">Load file</button>
+  <button id="exportBtn" title="Save profile + chat to the chosen doc (new doc if ＋ New doc)">Save → Doc</button>
+  <button id="copyBtn" title="Copy profile + chat to the clipboard">Copy</button>
+  <span class="sep"></span>
+  <button id="infoBtn" title="How this works, and what is private">ⓘ</button>
+  <button id="togBtn" title="Show / hide the slots">Slots</button>
+  <button id="fMinus" title="Smaller text">A−</button>
+  <button id="fPlus" title="Larger text">A+</button>
+  <button id="themeBtn" title="Light / dark"></button>
+  <button id="clearBtn" title="Clear the chat">New</button>
+</div>
+<input type="file" id="fileInput" accept=".md,.markdown,.txt,text/plain,text/markdown" style="display:none">
+<div class="sub"><span class="status" id="status"></span></div>
+<details class="settings">
+  <summary>Settings</summary>
+  <div class="setrow">
+    <label>Interviewer <select id="style"></select></label>
+    <label>Type <select id="itype"></select></label>
+    <label>Feedback <select id="fbmode"><option value="each">after every answer</option><option value="ask">only when I ask</option></select></label>
+  </div>
+  <div class="setrow">
+    <label>Also remove (your name, etc., comma-separated) <input id="names" type="text" placeholder="e.g. Jane Doe, Jane" spellcheck="false" autocomplete="off" style="width:240px"></label>
+  </div>
+  <div class="setrow">
+    <label>Folder <input id="folder" type="text" placeholder="Drive folder link (blank = recent docs)" spellcheck="false" autocomplete="off" style="width:240px"></label>
+    <input id="code" type="password" placeholder="Access code" autocomplete="off" style="width:130px">
+    <label>Model <input id="model" list="models" value="gpt-4.1-mini" spellcheck="false" style="width:130px">
+      <datalist id="models"><option value="gpt-4.1-mini"><option value="gpt-4.1"><option value="gpt-4o-mini"><option value="gpt-5-mini"><option value="gpt-5"></datalist></label>
+  </div>
+</details>
+<div class="slots" id="slots"></div>
+<div class="ctxwrap" id="ctxwrap"><textarea id="ctx" spellcheck="false"></textarea></div>
+<div class="modal" id="modal"><div class="sheet"><button class="x" id="modalX">✕</button><div id="modalBody"></div></div></div>
+<div class="feed" id="feed">
+  <div class="empty" id="empty">Fill the Job slot (paste the whole posting), add your Resume and any Past interviews / feedback, then tap Start.<br>Personal details (address, phone, email, links) are removed automatically.</div>
+</div>
+<div class="quick" id="quick"></div>
+<div class="composer">
+  <textarea id="inp" rows="1" placeholder="Your answer…" autocapitalize="sentences"></textarea>
+  <button class="primary" id="go">Send</button>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const ls = { get(k, d) { try { return localStorage.getItem(k) ?? d; } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+
+// ── Data (swap this block for a different role-play, e.g. a customer for sales practice) ──
+const SLOTS = {
+  job:    { label: 'Job', ph: 'Paste the whole job posting here (Indeed, LinkedIn, anything). Personal lines such as your commute address are removed automatically.', cap: 8000 },
+  resume: { label: 'Resume', ph: 'Paste or load your resume / background. The interviewer only asks about what is here. Contact details are removed automatically.', cap: 8000 },
+  past:   { label: 'Past interviews', ph: 'Paste or load earlier interviews, debriefs and feedback you were given. The interviewer avoids repeating questions and pushes on the weak spots listed here.', cap: 6000, tail: true }
+};
+const STYLES = {
+  recruiter: { name: 'Friendly recruiter', sys: 'You are a warm, professional recruiter doing a first-round screening. Put the candidate at ease, but still ask clear, direct questions and follow up when an answer is vague.' },
+  manager: { name: 'Hiring manager', sys: 'You are the hiring manager for this role. You care about results, reliability and fit for the team. Probe for the candidate\'s specific role, actions and outcomes, and ask for numbers or concrete examples when they are missing.' },
+  technical: { name: 'Technical interviewer', sys: 'You are a technical interviewer. Ask about how the candidate does the work: procedures, judgment calls, tools and how they handle edge cases. Ask why, not just what.' },
+  panel: { name: 'Skeptical panel member', sys: 'You are a skeptical, fair panel interviewer. Politely challenge the candidate\'s claims, ask "what would you do differently" and "what if that had failed", and keep the pressure professional, never hostile.' }
+};
+const TYPES = {
+  mixed: 'a realistic mix of behavioral, situational and role-specific questions',
+  behavioral: 'behavioral questions that need a specific past example ("tell me about a time...")',
+  technical: 'role-specific and technical questions about how the work is done',
+  culture: 'culture-fit, motivation, reliability and teamwork questions'
+};
+const RULES = 'Run a realistic job interview. Ask ONE question at a time and wait for the answer. Base questions on the job posting (its essential functions, qualifications, shift and schedule requirements, and any listed application questions) and on the candidate\'s resume. Ask about facts that are in the resume only; never invent employers, projects, licences or results. If the resume does not show something the job requires (for example a required licence or availability), raise it as an interviewer honestly would and let the candidate answer. If the candidate\'s answer is vague, ask a follow-up for the specifics (their role, what they did, the result). Do not repeat questions already covered in the past-interview notes, and press on the weak spots those notes list. Keep each turn short (a few sentences). Never write the candidate\'s answers for them.';
+const FEEDBACK = {
+  each: 'After each answer, give 2-3 short lines starting with "Feedback:" (what worked, then the single most important thing to fix, such as rambling, vague impact, no specifics, or a missing result), then ask the next question.',
+  ask: 'Do not give feedback unless the candidate asks for it. React briefly and naturally like a real interviewer, then ask a follow-up or the next question.'
+};
+const QUICK = [
+  ['Start', '[START]'],
+  ['Hint', 'Hint: give me a short outline of how to answer your last question, using only facts from my resume. Do not write the answer for me.'],
+  ['Next question', 'Next question, please.'],
+  ['Harder', 'Make the next question harder.'],
+  ['Feedback now', 'Give me feedback on my last answer now: what worked, and the most important thing to fix.'],
+  ['Debrief', 'End the interview and give me a debrief: 1) a score from 1 to 5 for communication, structure, specifics, and fit for this role; 2) my 3 weakest answers, each with a stronger version that uses only facts from my resume; 3) what to prepare next; 4) if past-interview notes exist, whether I improved.']
+];
+
+// ── Personal-detail scrubber (runs on paste, load, import, and again before anything is sent or saved) ──
+const RE_EMAIL = /[\w.+-]+@[\w-]+(?:\.[\w-]+)+/g;
+const RE_PHONE = /(?:\+\d{1,2}[ \t.-]?|\b1[ \t.-])?(?:\(\d{3}\)|\b\d{3})[ \t.-]?\d{3}[ \t.-]\d{4}\b/g;
+const RE_LINK = /\b(?:https?:\/\/)?(?:[\w-]+\.)?(?:linkedin|github|facebook|instagram|twitter|x)\.com\/[^\s,;)]+/gi;
+const RE_STREET = /\b\d{1,6}\s+(?:[A-Za-z0-9.'-]+\s+){0,4}?(?:Street|St|Avenue|Ave|Boulevard|Blvd|Road|Rd|Drive|Dr|Lane|Ln|Way|Court|Ct|Place|Pl|Parkway|Pkwy|Highway|Hwy|Terrace|Ter|Circle|Cir)\b\.?(?:,?\s*(?:Apt|Apartment|Suite|Ste|Unit|#)\.?\s*[\w-]+)?(?:,\s*[A-Za-z .]+,?\s*[A-Z]{2}\s*\d{5}(?:-\d{4})?)?/gi;
+function scrub(text, slot) {
+  let n = 0; const sub = (re, rep) => { text = text.replace(re, () => { n++; return rep; }); };
+  if (slot === 'job') {   // job-site boilerplate that carries your home address
+    text = text.split(/\r?\n/).filter(l => { const bad = /commute/i.test(l) || /^\s*from\s+\d+\s/i.test(l); if (bad) n++; return !bad; }).join('\n');
+  }
+  if (slot !== 'job') sub(RE_STREET, '[address]');   // the employer's address in a posting is not personal
+  sub(RE_EMAIL, '[email]'); sub(RE_PHONE, '[phone]'); sub(RE_LINK, '[link]');
+  for (const t of $('names').value.split(',').map(s => s.trim()).filter(s => s.length > 1)) {
+    sub(new RegExp('\\b' + t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'gi'), '[name]');
+  }
+  return { text, n };
+}
+
+// ── state ──
+const turns = []; let busy = false, gDoc = null, exported = 0, active = 'job';
+const slotText = {}; for (const k of Object.keys(SLOTS)) slotText[k] = ls.get('ji-' + k, '');
+$('names').value = ls.get('ji-names', ''); $('names').onchange = () => { ls.set('ji-names', $('names').value.trim()); for (const k of Object.keys(SLOTS)) scrubSlot(k); showSlot(); };
+function setStatus(t) { $('status').textContent = t || ''; }
+function scrollFeed() { $('feed').scrollTop = $('feed').scrollHeight; }
+
+for (const k of Object.keys(STYLES)) { const o = document.createElement('option'); o.value = k; o.textContent = STYLES[k].name; $('style').appendChild(o); }
+for (const k of Object.keys(TYPES)) { const o = document.createElement('option'); o.value = k; o.textContent = k[0].toUpperCase() + k.slice(1); $('itype').appendChild(o); }
+$('style').value = STYLES[ls.get('ji-style', 'manager')] ? ls.get('ji-style', 'manager') : 'manager'; $('style').onchange = () => ls.set('ji-style', $('style').value);
+$('itype').value = TYPES[ls.get('ji-type', 'mixed')] ? ls.get('ji-type', 'mixed') : 'mixed'; $('itype').onchange = () => ls.set('ji-type', $('itype').value);
+$('fbmode').value = ls.get('ji-fb', 'each'); $('fbmode').onchange = () => ls.set('ji-fb', $('fbmode').value);
+$('code').value = ls.get('ocr-access-code', ''); $('code').onchange = () => ls.set('ocr-access-code', $('code').value.trim());
+$('model').value = ls.get('ji-model', 'gpt-4.1-mini'); $('model').onchange = () => ls.set('ji-model', $('model').value.trim());
+
+let fs = Math.max(13, Math.min(30, parseInt(ls.get('ji-fs', '17'), 10) || 17));
+function applyFs() { document.documentElement.style.setProperty('--fs', fs); ls.set('ji-fs', fs); }
+$('fMinus').onclick = () => { fs = Math.max(13, fs - 1); applyFs(); };
+$('fPlus').onclick = () => { fs = Math.min(30, fs + 1); applyFs(); };
+applyFs();
+function isLight() { const t = document.documentElement.dataset.theme; return t ? t === 'light' : matchMedia('(prefers-color-scheme: light)').matches; }
+function applyTheme(t) { document.documentElement.dataset.theme = t; $('themeBtn').textContent = t === 'light' ? '☾' : '☀︎'; ls.set('ji-theme', t); }
+applyTheme(ls.get('ji-theme', '') || (isLight() ? 'light' : 'dark'));
+$('themeBtn').onclick = () => applyTheme(isLight() ? 'dark' : 'light');
+$('togBtn').onclick = () => { $('ctxwrap').classList.toggle('collapsed'); $('slots').classList.toggle('collapsed'); };
+
+// ── slots ──
+function paintTabs() {
+  const box = $('slots'); box.innerHTML = '';
+  for (const k of Object.keys(SLOTS)) {
+    const b = document.createElement('button'); b.className = 'tab' + (k === active ? ' on' : '');
+    b.textContent = SLOTS[k].label + (slotText[k].trim() ? ' ✓' : ''); b.onclick = () => { active = k; paintTabs(); showSlot(); };
+    box.appendChild(b);
+  }
+  const c = document.createElement('button'); c.className = 'small'; c.textContent = 'Clear slot'; c.title = 'Empty the selected slot';
+  c.onclick = () => { slotText[active] = ''; ls.set('ji-' + active, ''); showSlot(); paintTabs(); };
+  box.appendChild(c);
+}
+function showSlot() {
+  $('ctx').value = slotText[active]; $('ctx').placeholder = SLOTS[active].ph;
+  const n = slotText[active].trim().length, cap = SLOTS[active].cap;
+  setStatus(SLOTS[active].label + ': ' + (n ? n.toLocaleString() + ' chars' + (n > cap ? ' · only the ' + (SLOTS[active].tail ? 'latest ' : 'first ') + cap.toLocaleString() + ' are sent' : '') : 'empty'));
+}
+function scrubSlot(k) { const r = scrub(slotText[k], k); slotText[k] = r.text; ls.set('ji-' + k, r.text); return r.n; }
+function setSlot(k, text, label) {
+  const r = scrub(text.replace(/^﻿/, '').trim(), k);
+  slotText[k] = r.text; ls.set('ji-' + k, r.text); active = k; paintTabs(); showSlot();
+  if (r.n) setStatus((label ? 'Loaded "' + label + '" · ' : '') + 'removed ' + r.n + ' personal detail' + (r.n > 1 ? 's' : '') + ' · ' + SLOTS[k].label + ' ' + r.text.length.toLocaleString() + ' chars');
+  else if (label) setStatus('Loaded "' + label + '" into ' + SLOTS[k].label);
+}
+$('ctx').addEventListener('input', () => { slotText[active] = $('ctx').value; ls.set('ji-' + active, slotText[active]); paintTabs(); });
+$('ctx').addEventListener('paste', () => setTimeout(() => { const n = scrubSlot(active); $('ctx').value = slotText[active]; paintTabs(); showSlot(); if (n) setStatus('Removed ' + n + ' personal detail' + (n > 1 ? 's' : '') + ' from the pasted text'); }, 0));
+$('ctx').addEventListener('change', () => { scrubSlot(active); $('ctx').value = slotText[active]; });
+$('fileBtn').onclick = () => $('fileInput').click();
+$('fileInput').onchange = async e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  try { applyText(await f.text(), f.name, null); } catch (err) { setStatus('Could not read file: ' + err.message); }
+};
+paintTabs(); showSlot();
+
+// ── info popup ──
+$('infoBtn').onclick = () => {
+  $('modalBody').innerHTML = '<h3>Job Interviewer</h3>' +
+    '<h4>How it works</h4><ul><li>Paste the job posting into <b>Job</b>, your resume into <b>Resume</b>, and earlier interviews or feedback into <b>Past interviews</b>. Paste, <b>Load file</b>, or <b>Import</b> from a Google Doc all go into the selected slot.</li>' +
+    '<li>Tap <b>Start</b>. The interviewer asks one question at a time, drawn from the posting (duties, qualifications, shifts, application questions) and from your resume only.</li>' +
+    '<li><b>Hint</b>, <b>Harder</b>, <b>Feedback now</b> and <b>Debrief</b> are in the chip row. Settings has the interviewer style, interview type, and whether you get feedback after every answer.</li>' +
+    '<li><b>Save → Doc</b> (or <b>Copy</b>) writes a <b>## Profile</b> section (Job, Resume, Past interviews) followed by the chat log. <b>Import</b> or <b>Load file</b> on a doc with a Profile section refills all three slots and the chat, so edits you make in the doc come back. Your browser keeps the slots between visits either way. Saving to an existing doc only appends new chat; to refresh its profile, use Copy, or save to <b>＋ New doc</b>.</li></ul>' +
+    '<h4>Personal details</h4><ul><li>Emails, phone numbers, street addresses, social links, job-site commute lines, and any names you list in Settings are removed <b>in your browser</b> when you paste or load, and again before anything is sent or saved.</li>' +
+    '<li>It is pattern matching, so it can miss a name you did not list, a bare city, or an address written without a number. Skim the cleaned text before your first send, especially Past interviews.</li>' +
+    '<li>It is not anonymization. The model still receives the posting, your work history and your answers, because it needs them to interview you. Anything you send goes to OpenAI through your own access code.</li></ul>';
+  $('modal').classList.add('show');
+};
+$('modalX').onclick = () => $('modal').classList.remove('show');
+$('modal').addEventListener('click', e => { if (e.target === $('modal')) $('modal').classList.remove('show'); });
+
+// ── chat ──
+function clip(k) { const t = slotText[k].trim(), cap = SLOTS[k].cap; return t.length > cap ? (SLOTS[k].tail ? t.slice(-cap) : t.slice(0, cap)) : t; }
+function systemPrompt() {
+  const part = k => scrub(clip(k), k).text || '(not provided)';
+  return STYLES[$('style').value].sys + '\n' + RULES + '\nInterview type: ' + TYPES[$('itype').value] + '.\n' + FEEDBACK[$('fbmode').value] +
+    '\n\n--- JOB POSTING ---\n' + part('job') + '\n\n--- CANDIDATE RESUME / BACKGROUND ---\n' + part('resume') + '\n\n--- PAST INTERVIEWS AND FEEDBACK ---\n' + part('past');
+}
+function bubble(role, text) { $('empty') && $('empty').remove(); const d = document.createElement('div'); d.className = 'msg ' + role; const t = document.createElement('span'); t.textContent = text; d.appendChild(t); $('feed').appendChild(d); scrollFeed(); return t; }
+async function run(text, hidden) {
+  if (busy) return;
+  text = (text || '').trim(); if (!text) return;
+  if (!slotText.job.trim()) { setStatus('Paste the job posting into the Job slot first'); active = 'job'; paintTabs(); showSlot(); return; }
+  const code = $('code').value.trim(); if (!code) { setStatus('Enter the access code in Settings'); return; }
+  busy = true; $('go').disabled = true;
+  const sent = hidden ? 'Begin the interview now with a short greeting and your first question.' : text;
+  if (!hidden) { bubble('user', text); $('inp').value = ''; $('inp').style.height = ''; }
+  const out = bubble('assistant', '…'); let acc = '';
+  const msgs = turns.slice(-16).map(t => ({ role: t.role, text: scrub(t.text, 'chat').text })).concat([{ role: 'user', text: scrub(sent, 'chat').text }]);
+  try {
+    const r = await fetch('/api/tutor', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accessCode: code, model: $('model').value.trim(), system: systemPrompt(), messages: msgs }) });
+    if (r.status === 401) { ls.set('ocr-access-code', ''); $('code').value = ''; }
+    if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.error || ('HTTP ' + r.status)); }
+    const reader = r.body.getReader(); const dec = new TextDecoder();
+    while (true) { const { done, value } = await reader.read(); if (done) break; acc += dec.decode(value, { stream: true }); out.textContent = acc; scrollFeed(); }
+    turns.push({ role: 'user', text: sent, hidden: !!hidden }, { role: 'assistant', text: acc });
+  } catch (e) { out.parentNode.remove(); bubble('assistant err', 'Error: ' + e.message); }
+  finally { busy = false; $('go').disabled = false; $('inp').focus(); }
+}
+const ask = () => run($('inp').value, false);
+QUICK.forEach(([label, text]) => { const b = document.createElement('button'); b.textContent = label; b.onclick = () => label === 'Start' ? run(text, true) : run(text, false); $('quick').appendChild(b); });
+$('go').onclick = ask;
+$('inp').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); ask(); } });
+$('inp').addEventListener('input', e => { const t = e.target; t.style.height = 'auto'; t.style.height = Math.min(t.scrollHeight, 140) + 'px'; });
+$('clearBtn').onclick = () => { turns.length = 0; exported = 0; gDoc = null; $('recent').value = ''; $('feed').innerHTML = ''; };
+
+// ── Google Docs: import into a slot / save the session (same client as the other pages) ──
+const GDRIVE_CLIENT_ID = '1095683227908-7ro25k16mprkf408i3lf583gti8v759b.apps.googleusercontent.com';
+let gToken = null, gClient = null;
+const gAuth = () => ({ Authorization: 'Bearer ' + gToken });
+function gInit() {
+  if (!(window.google && google.accounts)) { setTimeout(gInit, 150); return; }
+  gClient = google.accounts.oauth2.initTokenClient({
+    client_id: GDRIVE_CLIENT_ID, scope: 'https://www.googleapis.com/auth/drive',
+    callback: resp => {
+      if (!resp.access_token) { setStatus('Google sign-in failed: ' + (resp.error || 'unknown')); return; }
+      gToken = resp.access_token; $('gBtn').textContent = '● Google'; $('gBtn').style.color = '#4da3ff';
+      $('recent').disabled = false;
+      setStatus('Google signed in'); loadRecent();
+    }
+  });
+}
+function gExpired() { gToken = null; $('gBtn').textContent = 'Google'; $('gBtn').style.color = ''; $('recent').disabled = true; return new Error('Google session expired — sign in again'); }
+$('gBtn').onclick = () => { if (gToken) { google.accounts.oauth2.revoke(gToken); gExpired(); setStatus('Google signed out'); } else if (gClient) gClient.requestAccessToken(); };
+// Folder link / URL / bare ID -> folder ID ('' = none, null = unparseable)
+function folderId(v) {
+  v = (v || '').trim(); if (!v) return '';
+  const m = v.match(/\/folders\/([\w-]+)/) || v.match(/[?&]id=([\w-]+)/) || v.match(/^([\w-]{20,})$/);
+  return m ? m[1] : null;
+}
+async function loadRecent() {
+  const raw = $('folder').value, fid = folderId(raw);
+  if (fid === null) { setStatus('Could not find a folder ID in that link'); return; }
+  try {
+    const base = "mimeType='application/vnd.google-apps.document' and trashed=false";
+    const q = encodeURIComponent(fid ? "'" + fid + "' in parents and " + base : base);
+    const order = fid ? 'modifiedTime+desc&pageSize=100' : 'viewedByMeTime+desc&pageSize=15';
+    const r = await fetch('https://www.googleapis.com/drive/v3/files?q=' + q + '&orderBy=' + order + '&supportsAllDrives=true&includeItemsFromAllDrives=true&fields=files(id,name)', { headers: gAuth() });
+    if (r.status === 401) throw gExpired();
+    if (!r.ok) throw new Error('Could not list ' + (fid ? 'folder' : 'recent docs') + ' (HTTP ' + r.status + ')');
+    const d = await r.json(); const sel = $('recent');
+    sel.innerHTML = '<option value="">＋ New doc' + (fid ? ' in folder' : '') + '</option>';
+    const files = d.files || [];
+    if (gDoc && !files.some(f => f.id === gDoc.id)) files.unshift(gDoc);   // keep the current target selectable
+    for (const f of files) { const o = document.createElement('option'); o.value = f.id; o.textContent = f.name; sel.appendChild(o); }
+    sel.value = gDoc ? gDoc.id : '';
+    ls.set('ji-folder', raw.trim());
+    setStatus((d.files || []).length ? (fid ? 'Folder: ' : 'Recent: ') + d.files.length + ' docs' : (fid ? 'No Google Docs in that folder' : 'No recent docs'));
+  } catch (e) { setStatus(e.message); }
+}
+$('folder').value = ls.get('ji-folder', '');
+$('folder').addEventListener('change', () => { if (gToken) loadRecent(); });
+$('folder').addEventListener('paste', () => setTimeout(() => { if (gToken) loadRecent(); }, 0));
+
+
+
+// ── Profile + chat <-> text ──
+// ## Profile / ### Job / ### Resume / ### Past interviews, then ## Chat log (ME: / INTERVIEWER:). Appended sessions start with "=== date ===".
+const SLOT_HEADS = { 'Job': 'job', 'Resume': 'resume', 'Past interviews': 'past' };
+function chatLog(list) { return list.filter(m => !m.hidden).map(m => (m.role === 'user' ? 'ME: ' : 'INTERVIEWER: ') + scrub(m.text, 'chat').text.trim()).join('\n\n'); }
+function jobTitle() { const l = slotText.job.split(/\r?\n/).map(s => s.trim()).find(Boolean); return (l || 'Interview').slice(0, 60); }
+function profileBlock() {
+  return '## Profile\n' + Object.entries(SLOT_HEADS).map(([h, k]) => '### ' + h + '\n' + scrub(slotText[k], k).text.trim()).join('\n\n') + '\n';
+}
+function fullDoc(list) {
+  return '# Interview: ' + jobTitle() + '\nInterviewer: ' + STYLES[$('style').value].name + ' · Type: ' + $('itype').value + ' · ' + new Date().toLocaleString() + '\n\n' + profileBlock() + '\n## Chat log\n' + chatLog(list) + '\n';
+}
+function parseSession(text) {
+  text = text.replace(/^﻿/, '');
+  const out = { profile: null, chat: [] };
+  const pm = text.match(/^## Profile[ \t]*$/m);
+  if (pm) {
+    const rest = text.slice(pm.index + pm[0].length);
+    const end = rest.search(/^(?:## Chat log[ \t]*|=== .* ===[ \t]*)$/m);
+    const block = end < 0 ? rest : rest.slice(0, end);
+    const marks = []; const re = /^### (Job|Resume|Past interviews)[ \t]*$/gm; let m;
+    while ((m = re.exec(block))) marks.push({ k: SLOT_HEADS[m[1]], s: m.index, e: m.index + m[0].length });
+    if (marks.length) { out.profile = {}; marks.forEach((x, j) => { out.profile[x.k] = block.slice(x.e, j + 1 < marks.length ? marks[j + 1].s : block.length).trim(); }); }
+  }
+  for (const seg of text.split(/^=== .* ===[ \t]*$/m)) {
+    const i = seg.search(/^## Chat log[ \t]*$/m); if (i < 0) continue;
+    let cur = null;
+    for (const raw of seg.slice(i).split(/\r?\n/).slice(1)) {
+      const m = raw.match(/^(ME|INTERVIEWER)\s*[:：]\s*(.*)$/);
+      if (m) { cur = { role: m[1] === 'ME' ? 'user' : 'assistant', text: m[2] }; out.chat.push(cur); }
+      else if (cur) cur.text += '\n' + raw;
+    }
+  }
+  out.chat.forEach(t => t.text = t.text.trim());
+  return out;
+}
+// Profile docs refill all three slots + the chat; anything else goes into the selected slot
+function applyText(text, label, doc) {
+  const d = parseSession(text);
+  if (d.profile) {
+    let n = 0;
+    for (const k of Object.keys(SLOTS)) if (d.profile[k] !== undefined) { const r = scrub(d.profile[k], k); slotText[k] = r.text; ls.set('ji-' + k, r.text); n += r.n; }
+    turns.length = 0; $('feed').innerHTML = '';
+    for (const t of d.chat) { turns.push(t); bubble(t.role, t.text); }
+    paintTabs(); showSlot(); scrollFeed();
+    if (doc) { gDoc = doc; exported = turns.length; } else { gDoc = null; exported = 0; $('recent').value = ''; }
+    setStatus('Loaded profile from "' + label + '"' + (d.chat.length ? ' + ' + d.chat.length + ' chat messages' : '') + (n ? ' · removed ' + n + ' personal detail' + (n > 1 ? 's' : '') : ''));
+  } else setSlot(active, text, label);
+}
+$('copyBtn').onclick = async () => {
+  try { await navigator.clipboard.writeText(fullDoc(turns)); setStatus('Copied profile + chat to the clipboard'); }
+  catch (e) { setStatus('Could not copy: ' + e.message); }
+};
+
+// Save → Doc: a new doc gets the profile + chat; an existing doc gets only the new chat appended (its profile is left as you edited it)
+function docName() { const d = new Date(), z = n => String(n).padStart(2, '0'); return 'Interview ' + jobTitle() + ' ' + d.getFullYear() + '-' + z(d.getMonth() + 1) + '-' + z(d.getDate()); }
+async function exportDoc() {
+  if (!gToken) { setStatus('Sign in to Google, then tap Save again'); if (gClient) gClient.requestAccessToken(); return; }
+  const fresh = turns.slice(exported);
+  if (gDoc && !fresh.some(m => !m.hidden)) { setStatus('Nothing new to save'); return; }
+  $('exportBtn').disabled = true;
+  try {
+    if (!gDoc) {
+      const fid = folderId($('folder').value);
+      if (fid === null) throw new Error('Could not find a folder ID in that link');
+      const meta = { name: docName(), mimeType: 'application/vnd.google-apps.document' };
+      if (fid) meta.parents = [fid];
+      const bnd = 'jibnd' + Math.random().toString(36).slice(2);
+      const body = '--' + bnd + '\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n' + JSON.stringify(meta) +
+        '\r\n--' + bnd + '\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n' + fullDoc(turns) + '\r\n--' + bnd + '--';
+      const r = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true&fields=id,name', {
+        method: 'POST', headers: { ...gAuth(), 'Content-Type': 'multipart/related; boundary=' + bnd }, body });
+      if (r.status === 401) throw gExpired();
+      if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error((e.error && e.error.message) || 'Save failed (HTTP ' + r.status + ')'); }
+      gDoc = await r.json();
+      const o = document.createElement('option'); o.value = gDoc.id; o.textContent = gDoc.name; $('recent').appendChild(o); $('recent').value = gDoc.id;
+      setStatus('Saved profile + chat to new doc "' + gDoc.name + '" — next saves append chat');
+    } else {
+      const dr = await fetch('https://docs.googleapis.com/v1/documents/' + gDoc.id + '?fields=body.content.endIndex', { headers: gAuth() });
+      if (dr.status === 401) throw gExpired();
+      if (!dr.ok) throw new Error('Doc read failed (HTTP ' + dr.status + ')');
+      const c = (await dr.json()).body.content; const end = c[c.length - 1].endIndex;
+      const text = '\n=== ' + new Date().toLocaleString() + ' · ' + jobTitle() + ' ===\n## Chat log\n' + chatLog(fresh) + '\n';
+      const r = await fetch('https://docs.googleapis.com/v1/documents/' + gDoc.id + ':batchUpdate', { method: 'POST', headers: { ...gAuth(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requests: [{ insertText: { location: { index: end - 1 }, text } }] }) });
+      if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error((e.error && e.error.message) || 'Append failed (HTTP ' + r.status + ')'); }
+      setStatus('Appended chat to "' + gDoc.name + '"');
+    }
+    exported = turns.length;
+  } catch (e) { setStatus(e.message); }
+  finally { $('exportBtn').disabled = false; }
+}
+$('exportBtn').onclick = exportDoc;
+
+// Dropdown only chooses the doc; Import loads it, Save writes to it
+$('recent').onchange = () => {
+  const id = $('recent').value;
+  if (!id) { gDoc = null; exported = 0; setStatus('Save will create a new doc'); return; }
+  gDoc = { id, name: $('recent').selectedOptions[0].textContent };
+  exported = turns.length;
+  setStatus('Doc: "' + gDoc.name + '" — Import loads it, Save appends chat to it');
+};
+$('importBtn').onclick = async () => {
+  if (!gToken) { setStatus('Sign in to Google, then tap Import again'); if (gClient) gClient.requestAccessToken(); return; }
+  const id = $('recent').value; if (!id) { setStatus('Pick a doc in the dropdown first'); return; }
+  const name = $('recent').selectedOptions[0].textContent;
+  setStatus('Importing "' + name + '"…');
+  try {
+    const r = await fetch('https://www.googleapis.com/drive/v3/files/' + id + '/export?mimeType=text/plain', { headers: gAuth() });
+    if (r.status === 401) throw gExpired();
+    if (!r.ok) throw new Error('Could not read doc (HTTP ' + r.status + ')');
+    applyText(await r.text(), name, { id, name });
+  } catch (e) { setStatus(e.message); }
+};
+gInit();
+</script>
+</body>
+</html>
