@@ -581,14 +581,13 @@
     <div class="setup-body">
       <div class="setup-row">
         <button class="btn google" id="authBtn" onclick="gdriveSignIn()">Sign In</button>
-        <input type="text" id="gSearchInput" placeholder="vocabulary-google-it" value="">
-        <button class="btn primary" id="gSearchBtn" onclick="gdriveSearch()" disabled>Load</button>
+        <input type="text" id="gFolderInput" placeholder="Drive folder link (blank = recent sheets)" spellcheck="false" autocomplete="off">
       </div>
       <div class="setup-row">
-        <div class="recent-dropdown-wrapper">
-          <button class="btn outline" id="recentBtn" disabled>Recent ▾</button>
-          <div id="recentDropdown" class="recent-dropdown" hidden></div>
-        </div>
+        <label>File</label>
+        <select id="gFileSelect" disabled onchange="onGFileSelect()">
+          <option value="">Sign in first</option>
+        </select>
       </div>
       <div class="setup-row">
         <label>Sheet</label>
@@ -1573,9 +1572,9 @@ function gdriveInitClient() {
         if (response.access_token) {
           gdriveAccessToken = response.access_token;
           document.getElementById('authBtn').textContent = 'Sign Out';
-          document.getElementById('gSearchBtn').disabled = false;
-          document.getElementById('recentBtn').disabled = false;
-          setGStatus('Signed in. Enter a spreadsheet name and click Load.');
+          document.getElementById('gFileSelect').disabled = false;
+          setGStatus('Signed in.');
+          loadGFileList();
         }
       },
     });
@@ -1594,11 +1593,10 @@ function gdriveSignIn() {
     gdriveAccessToken = null;
     gdriveWorkbook = null;
     document.getElementById('authBtn').textContent = 'Sign In';
-    document.getElementById('gSearchBtn').disabled = true;
+    document.getElementById('gFileSelect').innerHTML = '<option value="">Sign in first</option>';
+    document.getElementById('gFileSelect').disabled = true;
     document.getElementById('gSheetSelect').innerHTML = '<option value="">Sign in first</option>';
     document.getElementById('gSheetSelect').disabled = true;
-    document.getElementById('recentBtn').disabled = true;
-    closeRecentDropdown();
     setGStatus('Signed out');
     return;
   }
@@ -1609,115 +1607,54 @@ function gdriveSignIn() {
   }
 }
 
-async function gdriveSearch() {
-  var searchTerm = document.getElementById('gSearchInput').value.trim();
-  if (!searchTerm) { setGStatus('Enter a spreadsheet name'); return; }
+// Folder link / URL / bare ID -> folder ID ('' = none, null = unparseable)
+function gdriveFolderId(v) {
+  v = (v || '').trim(); if (!v) return '';
+  var m = v.match(/\/folders\/([\w-]+)/) || v.match(/[?&]id=([\w-]+)/) || v.match(/^([\w-]{20,})$/);
+  return m ? m[1] : null;
+}
+
+// List the spreadsheets in the folder (or your 15 most recently opened) into the File dropdown
+async function loadGFileList() {
+  var raw = document.getElementById('gFolderInput').value, fid = gdriveFolderId(raw);
+  if (fid === null) { setGStatus('Could not find a folder ID in that link'); return; }
   try {
-    setGStatus('Searching...');
-    var query = encodeURIComponent("name contains '" + searchTerm + "' and trashed=false and mimeType='application/vnd.google-apps.spreadsheet'");
-    var resp = await fetch('https://www.googleapis.com/drive/v3/files?q=' + query + '&fields=files(id,name)&orderBy=name', {
+    setGStatus(fid ? 'Listing folder...' : 'Listing recent sheets...');
+    var base = "mimeType='application/vnd.google-apps.spreadsheet' and trashed=false";
+    var q = encodeURIComponent(fid ? "'" + fid + "' in parents and " + base : base);
+    var order = fid ? 'modifiedTime+desc&pageSize=100' : 'viewedByMeTime+desc&pageSize=15';
+    var resp = await fetch('https://www.googleapis.com/drive/v3/files?q=' + q + '&orderBy=' + order + '&supportsAllDrives=true&includeItemsFromAllDrives=true&fields=files(id,name)', {
       headers: { Authorization: 'Bearer ' + gdriveAccessToken }
     });
-    if (!resp.ok) throw new Error('Search failed');
-    var data = await resp.json();
-    if (!data.files || data.files.length === 0) {
-      setGStatus('No spreadsheet matching "' + searchTerm + '"');
-      return;
-    }
-    var file = data.files[0];
-    setGStatus('Loading "' + file.name + '"...');
-    await gdriveLoadSpreadsheet(file.id, file.name);
+    if (resp.status === 401) { gdriveSignIn(); setGStatus('Google session expired. Sign in again.'); return; }
+    if (!resp.ok) throw new Error('Drive API error ' + resp.status);
+    var data = await resp.json(), files = data.files || [];
+    var sel = document.getElementById('gFileSelect');
+    sel.innerHTML = '<option value="">' + (fid ? 'Spreadsheet in folder...' : 'Recent spreadsheet...') + '</option>';
+    files.forEach(function(f) {
+      var o = document.createElement('option'); o.value = f.id; o.textContent = f.name || '(untitled)'; sel.appendChild(o);
+    });
+    sel.disabled = false;
+    try { localStorage.setItem('lg-folder', raw.trim()); } catch (e) {}
+    setGStatus(files.length ? (fid ? 'Folder: ' : 'Recent: ') + files.length + ' spreadsheet' + (files.length > 1 ? 's' : '') : (fid ? 'No Google Sheets in that folder' : 'No recent spreadsheets'));
   } catch (err) {
     setGStatus('Error: ' + err.message);
   }
 }
 
-/* ── RECENT FILES DROPDOWN (T005–T014) ── */
-
-var _recentDismissListener = null;
-
-async function fetchRecentFiles() {
-  var btn = document.getElementById('recentBtn');
-  btn.disabled = true;
-  btn.textContent = 'Loading\u2026';
-  try {
-    var q = encodeURIComponent("mimeType='application/vnd.google-apps.spreadsheet' and trashed=false");
-    var fields = encodeURIComponent('files(id,name,viewedByMeTime)');
-    var url = 'https://www.googleapis.com/drive/v3/files?q=' + q +
-              '&orderBy=viewedByMeTime+desc&pageSize=10&fields=' + fields;
-    var resp = await fetch(url, { headers: { Authorization: 'Bearer ' + gdriveAccessToken } });
-    if (!resp.ok) throw new Error('Drive API error ' + resp.status);
-    var data = await resp.json();
-    openRecentDropdown(data.files);
-  } catch (err) {
-    setGStatus('Error fetching recent files: ' + err.message);
-  } finally {
-    btn.disabled = false;
-    btn.textContent = 'Recent \u25be';
-  }
-}
-
-function openRecentDropdown(files) {
-  var dropdown = document.getElementById('recentDropdown');
-  dropdown.innerHTML = '';
-  if (!files || files.length === 0) {
-    var empty = document.createElement('button');
-    empty.className = 'recent-dropdown-item';
-    empty.textContent = 'No recent spreadsheets found';
-    empty.disabled = true;
-    empty.style.color = '#999'; empty.style.cursor = 'default';
-    dropdown.appendChild(empty);
-    dropdown.removeAttribute('hidden');
-    _registerDismissListener();
-    return;
-  }
-  files.forEach(function(f) {
-    var item = document.createElement('button');
-    item.className = 'recent-dropdown-item';
-    item.textContent = f.name;
-    item.addEventListener('click', function() {
-      closeRecentDropdown();
-      gdriveLoadSpreadsheet(f.id, f.name);
-    });
-    dropdown.appendChild(item);
-  });
-  dropdown.removeAttribute('hidden');
-  _registerDismissListener();
-}
-
-function closeRecentDropdown() {
-  var dropdown = document.getElementById('recentDropdown');
-  if (dropdown) dropdown.setAttribute('hidden', '');
-  if (_recentDismissListener) {
-    document.removeEventListener('touchstart', _recentDismissListener);
-    document.removeEventListener('click', _recentDismissListener);
-    _recentDismissListener = null;
-  }
-}
-
-function _registerDismissListener() {
-  if (_recentDismissListener) return;
-  _recentDismissListener = function(e) {
-    var wrapper = document.querySelector('.recent-dropdown-wrapper');
-    if (wrapper && !wrapper.contains(e.target)) {
-      closeRecentDropdown();
-    }
-  };
-  setTimeout(function() {
-    document.addEventListener('touchstart', _recentDismissListener);
-    document.addEventListener('click', _recentDismissListener);
-  }, 0);
+function onGFileSelect() {
+  var sel = document.getElementById('gFileSelect'), id = sel.value;
+  if (!id) return;
+  var name = sel.selectedOptions[0].textContent;
+  setGStatus('Loading "' + name + '"...');
+  gdriveLoadSpreadsheet(id, name);
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-  document.getElementById('recentBtn').addEventListener('click', function() {
-    var dropdown = document.getElementById('recentDropdown');
-    if (!dropdown.hasAttribute('hidden')) {
-      closeRecentDropdown();
-    } else {
-      fetchRecentFiles();
-    }
-  });
+  var fi = document.getElementById('gFolderInput');
+  try { fi.value = localStorage.getItem('lg-folder') || ''; } catch (e) {}
+  fi.addEventListener('change', function() { if (gdriveAccessToken) loadGFileList(); });
+  fi.addEventListener('paste', function() { setTimeout(function() { if (gdriveAccessToken) loadGFileList(); }, 0); });
 });
 
 async function gdriveLoadSpreadsheet(fileId, fileName) {
