@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Context Teacher</title>
+<style>
+  :root { color-scheme: dark; --bg:#111; --fg:#eee; --muted:#aaa; --dim:#888; --ctl:#1c1c1c; --line:#444; --line2:#2c2c2c; --accent:#d4a84b; --card:#1a1a1a; --me:#1d3b66; --asst:#232323; --err:#5a1f1f; }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) { color-scheme: light; --bg:#f6f6f4; --fg:#1a1a1a; --muted:#555; --dim:#777; --ctl:#fff; --line:#c8c8c4; --line2:#ddd; --accent:#8a6410; --card:#fff; --me:#d6e6ff; --asst:#ececea; --err:#ffd9d9; }
+  }
+  :root[data-theme="light"] { color-scheme: light; --bg:#f6f6f4; --fg:#1a1a1a; --muted:#555; --dim:#777; --ctl:#fff; --line:#c8c8c4; --line2:#ddd; --accent:#8a6410; --card:#fff; --me:#d6e6ff; --asst:#ececea; --err:#ffd9d9; }
+  :root[data-theme="dark"] { color-scheme: dark; --bg:#111; --fg:#eee; --muted:#aaa; --dim:#888; --ctl:#1c1c1c; --line:#444; --line2:#2c2c2c; --accent:#d4a84b; --card:#1a1a1a; --me:#1d3b66; --asst:#232323; --err:#5a1f1f; }
+  :root { --fs: 17; }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; }
+  body { font-family: -apple-system, system-ui, sans-serif; background: var(--bg); color: var(--fg); display: flex; flex-direction: column; overflow: hidden; }
+  select, button, input, textarea { background: var(--ctl); color: var(--fg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font-size: 14px; font-family: inherit; }
+  button { cursor: pointer; min-height: 40px; }
+  button.primary { background: #2a6fd6; border-color: #2a6fd6; color: #fff; font-weight: 600; }
+  button:disabled { opacity: .5; }
+  .bar { display: flex; gap: 6px; align-items: center; padding: 8px 10px; border-bottom: 1px solid var(--line2); flex-wrap: nowrap; overflow-x: auto; flex-shrink: 0; scrollbar-width: none; }
+  .bar::-webkit-scrollbar { display: none; }
+  .bar > * { flex-shrink: 0; }
+  .bar select { max-width: 150px; }
+  .bar input.num { width: 64px; }
+  .bar .sep { width: 1px; align-self: stretch; background: var(--line2); margin: 0 2px; }
+  .sub { display: flex; align-items: center; gap: 8px; padding: 4px 12px 0; font-size: 12px; color: var(--accent); letter-spacing: .5px; flex-shrink: 0; }
+  .status { font-size: 12px; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  details.settings { padding: 0 10px; font-size: 13px; color: var(--muted); border-bottom: 1px solid var(--line2); }
+  details.settings summary { padding: 6px 0; cursor: pointer; }
+  .setrow { display: flex; gap: 6px; flex-wrap: wrap; padding-bottom: 8px; align-items: center; }
+  .ctxwrap { margin: 6px 10px 0; flex-shrink: 0; }
+  .ctxwrap.collapsed { display: none; }
+  #ctx { width: 100%; height: 26vh; resize: vertical; font-family: Georgia, 'Times New Roman', serif; font-size: calc(var(--fs) * 1px - 1px); line-height: 1.5; background: var(--card); }
+  .passage { margin: 6px 10px 0; border: 1px solid var(--line2); border-radius: 10px; background: var(--card); flex-shrink: 0; max-height: calc(6em + 16px); overflow-y: auto; padding: 8px 14px; font-family: Georgia, 'Times New Roman', serif; font-size: calc(var(--fs) * 1px); line-height: 1.5; overscroll-behavior: contain; }
+  .passage.collapsed { max-height: 0; padding: 0 14px; border-width: 0; margin-top: 0; overflow: hidden; }
+  .passage sup { color: var(--accent); font-size: 11px; margin-right: 3px; font-family: -apple-system, system-ui, sans-serif; }
+  .passage .v { cursor: pointer; }
+  .passage .v.sel { background: rgba(212,168,75,.25); border-radius: 3px; }
+  .feed { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 10px; overscroll-behavior: contain; }
+  .empty { color: var(--dim); font-size: 14px; text-align: center; margin: auto; padding: 20px; line-height: 1.6; }
+  .msg { max-width: 94%; padding: 8px 12px; border-radius: 12px; white-space: pre-wrap; word-break: break-word; font-size: calc(var(--fs) * 1px - 1px); line-height: 1.6; }
+  .msg.user { align-self: flex-end; background: var(--me); }
+  .msg.assistant { align-self: flex-start; background: var(--asst); }
+  .msg.err { background: var(--err); }
+  .divider { align-self: center; font-size: 11px; color: var(--dim); letter-spacing: 1px; text-transform: uppercase; }
+  .quick { display: flex; gap: 6px; padding: 0 10px 6px; overflow-x: auto; }
+  .quick button { white-space: nowrap; min-height: 34px; font-size: 13px; padding: 4px 12px; border-radius: 999px; }
+  .composer { border-top: 1px solid var(--line2); padding: 8px 10px calc(8px + env(safe-area-inset-bottom)); display: flex; gap: 8px; align-items: flex-end; }
+  .composer textarea { flex: 1; min-height: 48px; max-height: 140px; resize: none; font-size: 16px; line-height: 1.4; }
+  .composer button { min-height: 48px; padding: 0 18px; }
+</style>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+<div class="bar">
+  <button id="gBtn" title="Sign in to Google">Google</button>
+  <select id="recent" disabled title="Doc to import from / save into"><option value="">＋ New doc</option></select>
+  <button id="importBtn" title="Load the chosen Google Doc as the context">Import</button>
+  <button id="fileBtn" title="Load a .md / .txt file as the context">Load file</button>
+  <button id="copyBtn" title="Copy the context plus the whole chat to the clipboard">Copy all</button>
+  <button id="exportBtn" title="Save the chat to the chosen doc (new doc if ＋ New doc)">Save → Doc</button>
+  <span class="sep"></span>
+  <button id="togBtn" title="Show / hide the context">Context</button>
+  <button id="fMinus" title="Smaller text">A−</button>
+  <button id="fPlus" title="Larger text">A+</button>
+  <button id="themeBtn" title="Light / dark"></button>
+  <button id="clearBtn" title="Clear the chat">New</button>
+</div>
+<input type="file" id="fileInput" accept=".md,.markdown,.txt,text/plain,text/markdown" style="display:none">
+<div class="sub"><span class="status" id="status"></span></div>
+<details class="settings">
+  <summary>Settings</summary>
+  <div class="setrow">
+    <label>Teacher <select id="style"></select></label>
+    <label>Folder <input id="folder" type="text" placeholder="Drive folder link (blank = recent docs)" spellcheck="false" autocomplete="off" style="width:240px"></label>
+    <input id="code" type="password" placeholder="Access code" autocomplete="off" style="width:130px">
+    <label>Model <input id="model" list="models" value="gpt-4.1-mini" spellcheck="false" style="width:130px">
+      <datalist id="models"><option value="gpt-4.1-mini"><option value="gpt-4.1"><option value="gpt-4o-mini"><option value="gpt-5-mini"><option value="gpt-5"></datalist></label>
+  </div>
+</details>
+<div class="ctxwrap" id="ctxwrap"><textarea id="ctx" placeholder="Import a context doc from Google Docs, load a file, or paste it here. The teacher reads this before answering." spellcheck="false"></textarea></div>
+<div class="feed" id="feed">
+  <div class="empty" id="empty">Load your context doc, then ask. The teacher builds on it and continues the topic where you left off.</div>
+</div>
+<div class="quick" id="quick"></div>
+<div class="composer">
+  <textarea id="inp" rows="1" placeholder="Ask or continue the topic…" autocapitalize="sentences"></textarea>
+  <button class="primary" id="go">Ask</button>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const ls = { get(k, d) { try { return localStorage.getItem(k) ?? d; } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+
+const STYLES = {
+  explainer: { name: 'Explainer', sys: 'You are a clear, patient teacher. Explain ideas simply, with concrete examples, and build on what the reader already has in their notes.' },
+  socratic: { name: 'Socratic', sys: 'You are a Socratic teacher. Answer briefly, then ask one or two probing questions that push the reader to think the idea through. Give a direct answer if they ask for one.' },
+  coach: { name: 'Coach', sys: 'You are a practical coach. Turn ideas into specific actions, small habits and next steps the reader can do this week, and hold them to a standard without shaming them.' },
+  researcher: { name: 'Researcher', sys: 'You are a careful researcher. Go deeper on the topic, separate well-established facts from interpretation, and list what the reader should verify (quotes, dates, sources) before relying on it.' }
+};
+const RULES = 'The reader\'s own context notes are given below. Treat them as the starting point: build on them, do not repeat them back, and respect the open items and questions they list. Never invent quotes, sources or statistics; if you are not sure something is accurate or a quotation is exact, say it is unverified and the reader should check it. Clearly separate what the notes say, what is well established, and your own suggestion. Be concise (a few short paragraphs at most) and speak to the reader directly.';
+const QUICK = ['Summarize where I am', 'Go deeper on the open items', 'Turn this into a plan', 'What should I verify?', 'Quiz me'];
+
+const turns = []; let busy = false, gDoc = null, exported = 0;
+
+for (const k of Object.keys(STYLES)) { const o = document.createElement('option'); o.value = k; o.textContent = STYLES[k].name; $('style').appendChild(o); }
+$('style').value = STYLES[ls.get('tc-style', 'explainer')] ? ls.get('tc-style', 'explainer') : 'explainer';
+$('style').onchange = () => ls.set('tc-style', $('style').value);
+$('code').value = ls.get('ocr-access-code', '');   // shared with the other pages
+$('code').onchange = () => ls.set('ocr-access-code', $('code').value.trim());
+$('model').value = ls.get('tc-model', 'gpt-4.1-mini');
+$('model').onchange = () => ls.set('tc-model', $('model').value.trim());
+$('ctx').value = ls.get('tc-ctx', '');
+$('ctx').addEventListener('input', () => ls.set('tc-ctx', $('ctx').value));
+QUICK.forEach(q => { const b = document.createElement('button'); b.textContent = q; b.onclick = () => { $('inp').value = q; ask(); }; $('quick').appendChild(b); });
+
+let fs = Math.max(13, Math.min(30, parseInt(ls.get('tc-fs', '17'), 10) || 17));
+function applyFs() { document.documentElement.style.setProperty('--fs', fs); ls.set('tc-fs', fs); }
+$('fMinus').onclick = () => { fs = Math.max(13, fs - 1); applyFs(); };
+$('fPlus').onclick = () => { fs = Math.min(30, fs + 1); applyFs(); };
+applyFs();
+function isLight() { const t = document.documentElement.dataset.theme; return t ? t === 'light' : matchMedia('(prefers-color-scheme: light)').matches; }
+function applyTheme(t) { document.documentElement.dataset.theme = t; $('themeBtn').textContent = t === 'light' ? '☾' : '☀︎'; ls.set('tc-theme', t); }
+applyTheme(ls.get('tc-theme', '') || (isLight() ? 'light' : 'dark'));
+$('themeBtn').onclick = () => applyTheme(isLight() ? 'dark' : 'light');
+$('togBtn').onclick = () => $('ctxwrap').classList.toggle('collapsed');
+function setStatus(t) { $('status').textContent = t || ''; }
+function scrollFeed() { $('feed').scrollTop = $('feed').scrollHeight; }
+function ctxTitle() { const m = $('ctx').value.match(/^#\s*(.+)$/m); return (m ? m[1] : 'Teacher').replace(/^Context:\s*/i, '').trim().slice(0, 60); }
+function updateStatus() { const n = $('ctx').value.trim().length; setStatus(n ? ctxTitle() + ' · ' + n.toLocaleString() + ' chars of context' : 'No context loaded'); }
+$('ctx').addEventListener('input', updateStatus); updateStatus();
+$('clearBtn').onclick = () => { turns.length = 0; exported = 0; gDoc = null; $('recent').value = ''; $('feed').innerHTML = ''; };
+
+// ── context doc <-> text (a saved doc may end with "## Chat log" that holds the conversation) ──
+function parseContextDoc(text) {
+  text = text.replace(/^﻿/, '');
+  let ctx = '', chat = [];
+  for (const seg of text.split(/^=== .* ===\s*$/m)) {
+    const i = seg.search(/^## Chat log\s*$/m);
+    const before = (i < 0 ? seg : seg.slice(0, i)).trim();
+    if (before && /^#/.test(before)) ctx = before;
+    else if (before && !ctx) ctx = before;
+    if (i >= 0) {
+      let cur = null;
+      for (const raw of seg.slice(i).split(/\r?\n/).slice(1)) {
+        const m = raw.match(/^(ME|TEACHER)\s*[:：]\s*(.*)$/);
+        if (m) { cur = { role: m[1] === 'ME' ? 'user' : 'assistant', text: m[2] }; chat.push(cur); }
+        else if (cur) cur.text += '\n' + raw;
+      }
+    }
+  }
+  chat.forEach(t => t.text = t.text.trim());
+  return { ctx, chat };
+}
+function loadContext(text, label) {
+  const d = parseContextDoc(text);
+  $('ctx').value = d.ctx || text.trim(); ls.set('tc-ctx', $('ctx').value);
+  turns.length = 0; $('feed').innerHTML = '';
+  for (const t of d.chat) { turns.push(t); bubble(t.role, t.text); }
+  exported = turns.length; scrollFeed(); $('ctxwrap').classList.remove('collapsed');
+  setStatus('Loaded "' + label + '"' + (d.chat.length ? ' with ' + d.chat.length + ' earlier messages' : '') + ' · ' + ctxTitle());
+}
+$('fileBtn').onclick = () => $('fileInput').click();
+$('fileInput').onchange = async e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  try { loadContext(await f.text(), f.name); gDoc = null; exported = 0; $('recent').value = ''; } catch (err) { setStatus('Could not read file: ' + err.message); }
+};
+
+// ── chat ──
+function systemPrompt() {
+  const c = $('ctx').value.trim();
+  return STYLES[$('style').value].sys + '\n' + RULES + '\n\n--- Reader\'s context notes ---\n' + (c || '(none loaded; ask the reader what they are working on)');
+}
+function bubble(role, text) { $('empty') && $('empty').remove(); const d = document.createElement('div'); d.className = 'msg ' + role; const t = document.createElement('span'); t.textContent = text; d.appendChild(t); $('feed').appendChild(d); scrollFeed(); return t; }
+async function ask() {
+  if (busy) return;
+  const text = $('inp').value.trim(); if (!text) return;
+  const code = $('code').value.trim(); if (!code) { setStatus('Enter the access code in Settings'); return; }
+  busy = true; $('go').disabled = true;
+  bubble('user', text); $('inp').value = ''; $('inp').style.height = '';
+  const out = bubble('assistant', '…'); let acc = '';
+  const msgs = turns.slice(-10).map(t => ({ role: t.role, text: t.text })).concat([{ role: 'user', text }]);
+  try {
+    const r = await fetch('/api/tutor', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accessCode: code, model: $('model').value.trim(), system: systemPrompt(), messages: msgs }) });
+    if (r.status === 401) { ls.set('ocr-access-code', ''); $('code').value = ''; }
+    if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.error || ('HTTP ' + r.status)); }
+    const reader = r.body.getReader(); const dec = new TextDecoder();
+    while (true) { const { done, value } = await reader.read(); if (done) break; acc += dec.decode(value, { stream: true }); out.textContent = acc; scrollFeed(); }
+    turns.push({ role: 'user', text }, { role: 'assistant', text: acc });
+  } catch (e) { out.parentNode.remove(); bubble('assistant err', 'Error: ' + e.message); }
+  finally { busy = false; $('go').disabled = false; $('inp').focus(); }
+}
+$('go').onclick = ask;
+$('inp').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); ask(); } });
+$('inp').addEventListener('input', e => { const t = e.target; t.style.height = 'auto'; t.style.height = Math.min(t.scrollHeight, 140) + 'px'; });
+
+// ── Google Docs: import a context doc / save the chat (same client as the other pages) ──
+const GDRIVE_CLIENT_ID = '1095683227908-7ro25k16mprkf408i3lf583gti8v759b.apps.googleusercontent.com';
+let gToken = null, gClient = null;
+const gAuth = () => ({ Authorization: 'Bearer ' + gToken });
+function gInit() {
+  if (!(window.google && google.accounts)) { setTimeout(gInit, 150); return; }
+  gClient = google.accounts.oauth2.initTokenClient({
+    client_id: GDRIVE_CLIENT_ID, scope: 'https://www.googleapis.com/auth/drive',
+    callback: resp => {
+      if (!resp.access_token) { setStatus('Google sign-in failed: ' + (resp.error || 'unknown')); return; }
+      gToken = resp.access_token; $('gBtn').textContent = '● Google'; $('gBtn').style.color = '#4da3ff';
+      $('recent').disabled = false;
+      setStatus('Google signed in'); loadRecent();
+    }
+  });
+}
+function gExpired() { gToken = null; $('gBtn').textContent = 'Google'; $('gBtn').style.color = ''; $('recent').disabled = true; return new Error('Google session expired — sign in again'); }
+$('gBtn').onclick = () => { if (gToken) { google.accounts.oauth2.revoke(gToken); gExpired(); setStatus('Google signed out'); } else if (gClient) gClient.requestAccessToken(); };
+// Folder link / URL / bare ID -> folder ID ('' = none, null = unparseable)
+function folderId(v) {
+  v = (v || '').trim(); if (!v) return '';
+  const m = v.match(/\/folders\/([\w-]+)/) || v.match(/[?&]id=([\w-]+)/) || v.match(/^([\w-]{20,})$/);
+  return m ? m[1] : null;
+}
+async function loadRecent() {
+  const raw = $('folder').value, fid = folderId(raw);
+  if (fid === null) { setStatus('Could not find a folder ID in that link'); return; }
+  try {
+    const base = "mimeType='application/vnd.google-apps.document' and trashed=false";
+    const q = encodeURIComponent(fid ? "'" + fid + "' in parents and " + base : base);
+    const order = fid ? 'modifiedTime+desc&pageSize=100' : 'viewedByMeTime+desc&pageSize=15';
+    const r = await fetch('https://www.googleapis.com/drive/v3/files?q=' + q + '&orderBy=' + order + '&supportsAllDrives=true&includeItemsFromAllDrives=true&fields=files(id,name)', { headers: gAuth() });
+    if (r.status === 401) throw gExpired();
+    if (!r.ok) throw new Error('Could not list ' + (fid ? 'folder' : 'recent docs') + ' (HTTP ' + r.status + ')');
+    const d = await r.json(); const sel = $('recent');
+    sel.innerHTML = '<option value="">＋ New doc' + (fid ? ' in folder' : '') + '</option>';
+    const files = d.files || [];
+    if (gDoc && !files.some(f => f.id === gDoc.id)) files.unshift(gDoc);   // keep the current target selectable
+    for (const f of files) { const o = document.createElement('option'); o.value = f.id; o.textContent = f.name; sel.appendChild(o); }
+    sel.value = gDoc ? gDoc.id : '';
+    ls.set('tc-folder', raw.trim());
+    setStatus((d.files || []).length ? (fid ? 'Folder: ' : 'Recent: ') + d.files.length + ' docs' : (fid ? 'No Google Docs in that folder' : 'No recent docs'));
+  } catch (e) { setStatus(e.message); }
+}
+$('folder').value = ls.get('tc-folder', '');
+$('folder').addEventListener('change', () => { if (gToken) loadRecent(); });
+$('folder').addEventListener('paste', () => setTimeout(() => { if (gToken) loadRecent(); }, 0));
+
+
+
+// Save → Doc: new doc = the context + "## Chat log"; an existing doc gets only the new messages appended
+function chatLog(list) { return list.map(m => (m.role === 'user' ? 'ME: ' : 'TEACHER: ') + m.text.trim()).join('\n\n'); }
+function docName() { const d = new Date(), z = n => String(n).padStart(2, '0'); return 'Teacher ' + ctxTitle() + ' ' + d.getFullYear() + '-' + z(d.getMonth() + 1) + '-' + z(d.getDate()); }
+async function exportDoc() {
+  if (!gToken) { setStatus('Sign in to Google, then tap Save again'); if (gClient) gClient.requestAccessToken(); return; }
+  const fresh = turns.slice(exported);
+  if (!gDoc && !$('ctx').value.trim() && !fresh.length) { setStatus('Nothing to save'); return; }
+  if (gDoc && !fresh.length) { setStatus('Nothing new to save'); return; }
+  $('exportBtn').disabled = true;
+  try {
+    if (!gDoc) {
+      const fid = folderId($('folder').value);
+      if (fid === null) throw new Error('Could not find a folder ID in that link');
+      const meta = { name: docName(), mimeType: 'application/vnd.google-apps.document' };
+      if (fid) meta.parents = [fid];
+      const text = $('ctx').value.trim() + '\n\n## Chat log\n' + chatLog(fresh) + '\n';
+      const bnd = 'tcbnd' + Math.random().toString(36).slice(2);
+      const body = '--' + bnd + '\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n' + JSON.stringify(meta) +
+        '\r\n--' + bnd + '\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n' + text + '\r\n--' + bnd + '--';
+      const r = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true&fields=id,name', {
+        method: 'POST', headers: { ...gAuth(), 'Content-Type': 'multipart/related; boundary=' + bnd }, body });
+      if (r.status === 401) throw gExpired();
+      if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error((e.error && e.error.message) || 'Save failed (HTTP ' + r.status + ')'); }
+      gDoc = await r.json();
+      const o = document.createElement('option'); o.value = gDoc.id; o.textContent = gDoc.name; $('recent').appendChild(o); $('recent').value = gDoc.id;
+      setStatus('Saved to new doc "' + gDoc.name + '" — next saves append');
+    } else {
+      const dr = await fetch('https://docs.googleapis.com/v1/documents/' + gDoc.id + '?fields=body.content.endIndex', { headers: gAuth() });
+      if (dr.status === 401) throw gExpired();
+      if (!dr.ok) throw new Error('Doc read failed (HTTP ' + dr.status + ')');
+      const c = (await dr.json()).body.content; const end = c[c.length - 1].endIndex;
+      const r = await fetch('https://docs.googleapis.com/v1/documents/' + gDoc.id + ':batchUpdate', { method: 'POST', headers: { ...gAuth(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requests: [{ insertText: { location: { index: end - 1 }, text: '\n=== ' + new Date().toLocaleString() + ' ===\n## Chat log\n' + chatLog(fresh) + '\n' } }] }) });
+      if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error((e.error && e.error.message) || 'Append failed (HTTP ' + r.status + ')'); }
+      setStatus('Appended to "' + gDoc.name + '"');
+    }
+    exported = turns.length;
+  } catch (e) { setStatus(e.message); }
+  finally { $('exportBtn').disabled = false; }
+}
+$('exportBtn').onclick = exportDoc;
+
+// Copy all: context + full chat, in the same format Import reads back
+async function copyAll() {
+  const ctx = $('ctx').value.trim();
+  if (!ctx && !turns.length) { setStatus('Nothing to copy'); return; }
+  const text = (ctx || '# Context') + '\n\n## Chat log\n' + chatLog(turns) + '\n';
+  try { await navigator.clipboard.writeText(text); setStatus('Copied context + ' + turns.length + ' messages to clipboard'); }
+  catch (e) {
+    const t = document.createElement('textarea'); t.value = text; document.body.appendChild(t); t.select();
+    let ok = false; try { ok = document.execCommand('copy'); } catch (e2) {} t.remove();
+    setStatus(ok ? 'Copied context + ' + turns.length + ' messages to clipboard' : 'Could not copy. Check clipboard permissions.');
+  }
+}
+$('copyBtn').onclick = copyAll;
+
+// Dropdown only chooses the doc; Import / Save do the work
+$('recent').onchange = () => {
+  const id = $('recent').value;
+  if (!id) { gDoc = null; exported = 0; setStatus('Save will create a new doc'); return; }
+  gDoc = { id, name: $('recent').selectedOptions[0].textContent };
+  exported = turns.length;   // later saves add only what comes after now
+  setStatus('Doc: "' + gDoc.name + '" — Import loads it, Save appends to it');
+};
+$('importBtn').onclick = async () => {
+  if (!gToken) { setStatus('Sign in to Google, then tap Import again'); if (gClient) gClient.requestAccessToken(); return; }
+  const id = $('recent').value; if (!id) { setStatus('Pick a doc in the dropdown first'); return; }
+  const name = $('recent').selectedOptions[0].textContent;
+  setStatus('Importing "' + name + '"…');
+  try {
+    const r = await fetch('https://www.googleapis.com/drive/v3/files/' + id + '/export?mimeType=text/plain', { headers: gAuth() });
+    if (r.status === 401) throw gExpired();
+    if (!r.ok) throw new Error('Could not read doc (HTTP ' + r.status + ')');
+    loadContext(await r.text(), name);
+    gDoc = { id, name }; exported = turns.length;
+  } catch (e) { setStatus(e.message); }
+};
+gInit();
+</script>
+</body>
+</html>
