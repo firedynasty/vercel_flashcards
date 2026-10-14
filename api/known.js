@@ -1,11 +1,12 @@
 // Vercel Serverless Function — Supabase `known_items` table proxy ("mark as known")
-// Keeps SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY server-side. service_role is
+// Keeps CHESS_SUPABASE_URL and CHESS_SUPABASE_SERVICE_ROLE_KEY server-side
+// (falls back to SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY). service_role is
 // required because RLS on `known_items` has no anon/authenticated policies — same
 // pattern as vercel_fen_saver's api/puzzles.js (same Supabase project).
 //
 // Set in Vercel dashboard -> Settings -> Environment Variables:
-//   SUPABASE_URL = https://xxxx.supabase.co
-//   SUPABASE_SERVICE_ROLE_KEY = your-service-role-key
+//   CHESS_SUPABASE_URL = https://xxxx.supabase.co
+//   CHESS_SUPABASE_SERVICE_ROLE_KEY = your-service-role-key
 //   ACCESS_CODE = (already set; same check as api/tutor.js)
 //
 // Table (run once in the Supabase SQL editor):
@@ -42,9 +43,9 @@ export default async function handler(req, res) {
   if (!accessCode) return res.status(400).json({ error: 'Access code required' });
   if (!validAccessCode || accessCode !== validAccessCode) return res.status(401).json({ error: 'Invalid access code' });
 
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) return res.status(500).json({ error: 'Supabase env vars not set on server.' });
+  const url = process.env.CHESS_SUPABASE_URL || process.env.SUPABASE_URL;
+  const key = process.env.CHESS_SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return res.status(500).json({ error: 'Supabase env vars not set on server (need CHESS_SUPABASE_URL and CHESS_SUPABASE_SERVICE_ROLE_KEY).' });
   const headers = { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' };
 
   const clean = (v, max) => (typeof v === 'string' && v.length > 0 && v.length <= max) ? v : null;
