@@ -160,6 +160,7 @@
         <input class="path-input" id="pathInput" placeholder="/images_for_render" spellcheck="false">
         <button class="tool-btn" id="loadBtn">Load</button>
         <button class="tool-btn" id="slideshowBtn" disabled>▶ Slideshow</button>
+        <button class="tool-btn" id="ankiBtn" title="Hide images you marked known in the last 5 days (synced via Supabase)">Anki: off</button>
     </div>
 
     <div class="stage" id="stage">
@@ -172,10 +173,12 @@
         <select class="jump-select" id="jumpSelect" disabled></select>
         <div class="counter" id="counter">– / –</div>
         <button class="nav-btn" id="nextBtn" disabled>▶</button>
-        <a class="nav-btn" id="qrOpenBtn" href="#" target="_blank" rel="noopener"
-           style="display:none; text-decoration:none; line-height:1; padding-top:10px;"
-           title="Open QR link in new tab">↗</a>
+        <button class="nav-btn" id="qrOpenBtn"
+           style="display:none; line-height:1;"
+           title="Copy the QR code's contents to the clipboard">📋</button>
+        <button class="nav-btn" id="knownBtn" style="display:none; font-size:1rem;" title="Mark this image as known (K)">✓ Known</button>
     </div>
+    <div id="knownInfo" style="display:none; text-align:center; font-size:12px; color:#a8d8ea; flex-shrink:0;"></div>
 
     <div class="filename" id="filenameLabel"></div>
     <div class="status" id="statusLabel"></div>
@@ -194,6 +197,9 @@
         </button>
     </div>
     <div id="qrToast" style="text-align:center; font-size:11px; color:#4ade80; min-height:16px; flex-shrink:0;"></div>
+    <div id="qrTextWrap" style="display:none; text-align:center; flex-shrink:0; padding:0 12px 6px;">
+        <span id="qrText" style="display:inline-block; max-width:100%; max-height:84px; overflow-y:auto; font-size:12px; color:#ddd; background:rgba(255,255,255,0.06); border-radius:6px; padding:4px 10px; white-space:pre-wrap; word-break:break-all; text-align:left; user-select:text; -webkit-user-select:text;"></span>
+    </div>
     <div id="qrScratch" style="position:fixed; left:-9999px; top:-9999px;"></div>
     <div style="text-align:center; font-size:11px; color:#445; flex-shrink:0; padding: 4px 0;">
         ← → navigate &nbsp;|&nbsp; / toggle slideshow
@@ -327,7 +333,8 @@
         }
 
         // ── Viewer state ──
-        var images = [];          // [{ name, path }]
+        var images = [];          // visible images: [{ name, path, id }] (filtered when Anki is on)
+        var allImages = [];       // every image in the folder
         var currentIndex = -1;
         var blobCache = {};       // path → objectURL (current + prefetched next)
         var loadToken = 0;        // guards against stale async loads
@@ -373,6 +380,7 @@
             srcLink.href = url || '#';
             srcLink.style.display = url ? 'inline-block' : 'none';
             qrBtn.style.display = url ? 'inline-block' : 'none';
+            if (typeof updateKnownUI === 'function') updateKnownUI();
         }
 
         function revokeAllBlobs() {
@@ -435,14 +443,23 @@
             document.getElementById('loadBtn').disabled = true;
             try {
                 var entries = await dbxListFolder(folder === '/' ? '' : folder);
-                images = entries
+                allImages = entries
                     .filter(function(en) {
                         if (en['.tag'] !== 'file') return false;
                         var ext = (en.name.split('.').pop() || '').toLowerCase();
                         return IMAGE_EXTS.indexOf(ext) !== -1;
                     })
-                    .map(function(en) { return { name: en.name, path: en.path_display }; })
+                    .map(function(en) { return { name: en.name, path: en.path_display, id: en.id }; })
                     .sort(function(a, b) { return a.name.localeCompare(b.name, undefined, { numeric: true }); });
+
+                knownFolder = folder || '/';
+                knownMap = {};
+                if (ankiOn) {
+                    try { knownMap = await fetchKnown(knownFolder); }
+                    catch(e) { statusLabel.textContent = '⚠ Anki sync failed (' + e.message + ') — showing all images'; }
+                }
+                showKnownToo = false;
+                images = visibleImages();
 
                 revokeAllBlobs();
                 loadToken++;
@@ -454,23 +471,16 @@
                     if (folder) window.history.replaceState({}, document.title, window.location.pathname + '?' + encodeURI(folder));
                 } catch(e) {}
 
-                jumpSelect.innerHTML = '';
-                images.forEach(function(im, i) {
-                    var opt = document.createElement('option');
-                    opt.value = String(i);
-                    opt.textContent = (i + 1) + ' · ' + im.name;
-                    jumpSelect.appendChild(opt);
-                });
+                rebuildJump();
 
                 if (images.length === 0) {
                     imageView.style.display = 'none';
                     placeholder.style.display = 'block';
-                    placeholder.textContent = 'No images found in ' + (folder || '/');
-                    statusLabel.textContent = '';
+                    placeholder.textContent = allImages.length ? 'All caught up — every image here is marked known.' : 'No images found in ' + (folder || '/');
                     updateControls();
                     return;
                 }
-                statusLabel.textContent = '';
+                if (statusLabel.textContent.indexOf('⚠') !== 0) statusLabel.textContent = '';
                 document.getElementById('slideshowBtn').disabled = false;
                 await showImage(0);
             } catch(e) {
@@ -503,6 +513,7 @@
 
         function slideshowStart() {
             slideshowTimer = setInterval(function() {
+                if (!images.length) return;
                 var next = (currentIndex + 1) % images.length;
                 showImage(next);
             }, 4000);
@@ -538,6 +549,7 @@
                 jumpSelect.focus();
             }
             else if (e.key === '/') { e.preventDefault(); slideshowBtn.click(); }
+            else if ((e.key === 'k' || e.key === 'K') && !e.metaKey && !e.ctrlKey && !e.altKey && ankiOn) { e.preventDefault(); toggleKnown(); }
         });
 
         // Folder from URL: supports ?/images/foo (bare path) and ?path=/images/foo
@@ -654,8 +666,29 @@
             return raw;
         }
 
+        // Contents of the QR code found in the current image (qr_bridge wrapper already decoded)
+        var qrContents = '';
+        function showQrText() { document.getElementById('qrText').textContent = qrContents; document.getElementById('qrTextWrap').style.display = ''; }
+        qrOpenBtn.addEventListener('click', function() {
+            if (!qrContents) return;
+            function fallback() {
+                var ta = document.createElement('textarea');
+                ta.value = qrContents; ta.style.position = 'fixed'; ta.style.opacity = '0';
+                document.body.appendChild(ta); ta.select();
+                var ok = false;
+                try { ok = document.execCommand('copy'); } catch(e) {}
+                document.body.removeChild(ta);
+                showQrToast(ok ? 'QR contents copied ✓' : 'Copy failed'); if (ok) showQrText();
+            }
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(qrContents).then(function() { showQrToast('QR contents copied ✓'); showQrText(); }).catch(fallback);
+            } else fallback();
+        });
+
         function scanImageForQr() {
             qrOpenBtn.style.display = 'none';
+            qrContents = '';
+            document.getElementById('qrTextWrap').style.display = 'none';
             try {
                 var canvas = document.createElement('canvas');
                 canvas.width = imageView.naturalWidth;
@@ -665,14 +698,144 @@
                 var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
                 var code = jsQR(imageData.data, imageData.width, imageData.height);
                 if (code && code.data) {
-                    var resolved = resolveQrValue(code.data);
-                    if (/^https?:\/\//i.test(resolved)) {
-                        qrOpenBtn.href = resolved;
-                        qrOpenBtn.style.display = '';
-                    }
+                    qrContents = resolveQrValue(code.data);
+                    qrOpenBtn.style.display = '';
                 }
             } catch(e) {}
         }
+    </script>
+    <script>
+        // ── Anki mode: hide images marked "known" in the last 5 days (Supabase via /api/known) ──
+        var KNOWN_DAYS = 5;
+        var ankiOn = false;
+        try { ankiOn = localStorage.getItem('dbx-anki') === '1'; } catch(e) {}
+        var knownMap = {};          // dropbox id → known_at (ISO)
+        var knownFolder = '/';      // `source` used for the current folder
+        var showKnownToo = false;   // "show them anyway"
+        var ankiBtn = document.getElementById('ankiBtn');
+        var knownBtn = document.getElementById('knownBtn');
+        var knownInfo = document.getElementById('knownInfo');
+
+        function accessCode() {
+            var c = '';
+            try { c = localStorage.getItem('ocr-access-code') || ''; } catch(e) {}   // shared with tutor.html / imageNotes.html
+            if (!c) {
+                c = (prompt('Access code:') || '').trim();
+                if (c) { try { localStorage.setItem('ocr-access-code', c); } catch(e) {} }
+            }
+            return c;
+        }
+        async function knownCall(method, path, body) {
+            var code = accessCode();
+            if (!code) throw new Error('access code needed');
+            var r = await fetch('/api/known' + path, {
+                method: method,
+                headers: { 'Content-Type': 'application/json', 'x-access-code': code },
+                body: body ? JSON.stringify(body) : undefined
+            });
+            if (r.status === 401) { try { localStorage.removeItem('ocr-access-code'); } catch(e) {} throw new Error('invalid access code'); }
+            var d = await r.json().catch(function() { return {}; });
+            if (!r.ok) throw new Error(d.error || ('HTTP ' + r.status));
+            return d;
+        }
+        async function fetchKnown(folder) {
+            var rows = await knownCall('GET', '?source=' + encodeURIComponent(folder) + '&days=' + KNOWN_DAYS);
+            var m = {};
+            rows.forEach(function(row) { m[row.item] = row.known_at; });
+            return m;
+        }
+
+        function visibleImages() {
+            if (!ankiOn || showKnownToo) return allImages.slice();
+            return allImages.filter(function(im) { return !knownMap[im.id]; });
+        }
+        function hiddenCount() {
+            return allImages.filter(function(im) { return knownMap[im.id]; }).length;
+        }
+        function rebuildJump() {
+            jumpSelect.innerHTML = '';
+            images.forEach(function(im, i) {
+                var opt = document.createElement('option');
+                opt.value = String(i);
+                opt.textContent = (i + 1) + ' · ' + (knownMap[im.id] ? '✓ ' : '') + im.name;
+                jumpSelect.appendChild(opt);
+            });
+        }
+        // Re-filter, then land on `keepId` if still visible, else on the image now at `fallbackIndex`
+        function refilter(keepId, fallbackIndex) {
+            images = visibleImages();
+            rebuildJump();
+            if (!images.length) {
+                currentIndex = -1; loadToken++;
+                imageView.style.display = 'none';
+                placeholder.style.display = 'block';
+                placeholder.textContent = 'All caught up — every image here is marked known.';
+                qrOpenBtn.style.display = 'none';
+                updateControls();
+                return;
+            }
+            var at = -1;
+            if (keepId) images.forEach(function(im, i) { if (im.id === keepId) at = i; });
+            if (at < 0) at = Math.max(0, Math.min(fallbackIndex, images.length - 1));
+            showImage(at);
+        }
+
+        function updateKnownUI() {
+            ankiBtn.textContent = 'Anki: ' + (ankiOn ? 'on' : 'off');
+            ankiBtn.style.borderColor = ankiOn ? '#4ade80' : '';
+            ankiBtn.style.color = ankiOn ? '#4ade80' : '';
+            var cur = (currentIndex >= 0 && images[currentIndex]) ? images[currentIndex] : null;
+            knownBtn.style.display = (ankiOn && cur) ? '' : 'none';
+            if (cur) knownBtn.textContent = knownMap[cur.id] ? '↩ Unmark' : '✓ Known';
+            var n = ankiOn ? hiddenCount() : 0;
+            if (!ankiOn || (!n && !showKnownToo)) { knownInfo.style.display = 'none'; return; }
+            knownInfo.style.display = '';
+            knownInfo.innerHTML = '';
+            var t = document.createElement('span');
+            t.textContent = showKnownToo ? (n + ' known shown · ') : (n + ' hidden as known · ');
+            var a = document.createElement('a');
+            a.href = '#'; a.style.color = '#4da3ff'; a.textContent = showKnownToo ? 'hide them' : 'show them anyway';
+            a.onclick = function(e) {
+                e.preventDefault();
+                var keep = (currentIndex >= 0 && images[currentIndex]) ? images[currentIndex].id : null;
+                showKnownToo = !showKnownToo;
+                refilter(keep, currentIndex);
+            };
+            knownInfo.appendChild(t); knownInfo.appendChild(a);
+        }
+
+        async function toggleKnown() {
+            var cur = (currentIndex >= 0 && images[currentIndex]) ? images[currentIndex] : null;
+            if (!cur) return;
+            var idx = currentIndex, wasKnown = !!knownMap[cur.id];
+            // Optimistic update, rolled back if the server call fails
+            if (wasKnown) delete knownMap[cur.id]; else knownMap[cur.id] = new Date().toISOString();
+            try {
+                await knownCall('POST', '', { action: wasKnown ? 'unmark' : 'mark', source: knownFolder, item: cur.id, label: cur.name });
+                statusLabel.textContent = '';
+                // Marking hides it (unless showing known); unmarking while hidden-view can't happen, so just refresh the labels
+                if (!wasKnown && !showKnownToo) refilter(null, idx); else refilter(cur.id, idx);
+            } catch(e) {
+                if (wasKnown) knownMap[cur.id] = new Date().toISOString(); else delete knownMap[cur.id];
+                statusLabel.textContent = '❌ Anki save failed: ' + e.message;
+                updateKnownUI();
+            }
+        }
+
+        knownBtn.addEventListener('click', toggleKnown);
+        ankiBtn.addEventListener('click', async function() {
+            ankiOn = !ankiOn;
+            try { localStorage.setItem('dbx-anki', ankiOn ? '1' : '0'); } catch(e) {}
+            showKnownToo = false;
+            if (ankiOn && allImages.length) {
+                statusLabel.textContent = 'Loading known…';
+                try { knownMap = await fetchKnown(knownFolder); statusLabel.textContent = ''; }
+                catch(e) { knownMap = {}; statusLabel.textContent = '⚠ Anki sync failed (' + e.message + ') — showing all images'; }
+            }
+            var keep = (currentIndex >= 0 && images[currentIndex]) ? images[currentIndex].id : null;
+            if (allImages.length) refilter(keep, currentIndex); else updateKnownUI();
+        });
+        updateKnownUI();
     </script>
 </body>
 </html>
