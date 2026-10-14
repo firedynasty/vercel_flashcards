@@ -24,6 +24,9 @@
 //   GET  /api/known?source=/images/foo&days=5   -> [{ item, label, known_at }] marked within the last N days (default 5)
 //   POST /api/known { action: "mark",   source, item, label }   (upsert; re-marking resets the date)
 //   POST /api/known { action: "unmark", source, item }
+//   POST /api/known { action: "prune", dryRun }    -> removes rows older than the window (all folders), like
+//                                                    vercel_fen_saver's sync: dryRun lists what would go first.
+//                                                    Expired rows are already ignored by GET, so prune is only housekeeping.
 
 const DEFAULT_DAYS = 5;
 
@@ -65,6 +68,24 @@ export default async function handler(req, res) {
 
     if (req.method === 'POST') {
       const { action } = req.body || {};
+
+      if (action === 'prune') {
+        const cutoff = new Date(Date.now() - DEFAULT_DAYS * 24 * 60 * 60 * 1000).toISOString();
+        const params = new URLSearchParams({ known_at: `lt.${cutoff}` });
+        if (req.body.dryRun) {
+          params.set('select', 'source,item,label,known_at'); params.set('order', 'known_at.asc'); params.set('limit', '5000');
+          const r = await fetch(`${url}/rest/v1/known_items?${params}`, { headers });
+          const rows = await r.json();
+          if (!r.ok) return res.status(r.status).json(rows);
+          return res.status(200).json({ dryRun: true, count: rows.length, rows: rows.slice(0, 50) });
+        }
+        params.set('select', 'item');
+        const r = await fetch(`${url}/rest/v1/known_items?${params}`, { method: 'DELETE', headers: { ...headers, Prefer: 'return=representation' } });
+        const rows = await r.json().catch(() => []);
+        if (!r.ok) return res.status(r.status).json(rows);
+        return res.status(200).json({ dryRun: false, deleted: rows.length });
+      }
+
       const source = clean(req.body && req.body.source, 1000);
       const item = clean(req.body && req.body.item, 1000);
       if (!source || !item) return res.status(400).json({ error: 'source and item required' });

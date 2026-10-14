@@ -161,6 +161,7 @@
         <button class="tool-btn" id="loadBtn">Load</button>
         <button class="tool-btn" id="slideshowBtn" disabled>▶ Slideshow</button>
         <button class="tool-btn" id="ankiBtn" title="Hide images you marked known in the last 5 days (synced via Supabase)">Anki: off</button>
+        <button class="tool-btn" id="pruneBtn" style="display:none;" title="Delete Supabase rows older than 5 days (they no longer hide anything)">🧹 Sync</button>
     </div>
 
     <div class="stage" id="stage">
@@ -784,6 +785,7 @@
             ankiBtn.textContent = 'Anki: ' + (ankiOn ? 'on' : 'off');
             ankiBtn.style.borderColor = ankiOn ? '#4ade80' : '';
             ankiBtn.style.color = ankiOn ? '#4ade80' : '';
+            document.getElementById('pruneBtn').style.display = ankiOn ? '' : 'none';
             var cur = (currentIndex >= 0 && images[currentIndex]) ? images[currentIndex] : null;
             knownBtn.style.display = (ankiOn && cur) ? '' : 'none';
             if (cur) knownBtn.textContent = knownMap[cur.id] ? '↩ Unmark' : '✓ Known';
@@ -822,6 +824,20 @@
             }
         }
 
+        // Sync = housekeeping: delete rows past the 5-day window (preview first, like vercel_fen_saver's sync)
+        document.getElementById('pruneBtn').addEventListener('click', async function() {
+            var btn = this; btn.disabled = true;
+            try {
+                statusLabel.textContent = 'Checking expired rows…';
+                var d = await knownCall('POST', '', { action: 'prune', dryRun: true });
+                if (!d.count) { statusLabel.textContent = 'Supabase is already tidy — no expired rows.'; return; }
+                var sample = d.rows.slice(0, 8).map(function(r) { return '  ' + (r.label || r.item) + '  (' + r.known_at.slice(0, 10) + ')'; }).join('\n');
+                if (!confirm('Delete ' + d.count + ' expired row' + (d.count === 1 ? '' : 's') + ' (marked known more than ' + KNOWN_DAYS + ' days ago, across all folders)?\n\n' + sample + (d.count > 8 ? '\n  …' : ''))) { statusLabel.textContent = ''; return; }
+                var done = await knownCall('POST', '', { action: 'prune' });
+                statusLabel.textContent = '🧹 Removed ' + done.deleted + ' expired row' + (done.deleted === 1 ? '' : 's') + '.';
+            } catch(e) { statusLabel.textContent = '❌ Sync failed: ' + e.message; }
+            finally { btn.disabled = false; }
+        });
         knownBtn.addEventListener('click', toggleKnown);
         ankiBtn.addEventListener('click', async function() {
             ankiOn = !ankiOn;
