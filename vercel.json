@@ -49,6 +49,8 @@
     { "source": "/spiritual_teacher", "destination": "/spiritual_teacher.html" },
     { "source": "/teacher.html", "destination": "/teacher.html" },
     { "source": "/teacher", "destination": "/teacher.html" },
+    { "source": "/blinkMetronome.html", "destination": "/blinkMetronome.html" },
+    { "source": "/blinkMetronome", "destination": "/blinkMetronome.html" },
     { "source": "/job_interviewer.html", "destination": "/job_interviewer.html" },
     { "source": "/job_interviewer", "destination": "/job_interviewer.html" },
     { "source": "/(.*)", "destination": "/flashcards.html" }

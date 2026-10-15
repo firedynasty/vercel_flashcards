@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Blink</title>
+<style>
+  :root { --bg:#14141c; --panel:#1d1d2b; --fg:#e8e8f0; --muted:#9a9ab0; --accent:#c9a84c; }
+  * { box-sizing: border-box; }
+  html, body {
+    height: 100%; margin: 0; overflow: hidden;
+    touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+  }
+  body {
+    display: flex; flex-direction: column; gap: 8px; padding: 10px 10px 0;
+    height: 100vh; height: 100dvh;
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+
+  /* ---- blink bar ---- */
+  .bar { flex: none; display: flex; align-items: center; gap: 12px; background: var(--panel); border-radius: 12px; padding: 10px 14px; }
+  #dot { flex: none; width: 56px; height: 56px; border-radius: 50%; background: #3a1210; }
+  .ctl { flex: 1; min-width: 0; }
+  .row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  #bpmLabel { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  #bpmLabel small { font-size: 12px; font-weight: 400; color: var(--muted); margin-left: 3px; }
+  .row label { margin-left: auto; font-size: 12px; color: var(--muted); cursor: pointer; white-space: nowrap; }
+  input[type=range] { width: 100%; accent-color: var(--accent); touch-action: pan-x; }
+  button.sync {
+    flex: none; padding: 12px 18px; border: 0; border-radius: 10px;
+    background: var(--accent); color: #1a1a2e; font: 700 15px -apple-system, BlinkMacSystemFont, sans-serif; cursor: pointer;
+  }
+  button.sync:active { transform: scale(.96); }
+
+  /* ---- game box (top) ---- */
+  #arena { position: relative; flex: 1 1 auto; min-height: 0; border-radius: 12px; background: #0e0e16; overflow: hidden; }
+  canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .hint { position: absolute; top: 8px; left: 12px; font-size: 11px; color: var(--muted); pointer-events: none; }
+  #score { position: absolute; top: 8px; right: 12px; font: 700 14px -apple-system, sans-serif; color: var(--accent); pointer-events: none; font-variant-numeric: tabular-nums; }
+  #dbg { position: absolute; bottom: 4px; left: 8px; font: 10px monospace; color: #6c6; pointer-events: none; display: none; }
+
+  /* ---- footer controls (normal flow, like Rooftop Rumble) ---- */
+  #footer {
+    position: relative; flex: none;
+    height: 168px; height: clamp(168px, 36dvh, 250px);
+    padding-bottom: env(safe-area-inset-bottom);
+    --s: min(calc(var(--fh, 190px) * .8), 170px);   /* stick size */
+    --b: min(calc(var(--fh, 190px) * .36), 84px);   /* button size */
+  }
+  /* zone owns its own height, so the floating ring's top/left are measured from a real box */
+  #zone { position: absolute; left: 0; bottom: 0; width: calc(var(--s) * 1.35); height: 100%; touch-action: none; }
+  #ring {
+    position: absolute; width: var(--s); height: var(--s); border-radius: 50%;
+    background: rgba(255,255,255,.06); border: 2px solid rgba(255,255,255,.2);
+    transform: translate(-50%, -50%); pointer-events: none;
+  }
+  #knob {
+    position: absolute; left: 50%; top: 50%; width: 40%; height: 40%; margin: -20% 0 0 -20%; border-radius: 50%;
+    background: rgba(255,255,255,.28); border: 2px solid rgba(255,255,255,.4);
+  }
+
+  /* short landscape phones: footer would eat the picture, so the controls float over the corners */
+  @media (max-height: 470px) and (orientation: landscape) {
+    #footer { position: fixed; left: 0; right: 0; bottom: 0; height: 0; padding: 0; --fh: 210px; }
+    #zone { height: 210px; }
+    .bar { padding: 6px 10px; }
+    #dot { width: 40px; height: 40px; }
+    button.sync { padding: 8px 14px; }
+  }
+</style>
+</head>
+<body>
+  <div class="bar">
+    <div id="dot"></div>
+    <div class="ctl">
+      <div class="row">
+        <span id="bpmLabel">80<small>BPM</small></span>
+        <label><input type="checkbox" id="clickBox"> click</label>
+      </div>
+      <input type="range" id="slider" min="30" max="105" step="1" value="80">
+    </div>
+    <button class="sync" id="syncBtn" title="Restart the beat right now (Space)">Sync</button>
+  </div>
+
+  <div id="arena">
+    <canvas id="cv"></canvas>
+    <div class="hint">joystick / arrow keys / WASD &middot; Space = Sync &middot; grab the grapes</div>
+    <div id="score"></div>
+    <div id="dbg"></div>
+  </div>
+
+  <div id="footer">
+    <div id="zone"><div id="ring"><div id="knob"></div></div></div>
+  </div>
+
+<script>
+(function () {
+  var MIN = 30, MAX = 105;
+  var $ = function (id) { return document.getElementById(id); };
+  var dbg = $('dbg'), DEBUG = /[?&]debug=1/.test(location.search);
+  if (DEBUG) dbg.style.display = 'block';
+  function log(s) { if (DEBUG) dbg.textContent = s; }
+
+  // ---------- blink metronome (always on) ----------
+  var dot = $('dot'), slider = $('slider'), label = $('bpmLabel'), clickBox = $('clickBox');
+  var best = 0;
+  var bpm = 80, clickOn = false, ctx = null, nextBeat = 0, flashes = [];
+  var level = 0;                                   // current flash level 0..1, shared with the ball
+
+  try {
+    var s = JSON.parse(localStorage.getItem('blinkPage') || '{}');
+    if (s.bpm) bpm = s.bpm;
+    clickOn = !!s.click; best = s.best || 0;
+  } catch (e) {}
+
+  function save() { try { localStorage.setItem('blinkPage', JSON.stringify({ bpm: bpm, click: clickOn, best: best })); } catch (e) {} }
+  function setBpm(v) {
+    bpm = Math.max(MIN, Math.min(MAX, Math.round(v)));
+    slider.value = bpm; label.firstChild.nodeValue = bpm; save();
+  }
+  setBpm(bpm); clickBox.checked = clickOn;
+
+  function nowS() { return performance.now() / 1000; }
+  function getCtx() {
+    if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+    if (ctx.state !== 'running') ctx.resume();
+    return ctx;
+  }
+  function click(t) {
+    var o = ctx.createOscillator(), g = ctx.createGain();
+    o.frequency.value = 1500;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.4, t + 0.002);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.06);
+    o.connect(g); g.connect(ctx.destination);
+    o.start(t); o.stop(t + 0.08);
+  }
+
+  // beats live on the page clock so the blink never depends on audio being unlocked;
+  // the optional click rides the audio clock only once audio is running
+  setInterval(function () {
+    var now = nowS();
+    if (!nextBeat || nextBeat < now - 0.5) nextBeat = now + 0.05;
+    while (nextBeat < now + 0.15) {
+      flashes.push(nextBeat);
+      if (clickOn && ctx && ctx.state === 'running') click(ctx.currentTime + (nextBeat - now));
+      nextBeat += 60 / bpm;
+    }
+  }, 25);
+
+  function sync() { flashes.length = 0; nextBeat = nowS(); if (clickOn) getCtx(); }
+
+  slider.addEventListener('input', function () { setBpm(+slider.value); });
+  clickBox.addEventListener('change', function () { clickOn = clickBox.checked; if (clickOn) getCtx(); save(); });
+  $('syncBtn').addEventListener('click', function () { sync(); this.blur(); });
+  // a saved "click on" needs one gesture before the browser lets audio start
+  document.addEventListener('pointerdown', function () { if (clickOn) getCtx(); });
+
+  // ---------- ball game ----------
+  var cv = $('cv'), g2 = cv.getContext('2d'), arena = $('arena'), footer = $('footer');
+  var W = 0, H = 0, DPR = 1;
+  var ball = { x: 0, y: 0, vx: 0, vy: 0, r: 20 };
+  var trail = [];
+
+  // canvas follows the game BOX (not the window); fires again when the footer changes size
+  function resize() {
+    DPR = window.devicePixelRatio || 1;
+    var w = Math.max(1, arena.clientWidth), h = Math.max(1, arena.clientHeight);
+    var oldW = W, oldH = H;
+    W = w; H = h;
+    cv.width = W * DPR; cv.height = H * DPR;
+    if (!oldW) { ball.x = W / 2; ball.y = H * 0.45; }
+    else { ball.x *= W / oldW; ball.y *= H / oldH; items.forEach(function (q) { q.x *= W / oldW; q.y *= H / oldH; }); }
+    // size the controls from the footer's height; in the 0-height overlay mode let the CSS --fh stand
+    if (footer.clientHeight > 0) footer.style.setProperty('--fh', footer.clientHeight + 'px');
+    else footer.style.removeProperty('--fh');
+    restRing();
+  }
+  if (window.ResizeObserver) new ResizeObserver(resize).observe(arena);
+  window.addEventListener('resize', resize);
+
+  // input: joystick vector (-1..1), plus keys and L/R buttons
+  var stickVec = { x: 0, y: 0 }, keys = {};
+
+  // ---- floating stick: the ring is created AT the touch point and every delta is measured
+  // from that point, so the painted ring and the maths can never disagree (no rect-math drift).
+  var zone = $('zone'), ring = $('ring'), knob = $('knob');
+  var stick = null;                                  // { id, x, y } origin = where the finger landed
+  function restRing() {                              // idle position: low on the left edge of the footer
+    if (stick) return;
+    var zr = zone.getBoundingClientRect(), R = ring.offsetWidth / 2;
+    ring.style.left = (R + 14) + 'px';
+    ring.style.top = (zr.height / 2) + 'px';
+    knob.style.transform = '';
+  }
+  function stickStart(e) {
+    var zr = zone.getBoundingClientRect();           // only used to PAINT the ring
+    ring.style.left = (e.clientX - zr.left) + 'px';  // do NOT clamp: clamping biases the output
+    ring.style.top = (e.clientY - zr.top) + 'px';
+    stick = { id: e.pointerId, x: e.clientX, y: e.clientY };
+    stickMove(e);
+    log('stick start ' + Math.round(e.clientX) + ',' + Math.round(e.clientY));
+  }
+  function stickMove(e) {
+    if (!stick || e.pointerId !== stick.id) return;
+    var R = ring.offsetWidth / 2;
+    var dx = e.clientX - stick.x, dy = e.clientY - stick.y;
+    var len = Math.hypot(dx, dy);
+    if (len > R) { dx *= R / len; dy *= R / len; len = R; }
+    knob.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
+    var n = len / R;
+    if (n < 0.12) { stickVec.x = stickVec.y = 0; }   // dead zone
+    else { stickVec.x = dx / R; stickVec.y = dy / R; }
+    log('stick ' + stickVec.x.toFixed(2) + ',' + stickVec.y.toFixed(2));
+  }
+  function stickEnd(e) {
+    if (!stick || (e && e.pointerId !== stick.id)) return;
+    stick = null; stickVec.x = stickVec.y = 0; restRing();
+    log('stick end');
+  }
+  zone.addEventListener('pointerdown', function (e) {
+    e.preventDefault();
+    try { zone.setPointerCapture(e.pointerId); } catch (_) {}
+    stickStart(e);                                   // a new press always takes over, so a lost pointerup can never leave the stick latched
+  });
+  zone.addEventListener('pointermove', function (e) { if (stick && e.pointerId === stick.id) { e.preventDefault(); stickMove(e); } });
+  zone.addEventListener('pointerup', stickEnd);
+  zone.addEventListener('pointercancel', function (e) { log('stick CANCEL'); stickEnd(e); });
+  zone.addEventListener('lostpointercapture', stickEnd);
+  zone.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+
+  function resetInput() { stickEnd(); keys = {}; }
+  document.addEventListener('visibilitychange', function () { if (document.hidden) resetInput(); });
+  window.addEventListener('blur', resetInput);
+
+  window.addEventListener('keydown', function (e) {
+    if (e.code === 'Space') { e.preventDefault(); if (!e.repeat) sync(); return; }
+    keys[e.code] = true;
+    if (e.code.indexOf('Arrow') === 0) e.preventDefault();
+  });
+  window.addEventListener('keyup', function (e) { keys[e.code] = false; });
+
+  // expose for tests
+  window.__blink = { stickVec: stickVec, ball: ball, items: function () { return items; }, score: function () { return score; }, getFlashes: function () { return flashes.length; } };
+
+
+  // ---- items to collect (pattern from snake: keep a minimum on the field, bonus now and then) ----
+  var items = [], pops = [], bits = [], score = 0, goldT = 6;
+  var scoreEl = $('score');
+  function showScore() { scoreEl.textContent = 'score ' + score + (best ? '  ·  best ' + best : ''); }
+  function rnd(a, b) { return a + Math.random() * (b - a); }
+  function spawnItem(type) {
+    var r = type === 'gold' ? 15 : 17, pad = r + 14, x, y, tries = 0;
+    do { x = rnd(pad, W - pad); y = rnd(pad + 24, H - pad); tries++; }
+    while (tries < 30 && Math.hypot(x - ball.x, y - ball.y) < 110);
+    items.push({ type: type, x: x, y: y, r: r, born: nowS() });
+  }
+  function eatTone() {
+    if (!clickOn || !ctx || ctx.state !== 'running') return;
+    var t = ctx.currentTime, o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = 'triangle'; o.frequency.setValueAtTime(520, t); o.frequency.exponentialRampToValueAtTime(780, t + 0.09);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.12, t + 0.012); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.1);
+    o.connect(g); g.connect(ctx.destination); o.start(t); o.stop(t + 0.12);
+  }
+  function collect(it) {
+    var pts = it.type === 'gold' ? 50 : 10;
+    score += pts; if (score > best) { best = score; save(); }
+    showScore();
+    pops.push({ x: it.x, y: it.y, t: 0, text: '+' + pts, color: it.type === 'gold' ? '#ffd24d' : '#c9a0ff' });
+    for (var i = 0; i < 12; i++) { var a = rnd(0, 6.2832), v = rnd(60, 190); bits.push({ x: it.x, y: it.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, t: 0, c: it.type === 'gold' ? '#ffd24d' : '#a05fe0' }); }
+    eatTone();
+  }
+  function updateItems(dt, now) {
+    for (var i = items.length - 1; i >= 0; i--) {
+      var it = items[i];
+      if (it.type === 'gold' && now - it.born > 9) { items.splice(i, 1); continue; }   // bonus times out
+      if (Math.hypot(it.x - ball.x, it.y - ball.y) < it.r + ball.r) { items.splice(i, 1); collect(it); }
+    }
+    var grapes = 0; for (var j = 0; j < items.length; j++) if (items[j].type === 'grape') grapes++;
+    while (grapes < 2) { spawnItem('grape'); grapes++; }
+    goldT -= dt;
+    if (goldT <= 0) { if (!items.some(function (q) { return q.type === 'gold'; })) spawnItem('gold'); goldT = rnd(9, 16); }
+    for (var k = pops.length - 1; k >= 0; k--) { pops[k].t += dt; pops[k].y -= 34 * dt; if (pops[k].t > 0.9) pops.splice(k, 1); }
+    for (var m = bits.length - 1; m >= 0; m--) { var b = bits[m]; b.t += dt; b.x += b.vx * dt; b.y += b.vy * dt; b.vx *= 0.94; b.vy *= 0.94; if (b.t > 0.5) bits.splice(m, 1); }
+  }
+  function drawGrape(x, y, r, pulse) {
+    g2.save(); g2.translate(x, y); var sc = 1 + pulse * 0.25; g2.scale(sc, sc);
+    g2.shadowColor = 'rgba(160,95,224,' + (0.35 + pulse * 0.5).toFixed(2) + ')'; g2.shadowBlur = 8 + pulse * 18;
+    var u = r * 0.36, cells = [[-1, -1.1], [1, -1.1], [-2, 0], [0, 0], [2, 0], [-1, 1.1], [1, 1.1], [0, 2.2]];
+    g2.fillStyle = '#7b3fc4';
+    for (var i = 0; i < cells.length; i++) { g2.beginPath(); g2.arc(cells[i][0] * u, cells[i][1] * u, u * 1.12, 0, 6.2832); g2.fill(); }
+    g2.shadowBlur = 0; g2.fillStyle = 'rgba(255,255,255,.35)';
+    for (var j = 0; j < cells.length; j++) { g2.beginPath(); g2.arc(cells[j][0] * u - u * 0.35, cells[j][1] * u - u * 0.35, u * 0.28, 0, 6.2832); g2.fill(); }
+    g2.strokeStyle = '#5fa04a'; g2.lineWidth = 2.5; g2.beginPath(); g2.moveTo(0, -2.2 * u); g2.lineTo(u * 0.8, -3.4 * u); g2.stroke();
+    g2.restore();
+  }
+  function drawGold(x, y, r, pulse) {
+    g2.save(); g2.shadowColor = 'rgba(255,210,77,' + (0.6 + pulse * 0.4).toFixed(2) + ')'; g2.shadowBlur = 14 + pulse * 20;
+    g2.fillStyle = '#ffd24d'; g2.beginPath(); g2.arc(x, y, r * (1 + pulse * 0.2), 0, 6.2832); g2.fill();
+    g2.shadowBlur = 0; g2.fillStyle = '#fff3b0'; g2.beginPath(); g2.arc(x - r * 0.3, y - r * 0.3, r * 0.35, 0, 6.2832); g2.fill(); g2.restore();
+  }
+
+  var last = performance.now();
+  function frame(t) {
+    requestAnimationFrame(frame);
+    var dt = Math.min(0.05, (t - last) / 1000); last = t;
+
+    // flash level for dot + ball
+    var now = nowS(); level = 0;
+    while (flashes.length && flashes[0] < now - 0.4) flashes.shift();
+    for (var i = 0; i < flashes.length; i++) {
+      var age = now - flashes[i];
+      if (age >= 0) level = Math.max(level, Math.max(0, 1 - age / 0.18));
+    }
+    dot.style.background = 'rgb(' + Math.round(58 + level * 197) + ',' + Math.round(18 + level * 41) + ',' + Math.round(16 + level * 32) + ')';
+    dot.style.boxShadow = '0 0 ' + Math.round(level * 36) + 'px rgba(255,59,48,' + level.toFixed(2) + ')';
+
+    // movement: joystick is analog; keys and L/R buttons add digital input
+    var ix = stickVec.x, iy = stickVec.y;
+    if (keys.ArrowLeft || keys.KeyA) ix -= 1;
+    if (keys.ArrowRight || keys.KeyD) ix += 1;
+    if (keys.ArrowUp || keys.KeyW) iy -= 1;
+    if (keys.ArrowDown || keys.KeyS) iy += 1;
+    var m = Math.hypot(ix, iy); if (m > 1) { ix /= m; iy /= m; }
+    var speed = Math.min(W, H) * 1.1;
+    ball.vx += (ix * speed - ball.vx) * 8 * dt;      // ease toward the target velocity
+    ball.vy += (iy * speed - ball.vy) * 8 * dt;
+    ball.x += ball.vx * dt; ball.y += ball.vy * dt;
+    var r = ball.r;
+    if (ball.x < r) { ball.x = r; ball.vx = 0; } else if (ball.x > W - r) { ball.x = W - r; ball.vx = 0; }
+    if (ball.y < r) { ball.y = r; ball.vy = 0; } else if (ball.y > H - r) { ball.y = H - r; ball.vy = 0; }
+
+    updateItems(dt, now);
+    trail.push({ x: ball.x, y: ball.y });
+    if (trail.length > 28) trail.shift();
+
+    g2.setTransform(DPR, 0, 0, DPR, 0, 0);
+    g2.clearRect(0, 0, W, H);
+    g2.strokeStyle = 'rgba(255,255,255,0.08)';
+    g2.lineWidth = 3;
+    g2.strokeRect(1.5, 1.5, W - 3, H - 3);          // arena border pulses with the beat
+    for (var k = 0; k < trail.length; k++) {
+      var a = k / trail.length;
+      g2.fillStyle = 'rgba(201,168,76,' + (a * 0.25).toFixed(3) + ')';
+      g2.beginPath(); g2.arc(trail[k].x, trail[k].y, ball.r * (0.4 + 0.6 * a), 0, 6.2832); g2.fill();
+    }
+    for (var q = 0; q < items.length; q++) {
+      if (items[q].type === 'grape') drawGrape(items[q].x, items[q].y, items[q].r, 0);
+      else drawGold(items[q].x, items[q].y, items[q].r, 0);
+    }
+    for (var u2 = 0; u2 < bits.length; u2++) { g2.globalAlpha = Math.max(0, 1 - bits[u2].t / 0.5); g2.fillStyle = bits[u2].c; g2.beginPath(); g2.arc(bits[u2].x, bits[u2].y, 3, 0, 6.2832); g2.fill(); }
+    g2.globalAlpha = 1;
+    g2.font = '700 15px -apple-system, sans-serif'; g2.textAlign = 'center';
+    for (var p2 = 0; p2 < pops.length; p2++) { g2.globalAlpha = Math.max(0, 1 - pops[p2].t / 0.9); g2.fillStyle = pops[p2].color; g2.fillText(pops[p2].text, pops[p2].x, pops[p2].y); }
+    g2.globalAlpha = 1;
+    var rad = ball.r;
+    g2.shadowColor = 'rgba(201,168,76,0.5)';
+    g2.shadowBlur = 10;
+    g2.fillStyle = '#c9a84c';
+    g2.beginPath(); g2.arc(ball.x, ball.y, rad, 0, 6.2832); g2.fill();
+    g2.shadowBlur = 0;
+  }
+  resize();
+  showScore();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
