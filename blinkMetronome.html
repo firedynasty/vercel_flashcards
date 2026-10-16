@@ -60,6 +60,34 @@
     background: rgba(255,255,255,.28); border: 2px solid rgba(255,255,255,.4);
   }
 
+  .btns { flex: none; display: flex; flex-direction: column; gap: 6px; }
+  button.sync.cc { position: relative; padding: 8px 18px; background: #2b2b40; color: var(--fg); font-weight: 600; font-size: 13px; }
+  #ccBadge { position: absolute; top: -6px; right: -6px; min-width: 18px; padding: 1px 5px; border-radius: 9px; background: #34c759; color: #04210d; font: 700 11px sans-serif; display: none; }
+
+  /* ---- Claude activity panel (covers the page while open) ---- */
+  #cc { position: fixed; inset: 8px; z-index: 10; display: none; flex-direction: column; gap: 8px; padding: 12px; border-radius: 14px; background: var(--panel); border: 1px solid #34344a; touch-action: pan-y; }
+  #cc.open { display: flex; }
+  #cc .top { flex: none; display: flex; align-items: center; gap: 8px; }
+  #cc .top b { font-size: 15px; }
+  #cc button, #cc input { font: 14px -apple-system, BlinkMacSystemFont, sans-serif; }
+  #cc .small { padding: 6px 12px; border: 1px solid #44445e; border-radius: 8px; background: #2b2b40; color: var(--fg); cursor: pointer; }
+  #cc .small.on { color: #4da3ff; border-color: #4da3ff; }
+  #ccStatus { flex: none; min-height: 14px; font-size: 12px; color: #e8a33c; }
+  #ccRows { flex: none; max-height: 30%; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
+  .srow { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; padding: 6px 8px; border-radius: 8px; background: #151522; font-size: 13px; }
+  .srow.working { border-left: 3px solid var(--accent); }
+  .srow.done { border-left: 3px solid #34c759; }
+  .srow .proj { font-weight: 700; }
+  .srow .tm { color: var(--muted); font-variant-numeric: tabular-nums; }
+  .srow .tx { flex-basis: 100%; color: var(--muted); font-size: 12px; max-height: 3.4em; overflow: hidden; }
+  #ccLog { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; user-select: text; -webkit-user-select: text; }
+  .msg { padding: 8px 10px; border-radius: 10px; font-size: 14px; line-height: 1.4; white-space: pre-wrap; max-width: 92%; }
+  .msg.user { align-self: flex-end; background: #2b3a5a; }
+  .msg.ai { align-self: flex-start; background: #232336; }
+  #cc .ask { flex: none; display: flex; gap: 6px; }
+  #cc .ask input { flex: 1; min-width: 0; padding: 10px; border-radius: 8px; border: 1px solid #44445e; background: #11111a; color: var(--fg); }
+  #ccCode { width: 110px; padding: 6px 8px; border-radius: 8px; border: 1px solid #44445e; background: #11111a; color: var(--fg); }
+
   /* short landscape phones: footer would eat the picture, so the controls float over the corners */
   @media (max-height: 470px) and (orientation: landscape) {
     #footer { position: fixed; left: 0; right: 0; bottom: 0; height: 0; padding: 0; --fh: 210px; }
@@ -80,7 +108,26 @@
       </div>
       <input type="range" id="slider" min="30" max="105" step="1" value="80">
     </div>
-    <button class="sync" id="syncBtn" title="Restart the beat right now (Space)">Sync</button>
+    <div class="btns">
+      <button class="sync" id="syncBtn" title="Restart the beat right now (Space)">Sync</button>
+      <button class="sync cc" id="ccBtn" title="What Claude Code is doing">Claude<span id="ccBadge"></span></button>
+    </div>
+  </div>
+
+  <div id="cc">
+    <div class="top">
+      <b>Claude Code</b>
+      <button class="small" id="dbxBtn">Dropbox</button>
+      <input id="ccCode" type="password" placeholder="Access code" autocomplete="off">
+      <button class="small" id="ccClose" style="margin-left:auto">Close</button>
+    </div>
+    <div id="ccStatus"></div>
+    <div id="ccRows"></div>
+    <div id="ccLog"></div>
+    <div class="ask">
+      <input id="ccIn" placeholder="Ask about what's going on&hellip;" autocomplete="off">
+      <button class="small" id="ccSend">Send</button>
+    </div>
   </div>
 
   <div id="arena">
@@ -156,6 +203,192 @@
   $('syncBtn').addEventListener('click', function () { sync(); this.blur(); });
   // a saved "click on" needs one gesture before the browser lets audio start
   document.addEventListener('pointerdown', function () { if (clickOn) getCtx(); });
+
+  // ---------- Claude activity panel ----------
+  // Reads the one-file snapshot claude_hooks_server/upload.js keeps in Dropbox (/vercel/claude_activity.json,
+  // rebuilt from the last 24h and overwritten, so nothing piles up). Chat goes through /api/tutor.
+  var SNAP = '/vercel/claude_activity.json', STALE = 2 * 3600 * 1000, MODEL = 'gpt-4.1';
+  var cc = $('cc'), ccBtn = $('ccBtn'), ccBadge = $('ccBadge'), ccRows = $('ccRows'), ccLog = $('ccLog'), ccIn = $('ccIn'), ccCode = $('ccCode');
+  var ccOpen = false, dbxToken = null, snap = null, unseen = 0, firstSnap = true, seen = {}, chat = [], chatBusy = false, TITLE0 = document.title;
+  try { ccCode.value = localStorage.getItem('blinkCode') || ''; } catch (e) {}
+  ccCode.addEventListener('change', function () { try { localStorage.setItem('blinkCode', ccCode.value.trim()); } catch (e) {} });
+  function ccStatus(t) { $('ccStatus').textContent = t || ''; }
+  function pad2(n) { return (n < 10 ? '0' : '') + n; }
+  function fmtClock(ms) { var s = Math.max(0, Math.floor(ms / 1000)), h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60); return h ? h + ':' + pad2(m) + ':' + pad2(s % 60) : m + ':' + pad2(s % 60); }
+  function clock(ms) { return new Date(ms).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }); }
+
+  // --- Dropbox sign-in (popup + postMessage, same flow as dropboxImageLoader; token stays in memory) ---
+  // The page's own URL must be a redirect URI of the Dropbox app.
+  function dbxKey() {
+    if (['localhost', '127.0.0.1'].indexOf(location.hostname) >= 0) {
+      var k = localStorage.getItem('dropbox-app-key') || '';
+      if (!k) { k = prompt('Dropbox App Key:') || ''; if (k) localStorage.setItem('dropbox-app-key', k); }
+      return Promise.resolve(k);
+    }
+    return fetch('/api/dropbox-key').then(function (r) { return r.json(); }).then(function (j) { return j.key || ''; }).catch(function () { return ''; });
+  }
+  function b64url(buf) { return btoa(String.fromCharCode.apply(null, new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
+  function dbxAuthBtn() {
+    var b = $('dbxBtn');
+    b.textContent = dbxToken ? '● Dropbox' : 'Dropbox'; b.classList.toggle('on', !!dbxToken);
+    b.title = dbxToken ? 'Connected — click to sign out' : 'Sign in to Dropbox';
+  }
+  function dbxSignIn() {
+    if (dbxToken) {
+      fetch('https://api.dropboxapi.com/2/auth/token/revoke', { method: 'POST', headers: { Authorization: 'Bearer ' + dbxToken } }).catch(function () {});
+      dbxToken = null; snap = null; dbxAuthBtn(); renderRows(); return;
+    }
+    dbxKey().then(function (key) {
+      if (!key) { ccStatus('Dropbox app key not configured'); return; }
+      var v = b64url(crypto.getRandomValues(new Uint8Array(64)));
+      return crypto.subtle.digest('SHA-256', new TextEncoder().encode(v)).then(function (d) {
+        var uri = location.origin + location.pathname;
+        var url = 'https://www.dropbox.com/oauth2/authorize?client_id=' + key + '&response_type=code&code_challenge=' + b64url(d) +
+          '&code_challenge_method=S256&redirect_uri=' + encodeURIComponent(uri) + '&token_access_type=online';
+        localStorage.setItem('blink_dbx_verifier', v);
+        var pop = window.open(url, 'dropbox_auth', 'width=520,height=680,scrollbars=yes,resizable=yes');
+        if (!pop) { sessionStorage.setItem('blink_dbx_verifier', v); location.href = url; }
+      });
+    });
+  }
+  // runs in the popup (or the page itself when popups are blocked) after Dropbox redirects back with ?code=
+  (function dbxRedirect() {
+    var code = new URLSearchParams(location.search).get('code');
+    if (!code) return;
+    var v = localStorage.getItem('blink_dbx_verifier') || sessionStorage.getItem('blink_dbx_verifier');
+    dbxKey().then(function (key) {
+      if (!v || !key) return;
+      return fetch('https://api.dropboxapi.com/oauth2/token', {
+        method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ code: code, grant_type: 'authorization_code', client_id: key, redirect_uri: location.origin + location.pathname, code_verifier: v }).toString()
+      }).then(function (r) { return r.json(); }).then(function (d) {
+        localStorage.removeItem('blink_dbx_verifier'); sessionStorage.removeItem('blink_dbx_verifier');
+        if (!d.access_token) { if (window.opener) window.close(); return; }
+        if (window.opener && !window.opener.closed) { window.opener.postMessage({ dropboxToken: d.access_token }, location.origin); window.close(); return; }
+        dbxToken = d.access_token; history.replaceState({}, document.title, location.pathname); dbxAuthBtn(); openCc(); pollSnap();
+      });
+    }).catch(function () { if (window.opener) window.close(); });
+  })();
+  window.addEventListener('message', function (e) {
+    if (e.origin !== location.origin || !e.data || !e.data.dropboxToken) return;
+    dbxToken = e.data.dropboxToken; dbxAuthBtn(); ccStatus(''); pollSnap();
+  });
+  $('dbxBtn').addEventListener('click', dbxSignIn);
+  dbxAuthBtn();
+
+  // --- snapshot polling ---
+  function liveSessions() {
+    var now = Date.now();
+    return ((snap && snap.sessions) || []).filter(function (s) { return !(s.state === 'working' && now - s.lastTs > STALE); });
+  }
+  function pollSnap() {
+    if (!dbxToken) return;
+    fetch('https://content.dropboxapi.com/2/files/download', { method: 'POST', headers: { Authorization: 'Bearer ' + dbxToken, 'Dropbox-API-Arg': JSON.stringify({ path: SNAP }) } })
+      .then(function (r) {
+        if (r.status === 401) { dbxToken = null; dbxAuthBtn(); ccStatus('Dropbox session expired — sign in again'); return null; }
+        if (r.status === 409) { ccStatus('No activity file in Dropbox yet — is the hook uploader running?'); return null; }
+        if (!r.ok) throw new Error('Dropbox ' + r.status);
+        return r.json();
+      })
+      .then(function (j) {
+        if (!j) return;
+        snap = j; ccStatus('');
+        liveSessions().forEach(function (s) {
+          var prev = seen[s.session];
+          if (!firstSnap && s.state === 'done' && (!prev || prev.finishedAt !== s.finishedAt) && !ccOpen) unseen++;
+          seen[s.session] = { state: s.state, finishedAt: s.finishedAt };
+        });
+        firstSnap = false; renderRows(); badge();
+      })
+      .catch(function (e) { ccStatus('Dropbox: ' + e.message); });
+  }
+  setInterval(function () { if (!document.hidden) pollSnap(); }, 4000);
+
+  function badge() { ccBadge.textContent = unseen; ccBadge.style.display = unseen ? 'block' : 'none'; }
+  function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+  function renderRows() {
+    ccRows.innerHTML = '';
+    var list = liveSessions();
+    if (!list.length) { ccRows.appendChild(el('div', 'srow', dbxToken ? 'Nothing reported in the last day' : 'Sign in to Dropbox to see Claude Code sessions')); return; }
+    list.sort(function (a, b) { return (b.state === 'working') - (a.state === 'working') || b.lastTs - a.lastTs; });
+    list.forEach(function (s) {
+      var row = el('div', 'srow ' + s.state);
+      row.appendChild(el('span', 'proj', (s.state === 'working' ? '⏱ ' : '✓ ') + s.project));
+      var t = el('span', 'tm'); if (s.state === 'working') t.dataset.start = s.startedAt; else t.textContent = 'took ' + fmtClock(s.finishedAt - s.startedAt) + ' · ' + clock(s.finishedAt);
+      row.appendChild(t);
+      var lp = s.events.filter(function (e) { return e.e === 'UserPromptSubmit'; }).pop();
+      var txt = s.state === 'done' && s.reply ? s.reply : (lp && lp.d) || '';
+      if (txt) row.appendChild(el('span', 'tx', txt));
+      ccRows.appendChild(row);
+    });
+    tickCc();
+  }
+  function tickCc() {
+    var now = Date.now(), oldest = 0, n = 0;
+    [].forEach.call(document.querySelectorAll('[data-start]'), function (e) { e.textContent = fmtClock(now - Number(e.dataset.start)); });
+    liveSessions().forEach(function (s) { if (s.state === 'working') { n++; if (!oldest || s.startedAt < oldest) oldest = s.startedAt; } });
+    document.title = (unseen ? '✓' + unseen + ' ' : '') + (n ? '⏱ ' + (n > 1 ? n + ' · ' : '') + fmtClock(now - oldest) : '') || TITLE0;
+  }
+  setInterval(tickCc, 1000);
+
+  function openCc() { ccOpen = true; unseen = 0; badge(); cc.classList.add('open'); renderRows(); }
+  ccBtn.addEventListener('click', function () { this.blur(); openCc(); pollSnap(); });
+  $('ccClose').addEventListener('click', function () { ccOpen = false; cc.classList.remove('open'); });
+
+  // --- chat: the model only sees what the snapshot holds (prompts, tool names, file/folder names, short command heads, last reply) ---
+  function evLine(e) {
+    var what = e.e === 'UserPromptSubmit' ? 'USER PROMPT: ' + (e.d || '') : e.e === 'Stop' ? 'finished' : e.e === 'Notification' ? 'notification: ' + (e.d || '') :
+      e.tool ? e.tool + (e.d ? ' ' + e.d : '') : e.e;
+    return clock(e.t) + ' ' + (e.a ? '[' + e.a + '] ' : '') + what;
+  }
+  function ccSystem() {
+    var parts = [
+      'You are a friendly assistant who helps the user keep track of Claude Code sessions running on their computer while they wait.',
+      'You only know the activity log below: the user\'s prompts (cut to 500 characters), tool names, file and folder names, the first part of shell commands, and the last reply of finished sessions (cut to 1000 characters).',
+      'You cannot see code, diffs, tool results or full replies. If asked about something the log does not cover, say so and suggest what to check. Never invent details.',
+      'Keep answers short (2-5 sentences) and plain. Current time: ' + clock(Date.now()) + '.', ''];
+    var list = liveSessions();
+    if (!list.length) parts.push('(no sessions logged in the last day)');
+    list.forEach(function (s) {
+      parts.push('## Session in project "' + s.project + '": ' + s.state + ', started ' + clock(s.startedAt) + (s.state === 'done' ? ', finished ' + clock(s.finishedAt) : ''));
+      parts.push('Activity (oldest first):');
+      s.events.slice(-30).forEach(function (e) { parts.push(evLine(e)); });
+      if (s.reply) parts.push('Claude\'s last reply: ' + s.reply);
+      parts.push('');
+    });
+    return parts.join('\n');
+  }
+  function addMsg(role, text) { var m = el('div', 'msg ' + role, text); ccLog.appendChild(m); ccLog.scrollTop = ccLog.scrollHeight; return m; }
+  function ask(q) {
+    q = (q || '').trim(); if (!q || chatBusy) return;
+    var code = ccCode.value.trim(); if (!code) { ccStatus('Enter the access code first'); return; }
+    chat.push({ role: 'user', text: q }); addMsg('user', q); ccIn.value = '';
+    var out = addMsg('ai', '…'), acc = '';
+    chatBusy = true;
+    fetch('/api/tutor', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accessCode: code, model: MODEL, system: ccSystem(), messages: chat.slice(-12) }) })
+      .then(function (r) {
+        if (!r.ok) return r.json().then(function (j) { throw new Error(j.error || 'HTTP ' + r.status); });
+        var rd = r.body.getReader(), dec = new TextDecoder();
+        return (function pump() {
+          return rd.read().then(function (x) {
+            if (x.done) return;
+            acc += dec.decode(x.value, { stream: true }); out.textContent = acc; ccLog.scrollTop = ccLog.scrollHeight;
+            return pump();
+          });
+        })();
+      })
+      .then(function () { chat.push({ role: 'assistant', text: acc }); })
+      .catch(function (e) { out.textContent = '[' + e.message + ']'; chat.pop(); })
+      .then(function () { chatBusy = false; });
+  }
+  $('ccSend').addEventListener('click', function () { ask(ccIn.value); });
+  ccIn.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); ask(ccIn.value); } });
+  (function chip() {
+    var b = el('button', 'small', 'What am I working on?'); b.style.alignSelf = 'flex-start';
+    b.addEventListener('click', function () { ask('What am I working on right now, and how far along does it look?'); });
+    ccLog.appendChild(b);
+  })();
 
   // ---------- ball game ----------
   var cv = $('cv'), g2 = cv.getContext('2d'), arena = $('arena'), footer = $('footer');
@@ -235,6 +468,7 @@
   window.addEventListener('blur', resetInput);
 
   window.addEventListener('keydown', function (e) {
+    if (ccOpen) return;                              // typing in the Claude panel
     if (e.code === 'Space') { e.preventDefault(); if (!e.repeat) sync(); return; }
     keys[e.code] = true;
     if (e.code.indexOf('Arrow') === 0) e.preventDefault();
