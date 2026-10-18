@@ -52,6 +52,7 @@
   .msg.user { align-self: flex-end; background: var(--me); }
   .msg.assistant { align-self: flex-start; background: var(--asst); }
   .msg.err { background: var(--err); }
+  .srcs { font-size: 11px; color: var(--dim); margin-top: 6px; line-height: 1.4; }
   .divider { align-self: center; font-size: 11px; color: var(--dim); letter-spacing: 1px; text-transform: uppercase; }
   .quick { display: flex; gap: 6px; padding: 0 10px 6px; overflow-x: auto; }
   .quick button { white-space: nowrap; min-height: 34px; font-size: 13px; padding: 4px 12px; border-radius: 999px; }
@@ -124,7 +125,8 @@ const RULES = 'Ground every answer in the passage given below. Cite verse number
 const QUICK = ['What is the main point?', 'Explain the context', 'Hard words or phrases?', 'How does this apply to me?', 'Related passages?'];
 
 let gDoc = null, exported = 0;
-let BIBLE = null, passageText = '', passageRef = '', selVerses = new Set();
+let BIBLE = null, INTRO = null, NOTES = null, passageText = '', passageRef = '', selVerses = new Set();
+let curView = null;   // { bi, ch, a, z } of the passage on screen
 const turns = []; let busy = false;
 
 // ── setup ──
@@ -157,7 +159,7 @@ function showPassage(fromChange) {
   const bi = +$('book').value, ch = +$('chap').value, verses = BIBLE[bi].chapters[ch - 1] || [];
   let a = parseInt($('vFrom').value, 10) || 1, z = parseInt($('vTo').value, 10) || (parseInt($('vFrom').value, 10) ? a : verses.length);
   a = Math.max(1, Math.min(a, verses.length)); z = Math.max(a, Math.min(z, verses.length));
-  customText = false; selVerses = new Set();
+  customText = false; selVerses = new Set(); curView = { bi, ch, a, z };
   passageRef = BOOKS[bi] + ' ' + ch + (a === 1 && z === verses.length ? '' : ':' + a + (z > a ? '-' + z : ''));
   const box = $('passage'); box.innerHTML = '';
   const lines = [];
@@ -175,7 +177,7 @@ function showPassage(fromChange) {
   setStatus(passageRef + ' · WEB');
 }
 function showCustom(name, text) {
-  customText = true; passageRef = name; passageText = text; selVerses = new Set();
+  customText = true; curView = null; passageRef = name; passageText = text; selVerses = new Set();
   const box = $('passage'); box.innerHTML = ''; box.textContent = text; box.scrollTop = 0; box.classList.remove('collapsed');
   setStatus(name + ' · imported text');
 }
@@ -191,9 +193,138 @@ $('clearBtn').onclick = () => { turns.length = 0; exported = 0; gDoc = null; $('
 let customText = false;
 function BIBLE_REF_OK() { return !customText; }
 function passageInfo() { return { label: passageRef, code: $('book').value + '|' + $('chap').value + '|' + $('vFrom').value + '|' + $('vTo').value }; }
-function systemPrompt() {
+// ── background context: book outline (bible_intro.json) + reader's own study notes (study_notes.json) ──
+// Outline lines look like "E. Retribution on Midian (31:1–54)"; depth comes from the marker (I. / A. / 1. / a.).
+const ROMAN = ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'];
+function outlineLines(text) {
+  const out = []; let romanNext = 0;
+  for (const raw of text.split(/\r?\n/)) {
+    const t = raw.trim(); if (!t) continue;
+    const m = t.match(/^([IVX]+|[A-Z]|\d+|[a-z])\.\s/);
+    if (!m) { if (out.length) out[out.length - 1].text += ' ' + t; continue; }   // wrapped continuation
+    const k = m[1];   // "I." is a roman numeral only when it is the next expected one, else a letter heading
+    let depth;
+    if (/^[IVXL]+$/.test(k) && k === ROMAN[romanNext]) { depth = 0; romanNext++; }
+    else depth = /^[A-Z]$/.test(k) ? 1 : /^\d+$/.test(k) ? 2 : 3;
+    out.push({ depth, text: t.replace(/\(\s+/g, '(').replace(/\s+\)/g, ')') });
+  }
+  out.forEach(l => {   // first/last chapter this line covers (single-chapter books have no "ch:v")
+    const r = l.text.match(/\((\d+):\d+(?:[–-](?:(\d+):)?\d+)?/) || l.text.match(/\((\d+)[–-]\d+/);
+    const one = r && r[0].includes(':');
+    l.c1 = r ? (one ? +r[1] : 1) : null; l.c2 = r ? (r[2] ? +r[2] : l.c1) : null;
+  });
+  return out;
+}
+function bookContext(v) {
+  if (!v) return '';
+  const parts = [];
+  if (INTRO) {
+    const abbr = BIBLE[v.bi].abbrev, raw = INTRO[abbr];
+    if (raw) {
+      const L = outlineLines(raw), hit = l => l.c1 != null && l.c1 <= v.ch && l.c2 >= v.ch;
+      if (L.some(l => l.depth === 0)) {
+        const map = L.filter(l => l.depth === 0).map(l => l.text);
+        const sec = []; let keep = false, prevHead = null, nextWanted = false;
+        L.forEach((l, i) => {
+          if (l.depth <= 1) {
+            if (nextWanted) { if (!sec.includes(l.text)) sec.push(l.text); nextWanted = false; }
+            keep = l.depth === 1 && hit(l);
+            if (keep) { if (prevHead && !sec.includes(prevHead)) sec.push(prevHead); if (!sec.includes(l.text)) sec.push(l.text); nextWanted = true; }
+            if (l.depth === 1) prevHead = l.text;
+          } else if (keep && hit(l)) sec.push('   '.repeat(l.depth - 1) + l.text);
+        });
+        parts.push('Book outline of ' + BOOKS[v.bi] + ':\n' + map.join('\n') + (sec.length ? '\n\nWhere chapter ' + v.ch + ' sits:\n' + sec.join('\n') : ''));
+      } else parts.push('Book outline of ' + BOOKS[v.bi] + ':\n' + raw.trim().slice(0, 1500));
+    }
+  }
+  return parts.length ? '\n\nBackground for chapter ' + v.ch + ':\n' + parts.join('\n\n') : '';
+}
+// ── RAG: retrieve commentary chunks (Barnes, Matthew Henry, reader's Logos notes) for THIS question ──
+// Per-book chunk files live in /commentary/<abbrev>.json: [{ c, f, t, src, title, text }] (t = 0: chapter overview).
+const COMM = {};   // abbrev -> { chunks, df, avgdl, N } once loaded; null when the book has no file
+const STOP = new Set('a an the and or but if of to in on at by for with from as is are was were be been being it its this that these those he she they them his her their you your i me my we our us not no do does did so than then there what why how when who whom which can could would should may might will shall about into over under after before also just very more most some any'.split(' '));
+function toks(str) {
+  return (str.toLowerCase().match(/[a-z0-9]+/g) || []).filter(w => !STOP.has(w) && w.length > 1)
+    .map(w => w.replace(/(ing|ed|es|ly|s)$/, m => w.length - m.length >= 4 ? '' : m));
+}
+const META = new Set('explain context reading read chapter passage verse verses mean meaning summary summarize overview text tell say out up number numbers please give show help understand'.split(' '));
+async function loadComm(abbr) {
+  if (abbr in COMM) return COMM[abbr];
+  COMM[abbr] = null;   // mark in-flight/missing so a failed fetch is not retried on every question
+  try {
+    await notesReady;
+    const r = await fetch('/commentary/' + abbr + '.json').catch(() => null);
+    const chunks = r && r.ok ? await r.json() : [];   // a book with no commentary file can still use the reader's notes
+    const nb = NOTES && NOTES[abbr] || {};
+    for (const ch of Object.keys(nb)) for (const n of nb[ch]) {
+      if (!n.q || !n.a || /^paste the logos/i.test(n.a)) continue;
+      const m = String(n.verses || '').match(/(\d+)(?:\s*[-–]\s*(\d+))?/);
+      chunks.push({ c: +ch, f: m ? +m[1] : 1, t: m ? +(m[2] || m[1]) : 0, src: "Reader's Logos notes", title: '', text: 'Q: ' + n.q + '\nA: ' + n.a });
+    }
+    if (!chunks.length) return null;
+    const df = {}; let tot = 0;
+    chunks.forEach(k => { k.tk = toks(k.title + ' ' + k.text); tot += k.tk.length; new Set(k.tk).forEach(w => { df[w] = (df[w] || 0) + 1; }); });
+    return (COMM[abbr] = { chunks, df, avgdl: tot / (chunks.length || 1), N: chunks.length });
+  } catch (e) { return null; }
+}
+function chunkLabel(k) {
+  const vs = k.t === 0 ? '' : k.f === k.t ? ', v. ' + k.f : k.f ? ', vv. ' + k.f + '-' + k.t : '';
+  return k.src === 'Matthew Henry' ? 'Matthew Henry' + (k.title ? ', "' + k.title + '"' : '') + vs : k.src + vs;
+}
+// BM25 over the chunks that speak to the passage on screen; prior question added so follow-ups ("what contradiction?") keep their topic
+async function retrieve(question) {
+  const v = curView; if (!v || !BIBLE) return [];
+  const db = await loadComm(BIBLE[v.bi].abbrev); if (!db) return [];
+  const lastU = turns.filter(t => t.role === 'user').slice(-1)[0], lastA = turns.filter(t => t.role === 'assistant').slice(-1)[0];
+  const q = toks(question).map(w => [w, 1]).concat(lastU ? toks(lastU.text).map(w => [w, 0.5]) : [], lastA ? toks(lastA.text).map(w => [w, 0.2]) : []);
+  const whole = v.a === 1 && v.z === BIBLE[v.bi].chapters[v.ch - 1].length;
+  const cand = db.chunks.filter(k => k.c === v.ch && (whole || k.t === 0 || (k.f <= v.z && (k.t || k.f) >= v.a)));
+  // Broad question ("explain Numbers 5 reading out of context"): no real topic words, so keyword scoring would be noise.
+  // Instead give a walk through the passage: chapter overview, then the lead chunk of each commentary at each section start.
+  const bookToks = new Set(toks(BOOKS[v.bi]));
+  const cq = toks(question).filter(w => !META.has(w) && !bookToks.has(w) && !/^\d+$/.test(w));
+  if (cq.length < 1) {
+    const starts = new Set(cand.filter(k => k.src === 'Matthew Henry' && k.t !== 0).map(k => k.f));
+    if (!starts.size) { const lo = whole ? 1 : v.a, hi = whole ? BIBLE[v.bi].chapters[v.ch - 1].length : v.z; for (let i = 0; i < 4; i++) starts.add(Math.round(lo + (hi - lo) * i / 4)); }
+    const sv = [...starts].sort((x, y) => x - y), out = [], seen = new Set();
+    const ov = cand.find(k => k.t === 0); if (ov) { out.push(ov); seen.add(ov); }
+    sv.forEach((s0, i) => {
+      const end = sv[i + 1] != null ? sv[i + 1] - 1 : 999;
+      for (const src of [...new Set(cand.map(k => k.src))]) {
+        const lead = cand.find(k => k.src === src && k.t !== 0 && k.f >= s0 && k.f <= end && !seen.has(k));
+        if (lead) { out.push(lead); seen.add(lead); }
+      }
+    });
+    let chars = 0; return out.filter(k => (chars += k.text.length) <= 8000).slice(0, 8);
+  }
+  const k1 = 1.5, b = 0.75;
+  const scored = cand.map(k => {
+    const tf = {}; k.tk.forEach(w => { tf[w] = (tf[w] || 0) + 1; });
+    let sc = 0;
+    for (const [w, wt] of q) { if (!tf[w]) continue; const idf = Math.log(1 + (db.N - db.df[w] + 0.5) / (db.df[w] + 0.5)); sc += wt * idf * (tf[w] * (k1 + 1)) / (tf[w] + k1 * (1 - b + b * k.tk.length / db.avgdl)); }
+    if (selVerses.size && k.t !== 0 && [...selVerses].some(x => x >= k.f && x <= (k.t || k.f))) sc *= 1.25;
+    if (k.src === "Reader's Logos notes") sc *= 1.15;
+    if (k.t === 0 && !whole) sc *= 0.5;   // chapter overviews help less than text on the verses themselves
+    return { k, sc };
+  }).sort((x, y) => y.sc - x.sc);
+  const perSrc = {}, picked = []; let chars = 0;
+  const take = (e, cap) => { if ((perSrc[e.k.src] || 0) >= cap || picked.length >= 8 || chars + e.k.text.length > 8000 || picked.includes(e)) return; perSrc[e.k.src] = (perSrc[e.k.src] || 0) + 1; chars += e.k.text.length; picked.push(e); };
+  const hits = scored.filter(e => e.sc > 0);
+  hits.forEach(e => take(e, 3));      // first pass: top 3 per source, so one commentary cannot crowd out the others
+  hits.forEach(e => take(e, 8));      // then fill up to 8 from whatever ranks next
+  if (picked.length < 3) scored.filter(e => e.k.t !== 0).sort((x, y) => ((x.k.t || x.k.f) - x.k.f) - ((y.k.t || y.k.f) - y.k.f)).forEach(e => { if (picked.length < 3) take(e, 8); });
+  return picked.map(e => e.k);
+}
+function sourcesBlock(chunks) {
+  if (!chunks.length) return '';
+  return '\n\nCommentary sources retrieved for this question (public-domain commentaries and the reader\'s own notes; they may disagree with each other):\n' +
+    chunks.map((k, i) => '[' + (i + 1) + '] ' + chunkLabel(k) + '\n' + k.text).join('\n\n') +
+    '\n\nUse these sources where they bear on the question and cite them as [1], [2]. Cite only sources listed here, never invent one. If they do not address the question, say so and answer from the passage.';
+}
+
+function systemPrompt(sources) {
   const focus = selVerses.size ? '\nThe reader has tapped these verses to focus on: ' + [...selVerses].sort((x, y) => x - y).join(', ') + '.' : '';
-  return STYLES[$('style').value].sys + '\n' + RULES + '\n\nThe reader is currently reading ' + passageRef + (passageRef && passageText && !BIBLE_REF_OK() ? ' (text supplied by the reader):\n' : ' (World English Bible):\n') + passageText + focus;
+  return STYLES[$('style').value].sys + '\n' + RULES + '\n\nThe reader is currently reading ' + passageRef + (passageRef && passageText && !BIBLE_REF_OK() ? ' (text supplied by the reader):\n' : ' (World English Bible):\n') + passageText + focus + (BIBLE_REF_OK() ? bookContext(curView) + (sources || '') : '');
 }
 function bubble(role, text) { $('empty') && $('empty').remove(); const d = document.createElement('div'); d.className = 'msg ' + role; const t = document.createElement('span'); t.textContent = text; d.appendChild(t); $('feed').appendChild(d); scrollFeed(); return t; }
 async function ask() {
@@ -206,12 +337,14 @@ async function ask() {
   const out = bubble('assistant', '…'); let acc = '';
   const msgs = turns.slice(-10).concat([{ role: 'user', text }]);
   try {
+    const used = BIBLE_REF_OK() ? await retrieve(text) : []; window.lastRag = used; console.log('RAG sources', used.map(chunkLabel));
     const r = await fetch('/api/tutor', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ accessCode: code, model: $('model').value.trim(), system: systemPrompt(), messages: msgs }) });
+      body: JSON.stringify({ accessCode: code, model: $('model').value.trim(), system: systemPrompt(sourcesBlock(used)), messages: msgs }) });
     if (r.status === 401) { ls.set('ocr-access-code', ''); $('code').value = ''; }
     if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.error || ('HTTP ' + r.status)); }
     const reader = r.body.getReader(); const dec = new TextDecoder();
     while (true) { const { done, value } = await reader.read(); if (done) break; acc += dec.decode(value, { stream: true }); out.textContent = acc; scrollFeed(); }
+    if (used.length) { const sd = document.createElement('div'); sd.className = 'srcs'; sd.textContent = 'Sources: ' + used.map((k, i) => '[' + (i + 1) + '] ' + chunkLabel(k)).join(' · '); out.parentNode.appendChild(sd); }
     const pi = passageInfo(); turns.push({ role: 'user', text, passage: pi }, { role: 'assistant', text: acc, passage: pi });
   } catch (e) { out.parentNode.remove(); bubble('assistant err', 'Error: ' + e.message); }
   finally { busy = false; $('go').disabled = false; $('inp').focus(); }
@@ -459,6 +592,10 @@ document.addEventListener('keydown', e => {
   const tag = (document.activeElement && document.activeElement.tagName) || '';
   if ((e.key === 'e' || e.key === 'E') && !e.metaKey && !e.ctrlKey && !e.altKey && !/INPUT|TEXTAREA|SELECT/.test(tag) && !$('refModal').classList.contains('show')) { e.preventDefault(); openRef(); }
 });
+
+// ── optional background data; the page works without either file ──
+fetch('/bible_intro.json').then(r => r.ok ? r.json() : null).then(d => { INTRO = d; }).catch(() => {});
+const notesReady = fetch('/study_notes.json').then(r => r.ok ? r.json() : null).then(d => { NOTES = d; }).catch(() => {});
 
 // ── load Bible (World English Bible, public domain) ──
 fetch('/bible_web.json').then(r => r.json()).then(d => {
