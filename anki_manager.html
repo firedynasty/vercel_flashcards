@@ -229,7 +229,7 @@ td.col-due .due-badge {
 .confirm-overlay.open { display: flex; }
 .confirm-box { background: var(--surface); border-radius: 12px; padding: 24px 28px; max-width: 360px; width: 90%; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,.25); }
 .confirm-box h3 { font-size: 16px; margin-bottom: 8px; }
-.confirm-box p  { font-size: 13px; color: var(--muted); margin-bottom: 20px; }
+.confirm-box p  { font-size: 13px; color: var(--muted); margin-bottom: 20px; white-space: pre-line; max-height: 50vh; overflow-y: auto; }
 .confirm-box .btn-row { display: flex; gap: 10px; justify-content: center; }
 
 /* ── MAIN VIEW TOGGLE ── */
@@ -1576,7 +1576,11 @@ function promptNewDeck() {
 }
 
 // ── CONFIRM ────────────────────────────────────────────────────────────────────
-function showConfirm(title, msg, cb) {
+function showConfirm(title, msg, cb, okLabel) {
+  var ok = document.getElementById('confirmOkBtn');
+  ok.textContent = okLabel || 'Delete';
+  ok.classList.toggle('danger', !okLabel);
+  ok.classList.toggle('primary', !!okLabel);
   document.getElementById('confirmTitle').textContent = title;
   document.getElementById('confirmMsg').textContent   = msg;
   document.getElementById('confirmOverlay').classList.add('open');
@@ -2031,20 +2035,39 @@ function looksLikeHeader(cells) {
 // Column 1 is always the front (your target-language term, whatever the
 // language). Columns 2+ join with "\n", skipping blanks, to form the back.
 // Mirrors csv_to_cards.py so the same CSV behaves identically either way.
+// A header row whose last column is "deck" (e.g. front,back,deck) sends each row to
+// that deck instead of the one picked above; "a::b" is a subdeck. That column is not
+// part of the back.
+var IMPORT_DECK_WORDS = ['deck', 'subdeck', 'sub deck', 'sub-deck'];
+var importHasDeckCol = false;
+
+function deckOf(card, fallback) { return card.deck || fallback; }
+
 function parseImportText(text) {
+  importHasDeckCol = false;
   var lines = text.split(/\r?\n/).map(function(l) { return l.trim(); }).filter(Boolean);
   if (!lines.length) return [];
 
   var start = 0;
   var first = parseCsvLine(lines[0]);
-  if (looksLikeHeader(first)) start = 1;
+  var deckIdx = -1;
+  if (looksLikeHeader(first)) {
+    start = 1;
+    var lastIdx = first.length - 1;
+    if (lastIdx >= 1 && IMPORT_DECK_WORDS.indexOf(first[lastIdx].toLowerCase().trim()) >= 0) {
+      deckIdx = lastIdx;
+      importHasDeckCol = true;
+    }
+  }
 
   var cards = [];
   for (var i = start; i < lines.length; i++) {
     var cols = parseCsvLine(lines[i]);
     if (!cols.length || !cols[0]) continue;
-    var back = cols.slice(1).filter(Boolean).join('\n');
-    cards.push({ front: cols[0], back: back });
+    var backCols = deckIdx >= 0 ? cols.slice(1, deckIdx) : cols.slice(1);
+    var back = backCols.filter(Boolean).join('\n');
+    var deck = deckIdx >= 0 ? (cols[deckIdx] || '').trim() : '';
+    cards.push({ front: cols[0], back: back, deck: deck });
   }
   return cards;
 }
@@ -2074,7 +2097,7 @@ var importDupSeq     = 0;   // drops stale responses when the CSV/deck changes
 function buildImportNotes(deck, allowDuplicate) {
   return importParsed.map(function(c) {
     return {
-      deckName: deck,
+      deckName: deckOf(c, deck),
       modelName: 'Basic',
       fields: { Front: c.front, Back: c.back },
       options: { allowDuplicate: allowDuplicate, duplicateScope: 'deck' },
@@ -2090,17 +2113,24 @@ function checkImportDuplicates() {
 
   var seen = {};
   var reasons = importParsed.map(function(c) {
-    var key = c.front.trim();
+    var key = deckOf(c, deck) + '\n' + c.front.trim();
     if (seen[key]) return 'repeated in CSV';
     seen[key] = true;
     return null;
   });
 
   document.getElementById('importDupStatus').textContent = 'Checking for duplicates…';
-  anki('canAddNotesWithErrorDetail', { notes: buildImportNotes(deck, false) })
+  // A deck that doesn't exist yet can't hold duplicates, so only check cards going to existing decks
+  var allNotes = buildImportNotes(deck, false);
+  var existingIdx = [];
+  allNotes.forEach(function(n, i) { if (allDecks[n.deckName]) existingIdx.push(i); });
+  (existingIdx.length
+      ? anki('canAddNotesWithErrorDetail', { notes: existingIdx.map(function(i) { return allNotes[i]; }) })
+      : Promise.resolve([]))
     .then(function(checks) {
       if (seq !== importDupSeq) return;
-      checks.forEach(function(chk, i) {
+      checks.forEach(function(chk, j) {
+        var i = existingIdx[j];
         if (!chk.canAdd && !reasons[i]) {
           reasons[i] = /duplicate/i.test(chk.error || '') ? 'already in deck' : (chk.error || 'cannot add');
         }
@@ -2173,7 +2203,7 @@ function updateImportPreview() {
   var headHtml = '<tr>';
   headers.forEach(function(h, i) {
     var cls = ' class="col-highlight"';
-    var badge = i === frontIdx ? ' ✦F' : ' ✦B';
+    var badge = i === frontIdx ? ' ✦F' : (importHasDeckCol && i === headers.length - 1 ? ' ✦D' : ' ✦B');
     headHtml += '<th' + cls + '>' + escH(h) + badge + '</th>';
   });
   headHtml += '</tr>';
@@ -2211,6 +2241,7 @@ function updateImportPreview() {
     cardsHtml += '<div class="import-card-num">Card ' + (i + 1) + (dup ? '<span class="dup-badge">DUP · ' + escH(dup) + '</span>' : '') + '</div>';
     cardsHtml += '<div class="import-card-row"><div class="import-card-label front-lbl">Front</div><div class="import-card-value">' + escH(c.front) + '</div></div>';
     cardsHtml += '<div class="import-card-row"><div class="import-card-label back-lbl">Back</div><div class="import-card-value">' + backHtml + '</div></div>';
+    if (c.deck) cardsHtml += '<div class="import-card-row"><div class="import-card-label">Deck</div><div class="import-card-value">' + escH(c.deck) + '</div></div>';
     cardsHtml += '</div>';
   });
   if (importParsed.length > LIMIT) {
@@ -2233,7 +2264,7 @@ function updateImportPreview() {
   }
 
   var k = importKeptIndexes().length;
-  label.textContent = 'Preview — ' + n + ' card' + (n !== 1 ? 's' : '') + ' · ✦F = Front · ✦B = Back';
+  label.textContent = 'Preview — ' + n + ' card' + (n !== 1 ? 's' : '') + ' · ✦F = Front · ✦B = Back' + (importHasDeckCol ? ' · ✦D = Deck' : '');
   countEl.textContent = k + ' card' + (k !== 1 ? 's' : '') + ' ready';
   btn.disabled = k === 0;
   btn.textContent = 'Import ' + k + ' card' + (k !== 1 ? 's' : '');
@@ -2299,7 +2330,29 @@ function promptImportNewDeck() {
     .catch(function(e) { setStatus('Error: ' + e.message, 'err'); });
 }
 
+// With a deck column, list where the cards will go (and which decks get created) and
+// wait for a click before touching Anki.
 function doImport() {
+  if (!importParsed.length) return;
+  if (!importHasDeckCol) { doImportNow(); return; }
+  var deck = document.getElementById('importDeck').value;
+  var counts = {}, order = [];
+  importKeptIndexes().forEach(function(i) {
+    var d = deckOf(importParsed[i], deck);
+    if (!(d in counts)) { counts[d] = 0; order.push(d); }
+    counts[d]++;
+  });
+  if (!order.length) return;
+  var total = order.reduce(function(t, d) { return t + counts[d]; }, 0);
+  var fresh = order.filter(function(d) { return !allDecks[d]; });
+  var lines = order.sort().map(function(d) {
+    return '• ' + d + ' — ' + counts[d] + ' card' + (counts[d] !== 1 ? 's' : '') + (allDecks[d] ? '' : '  (new deck)');
+  });
+  var msg = lines.join('\n') + (fresh.length ? '\n\n' + fresh.length + ' new deck' + (fresh.length !== 1 ? 's' : '') + ' will be created (parent decks too).' : '');
+  showConfirm('Add ' + total + ' card' + (total !== 1 ? 's' : '') + '?', msg, doImportNow, 'Import');
+}
+
+function doImportNow() {
   if (!importParsed.length) return;
   var deck = document.getElementById('importDeck').value;
   var removeDups = document.getElementById('importRemoveDups').checked;
@@ -2320,13 +2373,21 @@ function doImport() {
 
   // With "Remove duplicates" on, re-check right before adding (the deck may have
   // changed since the preview check) so addNotes never bulk-fails.
-  var ready = removeDups
-    ? anki('canAddNotesWithErrorDetail', { notes: notes }).then(function(checks) {
-        var ok = notes.filter(function(_, i) { return checks[i].canAdd; });
-        removed += notes.length - ok.length;
-        return ok;
-      })
-    : Promise.resolve(notes);
+  var missing = [];
+  notes.forEach(function(n) { if (!allDecks[n.deckName] && missing.indexOf(n.deckName) < 0) missing.push(n.deckName); });
+  var decksReady = missing.reduce(function(chain, name) {
+    return chain.then(function() { return anki('createDeck', { deck: name }); });
+  }, Promise.resolve());
+
+  var ready = decksReady.then(function() {
+    return removeDups
+      ? anki('canAddNotesWithErrorDetail', { notes: notes }).then(function(checks) {
+          var ok = notes.filter(function(_, i) { return checks[i].canAdd; });
+          removed += notes.length - ok.length;
+          return ok;
+        })
+      : notes;
+  });
 
   ready
     .then(function(toAdd) {
@@ -2337,11 +2398,15 @@ function doImport() {
       }
       return addNotesCompat(toAdd).then(function(results) {
         var added = results.filter(function(id) { return id !== null; }).length;
-        var msg = 'Imported ' + added + ' card' + (added !== 1 ? 's' : '') + ' into "' + deck + '"';
+        var deckNames = [];
+        notes.forEach(function(n) { if (deckNames.indexOf(n.deckName) < 0) deckNames.push(n.deckName); });
+        var msg = 'Imported ' + added + ' card' + (added !== 1 ? 's' : '') + ' into ' +
+          (deckNames.length === 1 ? '"' + deckNames[0] + '"' : deckNames.length + ' decks');
         if (removed) msg += ' (' + removed + ' duplicate' + (removed !== 1 ? 's' : '') + ' removed)';
         setStatus(msg, 'ok');
         closeImportModal();
-        if (currentDeck === deck) loadDeck(deck);
+        if (missing.length) loadDecks();  // show the new decks in the sidebar
+        if (deckNames.indexOf(currentDeck) >= 0) loadDeck(currentDeck);
       });
     })
     .catch(function(e) {
