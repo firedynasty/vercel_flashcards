@@ -53,6 +53,7 @@
   .msg.assistant { align-self: flex-start; background: var(--asst); }
   .msg.err { background: var(--err); }
   .srcs { font-size: 11px; color: var(--dim); margin-top: 6px; line-height: 1.4; }
+  .msg .copybtn { display: block; min-height: 28px; margin-top: 6px; padding: 2px 10px; font-size: 12px; color: var(--dim); background: transparent; border-radius: 6px; }
   .divider { align-self: center; font-size: 11px; color: var(--dim); letter-spacing: 1px; text-transform: uppercase; }
   .quick { display: flex; gap: 6px; padding: 0 10px 6px; overflow-x: auto; }
   .quick button { white-space: nowrap; min-height: 34px; font-size: 13px; padding: 4px 12px; border-radius: 999px; }
@@ -106,6 +107,7 @@
 <div class="quick" id="quick"></div>
 <div class="composer">
   <textarea id="inp" rows="1" placeholder="Ask about this passage…" autocapitalize="sentences"></textarea>
+  <button id="pasteBtn" title="Paste the clipboard into the question box">Paste</button>
   <button class="primary" id="go">Ask</button>
 </div>
 
@@ -326,7 +328,20 @@ function systemPrompt(sources) {
   const focus = selVerses.size ? '\nThe reader has tapped these verses to focus on: ' + [...selVerses].sort((x, y) => x - y).join(', ') + '.' : '';
   return STYLES[$('style').value].sys + '\n' + RULES + '\n\nThe reader is currently reading ' + passageRef + (passageRef && passageText && !BIBLE_REF_OK() ? ' (text supplied by the reader):\n' : ' (World English Bible):\n') + passageText + focus + (BIBLE_REF_OK() ? bookContext(curView) + (sources || '') : '');
 }
-function bubble(role, text) { $('empty') && $('empty').remove(); const d = document.createElement('div'); d.className = 'msg ' + role; const t = document.createElement('span'); t.textContent = text; d.appendChild(t); $('feed').appendChild(d); scrollFeed(); return t; }
+function bubble(role, text) { $('empty') && $('empty').remove(); const d = document.createElement('div'); d.className = 'msg ' + role; const t = document.createElement('span'); t.textContent = text; d.appendChild(t);
+  if (role === 'assistant') { const c = document.createElement('button'); c.className = 'copybtn'; c.textContent = 'Copy'; c.onclick = async () => { c.textContent = (await copyText(t.textContent)) ? 'Copied' : 'Copy failed'; setTimeout(() => c.textContent = 'Copy', 1500); }; d.appendChild(c); }
+  $('feed').appendChild(d); scrollFeed(); return t; }
+async function copyText(s) {
+  try { await navigator.clipboard.writeText(s); return true; } catch (e) {}
+  try { const ta = document.createElement('textarea'); ta.value = s; ta.style.cssText = 'position:fixed;opacity:0'; document.body.appendChild(ta); ta.select(); const ok = document.execCommand('copy'); ta.remove(); return ok; } catch (e) { return false; }
+}
+$('pasteBtn').onclick = async () => {
+  try {
+    const t = await navigator.clipboard.readText(); if (!t.trim()) { setStatus('Clipboard is empty'); return; }
+    const i = $('inp'); i.value = i.value.trim() ? i.value.replace(/\s+$/, '') + '\n\n' + t : t;
+    i.dispatchEvent(new Event('input')); i.focus(); setStatus('Pasted ' + t.length + ' characters. Edit, then Ask');
+  } catch (e) { setStatus('Could not read the clipboard (allow paste access, or long-press and paste)'); }
+};
 async function ask() {
   if (busy) return;
   const text = $('inp').value.trim(); if (!text) return;
@@ -344,7 +359,7 @@ async function ask() {
     if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.error || ('HTTP ' + r.status)); }
     const reader = r.body.getReader(); const dec = new TextDecoder();
     while (true) { const { done, value } = await reader.read(); if (done) break; acc += dec.decode(value, { stream: true }); out.textContent = acc; scrollFeed(); }
-    if (used.length) { const sd = document.createElement('div'); sd.className = 'srcs'; sd.textContent = 'Sources: ' + used.map((k, i) => '[' + (i + 1) + '] ' + chunkLabel(k)).join(' · '); out.parentNode.appendChild(sd); }
+    if (used.length) { const sd = document.createElement('div'); sd.className = 'srcs'; sd.textContent = 'Sources: ' + used.map((k, i) => '[' + (i + 1) + '] ' + chunkLabel(k)).join(' · '); out.parentNode.insertBefore(sd, out.parentNode.querySelector('.copybtn')); }
     const pi = passageInfo(); turns.push({ role: 'user', text, passage: pi }, { role: 'assistant', text: acc, passage: pi });
   } catch (e) { out.parentNode.remove(); bubble('assistant err', 'Error: ' + e.message); }
   finally { busy = false; $('go').disabled = false; $('inp').focus(); }
