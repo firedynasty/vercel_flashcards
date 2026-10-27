@@ -12,7 +12,7 @@
     touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
   }
   body {
-    display: flex; flex-direction: column; gap: 8px; padding: 10px 10px 0;
+    display: flex; flex-direction: column; gap: 8px; padding: 10px;
     height: 100vh; height: 100dvh;
     background: var(--bg); color: var(--fg);
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -34,39 +34,17 @@
   button.sync:active { transform: scale(.96); }
 
   /* ---- game box (top) ---- */
-  #arena { position: relative; flex: 1 1 auto; min-height: 0; border-radius: 12px; background: #0e0e16; overflow: hidden; }
+  #arena { position: relative; flex: 1 1 0; min-height: 0; border-radius: 12px; background: #0e0e16; overflow: hidden; }
   canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
   .hint { position: absolute; top: 8px; left: 12px; font-size: 11px; color: var(--muted); pointer-events: none; }
   #score { position: absolute; top: 8px; right: 12px; font: 700 14px -apple-system, sans-serif; color: var(--accent); pointer-events: none; font-variant-numeric: tabular-nums; }
   #dbg { position: absolute; bottom: 4px; left: 8px; font: 10px monospace; color: #6c6; pointer-events: none; display: none; }
 
-  /* ---- footer controls (normal flow, like Rooftop Rumble) ---- */
-  #footer {
-    position: relative; flex: none;
-    height: 168px; height: clamp(168px, 36dvh, 250px);
-    padding-bottom: env(safe-area-inset-bottom);
-    --s: min(calc(var(--fh, 190px) * .8), 170px);   /* stick size */
-    --b: min(calc(var(--fh, 190px) * .36), 84px);   /* button size */
-  }
-  /* zone owns its own height, so the floating ring's top/left are measured from a real box */
-  #zone { position: absolute; left: 0; bottom: 0; width: calc(var(--s) * 1.35); height: 100%; touch-action: none; }
-  #ring {
-    position: absolute; width: var(--s); height: var(--s); border-radius: 50%;
-    background: rgba(255,255,255,.06); border: 2px solid rgba(255,255,255,.2);
-    transform: translate(-50%, -50%); pointer-events: none;
-  }
-  #knob {
-    position: absolute; left: 50%; top: 50%; width: 40%; height: 40%; margin: -20% 0 0 -20%; border-radius: 50%;
-    background: rgba(255,255,255,.28); border: 2px solid rgba(255,255,255,.4);
-  }
-
   .btns { flex: none; display: flex; flex-direction: column; gap: 6px; }
-  button.sync.cc { position: relative; padding: 8px 18px; background: #2b2b40; color: var(--fg); font-weight: 600; font-size: 13px; }
-  #ccBadge { position: absolute; top: -6px; right: -6px; min-width: 18px; padding: 1px 5px; border-radius: 9px; background: #34c759; color: #04210d; font: 700 11px sans-serif; display: none; }
+  #cc .small.wait.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
 
-  /* ---- Claude activity panel (covers the page while open) ---- */
-  #cc { position: fixed; inset: 8px; z-index: 10; display: none; flex-direction: column; gap: 8px; padding: 12px; border-radius: 14px; background: var(--panel); border: 1px solid #34344a; touch-action: pan-y; }
-  #cc.open { display: flex; }
+  /* ---- Claude / OpenAI chat panel (bottom half, always loaded) ---- */
+  #cc { position: relative; flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 14px; background: var(--panel); border: 1px solid #34344a; touch-action: pan-y; }
   #cc .top { flex: none; display: flex; align-items: center; gap: 8px; }
   #cc .top b { font-size: 15px; }
   #cc button, #cc input { font: 14px -apple-system, BlinkMacSystemFont, sans-serif; }
@@ -88,10 +66,8 @@
   #cc .ask input { flex: 1; min-width: 0; padding: 10px; border-radius: 8px; border: 1px solid #44445e; background: #11111a; color: var(--fg); }
   #ccCode { width: 110px; padding: 6px 8px; border-radius: 8px; border: 1px solid #44445e; background: #11111a; color: var(--fg); }
 
-  /* short landscape phones: footer would eat the picture, so the controls float over the corners */
+  /* short landscape phones: tighter bar */
   @media (max-height: 470px) and (orientation: landscape) {
-    #footer { position: fixed; left: 0; right: 0; bottom: 0; height: 0; padding: 0; --fh: 210px; }
-    #zone { height: 210px; }
     .bar { padding: 6px 10px; }
     #dot { width: 40px; height: 40px; }
     button.sync { padding: 8px 14px; }
@@ -110,8 +86,14 @@
     </div>
     <div class="btns">
       <button class="sync" id="syncBtn" title="Restart the beat right now (Space)">Sync</button>
-      <button class="sync cc" id="ccBtn" title="What Claude Code is doing">Claude<span id="ccBadge"></span></button>
     </div>
+  </div>
+
+  <div id="arena">
+    <canvas id="cv"></canvas>
+    <div class="hint">arrow keys / WASD &middot; Space = Sync &middot; grab the grapes</div>
+    <div id="score"></div>
+    <div id="dbg"></div>
   </div>
 
   <div id="cc">
@@ -119,7 +101,7 @@
       <b>Claude Code</b>
       <button class="small" id="dbxBtn">Dropbox</button>
       <input id="ccCode" type="password" placeholder="Access code" autocomplete="off">
-      <button class="small" id="ccClose" style="margin-left:auto">Close</button>
+      <button class="small wait" id="waitBtn" title="Highlights until Claude / OpenAI responds">Wait</button>
     </div>
     <div id="ccStatus"></div>
     <div id="ccRows"></div>
@@ -128,17 +110,6 @@
       <input id="ccIn" placeholder="Ask about what's going on&hellip;" autocomplete="off">
       <button class="small" id="ccSend">Send</button>
     </div>
-  </div>
-
-  <div id="arena">
-    <canvas id="cv"></canvas>
-    <div class="hint">joystick / arrow keys / WASD &middot; Space = Sync &middot; grab the grapes</div>
-    <div id="score"></div>
-    <div id="dbg"></div>
-  </div>
-
-  <div id="footer">
-    <div id="zone"><div id="ring"><div id="knob"></div></div></div>
   </div>
 
 <script>
@@ -155,6 +126,19 @@
   var bpm = 80, clickOn = false, ctx = null, nextBeat = 0, flashes = [];
   var level = 0;                                   // current flash level 0..1, shared with the ball
 
+  // gradient line along the top: one sweep = 4 beats, rate follows bpm (60 bpm = 4 s per sweep)
+  var gradAnim = null;
+  (function () {
+    var line = document.createElement('div');
+    line.style.cssText = 'position:fixed;top:0;left:0;right:0;height:3px;z-index:50;pointer-events:none;' +
+      'background:linear-gradient(90deg,#d62828,#ffffff,#111111,#ffd60a,#111111,#1d4ed8,#ffffff,#d62828);background-size:200% 100%';
+    document.body.appendChild(line);
+    if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      gradAnim = line.animate([{ backgroundPosition: '0 0' }, { backgroundPosition: '-200% 0' }],
+        { duration: 4000, iterations: Infinity, easing: 'linear' });
+    }
+  })();
+
   try {
     var s = JSON.parse(localStorage.getItem('blinkPage') || '{}');
     if (s.bpm) bpm = s.bpm;
@@ -165,6 +149,7 @@
   function setBpm(v) {
     bpm = Math.max(MIN, Math.min(MAX, Math.round(v)));
     slider.value = bpm; label.firstChild.nodeValue = bpm; save();
+    if (gradAnim) gradAnim.updatePlaybackRate(bpm / 60);
   }
   setBpm(bpm); clickBox.checked = clickOn;
 
@@ -196,7 +181,7 @@
     }
   }, 25);
 
-  function sync() { flashes.length = 0; nextBeat = nowS(); if (clickOn) getCtx(); }
+  function sync() { flashes.length = 0; nextBeat = nowS(); if (gradAnim) gradAnim.currentTime = 0; if (clickOn) getCtx(); }
 
   slider.addEventListener('input', function () { setBpm(+slider.value); });
   clickBox.addEventListener('change', function () { clickOn = clickBox.checked; if (clickOn) getCtx(); save(); });
@@ -208,8 +193,8 @@
   // Reads the one-file snapshot claude_hooks_server/upload.js keeps in Dropbox (/vercel/claude_activity.json,
   // rebuilt from the last 24h and overwritten, so nothing piles up). Chat goes through /api/tutor.
   var SNAP = '/vercel/claude_activity.json', STALE = 2 * 3600 * 1000, MODEL = 'gpt-4.1';
-  var cc = $('cc'), ccBtn = $('ccBtn'), ccBadge = $('ccBadge'), ccRows = $('ccRows'), ccLog = $('ccLog'), ccIn = $('ccIn'), ccCode = $('ccCode');
-  var ccOpen = false, dbxToken = null, snap = null, unseen = 0, firstSnap = true, seen = {}, chat = [], chatBusy = false, TITLE0 = document.title;
+  var cc = $('cc'), ccRows = $('ccRows'), ccLog = $('ccLog'), ccIn = $('ccIn'), ccCode = $('ccCode');
+  var ccOpen = true, dbxToken = null, snap = null, unseen = 0, firstSnap = true, seen = {}, chat = [], chatBusy = false, TITLE0 = document.title;
   try { ccCode.value = localStorage.getItem('blinkCode') || ''; } catch (e) {}
   ccCode.addEventListener('change', function () { try { localStorage.setItem('blinkCode', ccCode.value.trim()); } catch (e) {} });
   function ccStatus(t) { $('ccStatus').textContent = t || ''; }
@@ -295,7 +280,7 @@
         snap = j; ccStatus('');
         liveSessions().forEach(function (s) {
           var prev = seen[s.session];
-          if (!firstSnap && s.state === 'done' && (!prev || prev.finishedAt !== s.finishedAt) && !ccOpen) unseen++;
+          if (!firstSnap && s.state === 'done' && (!prev || prev.finishedAt !== s.finishedAt)) waitOff();   // a Claude Code run just finished
           seen[s.session] = { state: s.state, finishedAt: s.finishedAt };
         });
         firstSnap = false; renderRows(); badge();
@@ -304,7 +289,7 @@
   }
   setInterval(function () { if (!document.hidden) pollSnap(); }, 4000);
 
-  function badge() { ccBadge.textContent = unseen; ccBadge.style.display = unseen ? 'block' : 'none'; }
+  function badge() {}                                // chat is always on screen, no unread badge
   function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
   function renderRows() {
     ccRows.innerHTML = '';
@@ -331,9 +316,12 @@
   }
   setInterval(tickCc, 1000);
 
-  function openCc() { ccOpen = true; unseen = 0; badge(); cc.classList.add('open'); renderRows(); }
-  ccBtn.addEventListener('click', function () { this.blur(); openCc(); pollSnap(); });
-  $('ccClose').addEventListener('click', function () { ccOpen = false; cc.classList.remove('open'); });
+  function openCc() { renderRows(); }
+  // Wait button: click to light its border; it clears when a Claude Code run finishes or a chat reply completes
+  var waitBtn = $('waitBtn');
+  function waitOff() { waitBtn.classList.remove('on'); }
+  waitBtn.addEventListener('click', function () { this.classList.toggle('on'); this.blur(); });
+  renderRows();                                      // panel is on screen from load
 
   // --- chat: the model only sees what the snapshot holds (prompts, tool names, file/folder names, short command heads, last reply) ---
   function evLine(e) {
@@ -380,7 +368,7 @@
       })
       .then(function () { chat.push({ role: 'assistant', text: acc }); })
       .catch(function (e) { out.textContent = '[' + e.message + ']'; chat.pop(); })
-      .then(function () { chatBusy = false; });
+      .then(function () { chatBusy = false; waitOff(); });   // reply done (or failed)
   }
   $('ccSend').addEventListener('click', function () { ask(ccIn.value); });
   ccIn.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); ask(ccIn.value); } });
@@ -391,12 +379,12 @@
   })();
 
   // ---------- ball game ----------
-  var cv = $('cv'), g2 = cv.getContext('2d'), arena = $('arena'), footer = $('footer');
+  var cv = $('cv'), g2 = cv.getContext('2d'), arena = $('arena');
   var W = 0, H = 0, DPR = 1;
   var ball = { x: 0, y: 0, vx: 0, vy: 0, r: 20 };
   var trail = [];
 
-  // canvas follows the game BOX (not the window); fires again when the footer changes size
+  // canvas follows the game BOX (not the window)
   function resize() {
     DPR = window.devicePixelRatio || 1;
     var w = Math.max(1, arena.clientWidth), h = Math.max(1, arena.clientHeight);
@@ -405,70 +393,19 @@
     cv.width = W * DPR; cv.height = H * DPR;
     if (!oldW) { ball.x = W / 2; ball.y = H * 0.45; }
     else { ball.x *= W / oldW; ball.y *= H / oldH; items.forEach(function (q) { q.x *= W / oldW; q.y *= H / oldH; }); }
-    // size the controls from the footer's height; in the 0-height overlay mode let the CSS --fh stand
-    if (footer.clientHeight > 0) footer.style.setProperty('--fh', footer.clientHeight + 'px');
-    else footer.style.removeProperty('--fh');
-    restRing();
   }
   if (window.ResizeObserver) new ResizeObserver(resize).observe(arena);
   window.addEventListener('resize', resize);
 
-  // input: joystick vector (-1..1), plus keys and L/R buttons
+  // input: keys only (stickVec stays 0; the frame loop still reads it)
   var stickVec = { x: 0, y: 0 }, keys = {};
 
-  // ---- floating stick: the ring is created AT the touch point and every delta is measured
-  // from that point, so the painted ring and the maths can never disagree (no rect-math drift).
-  var zone = $('zone'), ring = $('ring'), knob = $('knob');
-  var stick = null;                                  // { id, x, y } origin = where the finger landed
-  function restRing() {                              // idle position: low on the left edge of the footer
-    if (stick) return;
-    var zr = zone.getBoundingClientRect(), R = ring.offsetWidth / 2;
-    ring.style.left = (R + 14) + 'px';
-    ring.style.top = (zr.height / 2) + 'px';
-    knob.style.transform = '';
-  }
-  function stickStart(e) {
-    var zr = zone.getBoundingClientRect();           // only used to PAINT the ring
-    ring.style.left = (e.clientX - zr.left) + 'px';  // do NOT clamp: clamping biases the output
-    ring.style.top = (e.clientY - zr.top) + 'px';
-    stick = { id: e.pointerId, x: e.clientX, y: e.clientY };
-    stickMove(e);
-    log('stick start ' + Math.round(e.clientX) + ',' + Math.round(e.clientY));
-  }
-  function stickMove(e) {
-    if (!stick || e.pointerId !== stick.id) return;
-    var R = ring.offsetWidth / 2;
-    var dx = e.clientX - stick.x, dy = e.clientY - stick.y;
-    var len = Math.hypot(dx, dy);
-    if (len > R) { dx *= R / len; dy *= R / len; len = R; }
-    knob.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
-    var n = len / R;
-    if (n < 0.12) { stickVec.x = stickVec.y = 0; }   // dead zone
-    else { stickVec.x = dx / R; stickVec.y = dy / R; }
-    log('stick ' + stickVec.x.toFixed(2) + ',' + stickVec.y.toFixed(2));
-  }
-  function stickEnd(e) {
-    if (!stick || (e && e.pointerId !== stick.id)) return;
-    stick = null; stickVec.x = stickVec.y = 0; restRing();
-    log('stick end');
-  }
-  zone.addEventListener('pointerdown', function (e) {
-    e.preventDefault();
-    try { zone.setPointerCapture(e.pointerId); } catch (_) {}
-    stickStart(e);                                   // a new press always takes over, so a lost pointerup can never leave the stick latched
-  });
-  zone.addEventListener('pointermove', function (e) { if (stick && e.pointerId === stick.id) { e.preventDefault(); stickMove(e); } });
-  zone.addEventListener('pointerup', stickEnd);
-  zone.addEventListener('pointercancel', function (e) { log('stick CANCEL'); stickEnd(e); });
-  zone.addEventListener('lostpointercapture', stickEnd);
-  zone.addEventListener('contextmenu', function (e) { e.preventDefault(); });
-
-  function resetInput() { stickEnd(); keys = {}; }
+  function resetInput() { keys = {}; }
   document.addEventListener('visibilitychange', function () { if (document.hidden) resetInput(); });
   window.addEventListener('blur', resetInput);
 
   window.addEventListener('keydown', function (e) {
-    if (ccOpen) return;                              // typing in the Claude panel
+    if (/^(INPUT|TEXTAREA)$/.test((e.target || {}).tagName)) return;   // typing in the chat / code boxes
     if (e.code === 'Space') { e.preventDefault(); if (!e.repeat) sync(); return; }
     keys[e.code] = true;
     if (e.code.indexOf('Arrow') === 0) e.preventDefault();
@@ -550,7 +487,7 @@
     dot.style.background = 'rgb(' + Math.round(58 + level * 197) + ',' + Math.round(18 + level * 41) + ',' + Math.round(16 + level * 32) + ')';
     dot.style.boxShadow = '0 0 ' + Math.round(level * 36) + 'px rgba(255,59,48,' + level.toFixed(2) + ')';
 
-    // movement: joystick is analog; keys and L/R buttons add digital input
+    // movement: arrow keys / WASD
     var ix = stickVec.x, iy = stickVec.y;
     if (keys.ArrowLeft || keys.KeyA) ix -= 1;
     if (keys.ArrowRight || keys.KeyD) ix += 1;
