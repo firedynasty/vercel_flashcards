@@ -1590,6 +1590,16 @@ function showConfirm(title, msg, cb, okLabel) {
 function closeConfirm() { document.getElementById('confirmOverlay').classList.remove('open'); }
 
 // ── EXPORT CSV ────────────────────────────────────────────────────────────────
+// ── EXPORT CSV: the deck as the sheet shape the csv loader reads ────────────────
+//   col 1 = x (known)   col 2 = name (the front)   col 3..n = the back, one column per field
+// x means Anki has a card for that name at interval >= KNOWN_IVL_DAYS — "good to go for the
+// next week". Duplicates across subdecks resolve to ANY: the interval query runs over the whole
+// collection and matches by front text, so a word known in chinese::hsk1 but new in
+// chinese::movie2 still exports with an x. One direction only: this reads Anki, never writes it.
+var KNOWN_IVL_DAYS = 7;
+
+function xFront(s) { return stripHtml(String(s || '')).replace(/\s+/g, ' ').trim().toLowerCase(); }
+
 function exportCsv() {
   if (!currentNotes.length) { alert('No cards loaded.'); return; }
 
@@ -1604,36 +1614,69 @@ function exportCsv() {
     ? currentNotes.filter(function(n) { return selectedIds.has(n.noteId); })
     : currentNotes;
 
-  // Collect all field names in order from the first note that has fields
+  // Field names in Anki's own order, from the first note that has fields
   var allFieldNames = [];
   for (var i = 0; i < rows.length; i++) {
-    var keys = Object.keys(rows[i].fields || {});
-    if (keys.length) { allFieldNames = keys; break; }
+    var f = rows[i].fields || {};
+    var keys = Object.keys(f);
+    if (keys.length) {
+      allFieldNames = keys.sort(function(a, b) { return (f[a].order || 0) - (f[b].order || 0); });
+      break;
+    }
   }
+  if (!allFieldNames.length) { alert('No fields to export.'); return; }
 
-  // Header: all field names + Tags
-  var lines = [allFieldNames.concat(['Tags']).map(csvEsc).join(',')];
+  setStatus('Reading intervals from Anki…');
+  anki('findCards', { query: 'prop:ivl>=' + KNOWN_IVL_DAYS })
+    .then(function(ids) {
+      var known = {}, chain = Promise.resolve();
+      for (var i = 0; i < ids.length; i += 500) {
+        (function(batch) {
+          chain = chain.then(function() {
+            return anki('cardsInfo', { cards: batch }).then(function(info) {
+              info.forEach(function(c) {
+                var fs = Object.keys(c.fields).map(function(k) { return c.fields[k]; })
+                  .sort(function(a, b) { return a.order - b.order; });
+                var f = xFront(fs[0] ? fs[0].value : '');
+                if (f) known[f] = true;
+              });
+            });
+          });
+        })(ids.slice(i, i + 500));
+      }
+      return chain.then(function() { return known; });
+    })
+    .then(function(known) {
+      var head = ['x'].concat(allFieldNames);
+      var lines = [head.map(csvEsc).join(',')];
+      var marked = 0;
 
-  rows.forEach(function(n) {
-    var fields = n.fields || {};
-    var cells = allFieldNames.map(function(f) {
-      return fields[f] ? stripHtml(fields[f].value) : '';
+      rows.forEach(function(n) {
+        var fields = n.fields || {};
+        var cells = allFieldNames.map(function(f) {
+          return fields[f] ? stripHtml(fields[f].value) : '';
+        });
+        var isKnown = !!known[xFront(cells[0])];
+        if (isKnown) marked++;
+        lines.push([isKnown ? 'x' : ''].concat(cells).map(csvEsc).join(','));
+      });
+
+      var blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+      var url  = URL.createObjectURL(blob);
+      var a    = document.createElement('a');
+      var now  = new Date();
+      var pad  = function(x) { return x < 10 ? '0' + x : '' + x; };
+      var deck = currentDeck || 'anki-export';
+      a.href     = url;
+      a.download = deck.replace(/[^a-z0-9_-]/gi, '_') + '_' + now.getFullYear() + '-' + pad(now.getMonth()+1) + '-' + pad(now.getDate()) + '.csv';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      setStatus('Exported ' + rows.length + ' cards · ' + marked + ' x\'d (interval >= '
+        + KNOWN_IVL_DAYS + ' days) · col 1 = x, col 2 = ' + allFieldNames[0] + '.', 'ok');
+    })
+    .catch(function(e) {
+      setStatus('Export failed reading intervals: ' + e.message, 'err');
     });
-    cells.push((n.tags || []).join(' '));
-    lines.push(cells.map(csvEsc).join(','));
-  });
-
-  var blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
-  var url  = URL.createObjectURL(blob);
-  var a    = document.createElement('a');
-  var now  = new Date();
-  var pad  = function(x) { return x < 10 ? '0' + x : '' + x; };
-  var deck = currentDeck || 'anki-export';
-  a.href     = url;
-  a.download = deck.replace(/[^a-z0-9_-]/gi, '_') + '_' + now.getFullYear() + '-' + pad(now.getMonth()+1) + '-' + pad(now.getDate()) + '.csv';
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-  setStatus('Exported ' + rows.length + ' cards (' + allFieldNames.length + ' fields) as CSV.', 'ok');
 }
 
 // ── UTILS ──────────────────────────────────────────────────────────────────────
@@ -2060,16 +2103,45 @@ function parseImportText(text) {
     }
   }
 
-  var cards = [];
+  // Rows first, so the mark column can be detected across all of them.
+  var rows = [];
   for (var i = start; i < lines.length; i++) {
     var cols = parseCsvLine(lines[i]);
-    if (!cols.length || !cols[0]) continue;
-    var backCols = deckIdx >= 0 ? cols.slice(1, deckIdx) : cols.slice(1);
-    var back = backCols.filter(Boolean).join('\n');
-    var deck = deckIdx >= 0 ? (cols[deckIdx] || '').trim() : '';
-    cards.push({ front: cols[0], back: back, deck: deck });
+    if (cols.length) rows.push(cols);
   }
+
+  // A leading filter column (col 1 = x / blank, col 2 = the name) is skipped, not imported as
+  // the front. Without this, every unmarked row has an empty front and is dropped, and the
+  // marked ones all become a card called "x" that collapses into one duplicate.
+  var nameIdx = hasImportMarkColumn(rows) ? 1 : 0;
+
+  var cards = [];
+  rows.forEach(function(cols) {
+    var front = (cols[nameIdx] || '').trim();
+    if (!front) return;
+    var backCols = deckIdx >= 0 ? cols.slice(nameIdx + 1, deckIdx) : cols.slice(nameIdx + 1);
+    var back = backCols.filter(Boolean).join('\n');
+    if (!back) return;   // a name with nothing behind it is a section heading ("A", "B"), not a card
+    var deck = deckIdx >= 0 ? (cols[deckIdx] || '').trim() : '';
+    cards.push({ front: front, back: back, deck: deck });
+  });
   return cards;
+}
+
+// True when col 1 of every row is blank or a mark token (x / X / checkmark) and there is a
+// further column to use as the name. Digits are not marks, so an id column stays content.
+var IMPORT_MARK_RE = /^(x|\u2713|\u2714)$/i;
+
+function hasImportMarkColumn(rows) {
+  var sawWide = false;
+  for (var i = 0; i < rows.length; i++) {
+    var cols = rows[i];
+    if (!cols.some(function(c) { return String(c || '').trim(); })) continue;
+    var v = String(cols[0] == null ? '' : cols[0]).trim();
+    if (v && !IMPORT_MARK_RE.test(v)) return false;
+    if (cols.length > 1 && String(cols[1] || '').trim()) sawWide = true;
+  }
+  return sawWide;
 }
 
 function previewImport() {
