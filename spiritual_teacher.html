@@ -5,12 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Spiritual Teacher</title>
 <style>
-  :root { color-scheme: dark; --bg:#111; --fg:#eee; --muted:#aaa; --dim:#888; --ctl:#1c1c1c; --line:#444; --line2:#2c2c2c; --accent:#d4a84b; --card:#1a1a1a; --me:#1d3b66; --asst:#232323; --err:#5a1f1f; }
+  :root { color-scheme: dark; --bg:#111; --fg:#eee; --muted:#aaa; --dim:#888; --ctl:#1c1c1c; --line:#444; --line2:#2c2c2c; --accent:#d4a84b; --card:#1a1a1a; --me:#1d3b66; --asst:#232323; --err:#5a1f1f;
+    --skin:#e2b48c; --skin-shade:#c99970; --ink:#1c1410; --mouth:#2c0d0c; --tongue:#c4655e; --teeth:#efe9de; --iris:#6f93b3; --stage:#191919; }
   @media (prefers-color-scheme: light) {
-    :root:not([data-theme="dark"]) { color-scheme: light; --bg:#f6f6f4; --fg:#1a1a1a; --muted:#555; --dim:#777; --ctl:#fff; --line:#c8c8c4; --line2:#ddd; --accent:#8a6410; --card:#fff; --me:#d6e6ff; --asst:#ececea; --err:#ffd9d9; }
+    :root:not([data-theme="dark"]) { color-scheme: light; --bg:#f6f6f4; --fg:#1a1a1a; --muted:#555; --dim:#777; --ctl:#fff; --line:#c8c8c4; --line2:#ddd; --accent:#8a6410; --card:#fff; --me:#d6e6ff; --asst:#ececea; --err:#ffd9d9;
+    --skin:#f0c9a4; --skin-shade:#dfae86; --ink:#2a1d17; --mouth:#3f1413; --tongue:#d9776f; --teeth:#fbf7f0; --iris:#4a6b8a; --stage:#e6dfd5; }
   }
-  :root[data-theme="light"] { color-scheme: light; --bg:#f6f6f4; --fg:#1a1a1a; --muted:#555; --dim:#777; --ctl:#fff; --line:#c8c8c4; --line2:#ddd; --accent:#8a6410; --card:#fff; --me:#d6e6ff; --asst:#ececea; --err:#ffd9d9; }
-  :root[data-theme="dark"] { color-scheme: dark; --bg:#111; --fg:#eee; --muted:#aaa; --dim:#888; --ctl:#1c1c1c; --line:#444; --line2:#2c2c2c; --accent:#d4a84b; --card:#1a1a1a; --me:#1d3b66; --asst:#232323; --err:#5a1f1f; }
+  :root[data-theme="light"] { color-scheme: light; --bg:#f6f6f4; --fg:#1a1a1a; --muted:#555; --dim:#777; --ctl:#fff; --line:#c8c8c4; --line2:#ddd; --accent:#8a6410; --card:#fff; --me:#d6e6ff; --asst:#ececea; --err:#ffd9d9;
+    --skin:#f0c9a4; --skin-shade:#dfae86; --ink:#2a1d17; --mouth:#3f1413; --tongue:#d9776f; --teeth:#fbf7f0; --iris:#4a6b8a; --stage:#e6dfd5; }
+  :root[data-theme="dark"] { color-scheme: dark; --bg:#111; --fg:#eee; --muted:#aaa; --dim:#888; --ctl:#1c1c1c; --line:#444; --line2:#2c2c2c; --accent:#d4a84b; --card:#1a1a1a; --me:#1d3b66; --asst:#232323; --err:#5a1f1f;
+    --skin:#e2b48c; --skin-shade:#c99970; --ink:#1c1410; --mouth:#2c0d0c; --tongue:#c4655e; --teeth:#efe9de; --iris:#6f93b3; --stage:#191919; }
   :root { --fs: 17; }
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   html, body { height: 100%; }
@@ -53,7 +57,13 @@
   .msg.assistant { align-self: flex-start; background: var(--asst); }
   .msg.err { background: var(--err); }
   .srcs { font-size: 11px; color: var(--dim); margin-top: 6px; line-height: 1.4; }
-  .msg .copybtn { display: block; min-height: 28px; margin-top: 6px; padding: 2px 10px; font-size: 12px; color: var(--dim); background: transparent; border-radius: 6px; }
+  .msg .copybtn { display: inline-block; min-height: 28px; margin: 6px 6px 0 0; padding: 2px 10px; font-size: 12px; color: var(--dim); background: transparent; border-radius: 6px; }
+  /* The 3D face (talkinghead/head.js), which themes itself from --skin, --mouth
+     and friends above. Short, so the passage and the conversation keep the screen;
+     head.js resizes to whatever box it is given. Hidden with the Face button. */
+  .stage { background: var(--stage); border-bottom: 1px solid var(--line2); flex: 0 0 auto; height: clamp(130px, 24vh, 260px); touch-action: none; cursor: grab; }
+  .stage.off { display: none; }
+  .stage canvas { display: block; width: 100%; height: 100%; }
   .divider { align-self: center; font-size: 11px; color: var(--dim); letter-spacing: 1px; text-transform: uppercase; }
   .quick { display: flex; gap: 6px; padding: 0 10px 6px; overflow-x: auto; }
   .quick button { white-space: nowrap; min-height: 34px; font-size: 13px; padding: 4px 12px; border-radius: 999px; }
@@ -71,6 +81,9 @@
   <input class="num" id="vFrom" type="number" min="1" inputmode="numeric" placeholder="from" title="First verse (blank = whole chapter)">
   <input class="num" id="vTo" type="number" min="1" inputmode="numeric" placeholder="to" title="Last verse">
   <button id="togBtn" title="Show / hide the passage">Passage</button>
+  <button id="headBtn" title="Show / hide the face">Face</button>
+  <button id="voiceBtn" title="Read the answers aloud">🔊</button>
+  <button id="stopBtn" title="Stop reading" disabled>Stop</button>
   <span class="sep"></span>
   <button id="fMinus" title="Smaller text">A−</button>
   <button id="fPlus" title="Larger text">A+</button>
@@ -100,6 +113,7 @@
   <div class="hist" id="refHist"></div>
   <div class="hint">Enter = go · Esc = close · press <b>e</b> anywhere to open</div>
 </div></div>
+<div class="stage" id="stage"></div>
 <div class="passage" id="passage"></div>
 <div class="feed" id="feed">
   <div class="empty" id="empty">Choose a passage above, then ask about it.<br>Tap verse numbers in the passage to focus a question on just those verses.</div>
@@ -329,7 +343,8 @@ function systemPrompt(sources) {
   return STYLES[$('style').value].sys + '\n' + RULES + '\n\nThe reader is currently reading ' + passageRef + (passageRef && passageText && !BIBLE_REF_OK() ? ' (text supplied by the reader):\n' : ' (World English Bible):\n') + passageText + focus + (BIBLE_REF_OK() ? bookContext(curView) + (sources || '') : '');
 }
 function bubble(role, text) { $('empty') && $('empty').remove(); const d = document.createElement('div'); d.className = 'msg ' + role; const t = document.createElement('span'); t.textContent = text; d.appendChild(t);
-  if (role === 'assistant') { const c = document.createElement('button'); c.className = 'copybtn'; c.textContent = 'Copy'; c.onclick = async () => { c.textContent = (await copyText(t.textContent)) ? 'Copied' : 'Copy failed'; setTimeout(() => c.textContent = 'Copy', 1500); }; d.appendChild(c); }
+  if (role === 'assistant') { const s = document.createElement('button'); s.className = 'copybtn'; s.textContent = '🔊 Again'; s.onclick = () => window.stSpeak && window.stSpeak(t.textContent, true); d.appendChild(s);
+    const c = document.createElement('button'); c.className = 'copybtn'; c.textContent = 'Copy'; c.onclick = async () => { c.textContent = (await copyText(t.textContent)) ? 'Copied' : 'Copy failed'; setTimeout(() => c.textContent = 'Copy', 1500); }; d.appendChild(c); }
   $('feed').appendChild(d); scrollFeed(); return t; }
 async function copyText(s) {
   try { await navigator.clipboard.writeText(s); return true; } catch (e) {}
@@ -361,6 +376,9 @@ async function ask() {
     while (true) { const { done, value } = await reader.read(); if (done) break; acc += dec.decode(value, { stream: true }); out.textContent = acc; scrollFeed(); }
     if (used.length) { const sd = document.createElement('div'); sd.className = 'srcs'; sd.textContent = 'Sources: ' + used.map((k, i) => '[' + (i + 1) + '] ' + chunkLabel(k)).join(' · '); out.parentNode.insertBefore(sd, out.parentNode.querySelector('.copybtn')); }
     const pi = passageInfo(); turns.push({ role: 'user', text, passage: pi }, { role: 'assistant', text: acc, passage: pi });
+    // The face reads the answer out. Defined by the module script at the foot of
+    // the page; absent only if the import failed, and the page still works then.
+    window.stSpeak && window.stSpeak(acc);
   } catch (e) { out.parentNode.remove(); bubble('assistant err', 'Error: ' + e.message); }
   finally { busy = false; $('go').disabled = false; $('inp').focus(); }
 }
@@ -608,6 +626,10 @@ document.addEventListener('keydown', e => {
   if ((e.key === 'e' || e.key === 'E') && !e.metaKey && !e.ctrlKey && !e.altKey && !/INPUT|TEXTAREA|SELECT/.test(tag) && !$('refModal').classList.contains('show')) { e.preventDefault(); openRef(); }
 });
 
+// What the status line goes back to when the voice stops. The module script
+// below owns the face and has no idea what is being read.
+window.stAfterSpeech = () => updateFocus();
+
 // ── optional background data; the page works without either file ──
 fetch('/bible_intro.json').then(r => r.ok ? r.json() : null).then(d => { INTRO = d; }).catch(() => {});
 const notesReady = fetch('/study_notes.json').then(r => r.ok ? r.json() : null).then(d => { NOTES = d; }).catch(() => {});
@@ -620,6 +642,158 @@ fetch('/bible_web.json').then(r => r.json()).then(d => {
   fillChapters(); $('chap').value = saved.c || 1; $('vFrom').value = saved.f || ''; $('vTo').value = saved.t || '';
   showPassage(false);
 }).catch(e => setStatus('Could not load Bible: ' + e.message));
+</script>
+
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js" } }
+</script>
+<!--
+  The face, and the voice that drives it.
+
+  A separate module script on purpose: the study page above is a classic
+  script, and retyping it as a module would put every one of its top-level
+  functions out of the global scope for the sake of three imports. The whole
+  bridge between them is two names — window.stSpeak, which the page calls with
+  a finished answer, and window.stAfterSpeech, which hands the status line
+  back when the voice stops.
+
+  head.js / drivers.js / speech.js are imported unchanged; per the four
+  contracts in talkinghead/CLAUDE.md this block is this page's app.js, owning
+  the DOM and the wiring and nothing else. The same inlined-per-page shape the
+  eleven learn-*-tts callers use for the access code.
+-->
+<script type="module">
+import { createHead } from './talkinghead/head.js';
+import { createServerVoice, createBrowserVoice } from './talkinghead/speech.js';
+import { createAmplitudeDriver, createRhythmDriver } from './talkinghead/drivers.js';
+
+const $ = id => document.getElementById(id);
+const ls = { get(k, d) { try { return localStorage.getItem(k) ?? d; } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+const CODE_KEY = 'ocr-access-code';   // the box in Settings writes this; /api/tts is the judge of it
+const VOICE = 'onyx';
+const MAX_TTS = 2400;
+
+const head = createHead({ mount: $('stage') });
+const serverVoice = createServerVoice({ endpoint: '/api/tts' });
+const browserVoice = createBrowserVoice();
+const rhythmDriver = createRhythmDriver();
+let mode = 'server', speaking = false;
+
+const setStatus = t => { $('status').textContent = t; };
+function finish(restore) {
+  speaking = false; head.setSpeaking(false); head.setDriver(null); $('stopBtn').disabled = true;
+  if (restore !== false) window.stAfterSpeech && window.stAfterSpeech();
+}
+function stopSpeech() { serverVoice.stop(); browserVoice.stop(); finish(); }
+$('stopBtn').onclick = stopSpeech;
+serverVoice.on('end', () => finish());
+serverVoice.on('error', e => { finish(false); setStatus('Voice error: ' + e.message); });
+browserVoice.on('end', () => finish());
+browserVoice.on('error', e => { finish(false); setStatus('Voice error: ' + e.message); });
+browserVoice.on('boundary', () => rhythmDriver.accent());
+
+/* This page's answers are written to be READ — they cite "v. 5" and the
+   retrieved sources as "[1]" — and a speaking voice says "bracket one" and
+   "vee five" unless the citations are turned back into words first. The
+   sources line itself is a separate .srcs element and is never spoken. */
+function speakable(s) {
+  return s.replace(/```[\s\S]*?```/g, ' ')
+    .replace(/\[(\d+)(\s*,\s*\d+)*\]/g, '')                       // [1], [2, 3]: on screen, not in the ear
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/\bvv\.?\s*(\d+)\s*[-–—]\s*(\d+)/gi, 'verses $1 to $2')
+    .replace(/\bvv\.?\s*(\d+)/gi, 'verses $1')
+    .replace(/\bv\.\s*(\d+)/gi, 'verse $1')
+    .replace(/(\d+):(\d+)\s*[-–—]\s*(\d+)/g, '$1 verse $2 to $3')  // John 3:16-21
+    .replace(/(\d+):(\d+)/g, '$1 verse $2')                        // John 3:16
+    .replace(/[*_#`>~|]/g, '')
+    .replace(/\s+([,.;:!?])/g, '$1')   // a removed "[1]" leaves a gap before the comma it sat against
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+/* A study answer runs long. Cut on a sentence end rather than mid-word, and
+   only when there is a sentence end late enough to be worth cutting at. */
+function clip(s, n) {
+  if (s.length <= n) return s;
+  const cut = s.slice(0, n), i = Math.max(cut.lastIndexOf('. '), cut.lastIndexOf('! '), cut.lastIndexOf('? '));
+  return i > n * 0.5 ? cut.slice(0, i + 1) : cut;
+}
+
+let voiceOn = ls.get('st-voiceon', '1') === '1';
+function applyVoiceOn() {
+  $('voiceBtn').textContent = voiceOn ? '🔊' : '🔇';
+  $('voiceBtn').title = voiceOn ? 'Answers are read aloud — tap to go silent' : 'Answers are silent — tap to have them read aloud';
+  ls.set('st-voiceon', voiceOn ? '1' : '0');
+}
+$('voiceBtn').onclick = () => { voiceOn = !voiceOn; applyVoiceOn(); if (!voiceOn) stopSpeech(); };
+applyVoiceOn();
+
+let headOn = ls.get('st-headon', '1') === '1';
+function applyHeadOn() { $('stage').classList.toggle('off', !headOn); ls.set('st-headon', headOn ? '1' : '0'); }
+$('headBtn').onclick = () => { headOn = !headOn; applyHeadOn(); };
+applyHeadOn();
+
+/* force = the reader pressed "Again" on a reply, so speak it even when the
+   automatic reading is switched off. /api/tts hands back a whole mp3, so this
+   runs once the answer is complete; the analyser does not exist until speak()
+   has built the audio graph, which is why the driver is attached after it. */
+async function say(text, force) {
+  if (!voiceOn && !force) return;
+  const t = clip(speakable(text || ''), MAX_TTS);
+  if (!t) return;
+  stopSpeech();
+  speaking = true; head.setSpeaking(true); $('stopBtn').disabled = false;
+  try {
+    if (mode === 'server') {
+      setStatus('Generating voice…');
+      await serverVoice.speak({ text: t, voice: VOICE, speed: 1, accessCode: ($('code').value || ls.get(CODE_KEY, '') || '').trim() });
+      head.setDriver(createAmplitudeDriver(serverVoice.analyser));
+      setStatus('Reading aloud');
+    } else {
+      head.setDriver(rhythmDriver);
+      setStatus('Reading aloud');
+      await browserVoice.speak({ text: t });
+    }
+  } catch (e) {
+    if (e.name === 'AbortError') return;            // our own stop()
+    finish(false);
+    if (e.status === 401 || e.status === 400) {     // the endpoint has just refused the stored code
+      ls.set(CODE_KEY, ''); $('code').value = '';
+      $('code').closest('details').open = true;
+      setStatus(e.status === 401 ? 'That access code was refused — enter it again' : 'The voice needs the access code in Settings');
+    } else setStatus('Voice error: ' + e.message);
+  }
+}
+window.stSpeak = say;
+
+/* Tap the face to stop it talking. The bar is a scroll strip, so on a narrow
+   phone the Stop button is off to the right exactly when it is wanted; the
+   head is the one target always on screen. A tap only — anything that moves
+   is head.js's drag-to-turn, and a double tap recenters. */
+let tapAt = null;
+$('stage').addEventListener('pointerdown', e => { tapAt = { x: e.clientX, y: e.clientY, t: Date.now() }; });
+$('stage').addEventListener('pointerup', e => {
+  if (!tapAt) return;
+  const moved = Math.hypot(e.clientX - tapAt.x, e.clientY - tapAt.y);
+  const quick = Date.now() - tapAt.t < 500;
+  tapAt = null;
+  if (moved < 10 && quick && speaking) stopSpeech();
+});
+$('stage').addEventListener('dblclick', () => head.recenter());
+document.addEventListener('keydown', e => {
+  const tag = (document.activeElement && document.activeElement.tagName) || '';
+  if (e.key === 'Escape' && speaking && !/INPUT|TEXTAREA/.test(tag)) stopSpeech();
+});
+
+/* OPTIONS costs nothing and spends no OpenAI credit. The catch-all rewrite in
+   vercel.json serves flashcards.html for anything unmatched, so an HTML answer
+   means there is no such route: opened as a static file, fall back to the free
+   browser voice, whose jaw motion is a rhythm rather than real sync. */
+(async function probe() {
+  try {
+    const r = await fetch('/api/tts', { method: 'OPTIONS' });
+    mode = r.ok && !(r.headers.get('content-type') || '').includes('text/html') ? 'server' : 'browser';
+  } catch (e) { mode = 'browser'; }
+})();
 </script>
 </body>
 </html>
