@@ -4,7 +4,13 @@
 //
 // Contract: specs/006-gdoc-voice-notes/contracts/transcribe-api.md
 //
-// POST /api/transcribe  { audioBase64, mimeType }  →  { text }
+// POST /api/transcribe  { audioBase64, mimeType, accessCode }  →  { text }
+//
+// accessCode is required and checked against ACCESS_CODE, the same way
+// api/tts.js and api/ocr.js do it: without it this function spends the
+// server's OpenAI credit for anyone who knows the URL. The only caller is
+// googlenotes.html, which reads the code from localStorage under
+// 'ocr-access-code', prompts when it is missing, and clears it on a 401.
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -13,6 +19,14 @@ export default async function handler(req, res) {
 
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+
+  // Before the key, before the body: nothing below here runs for a stranger.
+  const { accessCode } = req.body || {};
+  const validAccessCode = process.env.ACCESS_CODE;
+  if (!accessCode) return res.status(400).json({ error: 'Access code required' });
+  if (!validAccessCode || accessCode !== validAccessCode) {
+    return res.status(401).json({ error: 'Invalid access code' });
+  }
 
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) return res.status(500).json({ error: 'OPENAI_API_KEY not configured on server' });

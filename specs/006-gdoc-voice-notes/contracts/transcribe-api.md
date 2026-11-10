@@ -16,13 +16,15 @@ Content-Type: application/json
 ```json
 {
   "audioBase64": "<base64-encoded audio bytes, no data: prefix>",
-  "mimeType": "audio/webm"
+  "mimeType": "audio/webm",
+  "accessCode": "<the shared ACCESS_CODE>"
 }
 ```
 
 | Field | Type | Required | Notes |
 |-------|------|----------|-------|
 | `audioBase64` | string | yes | The `MediaRecorder` blob, base64-encoded client-side (`FileReader.readAsDataURL` minus the `data:...;base64,` prefix, or equivalent). |
+| `accessCode` | string | yes | Checked against `ACCESS_CODE` before anything else, so an anonymous caller cannot spend the server's OpenAI credit. Added 2026-11-09; the same code and `localStorage` key (`ocr-access-code`) as `api/tts.js`, `api/ocr.js` and `api/tutor.js`. |
 | `mimeType` | string | yes | The blob's actual MIME type (e.g. `audio/webm`, `audio/mp4` on Safari) — used to pick a filename extension for the multipart upload to OpenAI and must be one OpenAI's endpoint accepts (`webm`, `mp4`, `wav`, `mp3`, `m4a`, `mpeg`, `mpga`). |
 
 `OPTIONS` requests return `200` with no body (CORS preflight), matching `api/tts.js`/`api/ocr.js`.
@@ -43,13 +45,17 @@ Content-Type: application/json
 | Status | Body | When |
 |--------|------|------|
 | `405` | `{ "error": "Method not allowed" }` | Any method other than `POST`/`OPTIONS`. |
+| `400` | `{ "error": "Access code required" }` | No `accessCode` in the body. Checked first: no OpenAI call is made. |
+| `401` | `{ "error": "Invalid access code" }` | `accessCode` does not match `ACCESS_CODE` (or that env var is unset). No OpenAI call is made. |
 | `400` | `{ "error": "Missing audioBase64" }` | Request body missing the required field. |
 | `500` | `{ "error": "OPENAI_API_KEY not configured on server" }` | Env var not set on this Vercel deployment (mirrors `api/tts.js`'s existing check). |
 | `<upstream status>` | `{ "error": "<OpenAI error text>" }` | OpenAI's transcription endpoint returned a non-2xx response (e.g. unintelligible/empty audio, rate limit) — passed through so the page can show FR-010's specific error message. |
 
 ## Server-side behavior (for the implementation phase, not a client-visible contract)
 
-1. Validate method and required field as above.
+1. Validate method, then the access code, then the required field as above —
+   in that order, so neither the key lookup nor the body decode runs for a
+   caller without the code.
 2. Decode `audioBase64` to a `Buffer`.
 3. Build a `FormData` (Node 18+ global) with:
    - `file`: a `Blob([buffer], { type: mimeType })` given a filename with the matching extension
@@ -69,8 +75,9 @@ Content-Type: application/json
 const res = await fetch('/api/transcribe', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ audioBase64, mimeType: blob.type }),
+  body: JSON.stringify({ audioBase64, mimeType: blob.type, accessCode }),
 });
+// 401 means the stored code is wrong or stale: forget it, ask once, retry.
 if (!res.ok) { const { error } = await res.json(); throw new Error(error); }
 const { text } = await res.json();
 ```

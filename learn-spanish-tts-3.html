@@ -895,19 +895,49 @@ function speakBrowser(text, onEnd) {
   speechSynthesis.speak(utterance);
 }
 
-async function speakOpenAI(text, onEnd) {
-  var voice = document.getElementById('openaiVoiceSelect').value;
-  try {
+// ---- /api/tts access code -------------------------------------------------
+// /api/tts refuses to spend the server's OpenAI key without this. Same code
+// and same localStorage key as the tutor / OCR / talking-head pages, so
+// entering it on one page unlocks the voice on all of them.
+function ttsAccessCode(forcePrompt) {
+  var code = '';
+  if (!forcePrompt) { try { code = (localStorage.getItem('ocr-access-code') || '').trim(); } catch (e) {} }
+  if (!code) {
+    code = (window.prompt('Access code for the OpenAI voice (Cancel uses the browser voice):') || '').trim();
+    if (code) { try { localStorage.setItem('ocr-access-code', code); } catch (e) {} }
+  }
+  return code;
+}
+
+// POSTs to /api/tts with the code attached. On 401 the stored code is wrong or
+// stale: forget it, ask once more, retry. Returns null when there is no code to
+// try, which the caller treats as "use the browser voice".
+async function ttsFetch(payload) {
+  var code = ttsAccessCode(false);
+  for (var attempt = 0; attempt < 2; attempt++) {
+    if (!code) return null;
     var resp = await fetch('/api/tts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        input: text,
-        voice: voice,
-        speed: ttsRate,
-        dialect: dialect
-      })
+      body: JSON.stringify(Object.assign({}, payload, { accessCode: code }))
     });
+    if (resp.status !== 401 || attempt === 1) return resp;
+    try { localStorage.removeItem('ocr-access-code'); } catch (e) {}
+    code = ttsAccessCode(true);
+  }
+  return null;
+}
+
+async function speakOpenAI(text, onEnd) {
+  var voice = document.getElementById('openaiVoiceSelect').value;
+  try {
+    var resp = await ttsFetch({ input: text, voice: voice, speed: ttsRate, dialect: dialect });
+
+    if (!resp) {
+      setStatus('No access code — using the browser voice');
+      speakBrowser(text, onEnd);
+      return;
+    }
 
     if (!resp.ok) {
       var errText = await resp.text();

@@ -1,3 +1,13 @@
+// Vercel Serverless Function — OpenAI text-to-speech (gpt-4o-mini-tts).
+// Keeps OPENAI_API_KEY server-side. Same ACCESS_CODE check as api/ocr.js.
+// Body: { input, voice, speed, dialect, accessCode }
+//
+// Every caller must send accessCode: without it this function spends the
+// server's OpenAI credit for anyone who knows the URL. Callers are the
+// learn-*-tts pages and talkinghead.html; all of them read the code from
+// localStorage under 'ocr-access-code', prompt when it is missing, and clear
+// it on a 401. A caller that sends no code falls back to the browser voice,
+// so an old page that has not been updated degrades rather than breaks.
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -9,6 +19,16 @@ export default async function handler(req, res) {
 
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  // Before the key, before the body: nothing below here runs for a stranger.
+  const { accessCode } = req.body || {};
+  const validAccessCode = process.env.ACCESS_CODE;
+  if (!accessCode) {
+    return res.status(400).json({ error: 'Access code required' });
+  }
+  if (!validAccessCode || accessCode !== validAccessCode) {
+    return res.status(401).json({ error: 'Invalid access code' });
   }
 
   const apiKey = process.env.OPENAI_API_KEY;

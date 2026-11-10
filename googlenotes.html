@@ -444,16 +444,47 @@ function stopRecording() {
   gnSetStatus('Transcribing…');
 }
 
+// ---- /api/transcribe access code -------------------------------------------
+// /api/transcribe refuses to spend the server's OpenAI key without this. Same
+// code and same localStorage key as the tutor / OCR / learn pages, so entering
+// it on any one of them covers this too.
+function gnAccessCode(forcePrompt) {
+  var code = '';
+  if (!forcePrompt) { try { code = (localStorage.getItem('ocr-access-code') || '').trim(); } catch (e) {} }
+  if (!code) {
+    code = (window.prompt('Access code for voice transcription:') || '').trim();
+    if (code) { try { localStorage.setItem('ocr-access-code', code); } catch (e) {} }
+  }
+  return code;
+}
+
+// POSTs with the code attached. On 401 the stored code is wrong or stale:
+// forget it, ask once more, retry. Returns null when there is no code to try.
+function gnTranscribeFetch(payload, attempt, code) {
+  attempt = attempt || 0;
+  code = attempt === 0 ? gnAccessCode(false) : code;
+  if (!code) return Promise.resolve(null);
+  return fetch('/api/transcribe', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(Object.assign({}, payload, { accessCode: code }))
+  }).then(function(r) {
+    if (r.status !== 401 || attempt > 0) return r;
+    try { localStorage.removeItem('ocr-access-code'); } catch (e) {}
+    return gnTranscribeFetch(payload, 1, gnAccessCode(true));
+  });
+}
+
 function transcribeRecording(blob) {
   var reader = new FileReader();
   reader.onload = function() {
     var base64 = reader.result.split(',')[1]; // strip the data: URL prefix
-    fetch('/api/transcribe', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ audioBase64: base64, mimeType: blob.type })
-    })
-      .then(function(r) { return r.json().then(function(data) { return { ok: r.ok, data: data }; }); })
+    gnTranscribeFetch({ audioBase64: base64, mimeType: blob.type })
+      .then(function(r) {
+        // No code given: say so rather than letting the recording vanish.
+        if (!r) return { ok: false, data: { error: 'No access code — transcription needs the code the other pages use.' } };
+        return r.json().then(function(data) { return { ok: r.ok, data: data }; });
+      })
       .then(function(result) {
         if (!result.ok) throw new Error(result.data.error || 'Transcription failed');
         // FR-008/FR-011: append to the (view-mode) note content, separated by a blank line.
