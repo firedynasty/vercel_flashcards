@@ -241,6 +241,19 @@ function applyTheme(t) { document.documentElement.dataset.theme = t; $('themeBtn
 applyTheme(ls.get('et-theme', '') || (isLight() ? 'light' : 'dark'));
 $('themeBtn').onclick = () => applyTheme(isLight() ? 'dark' : 'light');
 
+/* Chrome has no voices for the first second or so after a page load, and
+   speaking before the list arrives ends the utterance instantly with no sound
+   — the first tap is silently lost. Only the free browser voice is affected;
+   /api/tts has no such warm-up. */
+function voicesReady() {
+  if (!('speechSynthesis' in window) || speechSynthesis.getVoices().length) return Promise.resolve();
+  return new Promise(res => {
+    const done = () => { speechSynthesis.removeEventListener('voiceschanged', done); clearTimeout(t); res(); };
+    const t = setTimeout(done, 1500);   // some browsers never fire the event at all
+    speechSynthesis.addEventListener('voiceschanged', done);
+  });
+}
+
 let voiceOn = ls.get('et-voiceon', '1') === '1';
 function applyVoiceOn() {
   $('voiceBtn').textContent = voiceOn ? '🔊' : '🔇';
@@ -462,7 +475,12 @@ async function say(text) {
   if (!voiceOn) return;
   const t = speakable(text);
   if (!t) return;
-  stopSpeech();
+  /* Stop whatever is playing — but in browser mode do NOT cancel here.
+     speech.js's own speak() cancels before it queues, and Chrome swallows an
+     utterance queued immediately after a cancel, losing the first one. */
+  serverVoice.stop();
+  if (mode !== 'browser') browserVoice.stop();
+  head.setDriver(null);
   setSpeaking(true);
   try {
     if (mode === 'server') {
@@ -471,6 +489,7 @@ async function say(text) {
       head.setDriver(createAmplitudeDriver(serverVoice.analyser));
       setStatus('Speaking');
     } else {
+      await voicesReady();
       head.setDriver(rhythmDriver);
       setStatus('Speaking');
       await browserVoice.speak({ text: t, rate: $('speed').value });

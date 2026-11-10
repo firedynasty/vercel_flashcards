@@ -17,7 +17,7 @@
     --skin:#e2b48c; --skin-shade:#c99970; --ink:#1c1410; --mouth:#2c0d0c; --tongue:#c4655e; --teeth:#efe9de; --iris:#6f93b3; --stage:#191919; }
   :root { --fs: 17; }
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-  html, body { height: 100%; }
+  html, body { height: 100%; overflow: hidden; }
   body { font-family: -apple-system, system-ui, sans-serif; background: var(--bg); color: var(--fg); display: flex; flex-direction: column; overflow: hidden; }
   select, button, input, textarea { background: var(--ctl); color: var(--fg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font-size: 14px; font-family: inherit; }
   button { cursor: pointer; min-height: 40px; }
@@ -34,8 +34,15 @@
   details.settings { padding: 0 10px; font-size: 13px; color: var(--muted); border-bottom: 1px solid var(--line2); }
   details.settings summary { padding: 6px 0; cursor: pointer; }
   .setrow { display: flex; gap: 6px; flex-wrap: wrap; padding-bottom: 8px; align-items: center; }
-  .passage { margin: 6px 10px 0; border: 1px solid var(--line2); border-radius: 10px; background: var(--card); flex-shrink: 0; max-height: calc(6em + 16px); overflow-y: auto; padding: 8px 14px; font-family: Georgia, 'Times New Roman', serif; font-size: calc(var(--fs) * 1px); line-height: 1.5; overscroll-behavior: contain; }
+  .passage { margin: 6px 10px 0; border: 1px solid var(--line2); border-radius: 10px; background: var(--card); flex: 0 1 auto; min-height: 3em; max-height: calc(6em + 16px); overflow-y: auto; padding: 8px 14px; font-family: Georgia, 'Times New Roman', serif; font-size: calc(var(--fs) * 1px); line-height: 1.5; overscroll-behavior: contain; }
   .passage.collapsed { max-height: 0; padding: 0 14px; border-width: 0; margin-top: 0; overflow: hidden; }
+  /* The chapter summary, which comes before the text: it is what makes a
+     chapter easy to start on, and what the starter questions are drawn from. */
+  .summary { margin: 6px 10px 0; border: 1px solid var(--line2); border-left: 3px solid var(--accent); border-radius: 10px; background: var(--card); flex: 0 1 auto; min-height: 0; max-height: 24vh; overflow-y: auto; padding: 8px 13px; font-size: calc(var(--fs) * 1px - 2px); line-height: 1.55; overscroll-behavior: contain; }
+  .summary.collapsed, .summary:empty { display: none; }
+  .summary .shead { display: flex; align-items: center; gap: 8px; font-size: 10px; letter-spacing: .09em; text-transform: uppercase; color: var(--dim); font-weight: 700; margin-bottom: 5px; }
+  .summary .shead button { font-size: 11px; min-height: 22px; padding: 1px 8px; border-radius: 6px; color: var(--dim); background: transparent; text-transform: none; letter-spacing: 0; }
+  .summary .secs { margin-top: 7px; padding-top: 6px; border-top: 1px solid var(--line2); font-size: 12px; color: var(--muted); line-height: 1.6; }
   .passage sup { color: var(--accent); font-size: 11px; margin-right: 3px; font-family: -apple-system, system-ui, sans-serif; }
   .passage .v { cursor: pointer; }
   .passage .v.sel { background: rgba(212,168,75,.25); border-radius: 3px; }
@@ -50,7 +57,11 @@
   .sheet .hint { color: var(--dim); font-size: 12px; margin-top: 6px; }
   .hist { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
   .hist button { min-height: 34px; padding: 4px 12px; font-size: 13px; color: var(--accent); }
-  .feed { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 10px; overscroll-behavior: contain; }
+  /* min-height: 0 so the feed can actually shrink. Without it a flex item
+     refuses to go below its content height, the column overflows and the bar
+     scrolls off the top — which is what the summary pane's extra height
+     exposed. */
+  .feed { flex: 1; min-height: 0; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 10px; overscroll-behavior: contain; }
   .empty { color: var(--dim); font-size: 14px; text-align: center; margin: auto; padding: 20px; line-height: 1.6; }
   .msg { max-width: 94%; padding: 8px 12px; border-radius: 12px; white-space: pre-wrap; word-break: break-word; font-size: calc(var(--fs) * 1px - 1px); line-height: 1.6; }
   .msg.user { align-self: flex-end; background: var(--me); }
@@ -61,7 +72,7 @@
   /* The 3D face (talkinghead/head.js), which themes itself from --skin, --mouth
      and friends above. Short, so the passage and the conversation keep the screen;
      head.js resizes to whatever box it is given. Hidden with the Face button. */
-  .stage { background: var(--stage); border-bottom: 1px solid var(--line2); flex: 0 0 auto; height: clamp(130px, 24vh, 260px); touch-action: none; cursor: grab; }
+  .stage { background: var(--stage); border-bottom: 1px solid var(--line2); flex: 0 1 auto; height: clamp(130px, 24vh, 260px); min-height: 90px; touch-action: none; cursor: grab; }
   .stage.off { display: none; }
   .stage canvas { display: block; width: 100%; height: 100%; }
   .divider { align-self: center; font-size: 11px; color: var(--dim); letter-spacing: 1px; text-transform: uppercase; }
@@ -80,6 +91,7 @@
   <select id="chap" title="Chapter"></select>
   <input class="num" id="vFrom" type="number" min="1" inputmode="numeric" placeholder="from" title="First verse (blank = whole chapter)">
   <input class="num" id="vTo" type="number" min="1" inputmode="numeric" placeholder="to" title="Last verse">
+  <button id="sumBtn" title="Show / hide the chapter summary">Summary</button>
   <button id="togBtn" title="Show / hide the passage">Passage</button>
   <button id="headBtn" title="Show / hide the face">Face</button>
   <button id="voiceBtn" title="Read the answers aloud">🔊</button>
@@ -100,6 +112,10 @@
   <summary>Settings</summary>
   <div class="setrow">
     <label>Teacher <select id="style"></select></label>
+    <label>Answers <select id="length">
+      <option value="brief">Brief — 2-3 spoken sentences</option>
+      <option value="full">Full — the longer study answer</option>
+    </select></label>
     <label>Folder <input id="folder" type="text" placeholder="Drive folder link (blank = My Drive)" spellcheck="false" autocomplete="off" style="width:240px"></label>
     <input id="code" type="password" placeholder="Access code" autocomplete="off" style="width:130px">
     <label>Model <input id="model" list="models" value="gpt-4.1-mini" spellcheck="false" style="width:130px">
@@ -114,6 +130,7 @@
   <div class="hint">Enter = go · Esc = close · press <b>e</b> anywhere to open</div>
 </div></div>
 <div class="stage" id="stage"></div>
+<div class="summary" id="summary"></div>
 <div class="passage" id="passage"></div>
 <div class="feed" id="feed">
   <div class="empty" id="empty">Choose a passage above, then ask about it.<br>Tap verse numbers in the passage to focus a question on just those verses.</div>
@@ -139,9 +156,18 @@ const STYLES = {
 };
 const RULES = 'Ground every answer in the passage given below. Cite verse numbers (e.g. "v. 5") when you draw on a verse. Clearly separate what the text says from interpretation, and say so when Christians disagree. If the question goes beyond the passage, answer from the wider Bible and say you are doing so. Be concise (a few short paragraphs at most) and never invent verses or quotations. Speak to the reader directly.';
 const QUICK = ['What is the main point?', 'Explain the context', 'Hard words or phrases?', 'How does this apply to me?', 'Related passages?'];
+/* Brief is the default because the face reads the answer out, and nobody wants
+   four paragraphs read at them. Full restores the older study answer. */
+const BRIEF_RULE = 'Answer in 2 to 3 sentences, written to be spoken aloud: no lists, no bullet points, no markdown, no headings. Say the one thing that most answers the question and stop; the reader will ask if they want more.';
+/* Answer and follow-ups in one streamed call — a second round trip would delay
+   the voice, and the questions are no use without the answer. splitReply() cuts here. */
+const NEXT_RULE = 'End every reply with one final line beginning "NEXT:" holding 2 or 3 short follow-up questions, separated by " | ". Write them in the reader\'s own voice ("Who was this written to?"), under ten words each, each opening a genuinely different line of thought. Put nothing after that line.';
+/* Starter questions are drawn from the chapter summary, so the reader does not
+   have to know what to ask. The four angles mirror the fixed QUICK list. */
+const STARTER_SYS = 'You are given a short summary of one Bible chapter. Reply with ONLY a JSON array of exactly 4 strings and no other text. Each string is a short question a thoughtful reader would want answered about THIS chapter — name the actual people, places or ideas in it rather than asking something generic. Keep each under ten words, in the reader\'s own voice. Cover four different angles: what it says and who it was written to; a word, phrase or image worth unpacking; how it connects to the rest of Scripture; and how it bears on the reader\'s own life.';
 
 let gDoc = null, exported = 0;
-let BIBLE = null, INTRO = null, NOTES = null, passageText = '', passageRef = '', selVerses = new Set();
+let BIBLE = null, INTRO = null, NOTES = null, SUMM = null, passageText = '', passageRef = '', selVerses = new Set();
 let curView = null;   // { bi, ch, a, z } of the passage on screen
 const turns = []; let busy = false;
 
@@ -164,7 +190,13 @@ function applyTheme(t) { document.documentElement.dataset.theme = t; $('themeBtn
 applyTheme(ls.get('st-theme', '') || (isLight() ? 'light' : 'dark'));
 $('themeBtn').onclick = () => applyTheme(isLight() ? 'dark' : 'light');
 function setStatus(t) { $('status').textContent = t || ''; }
-QUICK.forEach(q => { const b = document.createElement('button'); b.textContent = q; b.onclick = () => { $('inp').value = q; ask(); }; $('quick').appendChild(b); });
+$('length').value = ls.get('st-length', 'brief');
+$('length').onchange = () => ls.set('st-length', $('length').value);
+function chips(list) {
+  const q = $('quick'); q.innerHTML = '';
+  list.forEach(text => { const b = document.createElement('button'); b.textContent = text; b.onclick = () => { $('inp').value = text; ask(); }; q.appendChild(b); });
+}
+chips(QUICK);
 
 function fillChapters() {
   const n = BIBLE ? BIBLE[$('book').value].chapters.length : 1;
@@ -191,13 +223,80 @@ function showPassage(fromChange) {
   ls.set('st-ref', JSON.stringify({ b: bi, c: ch, f: $('vFrom').value, t: $('vTo').value }));
   if (fromChange && turns.length) { const d = document.createElement('div'); d.className = 'divider'; d.textContent = '— now reading ' + passageRef + ' —'; $('feed').appendChild(d); scrollFeed(); }
   setStatus(passageRef + ' · WEB');
+  renderSummary(); scheduleStarters();
 }
 function showCustom(name, text) {
   customText = true; curView = null; passageRef = name; passageText = text; selVerses = new Set();
   const box = $('passage'); box.innerHTML = ''; box.textContent = text; box.scrollTop = 0; box.classList.remove('collapsed');
   setStatus(name + ' · imported text');
+  $('summary').innerHTML = ''; chips(QUICK);   // an imported text has no chapter summary
 }
 function updateFocus() { setStatus(selVerses.size ? passageRef + ' · focus v. ' + [...selVerses].sort((x, y) => x - y).join(', ') : passageRef + ' · WEB'); }
+
+/* ── the chapter summary ──
+   chapter_summaries.json: { "Romans 8": { overview, sections: [{ start_verse,
+   end_verse, heading }] } }, one entry for all 1189 chapters. It does three
+   jobs: it is what the reader sees first, it is what the starter questions are
+   generated from, and it goes to the teacher as context. The page works
+   without the file — the summary pane stays empty and QUICK stays on screen. */
+function summaryFor(bi, ch) { return (SUMM && SUMM[BOOKS[bi] + ' ' + ch]) || null; }
+function renderSummary() {
+  if (sumAuto) { sumOn = true; sumAuto = false; applySumOn(false); }   // a new chapter is worth seeing
+  const box = $('summary'); box.innerHTML = '';
+  const s = curView && summaryFor(curView.bi, curView.ch);
+  if (!s) return;
+  const head = document.createElement('div'); head.className = 'shead';
+  head.appendChild(document.createTextNode(BOOKS[curView.bi] + ' ' + curView.ch + ' · summary'));
+  const sp = document.createElement('button'); sp.textContent = '🔊 Read'; sp.title = 'Read the summary aloud';
+  sp.onclick = () => window.stSpeak && window.stSpeak(s.overview, true);
+  head.appendChild(sp); box.appendChild(head);
+  const p = document.createElement('div'); p.textContent = s.overview; box.appendChild(p);
+  if (s.sections && s.sections.length) {
+    const d = document.createElement('div'); d.className = 'secs';
+    d.textContent = s.sections.map(x => x.start_verse + '-' + x.end_verse + ' ' + x.heading).join(' · ');
+    box.appendChild(d);
+  }
+}
+function summaryBlock() {
+  const s = curView && summaryFor(curView.bi, curView.ch);
+  if (!s) return '';
+  const secs = (s.sections || []).map(x => '  vv. ' + x.start_verse + '-' + x.end_verse + ' — ' + x.heading).join('\n');
+  return '\n\nSummary of ' + BOOKS[curView.bi] + ' ' + curView.ch + ':\n' + s.overview + (secs ? '\nSections:\n' + secs : '');
+}
+/* sumAuto marks a collapse the page did on its own, at the first question.
+   That one is transient — the next chapter reopens the pane and nothing is
+   written to storage. Pressing the Summary button is a real preference and
+   does persist, and it clears sumAuto so the page stops second-guessing it. */
+let sumOn = ls.get('st-sumon', '1') === '1', sumAuto = false;
+function applySumOn(persist) { $('summary').classList.toggle('collapsed', !sumOn); if (persist !== false) ls.set('st-sumon', sumOn ? '1' : '0'); }
+$('sumBtn').onclick = () => { sumOn = !sumOn; sumAuto = false; applySumOn(); };
+applySumOn(false);
+
+/* ── starter questions, drawn from that summary ──
+   One cheap call per chapter, cached, and debounced so flipping through
+   chapters does not fire one per keystroke of the dropdown. The fixed QUICK
+   list stays on screen until better questions arrive, and stays for good if
+   they never do (no summary, no access code, a failed call). */
+const QCACHE = {};
+let starterSeq = 0, starterTimer = null;
+function scheduleStarters() { clearTimeout(starterTimer); starterTimer = setTimeout(starters, 700); }
+async function starters() {
+  if (!curView || customText) { chips(QUICK); return; }
+  const key = BOOKS[curView.bi] + ' ' + curView.ch;
+  if (QCACHE[key]) { chips(QCACHE[key]); return; }
+  chips(QUICK);
+  const s = summaryFor(curView.bi, curView.ch);
+  if (!s || !$('code').value.trim()) return;
+  const seq = ++starterSeq;
+  try {
+    const raw = await callTutor(STARTER_SYS, [{ role: 'user', text: key + '\n' + s.overview }]);
+    if (seq !== starterSeq) return;                        // the reader has moved on to another chapter
+    const m = raw.replace(/```json|```/g, '').match(/\[[\s\S]*\]/);
+    const list = m ? JSON.parse(m[0]) : null;
+    const ok = Array.isArray(list) ? list.filter(x => typeof x === 'string' && x.trim()).slice(0, 4) : [];
+    if (ok.length) { QCACHE[key] = ok; chips(ok); }
+  } catch (e) { /* QUICK is already on screen; a failed draft costs the reader nothing */ }
+}
 function scrollFeed() { $('feed').scrollTop = $('feed').scrollHeight; }
 $('book').onchange = () => { fillChapters(); $('vFrom').value = ''; $('vTo').value = ''; showPassage(true); };
 $('chap').onchange = () => { $('vFrom').value = ''; $('vTo').value = ''; showPassage(true); };
@@ -340,7 +439,32 @@ function sourcesBlock(chunks) {
 
 function systemPrompt(sources) {
   const focus = selVerses.size ? '\nThe reader has tapped these verses to focus on: ' + [...selVerses].sort((x, y) => x - y).join(', ') + '.' : '';
-  return STYLES[$('style').value].sys + '\n' + RULES + '\n\nThe reader is currently reading ' + passageRef + (passageRef && passageText && !BIBLE_REF_OK() ? ' (text supplied by the reader):\n' : ' (World English Bible):\n') + passageText + focus + (BIBLE_REF_OK() ? bookContext(curView) + (sources || '') : '');
+  const brief = $('length').value === 'brief' ? '\n' + BRIEF_RULE : '';
+  return STYLES[$('style').value].sys + '\n' + RULES + brief + '\n' + NEXT_RULE + '\n\nThe reader is currently reading ' + passageRef + (passageRef && passageText && !BIBLE_REF_OK() ? ' (text supplied by the reader):\n' : ' (World English Bible):\n') + passageText + focus + (BIBLE_REF_OK() ? summaryBlock() + bookContext(curView) + (sources || '') : '');
+}
+/* The NEXT: line is machinery, not an answer. Hide it while the reply is still
+   arriving — including a half-typed marker, which would otherwise flicker. */
+function visiblePart(acc) {
+  return acc.replace(/\n\s*NEXT\s*:[\s\S]*$/i, '').replace(/\n\s*N(E(X(T\s*:?)?)?)?\s*$/i, '');
+}
+function splitReply(raw) {
+  const m = raw.match(/\n\s*NEXT\s*:/i);
+  const answer = (m ? raw.slice(0, m.index) : raw).trim();
+  const next = (m ? raw.slice(m.index + m[0].length) : '').split(/\||\n/)
+    .map(s => s.replace(/^[\s\-–—•*\d.)]+/, '').trim()).filter(s => s.length > 4).slice(0, 3);
+  return { answer, next };
+}
+/* One place that talks to /api/tutor: the question, and the starter-question
+   draft. Streams, and hands onDelta the text so far. */
+async function callTutor(system, messages, onDelta) {
+  const r = await fetch('/api/tutor', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ accessCode: $('code').value.trim(), model: $('model').value.trim(), system, messages }) });
+  if (r.status === 401) { ls.set('ocr-access-code', ''); $('code').value = ''; }
+  if (!r.ok) { const e = await r.json().catch(() => ({})); const err = new Error(e.error || ('HTTP ' + r.status)); err.status = r.status; throw err; }
+  const reader = r.body.getReader(), dec = new TextDecoder();
+  let acc = '';
+  for (;;) { const { done, value } = await reader.read(); if (done) break; acc += dec.decode(value, { stream: true }); if (onDelta) onDelta(acc); }
+  return acc;
 }
 function bubble(role, text) { $('empty') && $('empty').remove(); const d = document.createElement('div'); d.className = 'msg ' + role; const t = document.createElement('span'); t.textContent = text; d.appendChild(t);
   if (role === 'assistant') { const s = document.createElement('button'); s.className = 'copybtn'; s.textContent = '🔊 Again'; s.onclick = () => window.stSpeak && window.stSpeak(t.textContent, true); d.appendChild(s);
@@ -363,22 +487,24 @@ async function ask() {
   if (!passageText) { setStatus('Choose a passage first'); return; }
   const code = $('code').value.trim(); if (!code) { setStatus('Enter the access code in Settings'); return; }
   busy = true; $('go').disabled = true;
+  // The summary has done its job once a question is asked — it seeded the
+  // questions — so give its height back to the conversation. The Summary
+  // button brings it straight back, and a new chapter reopens it.
+  if (sumOn && !turns.length) { sumOn = false; sumAuto = true; applySumOn(false); }
   bubble('user', text); $('inp').value = ''; $('inp').style.height = '';
   const out = bubble('assistant', '…'); let acc = '';
   const msgs = turns.slice(-10).concat([{ role: 'user', text }]);
   try {
     const used = BIBLE_REF_OK() ? await retrieve(text) : []; window.lastRag = used; console.log('RAG sources', used.map(chunkLabel));
-    const r = await fetch('/api/tutor', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ accessCode: code, model: $('model').value.trim(), system: systemPrompt(sourcesBlock(used)), messages: msgs }) });
-    if (r.status === 401) { ls.set('ocr-access-code', ''); $('code').value = ''; }
-    if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.error || ('HTTP ' + r.status)); }
-    const reader = r.body.getReader(); const dec = new TextDecoder();
-    while (true) { const { done, value } = await reader.read(); if (done) break; acc += dec.decode(value, { stream: true }); out.textContent = acc; scrollFeed(); }
+    const raw = await callTutor(systemPrompt(sourcesBlock(used)), msgs, s => { out.textContent = visiblePart(s) || '…'; scrollFeed(); });
+    const { answer, next } = splitReply(raw);
+    acc = answer; out.textContent = answer;
     if (used.length) { const sd = document.createElement('div'); sd.className = 'srcs'; sd.textContent = 'Sources: ' + used.map((k, i) => '[' + (i + 1) + '] ' + chunkLabel(k)).join(' · '); out.parentNode.insertBefore(sd, out.parentNode.querySelector('.copybtn')); }
-    const pi = passageInfo(); turns.push({ role: 'user', text, passage: pi }, { role: 'assistant', text: acc, passage: pi });
+    const pi = passageInfo(); turns.push({ role: 'user', text, passage: pi }, { role: 'assistant', text: answer, passage: pi });
+    chips(next.length ? next : (QCACHE[curView ? BOOKS[curView.bi] + ' ' + curView.ch : ''] || QUICK));
     // The face reads the answer out. Defined by the module script at the foot of
     // the page; absent only if the import failed, and the page still works then.
-    window.stSpeak && window.stSpeak(acc);
+    window.stSpeak && window.stSpeak(answer);
   } catch (e) { out.parentNode.remove(); bubble('assistant err', 'Error: ' + e.message); }
   finally { busy = false; $('go').disabled = false; $('inp').focus(); }
 }
@@ -633,6 +759,10 @@ window.stAfterSpeech = () => updateFocus();
 // ── optional background data; the page works without either file ──
 fetch('/bible_intro.json').then(r => r.ok ? r.json() : null).then(d => { INTRO = d; }).catch(() => {});
 const notesReady = fetch('/study_notes.json').then(r => r.ok ? r.json() : null).then(d => { NOTES = d; }).catch(() => {});
+// Chapter summaries usually land after the first showPassage(), so redraw then.
+fetch('/chapter_summaries.json').then(r => r.ok ? r.json() : null).then(d => {
+  SUMM = d; if (curView) { renderSummary(); scheduleStarters(); }
+}).catch(() => {});
 
 // ── load Bible (World English Bible, public domain) ──
 fetch('/bible_web.json').then(r => r.json()).then(d => {
@@ -718,6 +848,19 @@ function clip(s, n) {
   return i > n * 0.5 ? cut.slice(0, i + 1) : cut;
 }
 
+/* Chrome has no voices for the first second or so after a page load, and
+   speaking before the list arrives ends the utterance instantly with no sound
+   — the first tap was silently lost, the second worked. Only the free browser
+   voice is affected; /api/tts has no such warm-up. */
+function voicesReady() {
+  if (!('speechSynthesis' in window) || speechSynthesis.getVoices().length) return Promise.resolve();
+  return new Promise(res => {
+    const done = () => { speechSynthesis.removeEventListener('voiceschanged', done); clearTimeout(t); res(); };
+    const t = setTimeout(done, 1500);   // some browsers never fire the event at all
+    speechSynthesis.addEventListener('voiceschanged', done);
+  });
+}
+
 let voiceOn = ls.get('st-voiceon', '1') === '1';
 function applyVoiceOn() {
   $('voiceBtn').textContent = voiceOn ? '🔊' : '🔇';
@@ -740,7 +883,13 @@ async function say(text, force) {
   if (!voiceOn && !force) return;
   const t = clip(speakable(text || ''), MAX_TTS);
   if (!t) return;
-  stopSpeech();
+  /* Stop whatever is playing — but in browser mode do NOT cancel here.
+     speech.js's own speak() cancels before it queues, and Chrome swallows an
+     utterance queued immediately after a cancel, which silently lost the
+     first tap after a page load. One cancel, not two. */
+  serverVoice.stop();
+  if (mode !== 'browser') browserVoice.stop();
+  head.setDriver(null);
   speaking = true; head.setSpeaking(true); $('stopBtn').disabled = false;
   try {
     if (mode === 'server') {
@@ -749,6 +898,7 @@ async function say(text, force) {
       head.setDriver(createAmplitudeDriver(serverVoice.analyser));
       setStatus('Reading aloud');
     } else {
+      await voicesReady();
       head.setDriver(rhythmDriver);
       setStatus('Reading aloud');
       await browserVoice.speak({ text: t });
