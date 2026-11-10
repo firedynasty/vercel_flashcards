@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Talking Head</title>
+<meta name="description" content="A procedural 3D head that speaks pasted text, with the jaw driven by the real audio waveform.">
+<meta name="theme-color" content="#f3f1ee">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Instrument+Sans:wght@400;500;600&display=swap">
+<style>
+  /* Layout: 3D stage on the left, controls on the right; stacks on phones.
+     The head reads --skin, --mouth, --iris etc. straight off :root, so
+     retheming the page rethemes the face. */
+  :root {
+    --bg: #f3f1ee;
+    --panel: #fbfaf8;
+    --fg: #1d1b19;
+    --muted: #6b665f;
+    --line: #dcd7d0;
+    --accent: #c4452d;
+    --accent-fg: #ffffff;
+    --skin: #f0c9a4;
+    --skin-shade: #dfae86;
+    --ink: #2a1d17;
+    --mouth: #3f1413;
+    --tongue: #d9776f;
+    --teeth: #fbf7f0;
+    --iris: #4a6b8a;
+    --stage: #e6dfd5;
+    --font-display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", sans-serif;
+    --font-body: "Instrument Sans", "Segoe UI", system-ui, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #161412; --panel: #201d1a; --fg: #f1ece5; --muted: #a39b91; --line: #38332e;
+      --accent: #ef6a50; --accent-fg: #1a0d09; --skin: #e2b48c; --skin-shade: #c99970;
+      --ink: #1c1410; --mouth: #2c0d0c; --tongue: #c4655e; --teeth: #efe9de; --iris: #6f93b3;
+      --stage: #2a2521;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #161412; --panel: #201d1a; --fg: #f1ece5; --muted: #a39b91; --line: #38332e;
+    --accent: #ef6a50; --accent-fg: #1a0d09; --skin: #e2b48c; --skin-shade: #c99970;
+    --ink: #1c1410; --mouth: #2c0d0c; --tongue: #c4655e; --teeth: #efe9de; --iris: #6f93b3;
+    --stage: #2a2521;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font: 15px/1.5 var(--font-body);
+    padding-block: 28px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  main { max-width: 1060px; margin: 0 auto; display: grid; gap: 20px; }
+  h1 {
+    font: 700 clamp(28px, 5vw, 40px)/1.05 var(--font-display);
+    letter-spacing: -0.02em; margin: 0; text-wrap: balance;
+  }
+  .sub { color: var(--muted); margin: 6px 0 0; max-width: 62ch; }
+  .grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 340px); gap: 20px; align-items: start; }
+  @media (max-width: 820px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+
+  .stage {
+    background: var(--stage); border: 1px solid var(--line); border-radius: 14px;
+    padding: 14px; display: grid; gap: 10px; justify-items: center;
+  }
+  #canvasWrap { width: 100%; aspect-ratio: 1 / 1; max-height: 70vh; position: relative; touch-action: none; cursor: grab; }
+  #canvasWrap.dragging { cursor: grabbing; }
+  #canvasWrap canvas { display: block; width: 100%; height: 100%; border-radius: 10px; }
+  .meter { width: 100%; max-width: 420px; display: grid; gap: 6px; }
+  .meter-bar { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
+  .meter-fill { height: 100%; width: 0%; background: var(--accent); }
+  .status { font-size: 13px; color: var(--muted); text-align: center; min-height: 1.4em; }
+
+  .panel {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
+    padding: 18px; display: grid; gap: 16px;
+  }
+  label { display: grid; gap: 6px; font-weight: 600; font-size: 13px; }
+  label small { font-weight: 400; color: var(--muted); }
+  textarea, select, input[type="password"] {
+    font: inherit; color: var(--fg); background: var(--bg);
+    border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; width: 100%;
+  }
+  textarea { min-height: 130px; resize: vertical; line-height: 1.5; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+  .modes { display: flex; gap: 8px; flex-wrap: wrap; }
+  .modes button {
+    flex: 1 1 130px; font: 600 13px var(--font-body); padding: 9px 12px; border-radius: 8px;
+    border: 1px solid var(--line); background: var(--bg); color: var(--fg); cursor: pointer;
+  }
+  .modes button[aria-pressed="true"] { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+  .modes button:disabled { opacity: 0.45; cursor: default; }
+  .actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .btn {
+    font: 600 15px var(--font-body); border-radius: 8px; padding: 11px 20px; cursor: pointer;
+    border: 1px solid var(--accent); background: var(--accent); color: var(--accent-fg);
+  }
+  .btn.ghost { background: transparent; color: var(--fg); border-color: var(--line); }
+  .btn:disabled { opacity: 0.5; cursor: default; }
+  .note { font-size: 12.5px; color: var(--muted); margin: 0; }
+  #gate { display: grid; gap: 12px; }
+  .err { color: var(--accent); font-size: 13px; margin: 0; min-height: 1.3em; }
+  .over { color: var(--accent); font-weight: 600; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Talking Head</h1>
+    <p class="sub">A procedural head built in Three.js. Paste text, press Speak: the jaw hinge, lips, tongue and brows are driven by the loudness and brightness of the real audio. Drag the head to turn it. The server voice is <code>/api/tts</code>, the same OpenAI endpoint the learn-&#42;-tts pages use.</p>
+  </header>
+
+  <div class="grid">
+    <section class="stage" aria-label="3D face">
+      <div id="canvasWrap"></div>
+      <div class="meter" aria-hidden="true">
+        <div class="meter-bar"><div class="meter-fill" id="meterFill"></div></div>
+      </div>
+      <div class="status" id="status" role="status">Ready</div>
+    </section>
+
+    <section class="panel">
+      <!-- How the access code reaches /api/tts, which checks it against
+           ACCESS_CODE server-side and will not spend the OpenAI key without
+           it. The enforcement is in the endpoint, not here: this box is only
+           where the code is typed, and a 401 from the first Speak is what
+           brings it back. -->
+      <div id="gate" hidden>
+        <label for="code">Access code
+          <input id="code" type="password" autocomplete="current-password" spellcheck="false">
+          <small>The same code as the tutor, OCR and learn pages. Remembered on this device.</small>
+        </label>
+        <div class="actions">
+          <button type="button" class="btn" id="unlock">Unlock</button>
+        </div>
+        <p class="err" id="gateErr" role="alert"></p>
+      </div>
+
+      <div class="modes" role="group" aria-label="Voice source">
+        <button type="button" id="modeServer" aria-pressed="true">Server voice</button>
+        <button type="button" id="modeBrowser" aria-pressed="false">Browser voice</button>
+      </div>
+
+      <div id="serverFields" class="row">
+        <!-- Voice, Expression and Mouth drive are fixed (onyx / neutral / normal).
+             The controls stay in the DOM, hidden, so app.js keeps reading them and
+             any of the three can be brought back by deleting its `hidden`. -->
+        <label for="voice" hidden>Voice
+          <select id="voice"></select>
+        </label>
+        <label for="speed">Speed
+          <select id="speed">
+            <option value="0.85">Slower</option><option value="1" selected>Normal</option><option value="1.15">Faster</option>
+          </select>
+        </label>
+        <!-- These values go straight to /api/tts, which only special-cases
+             'cantonese'; 'mandarin' is what the learn-*-tts pages send for
+             Chinese read the default way. -->
+        <label for="dialect">Dialect <small>OpenAI voice only</small>
+          <select id="dialect">
+            <option value="" selected>As written</option>
+            <option value="mandarin">Mandarin</option>
+            <option value="cantonese">Cantonese</option>
+          </select>
+        </label>
+      </div>
+
+      <div id="browserFields" class="row" hidden>
+        <label for="sysVoice">Voice on this device
+          <select id="sysVoice"></select>
+        </label>
+        <label for="rate">Speed
+          <select id="rate">
+            <option value="0.85">Slower</option><option value="1" selected>Normal</option><option value="1.15">Faster</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="row" hidden>
+        <label for="mood">Expression
+          <select id="mood">
+            <option value="neutral" selected>Neutral</option>
+            <option value="bright">Bright</option>
+            <option value="surprised">Surprised</option>
+            <option value="serious">Serious</option>
+          </select>
+        </label>
+        <label for="gain">Mouth drive
+          <select id="gain">
+            <option value="0.75">Subtle</option>
+            <option value="1" selected>Normal</option>
+            <option value="1.4">Lively</option>
+          </select>
+        </label>
+      </div>
+
+      <label for="text">Text to speak
+        <textarea id="text" spellcheck="true">Hi, I am a head made of a few hundred lines of Three.js. My jaw is a real hinge, so it swings open with the sound of my voice. Paste any text in this box and press Speak.</textarea>
+        <small id="count">0 characters</small>
+      </label>
+
+      <div class="actions">
+        <button type="button" class="btn" id="paste">Paste &amp; Speak</button>
+        <button type="button" class="btn" id="speak">Speak</button>
+        <button type="button" class="btn ghost" id="stop" disabled>Stop</button>
+        <button type="button" class="btn ghost" id="reset">Recenter</button>
+      </div>
+      <p class="err" id="err" role="alert"></p>
+      <p class="note" id="modeNote"></p>
+    </section>
+  </div>
+</main>
+
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js" } }
+</script>
+<script type="module" src="./talkinghead/app.js"></script>
+</body>
+</html>

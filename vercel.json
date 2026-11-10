@@ -53,6 +53,8 @@
     { "source": "/blinkMetronome", "destination": "/blinkMetronome.html" },
     { "source": "/job_interviewer.html", "destination": "/job_interviewer.html" },
     { "source": "/job_interviewer", "destination": "/job_interviewer.html" },
+    { "source": "/talkinghead.html", "destination": "/talkinghead.html" },
+    { "source": "/talkinghead", "destination": "/talkinghead.html" },
     { "source": "/(.*)", "destination": "/flashcards.html" }
   ]
 }
