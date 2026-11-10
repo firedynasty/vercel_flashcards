@@ -55,6 +55,8 @@
     { "source": "/job_interviewer", "destination": "/job_interviewer.html" },
     { "source": "/talkinghead.html", "destination": "/talkinghead.html" },
     { "source": "/talkinghead", "destination": "/talkinghead.html" },
+    { "source": "/economic_teacher.html", "destination": "/economic_teacher.html" },
+    { "source": "/economic_teacher", "destination": "/economic_teacher.html" },
     { "source": "/(.*)", "destination": "/flashcards.html" }
   ]
 }
