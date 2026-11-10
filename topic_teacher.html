@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Topic Teacher</title>
+<meta name="description" content="Pick a subject, load your own material, and a talking teacher summarises it, hands you questions to tap, and answers in a few spoken sentences.">
+<!--
+  Topic Teacher — one page, several subjects.
+
+  The shape is the one spiritual_teacher.html and economic_teacher.html already
+  use: a summary comes first so you do not have to know what to ask, starter
+  questions are generated FROM that summary, and each answer arrives in two or
+  three spoken sentences with the next questions ready to tap.
+
+  What changes between subjects is only the entry in TOPICS: the persona, where
+  the material comes from, and whether the topic keeps a thread.
+
+    it   — a Front/Back CSV deck (Anki export). The whole deck is the material.
+    lit  — a chapter you paste, plus a RUNNING THREAD of the summaries of every
+           chapter before it. That thread is what lets the teacher answer "what
+           should I expect here?" from what the book has actually established,
+           and it is why the literature persona is told not to go past it.
+
+  Bible and news deliberately are not here: /spiritual_teacher and
+  /economic_teacher are those subjects with data this page does not need to
+  know about. Adding them back is a TOPICS entry plus a material source.
+
+  head.js / drivers.js / speech.js are imported unchanged; per the four
+  contracts in talkinghead/CLAUDE.md the module block at the foot is this
+  page's app.js and owns the DOM and the wiring, nothing else.
+-->
+<style>
+  /* The head themes itself from --skin, --mouth, --iris etc. on :root. */
+  :root { color-scheme: dark; --bg:#111; --fg:#eee; --muted:#aaa; --dim:#888; --ctl:#1c1c1c; --line:#444; --line2:#2c2c2c; --accent:#7aa95c; --card:#1a1a1a; --me:#1d3b66; --asst:#232323; --err:#5a1f1f;
+           --skin:#e2b48c; --skin-shade:#c99970; --ink:#1c1410; --mouth:#2c0d0c; --tongue:#c4655e; --teeth:#efe9de; --iris:#6f93b3; --stage:#191919; }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) { color-scheme: light; --bg:#f6f6f4; --fg:#1a1a1a; --muted:#555; --dim:#777; --ctl:#fff; --line:#c8c8c4; --line2:#ddd; --accent:#3d6b25; --card:#fff; --me:#d6e6ff; --asst:#ececea; --err:#ffd9d9;
+      --skin:#f0c9a4; --skin-shade:#dfae86; --ink:#2a1d17; --mouth:#3f1413; --tongue:#d9776f; --teeth:#fbf7f0; --iris:#4a6b8a; --stage:#e6dfd5; }
+  }
+  :root[data-theme="light"] { color-scheme: light; --bg:#f6f6f4; --fg:#1a1a1a; --muted:#555; --dim:#777; --ctl:#fff; --line:#c8c8c4; --line2:#ddd; --accent:#3d6b25; --card:#fff; --me:#d6e6ff; --asst:#ececea; --err:#ffd9d9;
+    --skin:#f0c9a4; --skin-shade:#dfae86; --ink:#2a1d17; --mouth:#3f1413; --tongue:#d9776f; --teeth:#fbf7f0; --iris:#4a6b8a; --stage:#e6dfd5; }
+  :root[data-theme="dark"] { color-scheme: dark; --bg:#111; --fg:#eee; --muted:#aaa; --dim:#888; --ctl:#1c1c1c; --line:#444; --line2:#2c2c2c; --accent:#7aa95c; --card:#1a1a1a; --me:#1d3b66; --asst:#232323; --err:#5a1f1f;
+    --skin:#e2b48c; --skin-shade:#c99970; --ink:#1c1410; --mouth:#2c0d0c; --tongue:#c4655e; --teeth:#efe9de; --iris:#6f93b3; --stage:#191919; }
+  :root { --fs: 17; }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overflow: hidden; }
+  body { font-family: -apple-system, system-ui, sans-serif; background: var(--bg); color: var(--fg); display: flex; flex-direction: column; overflow: hidden; }
+  select, button, input, textarea { background: var(--ctl); color: var(--fg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font-size: 14px; font-family: inherit; }
+  button { cursor: pointer; min-height: 40px; }
+  button.primary { background: #2a6fd6; border-color: #2a6fd6; color: #fff; font-weight: 600; }
+  button:disabled { opacity: .45; cursor: default; }
+
+  /* A scroll strip, not a wrapping block: the controls you reach for most sit first. */
+  .bar { display: flex; gap: 6px; align-items: center; padding: 8px 10px; border-bottom: 1px solid var(--line2); flex-wrap: nowrap; overflow-x: auto; flex-shrink: 0; scrollbar-width: none; }
+  .bar::-webkit-scrollbar { display: none; }
+  .bar > * { flex-shrink: 0; }
+  .bar button, .bar select { min-height: 36px; padding: 6px 9px; }
+  .loadbtn { font-weight: 600; border-color: var(--accent); color: var(--accent); }
+  .sub { padding: 0 10px 6px; min-height: 18px; }
+  .status { font-size: 12px; color: var(--dim); }
+
+  .settings { border-bottom: 1px solid var(--line2); flex-shrink: 0; }
+  .settings summary { padding: 6px 10px; font-size: 12px; color: var(--dim); cursor: pointer; }
+  .setrow { display: flex; gap: 10px; padding: 0 10px 10px; flex-wrap: wrap; align-items: center; font-size: 12px; color: var(--muted); }
+  .setrow label { display: flex; gap: 5px; align-items: center; }
+
+  .stage { background: var(--stage); border-bottom: 1px solid var(--line2); flex: 0 1 auto; height: clamp(130px, 24vh, 260px); min-height: 90px; touch-action: none; cursor: grab; }
+  .stage.off { display: none; }
+  .stage canvas { display: block; width: 100%; height: 100%; }
+
+  .panel { margin: 6px 10px 0; border: 1px solid var(--line2); border-left: 3px solid var(--accent); border-radius: 10px; background: var(--card); flex: 0 1 auto; min-height: 0; max-height: 24vh; overflow-y: auto; padding: 8px 13px; font-size: calc(var(--fs) * 1px - 2px); line-height: 1.55; overscroll-behavior: contain; }
+  .panel.collapsed, .panel:empty { display: none; }
+  .panel .phead { display: flex; align-items: center; gap: 8px; font-size: 10px; letter-spacing: .09em; text-transform: uppercase; color: var(--dim); font-weight: 700; margin-bottom: 5px; }
+  .panel .phead button { font-size: 11px; min-height: 22px; padding: 1px 8px; border-radius: 6px; color: var(--dim); background: transparent; text-transform: none; letter-spacing: 0; }
+  .panel .chapline { padding: 3px 0; border-top: 1px solid var(--line2); }
+  .panel .chapline:first-of-type { border-top: 0; }
+  .panel .chapline b { color: var(--fg); font-weight: 600; }
+  /* The cause-and-effect spine, shown inline under the recap. */
+  .chain { display: flex; flex-wrap: wrap; gap: 5px 4px; align-items: center; margin-top: 7px; padding-top: 6px; border-top: 1px solid var(--line2); font-size: 12px; }
+  .chain span { background: var(--ctl); border: 1px solid var(--line2); border-radius: 4px; padding: 2px 7px; }
+  .chain i { color: var(--accent); font-weight: 700; font-style: normal; }
+
+  /* Event cards: who did what, to whom, and the context that makes it matter. */
+  .cards { display: flex; flex-direction: column; gap: 10px; }
+  .ev { border: 1px solid var(--line2); border-radius: 10px; padding: 9px 11px; background: var(--ctl); }
+  .ev .top { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 7px; margin-bottom: 6px; }
+  .ev .n { color: var(--dim); font-size: 12px; }
+  .ev .who { font-weight: 700; color: var(--accent); }
+  .ev .verb { font-weight: 600; }
+  .ev .to { color: var(--muted); }
+  .ev dl { display: grid; grid-template-columns: 4.2rem minmax(0, 1fr); gap: 4px 10px; margin: 0; font-size: 12.5px; }
+  .ev dt { color: var(--dim); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; font-weight: 700; padding-top: 3px; }
+  .ev dd { margin: 0; line-height: 1.5; }
+  .seclabel { font-size: 10px; letter-spacing: .09em; text-transform: uppercase; color: var(--dim); font-weight: 700; margin: 14px 0 6px; }
+  .seclabel:first-child { margin-top: 0; }
+  .castlist li, .unclearlist li { margin-left: 1.1rem; padding: 4px 0; line-height: 1.5; font-size: 13px; }
+  .castlist b { color: var(--fg); }
+  .tryfirst { border: 1px dashed var(--line); border-radius: 10px; padding: 9px 11px; font-size: 13px; color: var(--muted); line-height: 1.55; }
+
+  .feed { flex: 1; min-height: 0; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 10px; overscroll-behavior: contain; }
+  .msg { max-width: 94%; padding: 8px 12px; border-radius: 12px; white-space: pre-wrap; word-break: break-word; font-size: calc(var(--fs) * 1px - 1px); line-height: 1.6; }
+  .msg.user { align-self: flex-end; background: var(--me); }
+  .msg.assistant { align-self: flex-start; background: var(--asst); }
+  .msg.err { background: var(--err); }
+  .msg .rowbtn { display: inline-block; min-height: 28px; margin: 6px 6px 0 0; padding: 2px 10px; font-size: 12px; color: var(--dim); background: transparent; border-radius: 6px; }
+  .divider { text-align: center; font-size: 11px; color: var(--dim); padding: 2px 0; }
+  .empty { color: var(--dim); font-size: 13px; text-align: center; margin: auto; padding: 0 16px; line-height: 1.8; }
+
+  .quick { display: flex; gap: 6px; padding: 0 10px 6px; overflow-x: auto; flex-shrink: 0; }
+  .quick:empty { display: none; }
+  .quick button { white-space: nowrap; min-height: 34px; font-size: 13px; padding: 4px 12px; border-radius: 999px; color: var(--accent); }
+
+  .composer { border-top: 1px solid var(--line2); padding: 8px 10px calc(8px + env(safe-area-inset-bottom)); display: flex; gap: 8px; align-items: flex-end; flex-shrink: 0; }
+  .composer textarea { flex: 1; min-height: 48px; max-height: 140px; resize: none; font-size: 16px; line-height: 1.4; }
+  .composer button { min-height: 48px; padding: 0 18px; }
+
+  .modal { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: none; align-items: center; justify-content: center; padding: 16px; z-index: 50; }
+  .modal.open { display: flex; }
+  .sheet { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px; width: 100%; max-width: 580px; display: flex; flex-direction: column; gap: 10px; max-height: 88vh; overflow-y: auto; }
+  .sheet h3 { font-size: 16px; }
+  .sheet textarea { min-height: 30vh; resize: vertical; font-size: 15px; line-height: 1.45; }
+  .arow { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .arow .sep { flex: 1; }
+  .err { color: #e06a5a; font-size: 12px; min-height: 14px; }
+  .hint { font-size: 11px; color: var(--dim); line-height: 1.6; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="bar">
+  <select id="topic" title="Subject"></select>
+  <button class="loadbtn" id="loadBtn" title="Load the material for this subject">Material</button>
+  <button id="sumBtn" title="Show / hide the summary">Summary</button>
+  <button id="threadBtn" title="Show / hide the story so far" hidden>Thread</button>
+  <button id="headBtn" title="Show / hide the face">Face</button>
+  <button id="voiceBtn" title="Read the answers aloud">🔊</button>
+  <button id="stopBtn" title="Stop reading" disabled>Stop</button>
+  <button id="fMinus" title="Smaller text">A−</button>
+  <button id="fPlus" title="Larger text">A+</button>
+  <button id="themeBtn" title="Light / dark"></button>
+  <button id="clearBtn" title="Clear this conversation">New</button>
+</div>
+<div class="sub"><span class="status" id="status"></span></div>
+<details class="settings">
+  <summary>Settings</summary>
+  <div class="setrow">
+    <label>Answers <select id="length">
+      <option value="brief">Brief — 2-3 spoken sentences</option>
+      <option value="full">Full — a longer answer</option>
+    </select></label>
+    <label>Speed <select id="speed">
+      <option value="0.85">Slower</option><option value="1" selected>Normal</option><option value="1.15">Faster</option>
+    </select></label>
+    <label>Voice <select id="voice"></select></label>
+    <input id="code" type="password" placeholder="Access code" autocomplete="off" style="width:130px">
+    <label>Model <input id="model" list="models" value="gpt-4.1-mini" spellcheck="false" style="width:130px">
+      <datalist id="models"><option value="gpt-4.1-mini"><option value="gpt-4.1"><option value="gpt-4o-mini"><option value="gpt-5-mini"><option value="gpt-5"></datalist></label>
+  </div>
+  <div class="setrow" id="modeNote"></div>
+</details>
+
+<div class="stage" id="stage"></div>
+<div class="panel" id="summary"></div>
+<div class="panel" id="thread"></div>
+
+<div class="modal" id="cardsModal"><div class="sheet">
+  <h3 id="cardsTitle">Cards</h3>
+  <div class="tryfirst">Say what happened in your own words first, then read the cards. Saying it yourself is what builds the comprehension — the cards are the check, not the lesson.</div>
+  <div id="cardsBody"></div>
+  <div class="arow">
+    <button id="ownWords">Let me say it in my own words</button>
+    <span class="sep"></span>
+    <button class="primary" id="cardsClose">Done</button>
+  </div>
+</div></div>
+
+<div class="modal" id="loadModal"><div class="sheet">
+  <h3 id="loadTitle">Material</h3>
+  <div class="arow" id="workRow" hidden>
+    <label style="flex:1">Story/thread <input id="work" type="text" placeholder="e.g. Pride and Prejudice" spellcheck="false" style="width:100%"></label>
+    <label style="flex:1">This part <input id="part" type="text" placeholder="e.g. Chapter 4" spellcheck="false" style="width:100%"></label>
+  </div>
+  <textarea id="loadText" spellcheck="false"></textarea>
+  <div class="err" id="loadErr"></div>
+  <div class="arow">
+    <button id="pickFile">Choose a file</button>
+    <button id="pasteBtn">Paste</button>
+    <span class="sep"></span>
+    <button id="loadClose">Cancel</button>
+    <button class="primary" id="loadGo">Use this</button>
+  </div>
+  <div class="hint" id="loadHint"></div>
+</div></div>
+<input type="file" id="fileInput" accept=".csv,.txt,.md,text/plain,text/csv" hidden>
+
+<div class="feed" id="feed"><div class="empty" id="empty"></div></div>
+<div class="quick" id="quick"></div>
+<div class="composer">
+  <textarea id="inp" rows="1" placeholder="Ask about this…" autocapitalize="sentences"></textarea>
+  <button class="primary" id="go">Ask</button>
+</div>
+
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js" } }
+</script>
+<script>
+const $ = id => document.getElementById(id);
+const ls = { get(k, d) { try { return localStorage.getItem(k) ?? d; } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+const CODE_KEY = 'ocr-access-code';   // shared with tutor, OCR, talkinghead and the learn-*-tts pages
+
+/* ── the subjects ──
+   Everything that differs between them lives here. `source` says where the
+   material comes from, `thread` whether the summaries accumulate.           */
+const TOPICS = {
+  it: {
+    name: 'IT course',
+    source: 'cards',
+    materialTitle: 'Your card deck',
+    hint: 'A CSV exported from the flashcard pages or Anki, with Front and Back columns — any extra columns are ignored. The whole deck becomes the material, so the teacher can explain, connect and quiz from it.',
+    empty: 'Load your card deck, and the teacher will summarise what the module covers, then hand you questions to tap.',
+    persona: 'You are a patient IT instructor teaching from the learner\'s own flashcard deck. Explain the idea behind a card rather than just restating the answer, and reach for a concrete everyday analogy when one genuinely fits. Connect cards to each other where they belong together. If the learner is wrong, say so plainly and show the distinction that matters.',
+    sumSys: 'You are given a deck of flashcards from one module of a course. In 3 or 4 plain sentences, say what this module is about and what the main ideas are, as a recap for someone about to study it. No lists, no markdown, no preamble — just the recap.',
+    qSys: 'Cover four different angles: the central idea of the module; a distinction learners most often get wrong; how two of these ideas connect; and something practical this lets you do or diagnose.',
+    quick: ['What is this module about?', 'Quiz me on this deck', 'Which ideas connect?', 'What do people get wrong?']
+  },
+  /* Literature is not a summariser. It is a reading companion for someone
+     working to follow what is actually happening: each chapter is broken into
+     who did what to whom and the context that makes it matter, and the thread
+     of those is what the next chapter gets read against. The card shape —
+     who / verb / to / where / why / before / after, plus the cause-and-effect
+     chain, the cast, and what the chapter genuinely leaves unclear — is from
+     the reader's own temple-chapter-cards.html. */
+  lit: {
+    name: 'Literature',
+    source: 'text',
+    thread: true,
+    cards: true,
+    materialTitle: 'The next part',
+    hint: 'Paste the chapter or section you have just read. It gets broken into event cards and joins the thread for this story, so the teacher knows everything up to here — and nothing past it.',
+    empty: 'Paste the chapter you just read. It is broken into who did what and why, and joins the thread for that book — so the next chapter is read against everything before it.',
+    persona: 'You are reading alongside someone who is working to follow what is happening in a story. Stay on what the text actually shows: who did what, to whom, and the context that makes it matter — quote the phrase that carries the point. The verb alone misleads ("she left" means one thing if she was fired and another if she was late), so always give the why. Keep what the book says separate from what you make of it. When the reader retells a part in their own words, say first what they got right, then correct only what actually changes the meaning, pointing at the line that shows it. When they ask what to expect, reason only from what the story has already established, name the evidence, and say plainly that it is an expectation and not a fact.',
+    sumSys: 'LIT_CARDS',
+    qSys: 'Cover four different angles: what just happened and why it matters; a character\'s motive or change; a phrase or detail worth dwelling on; and what this sets up for what comes next.',
+    quick: ['What just happened?', 'Who is who again?', 'What should I expect next?', 'What is worth noticing here?']
+  }
+};
+/* Added to every persona. The answers are HEARD, so they are written for the ear. */
+const SPOKEN_RULE = 'Your answer is read aloud by a speaking voice, so write it as speech: no lists, no bullet points, no numbered points, no markdown, no asterisks, no headings, no emoji, and no symbols that would sound wrong read out — write "percent" not "%", "dollars" not "$".';
+const BRIEF_RULE = 'Answer in 2 to 3 sentences. Say the one thing that most answers the question and stop; the reader will ask if they want more.';
+const HONEST_RULE = 'Answer from the material below. When you add anything from outside it, say so in a few words. If you are not sure, say so plainly rather than inventing — never invent a quotation, a number or a fact about the material.';
+/* Answer and follow-ups in ONE streamed call: a second round trip would delay
+   the voice, and the questions are no use without the answer. splitReply() cuts here. */
+const NEXT_RULE = 'End every reply with one final line beginning "NEXT:" holding 2 or 3 short follow-up questions, separated by " | ". Write them in the reader\'s own voice, under ten words each, each opening a genuinely different line of thought. Put nothing after that line.';
+/* The comprehension pass. JSON, because the result is rendered as cards rather
+   than read as prose; parseCards() falls back to plain text if it ever is not. */
+const LIT_CARD_SYS = 'You are helping someone follow what is happening in a story. You are given one chapter or section, and possibly the thread of what came before. Reply with ONLY a JSON object, no other text, shaped exactly like this:\n' +
+  '{"recap":"...","setting":[["Where","..."],["When","..."],["Tension","..."]],"events":[{"who":"...","verb":"...","to":"...","where":"...","why":"...","before":"...","after":"..."}],"chain":["...","..."],"cast":[["name","one line"]],"unclear":["..."]}\n' +
+  '- recap: two plain sentences saying what happens in this part.\n' +
+  '- events: one per thing that actually happens, in order, 4 to 10 of them. "who" is the character, "verb" is what they do in one or two words, "to" is what or whom they do it to. "why" is the motive or feeling — never leave it vague, because the verb alone misleads. "before" is what led to it, "after" is what it changed. Keep every field short and plain.\n' +
+  '- chain: the cause-and-effect spine, 4 to 7 short labels.\n' +
+  '- cast: everyone who appears or is spoken about, including anyone offstage whose orders or absence drives the action.\n' +
+  '- unclear: 2 to 4 things this chapter genuinely leaves open, or that a careful reader could easily misread — real questions, not comprehension-test questions.\n' +
+  'Use only what this chapter shows, plus the thread. Never use any knowledge of the rest of the story.';
+const STARTER_HEAD = 'You are given a short summary of some study material. Reply with ONLY a JSON array of exactly 4 strings and no other text. Each string is a short question the learner would want answered about THIS material — name the actual ideas, people or terms in it rather than asking something generic. Keep each under ten words, in the learner\'s own voice. ';
+
+const VOICES = ['onyx', 'alloy', 'echo', 'fable', 'nova', 'shimmer', 'ash', 'ballad', 'coral', 'sage', 'verse'];
+
+/* ── state ── */
+let topic = ls.get('tt-topic', 'it');
+if (!TOPICS[topic]) topic = 'it';
+let material = '';      // the text form of whatever is loaded, as the teacher sees it
+let label = '';         // what is on the status line
+let summary = '';       // the recap, shown first and used to draw the questions
+let CARDS = [];         // the deck, for card-source topics
+let LIT = null;         // the comprehension pass for the current part: { recap, setting, events, chain, cast, unclear }
+let work = '', part = '';   // `work` is the Story/thread field: the name the thread is filed under
+const turns = [];
+let busy = false;
+
+const T = () => TOPICS[topic];
+const threadKey = () => 'tt-thread-' + topic + '-' + (work || 'untitled').toLowerCase().replace(/\s+/g, '-');
+function loadThread() { try { return JSON.parse(ls.get(threadKey(), '[]')) || []; } catch (e) { return []; } }
+function saveThread(t) { ls.set(threadKey(), JSON.stringify(t.slice(-40))); }
+
+/* ── small UI ── */
+const setStatus = t => { $('status').textContent = t || ''; };
+function setBusy(b) { busy = b; $('go').disabled = b; $('quick').querySelectorAll('button').forEach(x => { x.disabled = b; }); }
+
+for (const k of Object.keys(TOPICS)) { const o = document.createElement('option'); o.value = k; o.textContent = TOPICS[k].name; $('topic').appendChild(o); }
+$('topic').value = topic;
+VOICES.forEach(v => { const o = document.createElement('option'); o.value = v; o.textContent = v; $('voice').appendChild(o); });
+$('voice').value = VOICES.includes(ls.get('tt-voice', 'onyx')) ? ls.get('tt-voice', 'onyx') : 'onyx';
+$('voice').onchange = () => ls.set('tt-voice', $('voice').value);
+$('speed').value = ls.get('tt-speed', '1');
+$('speed').onchange = () => ls.set('tt-speed', $('speed').value);
+$('length').value = ls.get('tt-length', 'brief');
+$('length').onchange = () => ls.set('tt-length', $('length').value);
+$('code').value = ls.get(CODE_KEY, '');
+$('code').onchange = () => ls.set(CODE_KEY, $('code').value.trim());
+$('model').value = ls.get('tt-model', 'gpt-4.1-mini');
+$('model').onchange = () => ls.set('tt-model', $('model').value.trim());
+
+let fs = Math.max(13, Math.min(30, parseInt(ls.get('tt-fs', '17'), 10) || 17));
+function applyFs() { document.documentElement.style.setProperty('--fs', fs); ls.set('tt-fs', fs); }
+$('fMinus').onclick = () => { fs = Math.max(13, fs - 1); applyFs(); };
+$('fPlus').onclick = () => { fs = Math.min(30, fs + 1); applyFs(); };
+applyFs();
+function isLight() { const t = document.documentElement.dataset.theme; return t ? t === 'light' : matchMedia('(prefers-color-scheme: light)').matches; }
+function applyTheme(t) { document.documentElement.dataset.theme = t; $('themeBtn').textContent = t === 'light' ? '☾' : '☀︎'; ls.set('tt-theme', t); }
+applyTheme(ls.get('tt-theme', '') || (isLight() ? 'light' : 'dark'));
+$('themeBtn').onclick = () => applyTheme(isLight() ? 'dark' : 'light');
+
+/* sumAuto marks a collapse the page did itself, at the first question. That one
+   is transient: new material reopens the pane and nothing is written to storage.
+   Pressing Summary is a real preference and does persist. */
+let sumOn = ls.get('tt-sumon', '1') === '1', sumAuto = false;
+function applySumOn(persist) { $('summary').classList.toggle('collapsed', !sumOn); if (persist !== false) ls.set('tt-sumon', sumOn ? '1' : '0'); }
+$('sumBtn').onclick = () => { sumOn = !sumOn; sumAuto = false; applySumOn(); };
+applySumOn(false);
+let threadOn = ls.get('tt-threadon', '0') === '1';
+function applyThreadOn() { $('thread').classList.toggle('collapsed', !threadOn); ls.set('tt-threadon', threadOn ? '1' : '0'); }
+$('threadBtn').onclick = () => { threadOn = !threadOn; applyThreadOn(); };
+applyThreadOn();
+
+/* A chip is either a question to send, or { label, fill } — text dropped into
+   the composer for the reader to finish, which is how "say it in your own
+   words" works: the page must not answer that one for them. */
+function chips(list) {
+  const q = $('quick'); q.innerHTML = '';
+  list.forEach(item => {
+    const fill = item && item.fill, text = fill ? item.label : item;
+    const b = document.createElement('button'); b.textContent = text; b.disabled = busy;
+    b.onclick = fill
+      ? () => { $('inp').value = item.fill; $('inp').focus(); $('inp').dispatchEvent(new Event('input')); }
+      : () => ask(text);
+    q.appendChild(b);
+  });
+}
+function scrollFeed() { $('feed').scrollTop = $('feed').scrollHeight; }
+function divider(t) { const d = document.createElement('div'); d.className = 'divider'; d.textContent = t; $('feed').appendChild(d); scrollFeed(); }
+function bubble(role, text) {
+  $('empty') && $('empty').remove();
+  const d = document.createElement('div'); d.className = 'msg ' + role;
+  const s = document.createElement('span'); s.textContent = text; d.appendChild(s);
+  $('feed').appendChild(d); scrollFeed();
+  return { box: d, span: s };
+}
+function replyButtons(b, text) {
+  const say = document.createElement('button'); say.className = 'rowbtn'; say.textContent = '🔊 Again';
+  say.onclick = () => window.ttSpeak && window.ttSpeak(text, true);
+  const copy = document.createElement('button'); copy.className = 'rowbtn'; copy.textContent = 'Copy';
+  copy.onclick = async () => { copy.textContent = (await copyText(text)) ? 'Copied' : 'Copy failed'; setTimeout(() => { copy.textContent = 'Copy'; }, 1500); };
+  b.box.appendChild(say); b.box.appendChild(copy);
+}
+async function copyText(s) {
+  try { await navigator.clipboard.writeText(s); return true; } catch (e) {}
+  try { const ta = document.createElement('textarea'); ta.value = s; ta.style.cssText = 'position:fixed;opacity:0'; document.body.appendChild(ta); ta.select(); const ok = document.execCommand('copy'); ta.remove(); return ok; } catch (e) { return false; }
+}
+
+/* ── switching subject ── */
+function applyTopic() {
+  topic = $('topic').value; ls.set('tt-topic', topic);
+  material = ''; summary = ''; CARDS = []; LIT = null; label = ''; turns.length = 0;
+  $('feed').innerHTML = '<div class="empty" id="empty">' + T().empty + '</div>';
+  $('summary').innerHTML = ''; $('thread').innerHTML = '';
+  $('threadBtn').hidden = !T().thread;
+  $('inp').placeholder = 'Ask about this…';
+  chips(T().quick);
+  setStatus('Tap Material to load something');
+}
+$('topic').onchange = applyTopic;
+$('clearBtn').onclick = () => { turns.length = 0; $('feed').innerHTML = ''; chips(T().quick); if (summary) divider('— ' + label + ' —'); };
+
+/* ── loading material ── */
+function openLoad() {
+  const t = T();
+  $('loadTitle').textContent = t.materialTitle;
+  $('loadHint').textContent = t.hint;
+  $('workRow').hidden = !t.thread;
+  $('loadText').placeholder = t.source === 'cards' ? 'Paste the CSV here, or choose a file. First row: x,Front,Back' : 'Paste the text here, or choose a file.';
+  $('loadErr').textContent = '';
+  if (t.thread) { $('work').value = work || ls.get('tt-work-' + topic, ''); $('part').value = ''; }
+  $('loadModal').classList.add('open');
+}
+function closeLoad() { $('loadModal').classList.remove('open'); }
+$('loadBtn').onclick = openLoad;
+$('loadClose').onclick = closeLoad;
+$('loadModal').onclick = e => { if (e.target === $('loadModal')) closeLoad(); };
+$('pickFile').onclick = () => $('fileInput').click();
+$('fileInput').onchange = async e => {
+  const f = e.target.files && e.target.files[0]; if (!f) return;
+  $('loadText').value = await f.text();
+  if (!$('part').value && T().thread) $('part').value = f.name.replace(/\.[^.]+$/, '');
+  $('loadErr').textContent = '';
+  e.target.value = '';   // so choosing the same file twice still fires
+};
+/* The clipboard read has to happen inside the click handler — readText() needs
+   the user gesture — and a refusal is not an error worth shouting about. */
+$('pasteBtn').onclick = async () => {
+  try {
+    const t = await navigator.clipboard.readText();
+    if (!t.trim()) { $('loadErr').textContent = 'The clipboard is empty.'; return; }
+    $('loadText').value = t; $('loadErr').textContent = '';
+  } catch (e) { $('loadErr').textContent = 'Could not read the clipboard — long-press the box and paste by hand.'; }
+};
+
+/* RFC4180 enough for a spreadsheet export: quoted fields, "" escapes, commas
+   and newlines inside quotes. The decks here have all three. */
+function parseCSV(text) {
+  const rows = []; let row = [], field = '', q = false;
+  const s = text.replace(/\r\n?/g, '\n');
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (q) {
+      if (c === '"') { if (s[i + 1] === '"') { field += '"'; i++; } else q = false; }
+      else field += c;
+    } else if (c === '"') q = true;
+    else if (c === ',') { row.push(field); field = ''; }
+    else if (c === '\n') { row.push(field); rows.push(row); row = []; field = ''; }
+    else field += c;
+  }
+  if (field || row.length) { row.push(field); rows.push(row); }
+  return rows.filter(r => r.some(x => x.trim()));
+}
+function cardsFromCSV(text) {
+  const rows = parseCSV(text);
+  if (!rows.length) return [];
+  const head = rows[0].map(h => h.trim().toLowerCase());
+  let fi = head.indexOf('front'), bi = head.indexOf('back'), start = 1;
+  if (fi < 0 || bi < 0) {                       // no header: assume the last two columns
+    start = 0; fi = rows[0].length >= 2 ? rows[0].length - 2 : 0; bi = fi + 1;
+  }
+  const out = [];
+  for (let i = start; i < rows.length; i++) {
+    const f = (rows[i][fi] || '').trim(), b = (rows[i][bi] || '').trim();
+    if (f && b) out.push({ front: f, back: b });
+  }
+  return out;
+}
+
+$('loadGo').onclick = async () => {
+  const t = T(), raw = $('loadText').value.trim();
+  if (!raw) { $('loadErr').textContent = 'Nothing to load yet.'; return; }
+  if (t.source === 'cards') {
+    const cards = cardsFromCSV(raw);
+    if (!cards.length) { $('loadErr').textContent = 'No Front/Back rows found in that CSV.'; return; }
+    CARDS = cards;
+    material = cards.map((c, i) => (i + 1) + '. Q: ' + c.front + '\n   A: ' + c.back).join('\n');
+    label = cards.length + ' cards';
+  } else {
+    if (raw.length < 80) { $('loadErr').textContent = 'That looks too short — paste a bit more.'; return; }
+    material = raw;
+    work = $('work').value.trim(); part = $('part').value.trim() || 'Part ' + (loadThread().length + 1);
+    if (work) ls.set('tt-work-' + topic, work);
+    label = (work ? work + ' · ' : '') + part;
+  }
+  closeLoad();
+  turns.length = 0; $('feed').innerHTML = '';
+  divider('— ' + label + ' —');
+  await summarise();
+};
+
+/* ── the summary, which comes first ── */
+function threadBlock() {
+  if (!T().thread) return '';
+  const th = loadThread();
+  if (!th.length) return '';
+  /* The thread IS the material for everything after chapter one: each part's
+     recap, its cause-and-effect spine, and who turned out to be who. */
+  const cast = {};
+  th.forEach(x => (x.cast || []).forEach(c => { if (Array.isArray(c) && c[0] && !cast[c[0]]) cast[c[0]] = c[1] || ''; }));
+  const who = Object.keys(cast);
+  return '\n\nThe story so far, from what the reader has already read:\n' +
+    th.map(x => '• ' + x.part + ': ' + x.text + ((x.chain && x.chain.length) ? '\n    chain: ' + x.chain.join(' → ') : '')).join('\n') +
+    (who.length ? '\n\nWho has appeared so far:\n' + who.map(n => '• ' + n + (cast[n] ? ' — ' + cast[n] : '')).join('\n') : '') +
+    '\n\nThe reader has read up to and including the part below and NOT ONE WORD FURTHER. Never reveal, hint at or confirm anything from later in the story, even if you know it. Expectations drawn from what is above are welcome; foreknowledge is not.';
+}
+function renderThread() {
+  const box = $('thread'); box.innerHTML = '';
+  if (!T().thread) return;
+  const th = loadThread();
+  if (!th.length) return;
+  const head = document.createElement('div'); head.className = 'phead';
+  head.appendChild(document.createTextNode((work || 'This story') + ' · story so far'));
+  const clr = document.createElement('button'); clr.textContent = 'Forget';
+  clr.title = 'Delete the saved thread for this story';
+  clr.onclick = () => { if (confirm('Forget the saved summaries for ' + (work || 'this story') + '?')) { ls.set(threadKey(), '[]'); renderThread(); } };
+  head.appendChild(clr); box.appendChild(head);
+  th.forEach(x => { const d = document.createElement('div'); d.className = 'chapline'; const b = document.createElement('b'); b.textContent = x.part + ' '; d.appendChild(b); d.appendChild(document.createTextNode(x.text)); box.appendChild(d); });
+}
+/* The model is asked for JSON. If it answers with prose anyway, keep the prose
+   as the recap rather than throwing the work away. */
+function parseCards(raw) {
+  const m = raw.replace(/```json|```/g, '').match(/\{[\s\S]*\}/);
+  if (!m) return null;
+  try {
+    const o = JSON.parse(m[0]);
+    if (!o || typeof o !== 'object') return null;
+    o.recap = typeof o.recap === 'string' ? o.recap : '';
+    ['setting', 'events', 'chain', 'cast', 'unclear'].forEach(k => { if (!Array.isArray(o[k])) o[k] = []; });
+    return o;
+  } catch (e) { return null; }
+}
+function el(tag, cls, text) { const d = document.createElement(tag); if (cls) d.className = cls; if (text != null) d.textContent = text; return d; }
+function chainRow(items) {
+  const row = el('div', 'chain');
+  items.forEach((s, i) => { if (i) row.appendChild(el('i', null, '→')); row.appendChild(el('span', null, s)); });
+  return row;
+}
+function renderSummary() {
+  if (sumAuto) { sumOn = true; sumAuto = false; applySumOn(false); }
+  const box = $('summary'); box.innerHTML = '';
+  if (!summary) return;
+  const head = el('div', 'phead');
+  head.appendChild(document.createTextNode(label + (LIT ? ' · what happened' : ' · summary')));
+  const sp = el('button', null, '🔊 Read');
+  sp.onclick = () => window.ttSpeak && window.ttSpeak(summary, true);
+  head.appendChild(sp);
+  if (LIT && LIT.events.length) {
+    const cb = el('button', null, 'Cards (' + LIT.events.length + ')');
+    cb.title = 'Who did what, and why';
+    cb.onclick = openCards;
+    head.appendChild(cb);
+  }
+  box.appendChild(head);
+  box.appendChild(el('div', null, summary));
+  if (LIT && LIT.chain.length) box.appendChild(chainRow(LIT.chain));
+}
+/* The full comprehension pass gets a sheet of its own: on a phone there is no
+   room for ten event cards above the conversation. */
+function renderCards() {
+  const body = $('cardsBody'); body.innerHTML = '';
+  if (!LIT) return;
+  $('cardsTitle').textContent = label;
+  if (LIT.setting.length) {
+    body.appendChild(el('div', 'seclabel', 'The scene'));
+    const dl = document.createElement('dl'); dl.className = 'ev'; dl.style.display = 'grid';
+    dl.style.gridTemplateColumns = '4.2rem minmax(0, 1fr)'; dl.style.gap = '4px 10px';
+    LIT.setting.forEach(pair => {
+      const k = Array.isArray(pair) ? pair[0] : '', v = Array.isArray(pair) ? pair[1] : String(pair);
+      dl.appendChild(el('dt', null, k)); dl.appendChild(el('dd', null, v));
+    });
+    body.appendChild(dl);
+  }
+  if (LIT.events.length) {
+    body.appendChild(el('div', 'seclabel', 'What happens, in order'));
+    const list = el('div', 'cards');
+    LIT.events.forEach((e, i) => {
+      const card = el('div', 'ev'), top = el('div', 'top');
+      top.appendChild(el('span', 'n', (i + 1) + '.'));
+      top.appendChild(el('span', 'who', e.who || '?'));
+      top.appendChild(el('span', 'verb', e.verb || ''));
+      if (e.to) top.appendChild(el('span', 'to', e.to));
+      card.appendChild(top);
+      const dl = document.createElement('dl');
+      [['Where', e.where], ['Why', e.why], ['Before', e.before], ['After', e.after]].forEach(([k, v]) => {
+        if (!v) return; dl.appendChild(el('dt', null, k)); dl.appendChild(el('dd', null, v));
+      });
+      if (dl.children.length) card.appendChild(dl);
+      list.appendChild(card);
+    });
+    body.appendChild(list);
+  }
+  if (LIT.chain.length) { body.appendChild(el('div', 'seclabel', 'What causes what')); body.appendChild(chainRow(LIT.chain)); }
+  if (LIT.cast.length) {
+    body.appendChild(el('div', 'seclabel', 'Who is who'));
+    const ul = el('ul', 'castlist');
+    LIT.cast.forEach(c => {
+      const li = document.createElement('li'); const name = Array.isArray(c) ? c[0] : String(c);
+      const b = el('b', null, name); li.appendChild(b);
+      if (Array.isArray(c) && c[1]) li.appendChild(document.createTextNode(' — ' + c[1]));
+      ul.appendChild(li);
+    });
+    body.appendChild(ul);
+  }
+  if (LIT.unclear.length) {
+    body.appendChild(el('div', 'seclabel', 'Left unclear'));
+    const ul = el('ul', 'unclearlist');
+    LIT.unclear.forEach(u => { const li = document.createElement('li'); li.textContent = u; ul.appendChild(li); });
+    body.appendChild(ul);
+  }
+}
+function openCards() { renderCards(); $('cardsModal').classList.add('open'); }
+$('cardsClose').onclick = () => $('cardsModal').classList.remove('open');
+$('cardsModal').onclick = e => { if (e.target === $('cardsModal')) $('cardsModal').classList.remove('open'); };
+$('ownWords').onclick = () => {
+  $('cardsModal').classList.remove('open');
+  $('inp').value = 'In my own words: ';
+  $('inp').focus(); $('inp').dispatchEvent(new Event('input'));
+};
+async function summarise() {
+  if (!readCode()) { needCode(); return; }
+  const wantCards = !!T().cards;
+  setStatus(wantCards ? 'Working through it…' : 'Reading it…');
+  LIT = null;
+  try {
+    const ctx = T().thread ? threadBlock() : '';
+    const sys = wantCards ? LIT_CARD_SYS : T().sumSys;
+    const raw = await callTutor(sys, [{ role: 'user', text: (ctx ? ctx + '\n\n' : '') + material.slice(0, 14000) }]);
+    if (wantCards) {
+      LIT = parseCards(raw);
+      summary = (LIT && LIT.recap) || raw.trim();    // prose instead of JSON is still worth keeping
+    } else summary = raw.trim();
+    renderSummary();
+    if (T().thread) {
+      const th = loadThread();
+      th.push({ part, text: summary, chain: LIT ? LIT.chain : [], cast: LIT ? LIT.cast : [] });
+      saveThread(th); renderThread();
+    }
+    setStatus(label);
+    /* The cards do NOT open themselves. The sheet's own instruction is to say
+       what happened in your own words first and use the cards as the check, so
+       opening them unasked would hand over the answer before the reader has
+       tried. The recap pane gets a Cards button and the feed says it is there. */
+    if (LIT && LIT.events.length) divider(LIT.events.length + ' cards ready — say it in your own words first, then tap Cards to check');
+    starters();
+  } catch (e) {
+    if (e.status === 401 || e.status === 400) needCode(e.status === 401 ? 'That code was refused — enter it again' : 'Enter the access code in Settings');
+    else setStatus('Could not work through it (' + e.message + ')');
+    chips(T().quick);
+  }
+}
+async function starters() {
+  if (!summary) { chips(T().quick); return; }
+  /* What the chapter leaves unclear IS the list of questions worth asking, so
+     for a comprehension pass there is nothing to generate: use them, and keep
+     the retelling prompt first, since saying it yourself is the whole point. */
+  if (LIT && LIT.unclear.length) {
+    chips([{ label: 'Say it in my own words', fill: 'In my own words: ' }].concat(LIT.unclear.slice(0, 3)));
+    return;
+  }
+  chips(T().quick);
+  try {
+    const raw = await callTutor(STARTER_HEAD + T().qSys, [{ role: 'user', text: summary }]);
+    const m = raw.replace(/```json|```/g, '').match(/\[[\s\S]*\]/);
+    const list = m ? JSON.parse(m[0]) : null;
+    const ok = Array.isArray(list) ? list.filter(x => typeof x === 'string' && x.trim()).slice(0, 4) : [];
+    if (ok.length) chips(ok);
+  } catch (e) { /* the topic's own questions are already on screen */ }
+}
+
+/* ── talking to the teacher ── */
+const readCode = () => ($('code').value || ls.get(CODE_KEY, '') || '').trim();
+function needCode(msg) {
+  ls.set(CODE_KEY, ''); $('code').value = '';
+  $('code').closest('details').open = true;
+  setStatus(msg || 'Enter the access code in Settings');
+}
+async function callTutor(system, messages, onDelta) {
+  const code = readCode();
+  if (!code) { const e = new Error('Access code needed'); e.status = 400; throw e; }
+  const r = await fetch('/api/tutor', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ accessCode: code, model: $('model').value.trim(), system, messages }) });
+  if (!r.ok) { const j = await r.json().catch(() => ({})); const e = new Error(j.error || ('HTTP ' + r.status)); e.status = r.status; throw e; }
+  const reader = r.body.getReader(), dec = new TextDecoder();
+  let acc = '';
+  for (;;) { const { done, value } = await reader.read(); if (done) break; acc += dec.decode(value, { stream: true }); if (onDelta) onDelta(acc); }
+  return acc;
+}
+function systemPrompt() {
+  const t = T();
+  const brief = $('length').value === 'brief' ? '\n' + BRIEF_RULE : '';
+  const head = t.source === 'cards'
+    ? '\n\nThe learner\'s card deck (' + CARDS.length + ' cards):\n'
+    : '\n\nThe part the reader has just read' + (label ? ' (' + label + ')' : '') + ':\n';
+  return t.persona + '\n' + SPOKEN_RULE + brief + '\n' + HONEST_RULE + '\n' + NEXT_RULE +
+         (summary ? '\n\nSummary of this material:\n' + summary : '') + threadBlock() +
+         head + material.slice(0, 20000);
+}
+function visiblePart(acc) {
+  return acc.replace(/\n\s*NEXT\s*:[\s\S]*$/i, '').replace(/\n\s*N(E(X(T\s*:?)?)?)?\s*$/i, '').trimStart();
+}
+function splitReply(raw) {
+  const m = raw.match(/\n\s*NEXT\s*:/i);
+  const answer = (m ? raw.slice(0, m.index) : raw).trim();
+  const next = (m ? raw.slice(m.index + m[0].length) : '').split(/\||\n/)
+    .map(s => s.replace(/^[\s\-–—•*\d.)]+/, '').trim()).filter(s => s.length > 4).slice(0, 3);
+  return { answer, next };
+}
+async function ask(question) {
+  if (busy) return;
+  const text = (question != null ? question : $('inp').value).trim();
+  if (!text) return;
+  if (!material) { setStatus('Load the material first — tap Material'); openLoad(); return; }
+  if (!readCode()) { needCode(); return; }
+  window.ttStop && window.ttStop();
+  setBusy(true);
+  if (sumOn && !turns.length) { sumOn = false; sumAuto = true; applySumOn(false); }   // the summary has done its job
+  bubble('user', text);
+  if (question == null) { $('inp').value = ''; $('inp').style.height = ''; }
+  $('quick').innerHTML = '';
+  const b = bubble('assistant', '…');
+  setStatus('Thinking…');
+  let raw = '';
+  try {
+    raw = await callTutor(systemPrompt(), turns.slice(-10).concat([{ role: 'user', text }]), s => { b.span.textContent = visiblePart(s) || '…'; scrollFeed(); });
+  } catch (e) {
+    b.box.remove(); bubble('assistant err', 'Error: ' + e.message); setBusy(false);
+    if (e.status === 401 || e.status === 400) needCode(e.status === 401 ? 'That code was refused — enter it again' : 'Enter the access code in Settings');
+    else setStatus(label);
+    chips(T().quick);
+    return;
+  }
+  const { answer, next } = splitReply(raw);
+  b.span.textContent = answer;
+  replyButtons(b, answer);
+  turns.push({ role: 'user', text }, { role: 'assistant', text: answer });
+  chips(next.length ? next : T().quick);
+  setBusy(false); scrollFeed();
+  setStatus(label);          // say() overwrites this; with the voice muted it is the last word
+  window.ttSpeak && window.ttSpeak(answer);
+}
+$('go').onclick = () => ask();
+$('inp').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); ask(); } });
+$('inp').addEventListener('input', e => { const t = e.target; t.style.height = 'auto'; t.style.height = Math.min(t.scrollHeight, 140) + 'px'; });
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  if ($('cardsModal').classList.contains('open')) $('cardsModal').classList.remove('open');
+  else if ($('loadModal').classList.contains('open')) closeLoad();
+});
+
+// What the status line goes back to when the voice stops.
+window.ttAfterSpeech = () => setStatus(label);
+applyTopic();
+if (T().thread) { work = ls.get('tt-work-' + topic, ''); renderThread(); }
+</script>
+
+<!--
+  The face, and the voice that drives it. A separate module script: the page
+  above is a classic script and retyping it as a module would put all of its
+  top-level functions out of global scope for the sake of three imports. The
+  bridge is three names — ttSpeak, ttStop, ttAfterSpeech.
+-->
+<script type="module">
+import { createHead } from './talkinghead/head.js';
+import { createServerVoice, createBrowserVoice } from './talkinghead/speech.js';
+import { createAmplitudeDriver, createRhythmDriver } from './talkinghead/drivers.js';
+
+const $ = id => document.getElementById(id);
+const ls = { get(k, d) { try { return localStorage.getItem(k) ?? d; } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+const CODE_KEY = 'ocr-access-code';
+const MAX_TTS = 2400;
+
+const head = createHead({ mount: $('stage') });
+const serverVoice = createServerVoice({ endpoint: '/api/tts' });
+const browserVoice = createBrowserVoice();
+const rhythmDriver = createRhythmDriver();
+let mode = 'server', speaking = false;
+
+const setStatus = t => { $('status').textContent = t; };
+function finish(restore) {
+  speaking = false; head.setSpeaking(false); head.setDriver(null); $('stopBtn').disabled = true;
+  if (restore !== false) window.ttAfterSpeech && window.ttAfterSpeech();
+}
+function stopSpeech() { serverVoice.stop(); browserVoice.stop(); finish(); }
+window.ttStop = stopSpeech;
+$('stopBtn').onclick = stopSpeech;
+serverVoice.on('end', () => finish());
+serverVoice.on('error', e => { finish(false); setStatus('Voice error: ' + e.message); });
+browserVoice.on('end', () => finish());
+browserVoice.on('error', e => { finish(false); setStatus('Voice error: ' + e.message); });
+browserVoice.on('boundary', () => rhythmDriver.accent());
+
+/* The prompt already asks for speech, so this is the belt to its braces: a
+   stray asterisk or "%" would otherwise be read out as a symbol. */
+function speakable(s) {
+  return s.replace(/```[\s\S]*?```/g, ' ')
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/(\d)\s*%/g, '$1 percent').replace(/%/g, ' percent')
+    .replace(/\$\s?([\d.,]+)\s*(trillion|billion|million)?/gi, (m0, n, u) => n + (u ? ' ' + u : '') + ' dollars')
+    .replace(/[*_#`>~|]/g, '')
+    .replace(/\s+([,.;:!?])/g, '$1')
+    .replace(/\s+/g, ' ').trim();
+}
+function clip(s, n) {
+  if (s.length <= n) return s;
+  const cut = s.slice(0, n), i = Math.max(cut.lastIndexOf('. '), cut.lastIndexOf('! '), cut.lastIndexOf('? '));
+  return i > n * 0.5 ? cut.slice(0, i + 1) : cut;
+}
+/* Chrome has no voices for the first second or so after a page load, and
+   speaking before the list arrives ends the utterance instantly with no sound,
+   losing the first tap. Browser voice only; /api/tts has no warm-up. */
+function voicesReady() {
+  if (!('speechSynthesis' in window) || speechSynthesis.getVoices().length) return Promise.resolve();
+  return new Promise(res => {
+    const done = () => { speechSynthesis.removeEventListener('voiceschanged', done); clearTimeout(t); res(); };
+    const t = setTimeout(done, 1500);
+    speechSynthesis.addEventListener('voiceschanged', done);
+  });
+}
+
+let voiceOn = ls.get('tt-voiceon', '1') === '1';
+function applyVoiceOn() {
+  $('voiceBtn').textContent = voiceOn ? '🔊' : '🔇';
+  $('voiceBtn').title = voiceOn ? 'Answers are read aloud — tap to go silent' : 'Answers are silent — tap to have them read aloud';
+  ls.set('tt-voiceon', voiceOn ? '1' : '0');
+}
+$('voiceBtn').onclick = () => { voiceOn = !voiceOn; applyVoiceOn(); if (!voiceOn) stopSpeech(); };
+applyVoiceOn();
+let headOn = ls.get('tt-headon', '1') === '1';
+function applyHeadOn() { $('stage').classList.toggle('off', !headOn); ls.set('tt-headon', headOn ? '1' : '0'); }
+$('headBtn').onclick = () => { headOn = !headOn; applyHeadOn(); };
+applyHeadOn();
+
+/* force = the reader pressed Again or Read, so speak even when the automatic
+   reading is off. The analyser does not exist until speak() has built the
+   audio graph, which is why the driver is attached after the await. */
+async function say(text, force) {
+  if (!voiceOn && !force) return;
+  const t = clip(speakable(text || ''), MAX_TTS);
+  if (!t) return;
+  serverVoice.stop();
+  if (mode !== 'browser') browserVoice.stop();   // in browser mode speech.js cancels for us; cancelling twice loses the utterance
+  head.setDriver(null);
+  speaking = true; head.setSpeaking(true); $('stopBtn').disabled = false;
+  try {
+    if (mode === 'server') {
+      setStatus('Generating voice…');
+      await serverVoice.speak({ text: t, voice: $('voice').value, speed: Number($('speed').value) || 1, accessCode: ($('code').value || ls.get(CODE_KEY, '') || '').trim() });
+      head.setDriver(createAmplitudeDriver(serverVoice.analyser));
+      setStatus('Reading aloud');
+    } else {
+      await voicesReady();
+      head.setDriver(rhythmDriver);
+      setStatus('Reading aloud');
+      await browserVoice.speak({ text: t, rate: $('speed').value });
+    }
+  } catch (e) {
+    if (e.name === 'AbortError') return;
+    finish(false);
+    if (e.status === 401 || e.status === 400) {
+      ls.set(CODE_KEY, ''); $('code').value = '';
+      $('code').closest('details').open = true;
+      setStatus(e.status === 401 ? 'That access code was refused — enter it again' : 'The voice needs the access code in Settings');
+    } else setStatus('Voice error: ' + e.message);
+  }
+}
+window.ttSpeak = say;
+
+/* Tap the face to stop it talking: the bar is a scroll strip, so on a narrow
+   phone Stop is off to the right exactly when it is wanted. A tap only —
+   anything that moves is head.js's drag-to-turn, and a double tap recenters. */
+let tapAt = null;
+$('stage').addEventListener('pointerdown', e => { tapAt = { x: e.clientX, y: e.clientY, t: Date.now() }; });
+$('stage').addEventListener('pointerup', e => {
+  if (!tapAt) return;
+  const moved = Math.hypot(e.clientX - tapAt.x, e.clientY - tapAt.y), quick = Date.now() - tapAt.t < 500;
+  tapAt = null;
+  if (moved < 10 && quick && speaking) stopSpeech();
+});
+$('stage').addEventListener('dblclick', () => head.recenter());
+document.addEventListener('keydown', e => {
+  const tag = (document.activeElement && document.activeElement.tagName) || '';
+  if (e.key === 'Escape' && speaking && !/INPUT|TEXTAREA/.test(tag)) stopSpeech();
+});
+
+/* OPTIONS costs nothing and spends no OpenAI credit. The catch-all rewrite in
+   vercel.json serves flashcards.html for anything unmatched, so an HTML answer
+   means there is no such route. */
+(async function probe() {
+  try {
+    const r = await fetch('/api/tts', { method: 'OPTIONS' });
+    mode = r.ok && !(r.headers.get('content-type') || '').includes('text/html') ? 'server' : 'browser';
+  } catch (e) { mode = 'browser'; }
+  $('modeNote').textContent = mode === 'server'
+    ? 'Voice: OpenAI /api/tts, the same endpoint the learn-*-tts pages use, so it spends real credit. The jaw is measured from the returned waveform, so it follows the voice — but it tracks loudness, not phonemes, so the lips do not close on "m", "b" or "p".'
+    : 'No /api/tts reachable, so the free browser voice is speaking and the jaw moves on a speech-shaped rhythm rather than real sync. /api/tutor is probably missing too — the chat needs the deployed site.';
+})();
+</script>
+</body>
+</html>

@@ -57,6 +57,8 @@
     { "source": "/talkinghead", "destination": "/talkinghead.html" },
     { "source": "/economic_teacher.html", "destination": "/economic_teacher.html" },
     { "source": "/economic_teacher", "destination": "/economic_teacher.html" },
+    { "source": "/topic_teacher.html", "destination": "/topic_teacher.html" },
+    { "source": "/topic_teacher", "destination": "/topic_teacher.html" },
     { "source": "/(.*)", "destination": "/flashcards.html" }
   ]
 }
