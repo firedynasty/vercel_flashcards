@@ -139,6 +139,7 @@
   <button id="fMinus" title="Smaller text">A−</button>
   <button id="fPlus" title="Larger text">A+</button>
   <button id="themeBtn" title="Light / dark"></button>
+  <button id="copyBtn" title="Copy the summary, the cards and the whole conversation">Copy chat</button>
   <button id="clearBtn" title="Clear this conversation">New</button>
 </div>
 <div class="sub"><span class="status" id="status"></span></div>
@@ -353,6 +354,40 @@ function replyButtons(b, text) {
   copy.onclick = async () => { copy.textContent = (await copyText(text)) ? 'Copied' : 'Copy failed'; setTimeout(() => { copy.textContent = 'Copy'; }, 1500); };
   b.box.appendChild(say); b.box.appendChild(copy);
 }
+/* Everything on screen as plain markdown, so the whole session can be pasted
+   into notes or a doc in one go. Selecting it by hand drags the button labels
+   in with it ("🔊 AgainCopy"), which is what this is here to avoid. ME: /
+   TEACHER: matches the chat log teacher.html writes. */
+function transcript() {
+  const out = [], d = new Date();
+  out.push('# ' + (label || T().name));
+  out.push(T().name + ' · ' + d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+  if (summary) out.push('\n## Summary\n' + summary);
+  if (LIT) {
+    if (LIT.setting.length) out.push('\n## The scene\n' + LIT.setting.map(p => Array.isArray(p) ? p[0] + ': ' + p[1] : '- ' + p).join('\n'));
+    if (LIT.chain.length) out.push('\n## What causes what\n' + LIT.chain.join(' → '));
+    if (LIT.events.length) out.push('\n## What happens, in order\n' + LIT.events.map((e, i) => {
+      const head = (i + 1) + '. ' + [e.who, e.verb, e.to].filter(Boolean).join(' — ');
+      const ctx = [['Where', e.where], ['Why', e.why], ['Before', e.before], ['After', e.after]]
+        .filter(([, v]) => v).map(([k, v]) => '   ' + k + ': ' + v).join('\n');
+      return head + (ctx ? '\n' + ctx : '');
+    }).join('\n'));
+    if (LIT.cast.length) out.push('\n## Who is who\n' + LIT.cast.map(c => '- ' + (Array.isArray(c) ? c[0] + (c[1] ? ' — ' + c[1] : '') : c)).join('\n'));
+    if (LIT.unclear.length) out.push('\n## Left unclear\n' + LIT.unclear.map(u => '- ' + u).join('\n'));
+  }
+  if (T().thread) {
+    const th = loadThread();
+    if (th.length) out.push('\n## Story so far\n' + th.map(x => '- ' + x.part + ': ' + x.text).join('\n'));
+  }
+  if (CARDS.length) out.push('\n## Deck\n' + CARDS.map((c, i) => (i + 1) + '. Q: ' + c.front + '\n   A: ' + c.back).join('\n'));
+  if (turns.length) out.push('\n## Chat log\n' + turns.map(m => (m.role === 'user' ? 'ME: ' : 'TEACHER: ') + m.text.trim()).join('\n\n'));
+  return out.join('\n') + '\n';
+}
+$('copyBtn').onclick = async () => {
+  if (!summary && !turns.length) { setStatus('Nothing to copy yet'); return; }
+  const ok = await copyText(transcript());
+  setStatus(ok ? 'Copied the summary and ' + turns.length + ' messages' : 'Could not copy — check clipboard permissions');
+};
 async function copyText(s) {
   try { await navigator.clipboard.writeText(s); return true; } catch (e) {}
   try { const ta = document.createElement('textarea'); ta.value = s; ta.style.cssText = 'position:fixed;opacity:0'; document.body.appendChild(ta); ta.select(); const ok = document.execCommand('copy'); ta.remove(); return ok; } catch (e) { return false; }
