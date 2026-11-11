@@ -27,7 +27,7 @@
   .bar::-webkit-scrollbar { display: none; }
   .bar > * { flex-shrink: 0; }
   .bar select { max-width: 150px; }
-  .bar input.num { width: 64px; }
+  .bar .where { font-size: 12px; color: var(--muted); padding: 0 2px; white-space: nowrap; }
   .bar .sep { width: 1px; align-self: stretch; background: var(--line2); margin: 0 2px; }
   .sub { display: flex; align-items: center; gap: 8px; padding: 4px 12px 0; font-size: 12px; color: var(--accent); letter-spacing: .5px; flex-shrink: 0; }
   .status { font-size: 12px; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -55,6 +55,13 @@
   .sheet input { width: 100%; font-size: 16px; }
   .sheet .err { color: #e5484d; font-size: 12px; min-height: 16px; margin-top: 4px; }
   .sheet .hint { color: var(--dim); font-size: 12px; margin-top: 6px; }
+  /* Search results. Each is a whole chapter with the first line of its
+     summary, because the summary is what you are choosing between. */
+  .hits { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+  .hits:empty { display: none; }
+  .hits button { display: block; width: 100%; text-align: left; padding: 7px 10px; font-size: 13px; line-height: 1.45; white-space: normal; }
+  .hits button b { color: var(--accent); }
+  .hits button span { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
   .hist { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
   .hist button { min-height: 34px; padding: 4px 12px; font-size: 13px; color: var(--accent); }
   /* min-height: 0 so the feed can actually shrink. Without it a flex item
@@ -86,11 +93,8 @@
 </head>
 <body>
 <div class="bar">
-  <button class="refbtn" id="refBtn" title="Go to a Bible reference (e)">Ref(e)</button>
-  <select id="book" title="Book"></select>
-  <select id="chap" title="Chapter"></select>
-  <input class="num" id="vFrom" type="number" min="1" inputmode="numeric" placeholder="from" title="First verse (blank = whole chapter)">
-  <input class="num" id="vTo" type="number" min="1" inputmode="numeric" placeholder="to" title="Last verse">
+  <button class="refbtn" id="refBtn" title="Find a topic, or go to a reference (e)">Find(e)</button>
+  <span class="where" id="where" title="What you are reading"></span>
   <button id="sumBtn" title="Show / hide the chapter summary">Summary</button>
   <button id="togBtn" title="Show / hide the passage">Passage</button>
   <button id="headBtn" title="Show / hide the face">Face</button>
@@ -124,17 +128,18 @@
   </div>
 </details>
 <div class="modal" id="refModal"><div class="sheet">
-  <h3>Go to Reference</h3>
-  <input id="refInput" type="text" placeholder="e.g. Romans 8, John 3:16-21, 1 Cor 13" spellcheck="false" autocomplete="off" autocapitalize="off">
+  <h3>What do you want to read about?</h3>
+  <input id="refInput" type="text" placeholder="a topic like forgiveness — or Romans 8, John 3" spellcheck="false" autocomplete="off" autocapitalize="off">
   <div class="err" id="refErr"></div>
+  <div class="hits" id="hits"></div>
   <div class="hist" id="refHist"></div>
-  <div class="hint">Enter = go · Esc = close · press <b>e</b> anywhere to open</div>
+  <div class="hint">Enter = search · a reference goes straight there · Esc = close · press <b>e</b> anywhere</div>
 </div></div>
 <div class="stage" id="stage"></div>
 <div class="summary" id="summary"></div>
 <div class="passage" id="passage"></div>
 <div class="feed" id="feed">
-  <div class="empty" id="empty">Choose a passage above, then ask about it.<br>Tap verse numbers in the passage to focus a question on just those verses.</div>
+  <div class="empty" id="empty">Tap Find and name a topic — or a reference — then read the summary and pick a question.<br>Tap verse numbers in the passage to focus a question on just those verses.</div>
 </div>
 <div class="quick" id="quick"></div>
 <div class="composer">
@@ -170,10 +175,20 @@ const STARTER_SYS = 'You are given a short summary of one Bible chapter. Reply w
 let gDoc = null, exported = 0;
 let BIBLE = null, INTRO = null, NOTES = null, SUMM = null, passageText = '', passageRef = '', selVerses = new Set();
 let curView = null;   // { bi, ch, a, z } of the passage on screen
+/* Where the reader is. This used to live in a book select, a chapter select
+   and two verse boxes, which made the page feel like a lookup tool: you had to
+   know the address before you could read anything. Finding is by topic now
+   (Find → search over the 1189 chapter summaries), and a chapter is the unit —
+   f/z stay only because a typed "John 3:16-21" and an imported study still
+   carry a range. */
+let REF = { bi: 42, ch: 1, f: '', z: '' };
+function goTo(bi, ch, f, z, fromChange) {
+  REF = { bi: +bi, ch: +ch, f: f || '', z: z || '' };
+  showPassage(fromChange !== false);
+}
 const turns = []; let busy = false;
 
 // ── setup ──
-BOOKS.forEach((b, i) => { const o = document.createElement('option'); o.value = i; o.textContent = b; $('book').appendChild(o); });
 for (const k of Object.keys(STYLES)) { const o = document.createElement('option'); o.value = k; o.textContent = STYLES[k].name; $('style').appendChild(o); }
 $('style').value = STYLES[ls.get('st-style', 'pastor')] ? ls.get('st-style', 'pastor') : 'pastor';
 $('style').onchange = () => ls.set('st-style', $('style').value);
@@ -199,14 +214,12 @@ function chips(list) {
 }
 chips(QUICK);
 
-function fillChapters() {
-  const n = BIBLE ? BIBLE[$('book').value].chapters.length : 1;
-  $('chap').innerHTML = ''; for (let c = 1; c <= n; c++) { const o = document.createElement('option'); o.value = c; o.textContent = 'Ch ' + c; $('chap').appendChild(o); }
-}
 function showPassage(fromChange) {
   if (!BIBLE) return;
-  const bi = +$('book').value, ch = +$('chap').value, verses = BIBLE[bi].chapters[ch - 1] || [];
-  let a = parseInt($('vFrom').value, 10) || 1, z = parseInt($('vTo').value, 10) || (parseInt($('vFrom').value, 10) ? a : verses.length);
+  const bi = Math.max(0, Math.min(+REF.bi || 0, BIBLE.length - 1));
+  const ch = Math.max(1, Math.min(+REF.ch || 1, BIBLE[bi].chapters.length));
+  const verses = BIBLE[bi].chapters[ch - 1] || [];
+  let a = parseInt(REF.f, 10) || 1, z = parseInt(REF.z, 10) || (parseInt(REF.f, 10) ? a : verses.length);
   a = Math.max(1, Math.min(a, verses.length)); z = Math.max(a, Math.min(z, verses.length));
   customText = false; selVerses = new Set(); curView = { bi, ch, a, z };
   passageRef = BOOKS[bi] + ' ' + ch + (a === 1 && z === verses.length ? '' : ':' + a + (z > a ? '-' + z : ''));
@@ -221,7 +234,9 @@ function showPassage(fromChange) {
     box.appendChild(sp);
   }
   passageText = lines.join('\n'); box.scrollTop = 0;
-  ls.set('st-ref', JSON.stringify({ b: bi, c: ch, f: $('vFrom').value, t: $('vTo').value }));
+  REF = { bi, ch, f: REF.f, z: REF.z };
+  $('where').textContent = passageRef;
+  ls.set('st-ref', JSON.stringify({ b: bi, c: ch, f: REF.f, t: REF.z }));
   if (fromChange && turns.length) { const d = document.createElement('div'); d.className = 'divider'; d.textContent = '— now reading ' + passageRef + ' —'; $('feed').appendChild(d); scrollFeed(); }
   setStatus(passageRef + ' · WEB');
   renderSummary(); scheduleStarters();
@@ -299,16 +314,13 @@ async function starters() {
   } catch (e) { /* QUICK is already on screen; a failed draft costs the reader nothing */ }
 }
 function scrollFeed() { $('feed').scrollTop = $('feed').scrollHeight; }
-$('book').onchange = () => { fillChapters(); $('vFrom').value = ''; $('vTo').value = ''; showPassage(true); };
-$('chap').onchange = () => { $('vFrom').value = ''; $('vTo').value = ''; showPassage(true); };
-$('vFrom').onchange = $('vTo').onchange = () => showPassage(true);
 $('togBtn').onclick = () => $('passage').classList.toggle('collapsed');
 $('clearBtn').onclick = () => { turns.length = 0; exported = 0; gDoc = null; $('recent').value = ''; $('feed').innerHTML = ''; };
 
 // ── chat ──
 let customText = false;
 function BIBLE_REF_OK() { return !customText; }
-function passageInfo() { return { label: passageRef, code: $('book').value + '|' + $('chap').value + '|' + $('vFrom').value + '|' + $('vTo').value }; }
+function passageInfo() { return { label: passageRef, code: REF.bi + '|' + REF.ch + '|' + REF.f + '|' + REF.z }; }
 // ── background context: book outline (bible_intro.json) + reader's own study notes (study_notes.json) ──
 // Outline lines look like "E. Retribution on Midian (31:1–54)"; depth comes from the marker (I. / A. / 1. / a.).
 const ROMAN = ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'];
@@ -680,7 +692,7 @@ $('importBtn').onclick = async () => {
     const text = await r.text(); const d = parseDoc(text);
     if (d.turns.length) {
       if (d.style && STYLES[d.style]) { $('style').value = d.style; ls.set('st-style', d.style); }
-      if (d.passage && BIBLE) { $('book').value = d.passage.b; fillChapters(); $('chap').value = d.passage.c; $('vFrom').value = d.passage.f; $('vTo').value = d.passage.t; showPassage(false); }
+      if (d.passage && BIBLE) goTo(d.passage.b, d.passage.c, d.passage.f, d.passage.t, false);
       turns.length = 0; $('feed').innerHTML = '';
       for (const t of d.turns) { turns.push(t); bubble(t.role, t.text); }
       gDoc = { id, name }; exported = turns.length; scrollFeed();
@@ -755,20 +767,108 @@ function parseRef(str) {
   return { idx, ch, f: f || '', z: z || '' };
 }
 function refLabel(r) { return BOOKS[r.idx] + ' ' + r.ch + (r.f ? ':' + r.f + (r.z && r.z > r.f ? '-' + r.z : '') : ''); }
+
+/* ── finding by topic ──
+   The 1189 chapter summaries are the corpus. That is the level a reader
+   actually chooses at — "something about forgiveness" — and it is the same
+   text the page then shows and draws the starter questions from, so what you
+   searched for is what you get asked about. BM25 over the summaries and their
+   section headings only: indexing all 31000 verses would cost tens of
+   megabytes on a phone for recall this does not need. Built once, lazily.
+
+   A remembered phrase ("I can do all things") is in no summary, so there is a
+   second pass over the verse text itself — a plain scan, no index, because
+   the Bible is already in memory. */
+let SIDX = null;
+function buildIndex() {
+  if (SIDX || !BIBLE || !SUMM) return SIDX;
+  const docs = [], df = {}; let total = 0;
+  BOOKS.forEach((name, bi) => {
+    for (let ch = 1; ch <= BIBLE[bi].chapters.length; ch++) {
+      const s = summaryFor(bi, ch); if (!s) continue;
+      const heads = (s.sections || []).map(x => x.heading).join(' ');
+      const tk = toks(name + ' ' + (s.overview || '') + ' ' + heads);
+      const tf = {}; tk.forEach(w => { tf[w] = (tf[w] || 0) + 1; });
+      Object.keys(tf).forEach(w => { df[w] = (df[w] || 0) + 1; });
+      docs.push({ bi, ch, tf, len: tk.length, snippet: s.overview || '' });
+      total += tk.length;
+    }
+  });
+  if (!docs.length) return null;
+  SIDX = { docs, df, N: docs.length, avgdl: total / docs.length };
+  return SIDX;
+}
+function searchSummaries(q, limit) {
+  const idx = buildIndex(); if (!idx) return [];
+  let qt = [...new Set(toks(q))].filter(w => !META.has(w));
+  const sharp = qt.filter(w => (idx.df[w] || 0) <= idx.N * 0.25);
+  if (sharp.length) qt = sharp;
+  if (!qt.length) return [];
+  const k1 = 1.5, b = 0.75;
+  return idx.docs.map(d => {
+    let sc = 0;
+    for (const w of qt) {
+      const f = d.tf[w]; if (!f) continue;
+      const n = idx.df[w], idf = Math.log(1 + (idx.N - n + 0.5) / (n + 0.5));
+      sc += idf * (f * (k1 + 1)) / (f + k1 * (1 - b + b * d.len / idx.avgdl));
+    }
+    return { d, sc };
+  }).filter(e => e.sc > 0).sort((x, y) => y.sc - x.sc).slice(0, limit).map(e => e.d);
+}
+const flat = s => s.toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
+function searchWords(q, limit) {
+  const needle = flat(q); if (!BIBLE || needle.length < 5) return [];
+  const out = [];
+  for (let bi = 0; bi < BIBLE.length; bi++) {
+    const chs = BIBLE[bi].chapters;
+    for (let i = 0; i < chs.length; i++) {
+      const v = chs[i].findIndex(t => flat(t).includes(needle));
+      if (v >= 0) { out.push({ bi, ch: i + 1, snippet: (i + 1) + ':' + (v + 1) + ' — ' + chs[i][v].trim() }); if (out.length >= limit) return out; }
+    }
+  }
+  return out;
+}
+function paintHits(list) {
+  const box = $('hits'); box.innerHTML = '';
+  list.forEach(d => {
+    const b = document.createElement('button');
+    const t = document.createElement('b'); t.textContent = BOOKS[d.bi] + ' ' + d.ch; b.appendChild(t);
+    const s = document.createElement('span'); s.textContent = d.snippet.slice(0, 150) + (d.snippet.length > 150 ? '…' : ''); b.appendChild(s);
+    b.onclick = () => {
+      goTo(d.bi, d.ch, '', '', true); $('passage').classList.remove('collapsed');
+      const label = BOOKS[d.bi] + ' ' + d.ch;
+      refHist = [label].concat(refHist.filter(x => x !== label)).slice(0, 12); ls.set('st-refhist', JSON.stringify(refHist));
+      closeRef();
+    };
+    box.appendChild(b);
+  });
+}
+function findTopic(q) {
+  if (!SUMM && !BIBLE) { $('refErr').textContent = 'Still loading — try again in a moment'; return; }
+  const manyWords = q.trim().split(/\s+/).length >= 3;
+  let hits = manyWords ? searchWords(q, 8) : [];     // a remembered line, quoted from memory
+  if (!hits.length) hits = searchSummaries(q, 8);    // otherwise it is a topic
+  if (!hits.length) hits = searchWords(q, 8);
+  if (!hits.length) { $('hits').innerHTML = ''; $('refErr').textContent = 'Nothing matched \u201c' + q + '\u201d — try another word, or a reference like Romans 8'; return; }
+  $('refErr').textContent = '';
+  paintHits(hits);
+}
 let refHist = []; try { refHist = JSON.parse(ls.get('st-refhist', '[]')) || []; } catch (e) { refHist = []; }
 function paintHist() {
   const box = $('refHist'); box.innerHTML = '';
   refHist.forEach(txt => { const b = document.createElement('button'); b.textContent = txt; b.onclick = () => goRef(txt); box.appendChild(b); });
 }
-function openRef() { $('refErr').textContent = ''; $('refInput').value = ''; paintHist(); $('refModal').classList.add('show'); setTimeout(() => $('refInput').focus(), 0); }
+function openRef() { $('refErr').textContent = ''; $('refInput').value = ''; $('hits').innerHTML = ''; paintHist(); $('refModal').classList.add('show'); setTimeout(() => $('refInput').focus(), 0); }
 function closeRef() { $('refModal').classList.remove('show'); }
+/* One box, two jobs: anything that reads as a reference goes straight there,
+   anything else is a topic and comes back as a list of chapters to choose. */
 function goRef(str) {
   if (!BIBLE) { $('refErr').textContent = 'Bible is still loading'; return; }
-  const r = parseRef(str);
-  if (!r) { $('refErr').textContent = 'Not a reference: try "Romans 8" or "John 3:16-21"'; return; }
+  const q = (str || '').trim(); if (!q) return;
+  const r = parseRef(q);
+  if (!r) { findTopic(q); return; }
   if (r.err) { $('refErr').textContent = r.err; return; }
-  $('book').value = r.idx; fillChapters(); $('chap').value = r.ch; $('vFrom').value = r.f; $('vTo').value = r.z;
-  showPassage(true); $('passage').classList.remove('collapsed');
+  goTo(r.idx, r.ch, r.f, r.z, true); $('passage').classList.remove('collapsed');
   const label = refLabel(r); refHist = [label].concat(refHist.filter(x => x !== label)).slice(0, 12); ls.set('st-refhist', JSON.stringify(refHist));
   closeRef();
 }
@@ -797,9 +897,7 @@ fetch('/chapter_summaries.json').then(r => r.ok ? r.json() : null).then(d => {
 fetch('/bible_web.json').then(r => r.json()).then(d => {
   BIBLE = d;
   let saved = {}; try { saved = JSON.parse(ls.get('st-ref', '{}')) || {}; } catch (e) {}
-  $('book').value = saved.b != null ? saved.b : 42;   // John
-  fillChapters(); $('chap').value = saved.c || 1; $('vFrom').value = saved.f || ''; $('vTo').value = saved.t || '';
-  showPassage(false);
+  goTo(saved.b != null ? saved.b : 42, saved.c || 1, saved.f || '', saved.t || '', false);   // 42 = John
 }).catch(e => setStatus('Could not load Bible: ' + e.message));
 </script>
 
