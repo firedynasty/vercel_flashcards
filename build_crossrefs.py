@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """Build crossrefs.json for spiritual_teacher.html.
 
-Source: crossRefs.json in the vercel_bible_current project — 29,226 verses,
-each with a list of related verses, already in relevance order. That file is
-12.7 MB, which is not something to hand a phone.
+Source: data/crossRefs.json — 29,226 verses, each with a list of related
+verses, already in relevance order, copied here from the vercel_bible_current
+project so this script runs on a fresh clone. That file is 12.7 MB, which is
+not something to hand a phone; .vercelignore keeps it out of the deployment,
+since only the built file is ever fetched.
 
 What comes out is 913 KB: per verse, the chapters its top links land in. The
 page only ever offers chapters to read, so the target verse number is dropped,
@@ -22,12 +24,16 @@ import os
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-DEFAULT_SRC = os.path.join(
+DEFAULT_SRC = os.path.join(HERE, 'data', 'crossRefs.json')
+# Where the copy in data/ came from, still used if someone deletes it.
+FALLBACK_SRC = os.path.join(
     os.path.dirname(HERE), 'vercel_bible_current', 'public', 'crossRefs.json')
 KEEP = 6
 
 def main():
     src = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_SRC
+    if not os.path.exists(src) and src == DEFAULT_SRC:
+        src = FALLBACK_SRC
     bible = json.load(open(os.path.join(HERE, 'bible_web.json')))
     xrefs = json.load(open(src))
 
