@@ -112,6 +112,7 @@
   <button id="fMinus" title="Smaller text">A−</button>
   <button id="fPlus" title="Larger text">A+</button>
   <button id="themeBtn" title="Light / dark"></button>
+  <button id="copyBtn" title="Copy the article and the whole conversation">Copy chat</button>
   <button id="clearBtn" title="Forget this conversation (keeps the article)">New</button>
 </div>
 <div class="sub"><span class="status" id="status"></span></div>
@@ -410,6 +411,25 @@ function replyButtons(b, text) {
   copy.onclick = async () => { copy.textContent = (await copyText(text)) ? 'Copied' : 'Copy failed'; setTimeout(() => { copy.textContent = 'Copy'; }, 1500); };
   row.appendChild(again); row.appendChild(copy); b.box.appendChild(row);
 }
+/* Everything on screen as plain markdown, so the whole session can be pasted
+   into notes or a doc in one go. Selecting it by hand drags the button labels
+   in with it ("🔊 AgainCopy"), which is what this is here to avoid. The
+   article goes in too: without it the answers read as replies to nothing.
+   ME: / TEACHER: matches the chat log teacher.html writes. */
+function transcript() {
+  const out = [], d = new Date();
+  out.push('# ' + (articleLabel || 'Economic teacher'));
+  out.push(($('style').selectedOptions[0] || {}).textContent + ' · ' +
+    d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+  if (article) out.push('\n## Article\n' + article.trim());
+  if (turns.length) out.push('\n## Chat log\n' + turns.map(m => (m.role === 'user' ? 'ME: ' : 'TEACHER: ') + m.text.trim()).join('\n\n'));
+  return out.join('\n') + '\n';
+}
+$('copyBtn').onclick = async () => {
+  if (!article && !turns.length) { setStatus('Nothing to copy yet'); return; }
+  const ok = await copyText(transcript());
+  setStatus(ok ? 'Copied the article and ' + turns.length + ' messages' : 'Could not copy — check clipboard permissions');
+};
 async function copyText(s) {
   try { await navigator.clipboard.writeText(s); return true; } catch (e) {}
   try { const ta = document.createElement('textarea'); ta.value = s; ta.style.cssText = 'position:fixed;opacity:0'; document.body.appendChild(ta); ta.select(); const ok = document.execCommand('copy'); ta.remove(); return ok; } catch (e) { return false; }

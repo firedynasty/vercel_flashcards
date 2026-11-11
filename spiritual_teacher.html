@@ -105,6 +105,7 @@
   <select id="recent" disabled title="Which Google Doc to save into / import from"><option value="">＋ New doc</option></select>
   <button id="exportBtn" title="Save this study to the chosen doc (new doc if ＋ New doc)">Save → Doc</button>
   <button id="importBtn" title="Load the chosen doc: a saved study resumes, any other doc becomes the text you read">Import</button>
+  <button id="copyBtn" title="Copy the summary and the whole conversation">Copy chat</button>
   <button id="clearBtn">New</button>
 </div>
 <div class="sub"><span class="status" id="status"></span></div>
@@ -470,6 +471,34 @@ function bubble(role, text) { $('empty') && $('empty').remove(); const d = docum
   if (role === 'assistant') { const s = document.createElement('button'); s.className = 'copybtn'; s.textContent = '🔊 Again'; s.onclick = () => window.stSpeak && window.stSpeak(t.textContent, true); d.appendChild(s);
     const c = document.createElement('button'); c.className = 'copybtn'; c.textContent = 'Copy'; c.onclick = async () => { c.textContent = (await copyText(t.textContent)) ? 'Copied' : 'Copy failed'; setTimeout(() => c.textContent = 'Copy', 1500); }; d.appendChild(c); }
   $('feed').appendChild(d); scrollFeed(); return t; }
+/* Everything on screen as plain markdown, so a study can be pasted into notes
+   in one go. Selecting it by hand drags the button labels in with it
+   ("🔊 AgainCopy"), which is what this is here to avoid. The chat log is
+   written by serializeTurns, the same re-loadable ME: / TEACHER: / PASSAGE:
+   form Save → Doc uses, so a pasted copy can be imported back; that is why it
+   comes last — parseDoc would swallow any heading after it into the last
+   answer. The WEB passage itself is left out (it is a reference away), but the
+   reader's own imported text is not, since nothing else holds it. */
+function transcript() {
+  const out = [], d = new Date(), s = curView && summaryFor(curView.bi, curView.ch);
+  out.push('# ' + (passageRef || 'Spiritual teacher'));
+  out.push(($('style').selectedOptions[0] || {}).textContent + ' · ' +
+    d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+  if (s) {
+    out.push('\n## Summary\n' + s.overview);
+    if (s.sections && s.sections.length)
+      out.push('Sections:\n' + s.sections.map(x => '- vv. ' + x.start_verse + '-' + x.end_verse + ' — ' + x.heading).join('\n'));
+  }
+  if (selVerses.size) out.push('\n## Focus verses\nv. ' + [...selVerses].sort((x, y) => x - y).join(', '));
+  if (customText && passageText) out.push('\n## Text\n' + passageText.trim());
+  if (turns.length) out.push('\n## Chat log\n' + serializeTurns(turns, true));
+  return out.join('\n') + '\n';
+}
+$('copyBtn').onclick = async () => {
+  if (!turns.length && !(curView && summaryFor(curView.bi, curView.ch)) && !customText) { setStatus('Nothing to copy yet'); return; }
+  const ok = await copyText(transcript());
+  setStatus(ok ? 'Copied the summary and ' + turns.length + ' messages' : 'Could not copy — check clipboard permissions');
+};
 async function copyText(s) {
   try { await navigator.clipboard.writeText(s); return true; } catch (e) {}
   try { const ta = document.createElement('textarea'); ta.value = s; ta.style.cssText = 'position:fixed;opacity:0'; document.body.appendChild(ta); ta.select(); const ok = document.execCommand('copy'); ta.remove(); return ok; } catch (e) { return false; }
