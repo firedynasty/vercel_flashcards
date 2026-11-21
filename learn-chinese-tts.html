@@ -127,6 +127,11 @@
     border: 1px solid #bbf7d0; border-radius: 6px; padding: 8px 12px;
   }
   .vocab-card .english.hidden { display: none; }
+  /* known: left click toggles, shared with learn-google (localStorage learnGoogle_known) */
+  .vocab-card, .context-line, #vocabDataTable tbody tr { -webkit-touch-callout: none; }
+  .vocab-card.known, .context-line.known { opacity: 0.45; border-left: 4px solid #16a34a; }
+  .vocab-card.known .chinese::after, .context-line.known .ctx-chinese::after { content: ' \2713'; color: #16a34a; font-size: 0.7em; }
+  #vocabDataTable tbody tr.known > td { opacity: 0.4; text-decoration: line-through; }
 
   /* ── SECTION HEADERS ── */
   .section-header {
@@ -671,6 +676,7 @@
       <span class="tbl-nav-hint">,&nbsp;up&nbsp;&nbsp;.&nbsp;down&nbsp;&nbsp;/&nbsp;play&nbsp;&nbsp;;&nbsp;stop</span>
       <span class="toggle-chip" id="toggleRandomize" onclick="toggleRandomize()">Randomize</span>
       <a href="https://vercel-spanish-chinese.vercel.app/chinese-glosser" target="_blank" class="toggle-chip" style="text-decoration:none;background:#0EA5E9;color:white;border-color:#0EA5E9;">Glosser</a>
+      <button id="downloadUnknownBtn" onclick="downloadUnknownCsv()" class="toggle-chip" style="display:none;background:#b45309;color:white;border-color:#b45309;cursor:pointer;font-family:inherit;font-size:inherit;" title="Download the cards not marked known">&#8659; Unknown CSV</button>
       <button onclick="exportAllCsv()" class="toggle-chip" style="background:#16a34a;color:white;border-color:#16a34a;cursor:pointer;font-family:inherit;font-size:inherit;">&#8659; CSV</button>
     </div>
 
@@ -1079,7 +1085,7 @@ function renderLyrics() {
   area.classList.add('active');
   document.getElementById('stickyBar').classList.add('active');
 
-  document.getElementById('countLabel').textContent = filteredRows.length + ' lines';
+  updateKnownCount();
 
   var container = document.getElementById('linesContainer');
   container.innerHTML = '';
@@ -1121,15 +1127,19 @@ function renderLyrics() {
         ctxEn.textContent = row.contextLine;
         ctx.appendChild(ctxEn);
       }
-      ctx.onclick = function() { speakLine(i); };
+      if (knownTerms.has(rowKey(row))) ctx.classList.add('known');
+      ctx.onclick = function() { toggleKnown(rowKey(row)); };
+      ctx.oncontextmenu = function(e) { e.preventDefault(); speakLine(i); };
       container.appendChild(ctx);
       return;
     }
 
     wordNum++;
     var card = document.createElement('div');
-    card.className = 'vocab-card';
+    card.className = 'vocab-card' + (knownTerms.has(rowKey(row)) ? ' known' : '');
     card.id = 'card-' + i;
+    card.addEventListener('click', function() { toggleKnown(rowKey(row)); });
+    card.addEventListener('contextmenu', function(e) { e.preventDefault(); speakLine(i); });
 
     // Card header row (num + chinese + reveal button)
     var cardHeader = document.createElement('div');
@@ -1145,13 +1155,6 @@ function renderLyrics() {
     cn.style.flex = '1';
     cn.style.marginBottom = '0';
     cn.textContent = row.chinese;
-    // Click on Chinese character speaks it
-    cn.addEventListener('click', (function(capturedI) {
-      return function(e) {
-        e.stopPropagation();
-        speakLine(capturedI);
-      };
-    })(i));
 
     var revBtn = document.createElement('button');
     revBtn.className = 'try-btn';
@@ -2152,18 +2155,18 @@ function renderTableView() {
       html += '<td style="font-size:13px;font-weight:700;color:#2563eb;letter-spacing:1px;">' + escHtml(item.row.sectionHeader) + '</td>';
       html += '<td></td><td></td></tr>';
     } else if (isCtx && hasCJK) {
-      html += '<tr style="background:#fefce8;" data-row-idx="' + item.idx + '">';
+      html += '<tr style="background:#fefce8;" data-row-idx="' + item.idx + '"' + knownCls(item.row) + '>';
       html += '<td>' + (n + 1) + '</td>';
       html += '<td><button class="tbl-play-btn" onclick="tblSpeak(' + item.idx + ', this)" title="Play TTS">&#9654;</button></td>';
       html += '<td class="tbl-chinese">' + escHtml(item.row.contextLine) + '</td>';
       html += '<td class="tbl-rom" style="font-size:11px;color:#92400e;">sentence</td>';
       html += '<td></td></tr>';
     } else if (isCtx) {
-      html += '<tr style="background:#f0f4ff;" data-row-idx="' + item.idx + '"><td>' + (n + 1) + '</td><td></td>';
+      html += '<tr style="background:#f0f4ff;" data-row-idx="' + item.idx + '"' + knownCls(item.row) + '><td>' + (n + 1) + '</td><td></td>';
       html += '<td style="font-size:13px;color:#1d4ed8;font-style:italic;">' + escHtml(item.row.contextLine) + '</td>';
       html += '<td></td><td></td></tr>';
     } else {
-      html += '<tr data-row-idx="' + item.idx + '">';
+      html += '<tr data-row-idx="' + item.idx + '"' + knownCls(item.row) + '>';
       html += '<td>' + (n + 1) + '</td>';
       html += '<td><button class="tbl-play-btn" onclick="tblSpeak(' + item.idx + ', this)" title="Play TTS">&#9654;</button></td>';
       html += '<td class="tbl-chinese">' + escHtml(item.row.chinese) + '</td>';
@@ -2193,6 +2196,18 @@ function renderTableView() {
       lengthMenu: 'Show _MENU_ rows',
       info: 'Showing _START_ to _END_ of _TOTAL_ entries',
     }
+  });
+
+  // Left click a row = known, right-click (long-press) = speak; the ▶ button still speaks
+  $('#vocabDataTable tbody').on('click', 'tr[data-row-idx]', function(e) {
+    if (e.target.closest('.tbl-play-btn')) return;
+    var idx = parseInt(this.getAttribute('data-row-idx'), 10);
+    tblSetCurrent(idx, false);
+    if (filteredRows[idx]) toggleKnown(rowKey(filteredRows[idx]));
+  }).on('contextmenu', 'tr[data-row-idx]', function(e) {
+    e.preventDefault();
+    var idx = parseInt(this.getAttribute('data-row-idx'), 10);
+    tblSpeak(idx, this.querySelector('.tbl-play-btn') || this);
   });
 
   // Re-apply green highlight after every sort/filter/page redraw
@@ -2330,6 +2345,52 @@ function shuffleDeckArray(arr) {
   var a = arr.slice();
   for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var tmp = a[i]; a[i] = a[j]; a[j] = tmp; }
   return a;
+}
+
+// ── KNOWN CARDS: click = known, right-click = speak, ⇓ Unknown CSV ──
+// Same localStorage key as learn-google, so marks carry over when you switch pages.
+var KNOWN_KEY  = 'learnGoogle_known';
+var knownTerms = (function() { try { return new Set(JSON.parse(localStorage.getItem(KNOWN_KEY) || '[]')); } catch (e) { return new Set(); } })();
+
+function rowKey(r) { return r.chinese || r.contextLine || ''; }
+function knownCls(r) { return knownTerms.has(rowKey(r)) ? ' class="known"' : ''; }
+function markableRows() { return allRows.filter(function(r) { return rowKey(r); }); }
+
+function toggleKnown(key) {
+  if (!key) return;
+  if (knownTerms.has(key)) knownTerms.delete(key); else knownTerms.add(key);
+  try { localStorage.setItem(KNOWN_KEY, JSON.stringify(Array.from(knownTerms))); } catch (e) {}
+  var on = knownTerms.has(key);
+  filteredRows.forEach(function(r, i) {
+    if (rowKey(r) !== key) return;
+    var card = document.getElementById('card-' + i);
+    if (card) card.classList.toggle('known', on);
+    var tr = document.querySelector('#vocabDataTable tr[data-row-idx="' + i + '"]');
+    if (tr) tr.classList.toggle('known', on);
+  });
+  updateKnownCount();
+}
+
+function updateKnownCount() {
+  var rows = markableRows();
+  var n = rows.filter(function(r) { return knownTerms.has(rowKey(r)); }).length;
+  document.getElementById('countLabel').textContent = filteredRows.length + ' lines' + (n ? ' \u00b7 ' + n + ' known / ' + rows.length : '');
+  document.getElementById('downloadUnknownBtn').style.display = rows.length ? '' : 'none';
+}
+
+function downloadUnknownCsv() {
+  var rows = markableRows();
+  var rest = rows.filter(function(r) { return !knownTerms.has(rowKey(r)); });
+  if (!rest.length) { alert(rows.length ? 'Every card is marked known.' : 'No data loaded yet.'); return; }
+  function csvEsc(s) { s = String(s || ''); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }
+  var lines = ['Chinese,Romanization,English'];
+  rest.forEach(function(r) { lines.push([rowKey(r), r.romanization || '', r.english || ''].map(csvEsc).join(',')); });
+  var base = (currentCsvName || 'cards').replace(/\.[^.]+$/, '').replace(/[^\w\s-]/g, '_');
+  var blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url; a.download = base + '_unknown.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
 }
 
 // ── EXPORT ALL CSV ──
@@ -2993,6 +3054,11 @@ function learnFileBar(dir, currentName) {
   });
   var top = document.querySelector('.container'); // above the page title, below any fixed toolbar
   if (top) top.insertBefore(bar, top.firstChild); else document.body.insertBefore(bar, document.body.firstChild);
+  // Push the bar below the fixed sticky toolbar (it appears once cards load and wraps on narrow screens).
+  var sticky = document.getElementById('stickyBar');
+  if (sticky && window.ResizeObserver) {
+    new ResizeObserver(function() { bar.style.marginTop = (sticky.offsetHeight ? sticky.offsetHeight + 8 : 0) + 'px'; }).observe(sticky);
+  }
   fetch('/_list?dir=' + encodeURIComponent(dir)).then(function(r) { return r.json(); }).then(function(data) {
     if (data.error) throw new Error(data.error);
     sel.innerHTML = '<option value="">' + data.files.length + ' card file' + (data.files.length === 1 ? '' : 's') + ' — choose one</option>';
