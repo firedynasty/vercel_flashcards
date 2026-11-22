@@ -456,6 +456,7 @@
   }
   .recent-dropdown-item:last-child { border-bottom: none; }
   .recent-dropdown-item:active { background: #f5f5f5; }
+  #linesContainer, #tableViewContainer { zoom: var(--cards-zoom, 1); }
 </style>
 </head>
 <body>
@@ -672,6 +673,7 @@
       <div class="sep"></div>
       <span class="toggle-chip" id="revealAllChip" onclick="toggleRevealAll()">&#9660; Reveal All</span>
       <span class="toggle-chip" id="toggleTableView" onclick="toggleTableView()">Table</span>
+    <span class="toggle-chip" onclick="cardsZoom(-1)" title="Smaller cards">A&minus;</span><span class="tbl-nav-hint" id="cardsZoomLabel" title="Card size">100%</span><span class="toggle-chip" onclick="cardsZoom(1)" title="Bigger cards">A+</span>
       <span class="toggle-chip" onclick="learnSwitchPage('learn-google.html')" title="Open these cards in Vocabulary Drill (click = known, right-click = speak)">&#8644; Vocab</span>
       <span class="tbl-nav-hint">,&nbsp;up&nbsp;&nbsp;.&nbsp;down&nbsp;&nbsp;/&nbsp;play&nbsp;&nbsp;;&nbsp;stop</span>
       <span class="toggle-chip" id="toggleRandomize" onclick="toggleRandomize()">Randomize</span>
@@ -3139,6 +3141,19 @@ if (window.EMBEDDED_CSV_TEXT) {
 } else if (!learnBootHandoff()) {
   initFromApi();
 }
+
+// ── A- / A+ : scale the cards and table (remembered per browser) ──
+var CARDS_ZOOM_KEY = 'flashcardsZoom';
+function cardsZoom(step) {
+  var z = 1;
+  try { z = parseFloat(localStorage.getItem(CARDS_ZOOM_KEY)) || 1; } catch (e) {}
+  if (step) z = Math.min(3, Math.max(0.6, Math.round((z + step * 0.1) * 10) / 10));
+  document.documentElement.style.setProperty('--cards-zoom', z);
+  var label = document.getElementById('cardsZoomLabel');
+  if (label) label.textContent = Math.round(z * 100) + '%';
+  try { localStorage.setItem(CARDS_ZOOM_KEY, z); } catch (e) {}
+}
+document.addEventListener('DOMContentLoaded', function() { cardsZoom(0); });
 </script>
 
 <!-- Dropbox File Browser Modal -->

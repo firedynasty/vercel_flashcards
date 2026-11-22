@@ -35,6 +35,19 @@ PORT = int(os.environ.get('OPENFLASHCARDS_PORT', '8765'))
 SIGNATURE = b'openflashcards'
 
 
+def default_root():
+    """Home, or on WSL with this repo on the Windows side, the Windows user folder
+    (/mnt/c/Users/you) so OneDrive/Documents folders, often symlinked into ~, work."""
+    parts = REPO.parts
+    if len(parts) > 4 and parts[1] == 'mnt' and len(parts[2]) == 1 and parts[3] == 'Users':
+        return Path(*parts[:5])
+    return Path.home()
+
+
+# Card files must live under ROOT; override with OPENFLASHCARDS_ROOT.
+ROOT = Path(os.environ.get('OPENFLASHCARDS_ROOT') or default_root()).expanduser().resolve()
+
+
 def list_cards(home, relative):
     """Card files under ~/relative (recursive), as paths relative to that folder."""
     if any(p.startswith('.') or p == '..' for p in Path(relative).parts):
@@ -81,7 +94,7 @@ class Handler(SimpleHTTPRequestHandler):
             return self.wfile.write(SIGNATURE)
         if route == '/_list':
             try:
-                files, truncated = list_cards(Path.home().resolve(), parse_qs(urlsplit(self.path).query).get('dir', [''])[0])
+                files, truncated = list_cards(ROOT, parse_qs(urlsplit(self.path).query).get('dir', [''])[0])
                 data, status = {'files': files, 'truncated': truncated}, 200
             except (PermissionError, FileNotFoundError):
                 data, status = {'error': 'folder not found'}, 404
@@ -93,7 +106,7 @@ class Handler(SimpleHTTPRequestHandler):
             self.end_headers()
             return self.wfile.write(body)
         if route.startswith('/_local/'):
-            path = safe_child(Path.home().resolve(), route[len('/_local/'):], CARD_TYPES)
+            path = safe_child(ROOT, route[len('/_local/'):], CARD_TYPES)
             mime = CARD_TYPES.get(path.suffix.lower()) if path else None
         else:
             relative = route.lstrip('/') or 'learn.html'
@@ -151,9 +164,9 @@ def main():
         parser.error(f'not found: {file}')
     if file.is_file() and file.suffix.lower() not in CARD_TYPES:
         parser.error(f'expected .csv, .tsv or .txt, got {file.suffix or "no extension"}')
-    home = Path.home().resolve()
+    home = ROOT
     if not file.is_relative_to(home) or any(p.startswith('.') for p in file.relative_to(home).parts):
-        parser.error('it must be under your home folder and not hidden')
+        parser.error(f'it must be under {home} and not hidden (set OPENFLASHCARDS_ROOT to change)')
     folder = file if file.is_dir() else file.parent
 
     state = ping(PORT)

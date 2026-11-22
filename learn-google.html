@@ -512,6 +512,7 @@
     font-size: 14px; font-weight: 700; padding: 12px 28px; cursor: pointer;
     display: block; margin: 48px auto 0;
   }
+  #cardsArea, #tableViewContainer { zoom: var(--cards-zoom, 1); }
 </style>
 </head>
 <body>
@@ -611,6 +612,7 @@
     <input type="text" id="searchInput" placeholder="&#128269; Search terms or definitions…" oninput="filterAndRender()">
     <button class="btn outline sm" id="darkModeBtn" onclick="toggleDarkMode()">&#9790; Dark</button>
     <span class="toggle-chip on" id="toggleTableView" onclick="toggleTableView()">Table</span>
+    <span class="toggle-chip" onclick="cardsZoom(-1)" title="Smaller cards">A&minus;</span><span class="tbl-nav-hint" id="cardsZoomLabel" title="Card size">100%</span><span class="toggle-chip" onclick="cardsZoom(1)" title="Bigger cards">A+</span>
     <span class="tbl-nav-hint">click&nbsp;=&nbsp;known&nbsp;&nbsp;right-click&nbsp;=&nbsp;speak&nbsp;&nbsp;,&nbsp;up&nbsp;&nbsp;.&nbsp;down&nbsp;&nbsp;/&nbsp;play&nbsp;&nbsp;;&nbsp;stop</span>
     <span class="toggle-chip" id="toggleRandomize" onclick="toggleRandomize()">Randomize</span>
     <select id="filterSel" onchange="filterAndRender()" style="display:none">
@@ -2571,6 +2573,19 @@ document.addEventListener('keydown', function(e) {
     closeModal();
   }
 });
+
+// ── A- / A+ : scale the cards and table (remembered per browser) ──
+var CARDS_ZOOM_KEY = 'flashcardsZoom';
+function cardsZoom(step) {
+  var z = 1;
+  try { z = parseFloat(localStorage.getItem(CARDS_ZOOM_KEY)) || 1; } catch (e) {}
+  if (step) z = Math.min(3, Math.max(0.6, Math.round((z + step * 0.1) * 10) / 10));
+  document.documentElement.style.setProperty('--cards-zoom', z);
+  var label = document.getElementById('cardsZoomLabel');
+  if (label) label.textContent = Math.round(z * 100) + '%';
+  try { localStorage.setItem(CARDS_ZOOM_KEY, z); } catch (e) {}
+}
+document.addEventListener('DOMContentLoaded', function() { cardsZoom(0); });
 </script>
 
 <!-- Dropbox File Browser Modal -->
