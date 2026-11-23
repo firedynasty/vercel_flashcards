@@ -1,0 +1,2563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chinese Lyrics Reader</title>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css">
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, 'Inter', sans-serif;
+    background: #f9f9f7;
+    min-height: 100vh;
+    color: #1a1a1a;
+  }
+  .container {
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 24px 20px;
+  }
+  h1 { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+  .subtitle { font-size: 12px; color: #888; margin-bottom: 16px; }
+
+  /* ── SETUP SECTION ── */
+  .setup-section {
+    margin-bottom: 20px;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    background: white;
+    overflow: hidden;
+  }
+  .setup-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 16px; background: #f5f5f5; cursor: pointer; user-select: none;
+  }
+  .setup-header span { font-size: 13px; font-weight: 600; color: #555; }
+  .setup-header .toggle-arrow { font-size: 12px; color: #999; }
+  .setup-body { padding: 12px 16px; }
+  .setup-row { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; align-items: center; }
+  .setup-row label { font-size: 13px; font-weight: 600; color: #555; min-width: 50px; }
+  .setup-row select, .setup-row input[type="text"] {
+    flex: 1; padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px;
+    font-size: 13px; font-family: inherit; min-width: 120px;
+  }
+  .setup-row select:disabled { opacity: 0.5; }
+
+  .btn {
+    border: none; border-radius: 6px; padding: 8px 16px;
+    font-weight: 600; font-size: 13px; cursor: pointer; transition: opacity 0.15s;
+  }
+  .btn:hover { opacity: 0.85; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn.primary { background: #2563eb; color: white; }
+  .btn.google { background: #4285f4; color: white; }
+  .btn.outline { background: none; border: 1px solid #ccc; color: #555; }
+
+  .status { font-size: 12px; color: #888; min-height: 18px; margin-top: 6px; }
+  .hint { font-size: 11px; color: #aaa; margin-top: 4px; line-height: 1.4; }
+
+  /* ── API KEY ── */
+  .api-key-row {
+    display: flex; gap: 8px; align-items: center; margin-bottom: 10px;
+  }
+  .api-key-row input {
+    flex: 1; padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px;
+    font-size: 13px; font-family: monospace;
+  }
+  .api-key-status {
+    font-size: 11px; padding: 4px 10px; border-radius: 12px; font-weight: 600;
+  }
+  .api-key-status.saved { background: #dcfce7; color: #16a34a; }
+  .api-key-status.missing { background: #fef3c7; color: #d97706; }
+
+  /* ── TTS ENGINE TOGGLE ── */
+  .tts-toggle {
+    display: flex; gap: 4px; margin-bottom: 10px;
+  }
+  .tts-toggle button {
+    padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 600;
+    cursor: pointer; border: 1px solid #ddd; background: white; color: #555;
+    transition: all 0.15s;
+  }
+  .tts-toggle button.active { background: #2563eb; color: white; border-color: #2563eb; }
+
+  /* ── LYRICS AREA ── */
+  .lyrics-area { display: none; }
+  .lyrics-area.active { display: block; }
+
+  .lyrics-info {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 14px; flex-wrap: wrap; gap: 8px;
+  }
+  .lyrics-info .count { font-size: 12px; color: #888; }
+
+  /* ── VOCAB CARDS ── */
+  .vocab-card {
+    background: white; border: 1px solid #e8e8e8; border-radius: 12px;
+    padding: 16px 20px; margin-bottom: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    cursor: pointer; transition: background-color 0.15s;
+  }
+  .vocab-card:hover { background-color: #f0f4ff; }
+  .vocab-card.speaking { background-color: #dbeafe; border-color: #93c5fd; }
+  .vocab-card .num { font-size: 11px; font-weight: 700; color: #aaa; margin-bottom: 4px; }
+  .vocab-card .chinese {
+    font-size: 24px; font-weight: 600; margin-bottom: 6px;
+    cursor: pointer; display: inline-block;
+  }
+  .vocab-card .chinese:hover { color: #2563eb; }
+  .vocab-card .romanization {
+    font-size: 14px; color: #888; font-style: italic; margin-bottom: 6px;
+  }
+  .vocab-card .romanization.hidden { display: none; }
+  .vocab-card .english {
+    font-size: 14px; color: #15803d; background: #f0fdf4;
+    border: 1px solid #bbf7d0; border-radius: 6px; padding: 8px 12px;
+  }
+  .vocab-card .english.hidden { display: none; }
+
+  /* ── SECTION HEADERS ── */
+  .section-header {
+    font-size: 13px; font-weight: 700; letter-spacing: 2px;
+    text-transform: uppercase; color: #2563eb;
+    padding: 16px 0 6px 4px;
+    border-bottom: 2px solid #dbeafe;
+    margin-bottom: 8px;
+  }
+
+  /* ── CONTEXT / SENTENCE LINES ── */
+  .context-line {
+    background: #fefce8; border: 1px solid #fde68a; border-radius: 10px;
+    padding: 10px 16px; margin-bottom: 8px;
+    font-size: 15px; line-height: 1.6; color: #92400e;
+    cursor: pointer;
+  }
+  .context-line:hover { background: #fef9c3; }
+  .context-line.repeat { background: #ecfdf5; border-color: #6ee7b7; color: #065f46; }
+  .context-line.repeat:hover { background: #d1fae5; }
+  .context-line.repeat .ctx-chinese { color: #064e3b; }
+  .context-line.repeat .repeat-label { font-size: 11px; color: #059669; margin-bottom: 2px; }
+  .context-line.speaking { background: #fde68a; border-color: #f59e0b; }
+  .context-line .ctx-chinese {
+    font-size: 20px; font-weight: 600; color: #78350f;
+  }
+  .context-line .ctx-english {
+    font-size: 13px; color: #a16207; margin-top: 2px;
+  }
+
+  /* ── HOVER TOOLTIP (reveal-on-hover mode) ── */
+  .vocab-card { position: relative; z-index: 1; }
+  .vocab-card:hover { z-index: 10; }
+  .def-tip {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: -1px; right: -1px;
+    background: #1e293b;
+    color: #e2e8f0;
+    padding: 12px 16px 14px;
+    font-size: 14px;
+    line-height: 1.65;
+    border-radius: 0 0 12px 12px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+    pointer-events: none;
+    z-index: 20;
+  }
+  .tooltip-on .vocab-card:hover .def-tip { display: block; }
+
+  /* ── HOVER-REVEAL SLIDER ── */
+  .tip-toggle {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 11px; font-weight: 700; color: #555;
+    cursor: pointer; user-select: none; white-space: nowrap;
+  }
+  .tip-switch {
+    position: relative; width: 38px; height: 20px; flex-shrink: 0;
+  }
+  .tip-track {
+    position: absolute; inset: 0;
+    background: #d0d0d0; border-radius: 20px; transition: background 0.25s;
+  }
+  .tip-track.on { background: #2563eb; }
+  .tip-knob {
+    position: absolute; width: 14px; height: 14px;
+    background: white; border-radius: 50%;
+    top: 3px; left: 3px; transition: left 0.25s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  }
+  .tip-knob.on { left: 21px; }
+
+  /* ── STICKY BAR ── */
+  .sticky-bar {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 150;
+    display: none; align-items: center; justify-content: center;
+    gap: 8px; flex-wrap: wrap;
+    padding: 8px 12px;
+    background: #f0f0f0;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+  }
+  .sticky-bar.active { display: flex; }
+  .sticky-bar.auto-on { background: #e6ffe6; }
+  .sticky-bar select {
+    font-size: 12px; font-family: inherit;
+    padding: 3px 6px; border: 1px solid #ccc; border-radius: 5px;
+  }
+  .sticky-bar .sep { width: 1px; height: 18px; background: #ccc; margin: 0 2px; }
+  .lyrics-area.active { padding-top: 50px; }
+
+  .auto-label {
+    font-weight: 700; font-size: 12px; color: #666;
+    cursor: pointer; padding: 4px 8px; border-radius: 4px;
+  }
+  .switch-wrap {
+    position: relative; display: inline-block; width: 50px; height: 24px; cursor: pointer;
+  }
+  .switch-wrap input { opacity: 0; width: 0; height: 0; }
+  .switch-track {
+    position: absolute; inset: 0;
+    background-color: #ddd; transition: .4s; border-radius: 24px;
+  }
+  .switch-track.on { background-color: #4CAF50; }
+  .switch-knob {
+    position: absolute; height: 18px; width: 18px;
+    bottom: 3px; left: 3px;
+    background-color: white; transition: .4s; border-radius: 50%;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  }
+  .switch-knob.on { left: 29px; }
+
+  /* ── TOGGLE CHIPS ── */
+  .toggle-chip {
+    padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 700;
+    cursor: pointer; border: 1px solid #ccc; background: white; color: #555;
+    user-select: none; transition: all 0.15s;
+  }
+  .toggle-chip.on { background: #2563eb; color: white; border-color: #2563eb; }
+
+  /* ── VIDEO SECTION ── */
+  .video-item { flex: 1 1 calc(50% - 6px); min-width: 260px; position: relative; }
+  .video-item video { width: 100%; border-radius: 8px; background: #000; display: block; cursor: pointer; }
+  .video-item .video-label {
+    font-size: 11px; color: #888; margin-top: 4px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .video-controls-row {
+    display: flex; gap: 4px; margin-top: 4px;
+  }
+  .vid-ctrl-btn {
+    border: none; border-radius: 6px; padding: 5px 12px;
+    font-size: 11px; font-weight: 600; cursor: pointer;
+    background: #e5e7eb; color: #333; transition: background 0.15s;
+  }
+  .vid-ctrl-btn:hover { background: #d1d5db; }
+  .vid-ctrl-btn.active { background: #2563eb; color: white; }
+  .vol-slider {
+    -webkit-appearance: none; appearance: none;
+    width: 70px; height: 4px; border-radius: 2px;
+    background: #d1d5db; outline: none; cursor: pointer;
+    align-self: center;
+  }
+  .vol-slider::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 14px; height: 14px; border-radius: 50%;
+    background: #2563eb; cursor: pointer;
+  }
+  .vol-slider::-moz-range-thumb {
+    width: 14px; height: 14px; border-radius: 50%;
+    background: #2563eb; border: none; cursor: pointer;
+  }
+
+  /* ── TABLE VIEW ── */
+  #tableViewContainer { display: none; padding-top: 50px; }
+  #tableViewContainer.active { display: block; }
+  #tableViewContainer table.dataTable { width: 100% !important; border-collapse: collapse; }
+  #tableViewContainer table.dataTable thead th {
+    background: #f1f5f9; color: #334155; font-size: 13px; font-weight: 700;
+    padding: 10px 12px; border-bottom: 2px solid #cbd5e1;
+  }
+  #tableViewContainer table.dataTable tbody td {
+    padding: 10px 12px; border-bottom: 1px solid #e2e8f0;
+    font-size: 14px; vertical-align: middle;
+  }
+  #tableViewContainer table.dataTable tbody tr:nth-child(odd) { background: #f8fafc; }
+  #tableViewContainer table.dataTable tbody tr:hover { background: #eff6ff; }
+  .tbl-chinese { font-size: 20px !important; font-weight: 600; }
+  .tbl-rom { font-size: 12px; color: #888; font-style: italic; }
+  .tbl-play-btn {
+    border: none; border-radius: 50%; width: 34px; height: 34px;
+    background: #2563eb; color: white; font-size: 16px;
+    cursor: pointer; transition: background 0.15s; flex-shrink: 0;
+  }
+  .tbl-play-btn:hover { background: #1d4ed8; }
+  .tbl-play-btn.speaking { background: #16a34a; }
+  /* , / . keyboard nav — current row highlight (td-level: wins over inline tr backgrounds) */
+  #tableViewContainer table.dataTable tbody tr.tbl-current > td { background-color: #bfdbfe !important; }
+  .dataTables_wrapper .dataTables_length,
+  .dataTables_wrapper .dataTables_filter,
+  .dataTables_wrapper .dataTables_info,
+  .dataTables_wrapper .dataTables_paginate { font-size: 12px; color: #555; margin: 8px 0; }
+  .dataTables_wrapper .dataTables_filter input {
+    border: 1px solid #ddd; border-radius: 6px; padding: 5px 10px; font-size: 13px;
+  }
+  .dataTables_wrapper .dataTables_paginate .paginate_button {
+    border: 1px solid #ddd; border-radius: 4px; padding: 4px 10px; margin: 0 2px;
+    cursor: pointer; font-size: 12px;
+  }
+  .dataTables_wrapper .dataTables_paginate .paginate_button.current {
+    background: #2563eb !important; color: white !important; border-color: #2563eb;
+  }
+  .dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+    background: #eff6ff !important; border-color: #93c5fd;
+  }
+
+  /* ── LOADING SPINNER ── */
+  .loading-dot {
+    display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+    background: #2563eb; margin: 0 2px;
+    animation: bounce 1.4s infinite ease-in-out both;
+  }
+  .loading-dot:nth-child(1) { animation-delay: -0.32s; }
+  .loading-dot:nth-child(2) { animation-delay: -0.16s; }
+  @keyframes bounce {
+    0%, 80%, 100% { transform: scale(0); }
+    40% { transform: scale(1); }
+  }
+
+  /* ── DECK VIEW ── */
+  #deckViewContainer { display: none; max-width: 480px; margin: 0 auto; padding: 20px 20px 40px; }
+  #deckViewContainer.active { display: flex; flex-direction: column; }
+  .deck-progress-row { display: flex; align-items: center; gap: 10px; margin-bottom: 22px; }
+  .deck-progress-track { flex: 1; height: 5px; background: #DAD6CC; border-radius: 3px; overflow: hidden; }
+  .deck-progress-fill { height: 100%; background: #C9A227; border-radius: 3px; transition: width .25s ease; }
+  .deck-progress-label { font-size: 12px; color: #888; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .deck-stage { position: relative; min-height: 300px; display: flex; align-items: center; justify-content: center; }
+  .deck-card {
+    position: absolute; width: 100%; max-width: 340px; min-height: 260px;
+    background: white; border-radius: 16px; border: 1px solid #e0e0db;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.06);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 28px; text-align: center; cursor: pointer;
+  }
+  .deck-card .deck-eyebrow { position: absolute; top: 12px; left: 18px; font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: #888; }
+  .deck-card .deck-word { font-weight: 700; font-size: 26px; line-height: 1.25; color: #1a1a1a; }
+  .deck-card .deck-rom { font-size: 13px; color: #888; font-style: italic; margin-top: 6px; display: none; }
+  .deck-card .deck-def { font-size: 15px; color: #888; margin-top: 14px; line-height: 1.5; display: none; }
+  .deck-card.flipped .deck-word { font-size: 20px; color: #888; font-weight: 400; }
+  .deck-card.flipped .deck-rom { display: block; }
+  .deck-card.flipped .deck-def { display: block; color: #1a1a1a; }
+  .deck-card .deck-flip-hint { position: absolute; bottom: 14px; font-size: 11px; color: #888; opacity: .7; }
+  .deck-card.flipped .deck-flip-hint { display: none; }
+  .deck-stamp { position: absolute; top: 24px; font-weight: 700; font-size: 20px; letter-spacing: .06em; border: 3px solid; border-radius: 8px; padding: 4px 14px; text-transform: uppercase; opacity: 0; pointer-events: none; }
+  .deck-stamp.right { right: 26px; color: #16a34a; border-color: #16a34a; transform: rotate(-8deg); }
+  .deck-stamp.left { left: 26px; color: #4A5B7A; border-color: #4A5B7A; transform: rotate(8deg); }
+  .deck-side-col { position: absolute; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 14px; align-items: center; z-index: 10; }
+  .deck-side-col.left { left: 0; }
+  .deck-side-col.right { right: 0; }
+  .deck-side-btn { width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 700; cursor: pointer; border: 2px solid; background: white; font-family: inherit; box-shadow: 0 2px 8px rgba(0,0,0,0.08); transition: transform 0.1s, box-shadow 0.1s; }
+  .deck-side-btn:active { transform: scale(0.9); }
+  .deck-side-btn.miss { color: #dc2626; border-color: #fca5a5; }
+  .deck-side-btn.miss:active { background: #fef2f2; }
+  .deck-side-btn.correct { color: #16a34a; border-color: #86efac; }
+  .deck-side-btn.correct:active { background: #f0fdf4; }
+  .deck-side-btn.reveal { color: #888; border-color: #ccc; font-size: 20px; }
+  .deck-side-btn.reveal:active { background: #f5f5f5; }
+  .deck-side-btn:disabled { opacity: .35; cursor: default; }
+  .deck-done { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 10px; min-height: 300px; }
+  .deck-done .deck-done-big { font-weight: 700; font-size: 24px; }
+  .deck-done p { color: #888; font-size: 14px; margin: 0 0 10px; }
+  .deck-hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<button title="Page down" onclick="window.scrollBy({top: window.innerHeight * 0.8, behavior: 'smooth'})" style="position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 10; width: 48px; height: 48px; background: rgba(0, 0, 0, 0.45); border-radius: 50%; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s;" onmouseover="this.style.background='rgba(0,0,0,0.7)'" onmouseout="this.style.background='rgba(0,0,0,0.45)'">
+  <svg width="28" height="28" viewBox="0 0 64 64"><path d="M8 20 L32 44 L56 20" stroke="white" stroke-width="8" fill="none" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+</button>
+
+<div class="container">
+  <h1>Chinese Lyrics Reader</h1>
+  <div class="subtitle">Click to hear pronunciation — Mandarin or Cantonese via OpenAI or Browser TTS</div>
+  <a href="chinese-csv-to-table.html" style="display:inline-block;margin:6px 0 10px;font-size:12px;color:#2563eb;text-decoration:none;">CSV to Table Tool &rarr;</a>
+
+  <!-- Setup Section -->
+  <div class="setup-section" id="setupSection">
+    <div class="setup-body">
+
+      <!-- Dialect Toggle -->
+      <div style="font-size:12px;font-weight:600;color:#555;margin-bottom:6px;">Dialect</div>
+      <div class="tts-toggle">
+        <button id="dialectMandarin" class="active" onclick="setDialect('mandarin')">Mandarin</button>
+        <button id="dialectCantonese" onclick="setDialect('cantonese')">Cantonese</button>
+      </div>
+
+      <!-- TTS Engine Toggle -->
+      <div style="font-size:12px;font-weight:600;color:#555;margin-bottom:6px;">Voice Engine</div>
+      <div class="tts-toggle">
+        <button id="ttsToggleBrowser" class="active" onclick="setTtsEngine('browser')">Browser TTS (free)</button>
+        <button id="ttsToggleOpenai" onclick="setTtsEngine('openai')">OpenAI (natural)</button>
+        <button id="ttsToggleEleven" onclick="setTtsEngine('elevenlabs')">ElevenLabs (natural)</button>
+      </div>
+
+      <!-- OpenAI Voice Picker -->
+      <div class="setup-row" id="openaiVoiceRow" style="display:none;">
+        <label>Voice</label>
+        <select id="openaiVoiceSelect" onchange="localStorage.setItem('chineseTts_openaiVoice', this.value)">
+          <option value="alloy">Alloy</option>
+          <option value="echo">Echo</option>
+          <option value="fable">Fable</option>
+          <option value="onyx">Onyx</option>
+          <option value="nova">Nova</option>
+          <option value="shimmer">Shimmer</option>
+        </select>
+      </div>
+
+      <!-- ElevenLabs API Key + Voice Picker -->
+      <div id="elevenSection" style="display:none;">
+        <div style="font-size:12px;font-weight:600;color:#555;margin-bottom:6px;">ElevenLabs API Key</div>
+        <div class="api-key-row">
+          <input type="password" id="apiKeyInput" placeholder="Paste your ElevenLabs API key..."
+                 onchange="saveApiKey()" onkeyup="saveApiKey()">
+          <span class="api-key-status missing" id="apiKeyStatus">not set</span>
+        </div>
+        <div class="setup-row" id="elevenVoiceRow">
+          <label>Voice</label>
+          <select id="elevenVoiceSelect" onchange="localStorage.setItem('chineseTts_elevenVoice', this.value)">
+            <option value="pNInz6obpgDQGcFmaJgB">Adam (deep, warm)</option>
+            <option value="ErXwobaYiN019PkySvjV">Antoni (calm)</option>
+            <option value="VR6AewLTigWG4xSOukaG">Arnold (strong)</option>
+            <option value="EXAVITQu4vr4xnSDxMaL">Bella (warm female)</option>
+            <option value="jBpfuIE2acCO8z3wKNLl">Gigi (youthful female)</option>
+            <option value="onwK4e9ZLuTAKqWW03F9">Daniel (British male)</option>
+          </select>
+        </div>
+      </div>
+
+      <hr style="border:none;border-top:1px solid #eee;margin:12px 0;">
+
+      <!-- Drop Folder -->
+      <div style="font-size:12px;font-weight:600;color:#555;margin-bottom:6px;">Drop Folder</div>
+      <div class="setup-row">
+        <input type="file" id="folderInput" webkitdirectory style="display:none">
+        <button class="btn primary" onclick="document.getElementById('folderInput').click()">Drop Folder</button>
+        <input type="file" id="fileInput" accept=".csv,.txt,.xlsx,.xls" style="display:none">
+        <button class="btn outline" onclick="document.getElementById('fileInput').click()">Drop File</button>
+        <span id="folderName" style="font-size:12px;color:#888;font-family:monospace;">No folder selected</span>
+      </div>
+      <div class="hint">Picks the first .csv, .txt (;delimited), or .xlsx and all .mp4 files from the top level of the folder.</div>
+
+      <hr style="border:none;border-top:1px solid #eee;margin:12px 0;">
+
+      <!-- Google Sheets -->
+      <div style="font-size:12px;font-weight:600;color:#555;margin-bottom:6px;">Google Sheets</div>
+      <div class="setup-row">
+        <button class="btn google" id="authBtn" onclick="gdriveSignIn()">Sign In</button>
+        <input type="text" id="searchInput" placeholder="Spreadsheet name..." value="chinese">
+        <button class="btn primary" id="searchBtn" onclick="gdriveSearch()" disabled>Load</button>
+      </div>
+      <div class="setup-row">
+        <label>Sheet</label>
+        <select id="sheetSelect" disabled onchange="onSheetSelect()">
+          <option value="">Sign in first</option>
+        </select>
+      </div>
+      <div class="status" id="status"></div>
+      <div class="hint">Sheet format: auto-detects 2 columns (term, definition) or 3 columns (term, pronunciation, definition).</div>
+      <!-- hidden stub for lessonSelect (referenced in shared JS) -->
+      <select id="lessonSelect" style="display:none"></select>
+    </div>
+  </div>
+
+  <!-- Paste CSV (always visible) -->
+  <div style="margin:8px 0 0; padding:12px 16px; border:1px solid #e0e0e0; border-radius:10px; background:white;">
+    <div style="font-size:12px;font-weight:600;color:#555;margin-bottom:6px;">Paste CSV</div>
+    <div style="display:flex;gap:16px;align-items:center;margin-bottom:6px;font-size:12px;color:#555;flex-wrap:wrap;">
+      <label style="cursor:pointer;display:flex;align-items:center;gap:4px;"><input type="radio" name="csvColMode" value="3" checked> 3 columns <span style="color:#999;">(language, pronunciation, definition)</span></label>
+      <label style="cursor:pointer;display:flex;align-items:center;gap:4px;"><input type="radio" name="csvColMode" value="2"> 2 columns <span style="color:#999;">(language, definition)</span></label>
+      <label style="cursor:pointer;display:flex;align-items:center;gap:4px;"><input type="radio" name="csvColMode" value="0"> multi-line blocks <span style="color:#999;">(each line = one field, blank line = row separator)</span></label>
+    </div>
+    <textarea id="pasteCsvInput" rows="5" style="width:100%;border:1px solid #ddd;border-radius:8px;padding:10px 14px;font-family:'SF Mono',Monaco,monospace;font-size:12px;line-height:1.6;resize:vertical;color:#333;" placeholder="Paste CSV content here (Chinese,Pinyin,English)&#10;一,yī,one&#10;五,wǔ,five&#10;魚,yú,fish"></textarea>
+    <div style="margin-top:6px;">
+      <button class="btn primary" onclick="loadPastedCsv()">Load CSV</button>
+      <button class="btn outline" onclick="pasteFromClipboard()">Paste from clipboard</button>
+      <button class="btn outline" onclick="pasteFromSheets()">Paste from Sheets</button>
+      <span id="pasteCsvStatus" style="font-size:12px;color:#888;margin-left:8px;"></span>
+    </div>
+  </div>
+
+  <!-- Dropbox bucket pull -->
+  <div style="margin:8px 0 0; padding:10px 14px; border:1px solid #e0e0e0; border-radius:10px; background:white; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+    <button id="dbxAuthBtn" style="font-size:11px; padding:4px 10px; border-radius:6px; border:1px solid #ccc; background:#f5f5f3; color:#555; cursor:pointer; font-family:inherit; font-weight:600; white-space:nowrap;">Dropbox</button>
+    <select id="dbxPullBucketNum" style="padding:5px 7px; border:1px solid #ddd; border-radius:6px; font-size:12px; font-family:inherit; background:white;"></select>
+    <button id="dbxPullBtn" style="font-size:12px; padding:5px 12px; border-radius:6px; border:1px solid #2563eb; background:#eff6ff; color:#2563eb; cursor:pointer; font-family:inherit; font-weight:600; white-space:nowrap;">&#8595; Load bucket</button>
+    <span id="dbxPullStatus" style="font-size:11px; color:#888;"></span>
+  </div>
+
+  <!-- Video Section (from folder drop) -->
+  <div id="videoSection" style="display:none;margin-bottom:16px;">
+    <div class="setup-header" onclick="toggleVideos()" style="border-radius:10px 10px 0 0;border:1px solid #e0e0e0;border-bottom:none;">
+      <span id="videoHeaderLabel">Videos (0)</span>
+      <span class="toggle-arrow" id="videoArrow">&#9660;</span>
+    </div>
+    <div id="videoBody" style="border:1px solid #e0e0e0;border-radius:0 0 10px 10px;background:white;padding:12px;display:flex;flex-wrap:wrap;gap:12px;">
+    </div>
+  </div>
+
+  <!-- Lyrics Area -->
+  <div class="lyrics-area" id="lyricsArea">
+    <div class="lyrics-info">
+      <span class="count" id="countLabel"></span>
+    </div>
+
+    <!-- Sticky control bar -->
+    <div class="sticky-bar" id="stickyBar">
+      <select id="sheetDropdown" onchange="onSheetDropdownChange(this.value)" title="Sheet" style="font-size:11px;padding:3px 6px;border-radius:6px;border:1px solid #ccc;max-width:140px;">
+        <option value="">Loading...</option>
+      </select>
+      <div class="sep"></div>
+      <select id="speechRateSelect" onchange="ttsRate = parseFloat(this.value)" title="Speed">
+        <option value="0.5">0.5x</option>
+        <option value="0.7">0.7x</option>
+        <option value="1" selected>1x</option>
+        <option value="1.25">1.25x</option>
+        <option value="1.5">1.5x</option>
+      </select>
+      <button onclick="document.getElementById('learnModal').style.display='flex'" style="font-size:12px;font-weight:700;width:22px;height:22px;border-radius:50%;border:1px solid #aaa;background:white;color:#555;cursor:pointer;" title="Learning approach guide">?</button>
+      <div class="sep"></div>
+      <select id="ttsLangSelect" onchange="setTtsLang(this.value)" title="TTS playback language" style="font-size:12px;padding:3px 6px;">
+        <option value="zh-CN">Mandarin</option>
+        <option value="zh-HK">Cantonese</option>
+        <option value="en-US">English</option>
+        <option value="es-ES">Spanish</option>
+        <option value="ko-KR">Korean</option>
+        <option value="fr-FR">French</option>
+        <option value="el-GR">Greek</option>
+        <option value="he-IL">Hebrew</option>
+      </select>
+      <div class="sep"></div>
+      <div class="tip-toggle" onclick="setTooltipMode(!tooltipOn)" title="Hover any card to reveal its English meaning">
+        <span>Reveal on hover</span>
+        <div class="tip-switch">
+          <div class="tip-track" id="tipTrack"></div>
+          <div class="tip-knob" id="tipKnob"></div>
+        </div>
+      </div>
+      <div class="sep"></div>
+      <div class="sep"></div>
+      <span class="toggle-chip" id="toggleTableView" onclick="toggleTableView()">Table</span>
+      <span class="toggle-chip" id="toggleDeckView" onclick="toggleDeckView()">Deck</span>
+      <a href="https://vercel-spanish-chinese.vercel.app/chinese-glosser" target="_blank" class="toggle-chip" style="text-decoration:none;background:#0EA5E9;color:white;border-color:#0EA5E9;">Glosser</a>
+    </div>
+
+    <!-- Learning approach modal -->
+    <div id="learnModal" style="display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;" onclick="if(event.target===this)this.style.display='none'">
+      <div style="background:white;border-radius:14px;max-width:520px;width:90%;max-height:80vh;overflow-y:auto;padding:24px 28px;box-shadow:0 12px 40px rgba(0,0,0,0.25);position:relative;">
+        <button onclick="document.getElementById('learnModal').style.display='none'" style="position:absolute;top:12px;right:14px;border:none;background:none;font-size:20px;cursor:pointer;color:#999;">&times;</button>
+        <h3 style="margin:0 0 12px;font-size:17px;color:#1a1a1a;">Pick Your Lane First</h3>
+        <p style="font-size:13px;line-height:1.65;color:#444;margin:0 0 14px;">
+          Trying to learn speaking <em>and</em> reading at the same time splits your attention and slows both. Pick one track first, build confidence, then layer the other on top.
+        </p>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
+          <div style="flex:1;min-width:200px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:14px;">
+            <div style="font-size:13px;font-weight:700;color:#1d4ed8;margin-bottom:6px;">Speaking / Understanding</div>
+            <p style="font-size:12px;line-height:1.6;color:#1e40af;margin:0;">
+              Focus on pinyin + tones. Skip characters at first. Use TTS, listen and repeat. Train your ear before your eyes.
+            </p>
+            <div style="margin-top:10px;font-size:11px;color:#3b82f6;font-weight:600;">Tip:</div>
+            <div style="font-size:11px;color:#555;line-height:1.6;margin-top:2px;">
+              Reveal on hover for self-testing
+            </div>
+          </div>
+          <div style="flex:1;min-width:200px;background:#fefce8;border:1px solid #fde68a;border-radius:10px;padding:14px;">
+            <div style="font-size:13px;font-weight:700;color:#92400e;margin-bottom:6px;">Reading / Writing</div>
+            <p style="font-size:12px;line-height:1.6;color:#78350f;margin:0;">
+              Focus on characters. Each one is its own memorization project (~2,000-3,000 to read a newspaper). Attach sounds to shapes you recognize.
+            </p>
+            <div style="margin-top:10px;font-size:11px;color:#d97706;font-weight:600;">Tip:</div>
+            <div style="font-size:11px;color:#555;line-height:1.6;margin-top:2px;">
+              Use the Deck view to self-test
+            </div>
+          </div>
+        </div>
+        <p style="font-size:11px;line-height:1.55;color:#999;margin:0;">
+          The sandwich method here helps both tracks: sentence &rarr; glossed vocab &rarr; sentence again. Your brain gets context, detail, then reinforcement.
+        </p>
+        <p style="font-size:11px;line-height:1.55;color:#999;margin:8px 0 0;">
+          Clicking any card or sentence automatically copies the Chinese text to your clipboard &mdash; paste into <strong>translate.google.com</strong> to hear it read aloud.
+        </p>
+      </div>
+    </div>
+
+    <!-- Lines container (card view) -->
+    <div id="linesContainer"></div>
+
+    <!-- Table view container -->
+    <div id="tableViewContainer">
+      <div id="tableViewInner"></div>
+      <div style="height: calc(20 * 2.5em);"></div>
+    </div>
+
+    <!-- Deck view container -->
+    <div id="deckViewContainer">
+      <div class="deck-progress-row">
+        <div class="deck-progress-track"><div class="deck-progress-fill" id="deckProgressFill"></div></div>
+        <div class="deck-progress-label" id="deckProgressLabel">0 / 0</div>
+      </div>
+      <div class="deck-stage" id="deckStage">
+        <div class="deck-stamp right" id="deckStampRight">Got it</div>
+        <div class="deck-stamp left" id="deckStampLeft">Again</div>
+        <div class="deck-side-col left">
+          <button class="deck-side-btn correct">&#10003;</button>
+          <button class="deck-side-btn miss">&#10007;</button>
+        </div>
+        <div class="deck-side-col right">
+          <button class="deck-side-btn reveal" id="deckRevealBtn">&#8635;</button>
+          <button class="deck-side-btn correct">&#10003;</button>
+          <button class="deck-side-btn miss">&#10007;</button>
+        </div>
+        <div class="deck-card" id="deckCard">
+          <span class="deck-eyebrow" id="deckEyebrow">1 of 1</span>
+          <span class="deck-word" id="deckWordText">word</span>
+          <span class="deck-rom" id="deckRomText"></span>
+          <span class="deck-def" id="deckDefText">definition</span>
+          <span class="deck-flip-hint">tap to reveal</span>
+        </div>
+      </div>
+      <div style="display:flex; justify-content:center; gap:48px; margin-top:8px;">
+        <span style="font-size:11px; color:#aaa;"><kbd style="background:#f0f0f0; border:1px solid #ccc; border-radius:3px; padding:1px 5px; font-size:10px; color:#555;">&#8592;</kbd> again</span>
+        <span style="font-size:11px; color:#aaa;"><kbd style="background:#f0f0f0; border:1px solid #ccc; border-radius:3px; padding:1px 5px; font-size:10px; color:#555;">&#8593;</kbd> flip</span>
+        <span style="font-size:11px; color:#aaa;"><kbd style="background:#f0f0f0; border:1px solid #ccc; border-radius:3px; padding:1px 5px; font-size:10px; color:#555;">&#8594;</kbd> got it</span>
+      </div>
+      <div style="text-align:center; margin-top:14px;">
+        <span id="deckMissedCount" style="font-size:12px; color:#dc2626; display:none;">0 missed</span>
+        <span id="deckRemainingCount" style="font-size:12px; color:#888; margin-left:10px; display:none;">0 remaining</span>
+      </div>
+      <div id="deckSaveArea" style="display:flex; flex-direction:column; align-items:center; gap:8px; margin-top:8px;">
+        <button class="btn primary" id="deckSaveMissedBtn" style="padding:10px 18px; font-size:13px; background:#16a34a; width:100%; max-width:280px;" onclick="deckSaveMissedToSheet('missed')">Copy missed CSV</button>
+        <button class="btn primary" id="deckSaveBothBtn" style="padding:10px 18px; font-size:13px; background:#2563eb; width:100%; max-width:280px;" onclick="deckSaveMissedToSheet('both')">Copy missed + remaining</button>
+        <div style="display:flex; gap:6px; width:100%; max-width:280px;">
+          <select id="dbxPushBucketNum" style="padding:8px 7px; border:1px solid #ddd; border-radius:6px; font-size:12px; font-family:inherit; background:white; min-width:96px;"></select>
+          <button id="dbxPushBtn" style="flex:1; padding:10px 10px; font-size:11px; background:#0061fe; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:600; font-family:inherit; white-space:nowrap;">&#8593; Push (missed&rem.)</button>
+        </div>
+        <div id="dbxPushStatus" style="font-size:12px; color:#888; min-height:18px;"></div>
+        <!-- Push confirmation overlay -->
+        <div id="dbxPushConfirm" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:9999; align-items:center; justify-content:center;">
+          <div style="background:white; border-radius:12px; padding:24px 28px; box-shadow:0 8px 32px rgba(0,0,0,0.3); text-align:center; max-width:280px; width:90%;">
+            <p id="dbxPushConfirmMsg" style="margin:0 0 18px; font-size:15px; color:#222; line-height:1.5; font-family:inherit;"></p>
+            <div style="display:flex; gap:10px;">
+              <button id="dbxPushCancelBtn" style="flex:1; padding:9px 0; font-size:14px; border-radius:8px; border:1px solid #ccc; background:#f5f5f5; color:#333; cursor:pointer; font-weight:600; font-family:inherit;">Cancel</button>
+              <button id="dbxPushConfirmBtn" style="flex:1; padding:9px 0; font-size:14px; border-radius:8px; border:none; background:#0061fe; color:white; cursor:pointer; font-weight:600; font-family:inherit;">Push</button>
+            </div>
+          </div>
+        </div>
+        <div id="deckSaveStatus" style="font-size:12px; color:#888; margin-top:6px; min-height:18px;"></div>
+        <textarea id="deckCsvTextarea" style="width:100%; max-width:280px; height:120px; font-size:11px; font-family:monospace; border:1px solid #ddd; border-radius:6px; padding:6px; box-sizing:border-box; resize:vertical;" readonly></textarea>
+      </div>
+      <div class="deck-done deck-hidden" id="deckDoneScreen">
+        <div class="deck-done-big">Deck cleared!</div>
+        <p id="deckDoneStats"></p>
+        <p id="deckMissedStats" style="font-size:13px; color:#dc2626;"></p>
+        <button class="btn primary" id="deckDoneSaveBtn" style="padding:12px 20px; display:none; background:#16a34a;" onclick="deckSaveMissedToSheet('missed')">Copy missed CSV</button>
+        <div id="deckDoneSaveStatus" style="font-size:12px; color:#888; margin-top:6px; min-height:18px;"></div>
+        <button class="btn primary" id="deckRestartBtn" style="padding:12px 20px;">Review again</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+/* script_csv_to_html.py: hide setup UI not needed in baked copies */
+/* direct-child :has(>) — a plain descendant match would also hide ancestor wrappers and blank the page */
+div:has(> #pasteCsvInput), div:has(> #dbxAuthBtn) { display: none !important; }
+</style>
+<script>
+// Baked in by script_csv_to_html.py — consumed by the INIT block
+var EMBEDDED_CSV_TEXT = "term,pronunciation,definition\r\n神說 ： 天下的水要聚在一處 ， 使旱地露出來 。 事就這樣成了 。,\"shén shuō: tiānxià de shuǐ yào jù zài yī chù, shǐ hàn dì lù chūlái. shì jiù zhèyàng chéngle.\",\"God said: 'Let the waters under heaven be gathered together to one place, and let dry land appear.' And it was so.\"\r\n神稱旱地為地 ， 稱水的聚處為海 。 神看著是好的 。,\"shén chēng hàn dì wèi dì, chēng shuǐ de jù chù wèi hǎi. shén kànzhe shì hǎo de.\",God called the dry land 'Earth' and the gathering of the waters He called 'Seas.' And God saw that it was good.\r\n神說 ： 地要發生青草和結種子的菜蔬 ， 並結果子的樹木 ， 各從其類 ， 果子都包著核 。 事就這樣成了 。,\"shén shuō: dì yào fāshēng qīngcǎo hé jié zhǒng de cài shù, bìng jiéguǒ de shùmù, gè cóng qí lèi, guǒzi dōu bāozhe hé. shì jiù zhèyàng chéngle.\",\"God said: 'Let the earth bring forth grass and herb yielding seed, and fruit trees yielding fruit after their kind, whose seed is in itself.' And it was so.\"\r\n";
+var EMBEDDED_CSV_NAME = "sentences.txt";
+var EMBEDDED_TABLE_VIEW = true;
+var EMBEDDED_COL_MODE = 3;
+</script>
+<script>
+// ── STATE ──
+const GDRIVE_CLIENT_ID = '1095683227908-7ro25k16mprkf408i3lf583gti8v759b.apps.googleusercontent.com';
+const GDRIVE_SCOPES = 'https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/spreadsheets';
+
+let gdriveAccessToken = null;
+let gdriveTokenClient = null;
+let gdriveWorkbook = null;
+let gdriveSpreadsheetId = null;
+let gdriveCurrentSheetName = null;
+
+let allRows = [];
+let filteredRows = [];
+let ttsEngine = 'browser'; // 'browser' or 'openai'
+let dialect = 'mandarin'; // 'mandarin' or 'cantonese'
+var ttsLang = localStorage.getItem('chineseTts_ttsLang') || 'zh-CN'; // browser TTS playback language
+let ttsRate = 1;
+let autoAdvance = false;
+let currentSpeakingIndex = -1;
+let currentAudio = null; // for OpenAI playback
+
+let tableViewOn = false;
+let dataTableInstance = null;
+var deckViewOn = false;
+var deckQueue = [];
+var deckTotal = 0;
+var deckCleared = 0;
+var deckCurrent = null;
+var deckFlipped = false;
+var deckMissedSet = new Set();
+
+let tooltipOn = false;
+
+// ── OPENAI API KEY (localStorage) ──
+function getApiKey() {
+  return localStorage.getItem('OPENAI_API_KEY') || '';
+}
+
+// ── ELEVENLABS API KEY (localStorage) ──
+function saveApiKey() {
+  var key = document.getElementById('apiKeyInput').value.trim();
+  if (key) {
+    localStorage.setItem('elevenlabs_api_key', key);
+    document.getElementById('apiKeyStatus').textContent = 'saved';
+    document.getElementById('apiKeyStatus').className = 'api-key-status saved';
+  } else {
+    localStorage.removeItem('elevenlabs_api_key');
+    document.getElementById('apiKeyStatus').textContent = 'not set';
+    document.getElementById('apiKeyStatus').className = 'api-key-status missing';
+  }
+}
+
+function loadApiKey() {
+  var key = localStorage.getItem('elevenlabs_api_key');
+  if (key) {
+    document.getElementById('apiKeyInput').value = key;
+    document.getElementById('apiKeyStatus').textContent = 'saved';
+    document.getElementById('apiKeyStatus').className = 'api-key-status saved';
+  }
+}
+
+function getElevenLabsKey() {
+  return localStorage.getItem('elevenlabs_api_key') || '';
+}
+
+// ── DIALECT / TTS LANGUAGE ──
+function setDialect(d) {
+  setTtsLang(d === 'cantonese' ? 'zh-HK' : 'zh-CN');
+}
+function setTtsLang(lang) {
+  ttsLang = lang;
+  dialect = lang === 'zh-HK' ? 'cantonese' : 'mandarin';
+  try { localStorage.setItem('chineseTts_ttsLang', lang); } catch(e) {}
+  var sel = document.getElementById('ttsLangSelect');
+  if (sel) sel.value = lang;
+  document.getElementById('dialectMandarin').className = lang === 'zh-CN' ? 'active' : '';
+  document.getElementById('dialectCantonese').className = lang === 'zh-HK' ? 'active' : '';
+}
+
+// ── TTS ENGINE ──
+function setTtsEngine(engine) {
+  ttsEngine = engine;
+  try { localStorage.setItem('chineseTts_ttsEngine', engine); } catch(e) {}
+  document.getElementById('ttsToggleBrowser').className = engine === 'browser' ? 'active' : '';
+  document.getElementById('ttsToggleOpenai').className = engine === 'openai' ? 'active' : '';
+  document.getElementById('ttsToggleEleven').className = engine === 'elevenlabs' ? 'active' : '';
+  document.getElementById('openaiVoiceRow').style.display = engine === 'openai' ? 'flex' : 'none';
+  document.getElementById('elevenSection').style.display = engine === 'elevenlabs' ? 'block' : 'none';
+
+  if (engine === 'openai') {
+    setStatus('OpenAI TTS via server proxy');
+  }
+  if (engine === 'elevenlabs' && !getElevenLabsKey()) {
+    setStatus('Enter your ElevenLabs API key above');
+  }
+}
+
+// ── SPEAK (unified) ──
+function speakText(text, onEnd) {
+  stopSpeaking();
+
+  if (ttsEngine === 'elevenlabs') {
+    speakElevenLabs(text, onEnd);
+  } else if (ttsEngine === 'openai') {
+    speakOpenAI(text, onEnd);
+  } else {
+    speakBrowser(text, onEnd);
+  }
+}
+
+function speakBrowser(text, onEnd) {
+  var utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = ttsLang;
+  utterance.rate = ttsRate;
+  utterance.onend = function() { if (onEnd) onEnd(); };
+  speechSynthesis.speak(utterance);
+}
+
+// ---- /api/tts access code -------------------------------------------------
+// /api/tts refuses to spend the server's OpenAI key without this. Same code
+// and same localStorage key as the tutor / OCR / talking-head pages, so
+// entering it on one page unlocks the voice on all of them.
+function ttsAccessCode(forcePrompt) {
+  var code = '';
+  if (!forcePrompt) { try { code = (localStorage.getItem('ocr-access-code') || '').trim(); } catch (e) {} }
+  if (!code) {
+    code = (window.prompt('Access code for the OpenAI voice (Cancel uses the browser voice):') || '').trim();
+    if (code) { try { localStorage.setItem('ocr-access-code', code); } catch (e) {} }
+  }
+  return code;
+}
+
+// POSTs to /api/tts with the code attached. On 401 the stored code is wrong or
+// stale: forget it, ask once more, retry. Returns null when there is no code to
+// try, which the caller treats as "use the browser voice".
+async function ttsFetch(payload) {
+  var code = ttsAccessCode(false);
+  for (var attempt = 0; attempt < 2; attempt++) {
+    if (!code) return null;
+    var resp = await fetch('/api/tts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(Object.assign({}, payload, { accessCode: code }))
+    });
+    if (resp.status !== 401 || attempt === 1) return resp;
+    try { localStorage.removeItem('ocr-access-code'); } catch (e) {}
+    code = ttsAccessCode(true);
+  }
+  return null;
+}
+
+async function speakOpenAI(text, onEnd) {
+  var voice = document.getElementById('openaiVoiceSelect').value;
+  try {
+    var resp = await ttsFetch({ input: text, voice: voice, speed: ttsRate, dialect: dialect });
+
+    if (!resp) {
+      setStatus('No access code — using the browser voice');
+      speakBrowser(text, onEnd);
+      return;
+    }
+
+    if (!resp.ok) {
+      var errText = await resp.text();
+      console.error('OpenAI TTS error:', resp.status, errText);
+      setStatus('OpenAI error ' + resp.status + ' — falling back to browser TTS');
+      speakBrowser(text, onEnd);
+      return;
+    }
+
+    var blob = await resp.blob();
+    var url = URL.createObjectURL(blob);
+    currentAudio = new Audio(url);
+    currentAudio.onended = function() {
+      URL.revokeObjectURL(url);
+      currentAudio = null;
+      if (onEnd) onEnd();
+    };
+    currentAudio.play();
+  } catch (err) {
+    console.error('OpenAI TTS fetch error:', err);
+    setStatus('Network error — falling back to browser TTS');
+    speakBrowser(text, onEnd);
+  }
+}
+
+async function speakElevenLabs(text, onEnd) {
+  var apiKey = getElevenLabsKey();
+  if (!apiKey) {
+    setStatus('ElevenLabs API key not set — using browser TTS');
+    speakBrowser(text, onEnd);
+    return;
+  }
+
+  var voiceId = document.getElementById('elevenVoiceSelect').value;
+  try {
+    var resp = await fetch('https://api.elevenlabs.io/v1/text-to-speech/' + voiceId, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'xi-api-key': apiKey
+      },
+      body: JSON.stringify({
+        text: text,
+        model_id: 'eleven_multilingual_v2',
+        voice_settings: { stability: 0.5, similarity_boost: 0.75, style: 0.4 }
+      })
+    });
+
+    if (!resp.ok) {
+      var errText = await resp.text();
+      console.error('ElevenLabs error:', resp.status, errText);
+      setStatus('ElevenLabs error ' + resp.status + ' — falling back to browser TTS');
+      speakBrowser(text, onEnd);
+      return;
+    }
+
+    var blob = await resp.blob();
+    var url = URL.createObjectURL(blob);
+    currentAudio = new Audio(url);
+    currentAudio.playbackRate = ttsRate;
+    currentAudio.onended = function() {
+      URL.revokeObjectURL(url);
+      currentAudio = null;
+      if (onEnd) onEnd();
+    };
+    currentAudio.play();
+  } catch (err) {
+    console.error('ElevenLabs fetch error:', err);
+    setStatus('Network error — falling back to browser TTS');
+    speakBrowser(text, onEnd);
+  }
+}
+
+function stopSpeaking() {
+  speechSynthesis.cancel();
+  if (currentAudio) {
+    currentAudio.pause();
+    currentAudio = null;
+  }
+}
+
+// ── SPEAK LINE (click on line) ──
+function copyToClipboard(text) {
+  navigator.clipboard.writeText(text).catch(function() {});
+}
+
+function speakLine(index) {
+  stopSpeaking();
+  if (index < 0 || index >= filteredRows.length) {
+    clearHighlight();
+    currentSpeakingIndex = -1;
+    return;
+  }
+
+  var row = filteredRows[index];
+  // For context lines, speak the text
+  var textToSpeak = row.chinese || row.contextLine || '';
+  if (!textToSpeak) {
+    // Skip non-speakable rows (section headers) during auto-advance
+    if (autoAdvance) { speakLine(index + 1); return; }
+    return;
+  }
+
+  // Copy to clipboard for use with translate.google.com
+  copyToClipboard(textToSpeak);
+
+  currentSpeakingIndex = index;
+  highlightLine(index);
+
+  speakText(textToSpeak, function() {
+    if (autoAdvance && currentSpeakingIndex === index) {
+      speakLine(index + 1);
+    } else {
+      clearHighlight();
+      currentSpeakingIndex = -1;
+    }
+  });
+}
+
+// ── SPEAK SINGLE WORD (click on word token) ──
+function speakWord(text, tokenEl, event) {
+  event.stopPropagation(); // don't trigger line click
+
+  // Remove previous playing state
+  document.querySelectorAll('.word-token.playing').forEach(function(el) {
+    el.classList.remove('playing');
+  });
+  tokenEl.classList.add('playing');
+
+  speakText(text, function() {
+    tokenEl.classList.remove('playing');
+  });
+}
+
+function highlightLine(index) {
+  clearHighlight();
+  var card = document.getElementById('card-' + index);
+  if (card) {
+    card.classList.add('speaking');
+    card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+}
+
+function clearHighlight() {
+  document.querySelectorAll('.vocab-card.speaking, .context-line.speaking').forEach(function(el) {
+    el.classList.remove('speaking');
+  });
+}
+
+// ── AUTO ADVANCE ──
+function setAutoAdvance(val) {
+  autoAdvance = val;
+  document.getElementById('autoAdvanceCheckbox').checked = val;
+  var bar = document.getElementById('stickyBar');
+  var track = document.getElementById('switchTrack');
+  var knob = document.getElementById('switchKnob');
+  var stopLabel = document.getElementById('stopLabel');
+  var autoLabel = document.getElementById('autoLabel');
+
+  if (val) {
+    bar.classList.add('auto-on');
+    track.classList.add('on');
+    knob.classList.add('on');
+  } else {
+    bar.classList.remove('auto-on');
+    track.classList.remove('on');
+    knob.classList.remove('on');
+    stopSpeaking();
+    clearHighlight();
+    currentSpeakingIndex = -1;
+  }
+  stopLabel.style.background = val ? 'transparent' : '#ffcdd2';
+  stopLabel.style.color = val ? '#666' : '#666';
+  autoLabel.style.color = val ? '#4CAF50' : '#666';
+  autoLabel.style.backgroundColor = val ? '#c8e6c9' : 'transparent';
+}
+
+// ── RENDER LYRICS ──
+function renderLyrics() {
+  var area = document.getElementById('lyricsArea');
+  if (filteredRows.length === 0) {
+    area.classList.remove('active');
+    return;
+  }
+  area.classList.add('active');
+  document.getElementById('stickyBar').classList.add('active');
+
+  document.getElementById('countLabel').textContent = filteredRows.length + ' lines';
+
+  var container = document.getElementById('linesContainer');
+  container.innerHTML = '';
+  container.classList.toggle('tooltip-on', tooltipOn);
+
+  var wordNum = 0;
+  filteredRows.forEach(function(row, i) {
+    // Section header
+    if (row.sectionHeader) {
+      var header = document.createElement('div');
+      header.className = 'section-header';
+      header.textContent = row.sectionHeader;
+      container.appendChild(header);
+      return;
+    }
+
+    // Context/sentence line
+    if (row.contextLine) {
+      var ctx = document.createElement('div');
+      ctx.className = 'context-line' + (row.isRepeat ? ' repeat' : '');
+      ctx.id = 'card-' + i;
+      if (row.isRepeat) {
+        var lbl = document.createElement('div');
+        lbl.className = 'repeat-label';
+        lbl.textContent = '\u21bb Review';
+        ctx.appendChild(lbl);
+      }
+      // Detect if it contains CJK characters (Chinese sentence) vs English
+      var hasCJK = /[\u4e00-\u9fff\u3400-\u4dbf]/.test(row.contextLine);
+      if (hasCJK) {
+        var ctxCn = document.createElement('div');
+        ctxCn.className = 'ctx-chinese';
+        ctxCn.textContent = row.contextLine;
+        ctx.appendChild(ctxCn);
+      } else {
+        var ctxEn = document.createElement('div');
+        ctxEn.className = 'ctx-english';
+        ctxEn.textContent = row.contextLine;
+        ctx.appendChild(ctxEn);
+      }
+      ctx.onclick = function() { speakLine(i); };
+      container.appendChild(ctx);
+      return;
+    }
+
+    wordNum++;
+    var card = document.createElement('div');
+    card.className = 'vocab-card';
+    card.id = 'card-' + i;
+
+    var num = document.createElement('div');
+    num.className = 'num';
+    num.textContent = '#' + wordNum;
+    card.appendChild(num);
+
+    var cn = document.createElement('div');
+    cn.className = 'chinese';
+    cn.textContent = row.chinese;
+    // Click on Chinese character speaks it
+    cn.addEventListener('click', (function(capturedI) {
+      return function(e) {
+        e.stopPropagation();
+        speakLine(capturedI);
+      };
+    })(i));
+    card.appendChild(cn);
+
+    if (row.romanization) {
+      var rom = document.createElement('div');
+      rom.className = 'romanization';
+      rom.textContent = row.romanization;
+      card.appendChild(rom);
+    }
+
+    if (row.english) {
+      var en = document.createElement('div');
+      en.className = 'english';
+      en.textContent = row.english;
+      card.appendChild(en);
+    }
+
+    // Hover-reveal tooltip
+    var tip = document.createElement('div');
+    tip.className = 'def-tip';
+    var tipParts = [];
+    if (row.chinese)      tipParts.push('<span style="font-size:20px;font-weight:600;color:#fde68a;">' + escHtml(row.chinese) + '</span>');
+    if (row.romanization) tipParts.push('<span style="color:#93c5fd;font-style:italic;">' + escHtml(row.romanization) + '</span>');
+    if (row.english)      tipParts.push('<span style="color:#86efac;">' + escHtml(row.english) + '</span>');
+    tip.innerHTML = tipParts.join('<br>');
+    card.appendChild(tip);
+
+    container.appendChild(card);
+  });
+
+  // Refresh table view if active
+  if (tableViewOn) renderTableView();
+}
+
+// ── GOOGLE SHEETS ──
+function setStatus(msg) { document.getElementById('status').textContent = msg; }
+
+function gdriveInitClient() {
+  if (window.google && window.google.accounts) {
+    gdriveTokenClient = window.google.accounts.oauth2.initTokenClient({
+      client_id: GDRIVE_CLIENT_ID,
+      scope: GDRIVE_SCOPES,
+      callback: function(response) {
+        if (response.access_token) {
+          gdriveAccessToken = response.access_token;
+          document.getElementById('authBtn').textContent = 'Sign Out';
+          document.getElementById('searchBtn').disabled = false;
+          setStatus('Signed in. Click Load to fetch spreadsheet.');
+        }
+      },
+    });
+  }
+}
+
+var checkGoogle = setInterval(function() {
+  if (window.google && window.google.accounts) {
+    clearInterval(checkGoogle);
+    gdriveInitClient();
+  }
+}, 200);
+
+function gdriveSignIn() {
+  if (gdriveAccessToken) {
+    gdriveAccessToken = null;
+    gdriveWorkbook = null;
+    document.getElementById('authBtn').textContent = 'Sign In';
+    document.getElementById('searchBtn').disabled = true;
+    document.getElementById('sheetSelect').innerHTML = '<option value="">Sign in first</option>';
+    document.getElementById('sheetSelect').disabled = true;
+    allRows = [];
+    filteredRows = [];
+    setStatus('Signed out');
+    return;
+  }
+  if (gdriveTokenClient) {
+    gdriveTokenClient.requestAccessToken();
+  } else {
+    setStatus('Google API not loaded yet. Try again.');
+  }
+}
+
+async function gdriveSearch() {
+  var searchTerm = document.getElementById('searchInput').value.trim();
+  if (!searchTerm) { setStatus('Enter a spreadsheet name'); return; }
+  try {
+    setStatus('Searching...');
+    var query = encodeURIComponent("name contains '" + searchTerm + "' and trashed=false and mimeType='application/vnd.google-apps.spreadsheet'");
+    var resp = await fetch('https://www.googleapis.com/drive/v3/files?q=' + query + '&fields=files(id,name)&orderBy=name', {
+      headers: { Authorization: 'Bearer ' + gdriveAccessToken }
+    });
+    if (!resp.ok) throw new Error('Search failed');
+    var data = await resp.json();
+    if (!data.files || data.files.length === 0) {
+      setStatus('No spreadsheet matching "' + searchTerm + '"');
+      return;
+    }
+    var file = data.files[0];
+    setStatus('Loading "' + file.name + '"...');
+    await loadSpreadsheet(file.id, file.name);
+  } catch (err) {
+    setStatus('Error: ' + err.message);
+  }
+}
+
+async function loadSpreadsheet(fileId, fileName) {
+  gdriveSpreadsheetId = fileId;
+  try {
+    var exportMime = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+    var resp = await fetch('https://www.googleapis.com/drive/v3/files/' + fileId + '/export?mimeType=' + encodeURIComponent(exportMime), {
+      headers: { Authorization: 'Bearer ' + gdriveAccessToken }
+    });
+    if (!resp.ok) throw new Error('Export failed');
+    var arrayBuffer = await resp.arrayBuffer();
+    gdriveWorkbook = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array' });
+
+    var sel = document.getElementById('sheetSelect');
+    sel.innerHTML = '<option value="">-- select sheet --</option>';
+    gdriveWorkbook.SheetNames.forEach(function(name) {
+      var opt = document.createElement('option');
+      opt.value = name; opt.textContent = name;
+      sel.appendChild(opt);
+    });
+    sel.disabled = false;
+    if (gdriveWorkbook.SheetNames.length === 1) {
+      sel.value = gdriveWorkbook.SheetNames[0];
+      onSheetSelect();
+    }
+    setStatus('Loaded "' + fileName + '" — ' + gdriveWorkbook.SheetNames.length + ' sheet(s)');
+  } catch (err) {
+    setStatus('Error: ' + err.message);
+  }
+}
+
+function parseCsv(text) {
+  // Normalize line endings: \r\n → \n, lone \r → \n
+  text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  var result = [];
+  var current = '', cells = [], inQuotes = false;
+  for (var i = 0; i < text.length; i++) {
+    var ch = text[i];
+    if (inQuotes) {
+      if (ch === '"' && text[i+1] === '"') { current += '"'; i++; }
+      else if (ch === '"') { inQuotes = false; }
+      else { current += ch; }
+    } else {
+      if (ch === '"') { inQuotes = true; }
+      else if (ch === ',') { cells.push(current); current = ''; }
+      else if (ch === '\n') {
+        cells.push(current); result.push(cells);
+        cells = []; current = '';
+      } else { current += ch; }
+    }
+  }
+  cells.push(current);
+  if (cells.length > 0) result.push(cells);
+  return result;
+}
+
+function detectSheetCols(rows) {
+  // Scan first 10 data rows (skip header row 0); if any has a non-empty 3rd column → 3-col
+  for (var i = 1; i < Math.min(rows.length, 11); i++) {
+    if ((rows[i][2] || '').trim()) return 3;
+  }
+  return 2;
+}
+
+function onSheetSelect() {
+  var sheetName = document.getElementById('sheetSelect').value;
+  if (!sheetName || !gdriveWorkbook) return;
+  gdriveCurrentSheetName = sheetName;
+
+  var sheet = gdriveWorkbook.Sheets[sheetName];
+  var csv = XLSX.utils.sheet_to_csv(sheet);
+  var rows = parseCsv(csv);
+
+  if (rows.length < 2) { setStatus('Sheet is empty'); return; }
+
+  // Auto-detect 2 vs 3 columns
+  var detectedCols = detectSheetCols(rows);
+
+  allRows = [];
+  for (var i = 1; i < rows.length; i++) {
+    var r = rows[i];
+    var colA = (r[0] || '').trim();
+    var colB = (r[1] || '').trim();
+    var colC = (r[2] || '').trim();
+
+    if (!colA && !colB && !colC) continue;
+
+    if (colA && !colB && !colC) {
+      if (/^(Dialogue|Scene|Chapter|Part|Section|Lesson|Unit|Genesis|Exodus|Leviticus|Numbers|Deuteronomy|Joshua|Judges|Ruth|Samuel|Kings|Chronicles|Ezra|Nehemiah|Esther|Job|Psalm|Psalms|Proverbs|Ecclesiastes|Song|Isaiah|Jeremiah|Lamentations|Ezekiel|Daniel|Hosea|Joel|Amos|Obadiah|Jonah|Micah|Nahum|Habakkuk|Zephaniah|Haggai|Zechariah|Malachi|Matthew|Mark|Luke|John|Acts|Romans|Corinthians|Galatians|Ephesians|Philippians|Colossians|Thessalonians|Timothy|Titus|Philemon|Hebrews|James|Peter|Jude|Revelation|Verse)\s/i.test(colA)) {
+        allRows.push({ chinese: '', romanization: '', english: '', sectionHeader: colA, contextLine: '' });
+      } else {
+        allRows.push({ chinese: '', romanization: '', english: '', sectionHeader: '', contextLine: colA });
+      }
+    } else {
+      var rom = detectedCols === 2 ? '' : colB;
+      var eng = detectedCols === 2 ? colB : colC;
+      allRows.push({ chinese: colA, romanization: rom, english: eng, sectionHeader: '', contextLine: '' });
+    }
+  }
+
+  setStatus('Loaded ' + allRows.length + ' lines (' + detectedCols + '-col)');
+  refreshRows();
+}
+
+// Insert a repeat of the sentence pair (English + Chinese) after vocab words
+function insertSentenceRepeats(rows) {
+  var result = [];
+  var i = 0;
+  while (i < rows.length) {
+    // Detect sentence pair: English context line followed by Chinese context line
+    var isEnglishCtx = rows[i].contextLine && !/[\u4e00-\u9fff\u3400-\u4dbf]/.test(rows[i].contextLine);
+    var nextIsChinese = (i + 1 < rows.length) && rows[i + 1].contextLine && /[\u4e00-\u9fff\u3400-\u4dbf]/.test(rows[i + 1].contextLine);
+
+    if (isEnglishCtx && nextIsChinese) {
+      var engRow = rows[i];
+      var chnRow = rows[i + 1];
+      result.push(engRow);
+      result.push(chnRow);
+
+      // Check if vocab cards follow
+      var k = i + 2;
+      var hasVocab = false;
+      while (k < rows.length && !rows[k].contextLine && !rows[k].sectionHeader) {
+        if (rows[k].chinese) hasVocab = true;
+        result.push(rows[k]);
+        k++;
+      }
+
+      if (hasVocab) {
+        // Repeat the English + Chinese pair
+        result.push({ chinese: '', romanization: '', english: '', sectionHeader: '', contextLine: engRow.contextLine, isRepeat: true });
+        result.push({ chinese: '', romanization: '', english: '', sectionHeader: '', contextLine: chnRow.contextLine, isRepeat: true });
+      }
+      i = k;
+    } else {
+      result.push(rows[i]);
+      i++;
+    }
+  }
+  return result;
+}
+
+function refreshRows() {
+  filteredRows = insertSentenceRepeats(allRows.slice());
+  renderLyrics();
+}
+
+// ── HELPERS ──
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── HOVER-REVEAL TOGGLE ──
+function setTooltipMode(on) {
+  tooltipOn = on;
+  document.getElementById('linesContainer').classList.toggle('tooltip-on', on);
+  document.getElementById('tipTrack').classList.toggle('on', on);
+  document.getElementById('tipKnob').classList.toggle('on', on);
+}
+
+// ── DROP FOLDER ──
+let videosHidden = false;
+
+function toggleVideos() {
+  videosHidden = !videosHidden;
+  document.getElementById('videoBody').style.display = videosHidden ? 'none' : 'flex';
+  document.getElementById('videoArrow').textContent = videosHidden ? '\u25ba' : '\u25bc';
+}
+
+function loadCsvText(text, fileName, forceColMode) {
+  var mode = forceColMode || csvColMode;
+  var rows = parseCsv(text);
+  if (rows.length < 2) { setStatus('CSV is empty'); return false; }
+
+  allRows = [];
+  for (var i = 1; i < rows.length; i++) {
+    var r = rows[i];
+    var colA = (r[0] || '').trim();
+    var colB = (r[1] || '').trim();
+    var colC = (r[2] || '').trim();
+
+    if (!colA && !colB && !colC) continue;
+
+    if (colA && !colB && !colC) {
+      if (/^(Dialogue|Scene|Chapter|Part|Section|Lesson|Unit|Genesis|Exodus|Leviticus|Numbers|Deuteronomy|Joshua|Judges|Ruth|Samuel|Kings|Chronicles|Ezra|Nehemiah|Esther|Job|Psalm|Psalms|Proverbs|Ecclesiastes|Song|Isaiah|Jeremiah|Lamentations|Ezekiel|Daniel|Hosea|Joel|Amos|Obadiah|Jonah|Micah|Nahum|Habakkuk|Zephaniah|Haggai|Zechariah|Malachi|Matthew|Mark|Luke|John|Acts|Romans|Corinthians|Galatians|Ephesians|Philippians|Colossians|Thessalonians|Timothy|Titus|Philemon|Hebrews|James|Peter|Jude|Revelation|Verse)\s/i.test(colA)) {
+        allRows.push({ chinese: '', romanization: '', english: '', sectionHeader: colA, contextLine: '' });
+      } else {
+        allRows.push({ chinese: '', romanization: '', english: '', sectionHeader: '', contextLine: colA });
+      }
+    } else {
+      var rom = mode === 2 ? '' : colB;
+      var eng = mode === 2 ? colB : colC;
+      allRows.push({ chinese: colA, romanization: rom, english: eng, sectionHeader: '', contextLine: '' });
+    }
+  }
+
+
+  setStatus('Loaded ' + allRows.length + ' lines from ' + fileName);
+  refreshRows();
+  return true;
+}
+
+// ── PASTE FROM GOOGLE SHEETS (tab-separated clipboard) ──
+function pasteFromSheets() {
+  var statusEl = document.getElementById('pasteCsvStatus');
+  navigator.clipboard.readText().then(function(text) {
+    if (!text.trim()) { statusEl.textContent = 'Clipboard is empty.'; return; }
+    document.getElementById('pasteCsvInput').value = text;
+    loadPastedCsv(); // tab-separated Sheets data is auto-converted in loadPastedCsv
+  }).catch(function() {
+    statusEl.textContent = 'Clipboard access denied — paste into the box and click Load CSV.';
+  });
+}
+
+function pasteFromClipboard() {
+  var statusEl = document.getElementById('pasteCsvStatus');
+  navigator.clipboard.readText().then(function(text) {
+    if (!text.trim()) { statusEl.textContent = 'Clipboard is empty.'; return; }
+    document.getElementById('pasteCsvInput').value = text;
+    loadPastedCsv();
+  }).catch(function() {
+    statusEl.textContent = 'Clipboard access denied — paste manually.';
+  });
+}
+
+// ── CSV COLUMN MODE (paste path): 3 = language,pronunciation,definition · 2 = language,definition · 0 = multi-line blocks ──
+var csvColMode = parseInt(localStorage.getItem('chineseTts_csvColMode') ?? '3', 10);
+if (isNaN(csvColMode)) csvColMode = 3;
+function updateCsvPlaceholder() {
+  if (csvColMode === 0) {
+    document.getElementById('pasteCsvInput').placeholder = 'Paste multi-line blocks here\n(each field on its own line, blank line between rows)\n\n神說：...\nshén shuō:...\nGod said:...\n\n神稱旱地為地...\nshén chēng hàn dì...\nGod called the dry land...';
+  } else if (csvColMode === 2) {
+    document.getElementById('pasteCsvInput').placeholder = 'Paste CSV content here (Chinese,English)\n一,one\n五,five\n魚,fish';
+  } else {
+    document.getElementById('pasteCsvInput').placeholder = 'Paste CSV content here (Chinese,Pinyin,English)\n一,yī,one\n五,wǔ,five\n魚,fish';
+  }
+}
+document.querySelectorAll('input[name="csvColMode"]').forEach(function(r) {
+  r.checked = parseInt(r.value, 10) === csvColMode;
+  r.addEventListener('change', function() {
+    csvColMode = parseInt(this.value, 10);
+    localStorage.setItem('chineseTts_csvColMode', String(csvColMode));
+    updateCsvPlaceholder();
+  });
+});
+updateCsvPlaceholder();
+
+function csvQuoteCell(s) {
+  if (s.indexOf(',') >= 0 || s.indexOf('"') >= 0 || s.indexOf('\n') >= 0) {
+    return '"' + s.replace(/"/g, '""') + '"';
+  }
+  return s;
+}
+
+// Convert multi-line block format → CSV.
+// Blocks are separated by blank lines. Each non-numeric block becomes one row.
+// Auto-detects 2 or 3 lines per block from the first valid block found.
+function convertMultilineBlocksToCsv(text) {
+  var blocks = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split(/\n{2,}/);
+  // Detect lines-per-card from first valid (non-numeric) block
+  var linesPerCard = 3;
+  for (var i = 0; i < blocks.length; i++) {
+    var lines = blocks[i].split('\n').map(function(l) { return l.trim(); }).filter(Boolean);
+    if (lines.length > 0 && !lines.every(function(l) { return /^\d+[a-z]?$/i.test(l); })) {
+      linesPerCard = lines.length;
+      break;
+    }
+  }
+  var csvRows = [];
+  blocks.forEach(function(block) {
+    var lines = block.split('\n').map(function(l) { return l.trim(); }).filter(Boolean);
+    if (lines.length === 0) return;
+    if (lines.every(function(l) { return /^\d+[a-z]?$/i.test(l); })) return; // skip verse-ref blocks
+    if (lines.length !== linesPerCard) return;
+    csvRows.push(lines.map(csvQuoteCell).join(','));
+  });
+  var header = linesPerCard === 2 ? 'term,definition' : 'term,pronunciation,definition';
+  return header + '\n' + csvRows.join('\n');
+}
+
+function loadPastedCsv() {
+  var raw = document.getElementById('pasteCsvInput').value.trim();
+  var statusEl = document.getElementById('pasteCsvStatus');
+  if (!raw) { statusEl.textContent = 'Paste some CSV first.'; return; }
+  var forceMode;
+  if (csvColMode === 0) {
+    raw = convertMultilineBlocksToCsv(raw);
+    forceMode = raw.startsWith('term,definition') ? 2 : 3; // match what converter emitted
+  } else {
+    forceMode = csvColMode;
+    if (raw.indexOf('\t') >= 0) raw = raw.split('\n').map(tabToCsv).join('\n'); // Google Sheets copies are tab-separated
+  }
+  var ok = loadCsvText(raw, 'pasted-csv', forceMode);
+  if (ok) {
+    statusEl.textContent = 'Loaded.';
+    if (tableViewOn) renderTableView();
+    else if (!deckViewOn) toggleDeckView();
+  } else {
+    statusEl.textContent = 'Error: could not parse CSV.';
+  }
+}
+
+function tabToCsv(line) {
+  return line.split('\t').map(function(cell) {
+    cell = cell.trim();
+    if (cell.indexOf(',') >= 0 || cell.indexOf('"') >= 0) {
+      return '"' + cell.replace(/"/g, '""') + '"';
+    }
+    return cell;
+  }).join(',');
+}
+
+function loadVideos(videoFiles) {
+  var section = document.getElementById('videoSection');
+  var body = document.getElementById('videoBody');
+  body.innerHTML = '';
+
+  if (videoFiles.length === 0) {
+    section.style.display = 'none';
+    return;
+  }
+
+  document.getElementById('videoHeaderLabel').textContent = 'Videos (' + videoFiles.length + ')';
+  videoFiles.forEach(function(f) {
+    var url = URL.createObjectURL(f);
+    var item = document.createElement('div');
+    item.className = 'video-item';
+
+    var vid = document.createElement('video');
+    vid.src = url;
+    vid.preload = 'metadata';
+    vid.muted = true;
+    vid.onclick = function() { if (vid.paused) vid.play(); else vid.pause(); };
+
+    var label = document.createElement('div');
+    label.className = 'video-label';
+    label.textContent = f.name;
+
+    var controls = document.createElement('div');
+    controls.className = 'video-controls-row';
+
+    var toStartBtn = document.createElement('button');
+    toStartBtn.className = 'vid-ctrl-btn';
+    toStartBtn.textContent = 'to:0';
+    toStartBtn.onclick = function() { vid.currentTime = 0; };
+
+    var backBtn = document.createElement('button');
+    backBtn.className = 'vid-ctrl-btn';
+    backBtn.textContent = '-5s';
+    backBtn.onclick = function() { vid.currentTime = Math.max(0, vid.currentTime - 5); };
+
+    var playBtn = document.createElement('button');
+    playBtn.className = 'vid-ctrl-btn';
+    playBtn.textContent = '\u25b6 Play';
+    playBtn.onclick = function() {
+      if (vid.paused) { vid.play(); playBtn.textContent = '\u23f8 Pause'; playBtn.classList.add('active'); }
+      else { vid.pause(); playBtn.textContent = '\u25b6 Play'; playBtn.classList.remove('active'); }
+    };
+    vid.addEventListener('play', function() { playBtn.textContent = '\u23f8 Pause'; playBtn.classList.add('active'); });
+    vid.addEventListener('pause', function() { playBtn.textContent = '\u25b6 Play'; playBtn.classList.remove('active'); });
+    vid.addEventListener('ended', function() { playBtn.textContent = '\u25b6 Play'; playBtn.classList.remove('active'); });
+
+    var muteBtn = document.createElement('button');
+    muteBtn.className = 'vid-ctrl-btn active';
+    muteBtn.textContent = '\ud83d\udd07 Sound Off';
+    muteBtn.onclick = function() {
+      vid.muted = !vid.muted;
+      muteBtn.textContent = vid.muted ? '\ud83d\udd07 Sound Off' : '\ud83d\udd0a Sound On';
+      muteBtn.classList.toggle('active', !vid.muted);
+      if (!vid.muted && vid.volume === 0) vid.volume = 1;
+    };
+
+    var rateSlider = document.createElement('input');
+    rateSlider.type = 'range';
+    rateSlider.className = 'vol-slider';
+    rateSlider.min = '0.5';
+    rateSlider.max = '1';
+    rateSlider.step = '0.05';
+    rateSlider.value = '1';
+    rateSlider.title = 'Playback rate';
+    var rateLabel = document.createElement('span');
+    rateLabel.style.cssText = 'font-size:11px;font-weight:600;color:#555;min-width:30px;';
+    rateLabel.textContent = '1x';
+    rateSlider.oninput = function() {
+      var r = parseFloat(rateSlider.value);
+      vid.playbackRate = r;
+      rateLabel.textContent = r + 'x';
+    };
+
+    controls.appendChild(toStartBtn);
+    controls.appendChild(backBtn);
+    controls.appendChild(playBtn);
+    controls.appendChild(muteBtn);
+    controls.appendChild(rateSlider);
+    controls.appendChild(rateLabel);
+    item.appendChild(vid);
+    item.appendChild(label);
+    item.appendChild(controls);
+    body.appendChild(item);
+  });
+
+  section.style.display = 'block';
+  videosHidden = false;
+  document.getElementById('videoBody').style.display = 'flex';
+  document.getElementById('videoArrow').textContent = '\u25bc';
+}
+
+document.getElementById('folderInput').addEventListener('change', function() {
+  var files = Array.from(this.files);
+  if (!files.length) return;
+
+  // Non-recursive: only top-level files (no subfolder separators beyond the root folder)
+  var folderName = files[0].webkitRelativePath.split('/')[0];
+  var topLevel = files.filter(function(f) {
+    var parts = f.webkitRelativePath.split('/');
+    return parts.length === 2; // folder/file only
+  });
+
+  document.getElementById('folderName').textContent = folderName;
+
+  // Find data file: .csv first, then .txt, then .xlsx
+  var csvFile = topLevel.find(function(f) { return /\.csv$/i.test(f.name); });
+  var txtFile = !csvFile ? topLevel.find(function(f) { return /\.txt$/i.test(f.name); }) : null;
+  var xlsxFile = (!csvFile && !txtFile) ? topLevel.find(function(f) { return /\.xlsx?$/i.test(f.name); }) : null;
+  var dataFile = csvFile || txtFile || xlsxFile;
+  // Find all .mp4
+  var mp4Files = topLevel.filter(function(f) { return /\.mp4$/i.test(f.name); });
+  mp4Files.sort(function(a, b) { return a.name.localeCompare(b.name); });
+
+  if (!dataFile && !mp4Files.length) { setStatus('No .csv/.txt/.xlsx or .mp4 found in folder'); return; }
+
+  // Load videos
+  loadVideos(mp4Files);
+
+  // Load data file
+  if (xlsxFile) {
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      var wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+      gdriveWorkbook = wb;
+      var sel = document.getElementById('sheetSelect');
+      sel.innerHTML = '<option value="">-- select sheet --</option>';
+      wb.SheetNames.forEach(function(name) {
+        var opt = document.createElement('option');
+        opt.value = name; opt.textContent = name;
+        sel.appendChild(opt);
+      });
+      sel.disabled = false;
+      if (wb.SheetNames.length === 1) {
+        sel.value = wb.SheetNames[0];
+        onSheetSelect();
+      } else {
+        setStatus('Loaded "' + xlsxFile.name + '" — ' + wb.SheetNames.length + ' sheet(s). Pick a sheet.');
+      }
+    };
+    reader.readAsArrayBuffer(xlsxFile);
+  } else if (txtFile) {
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      var text = e.target.result;
+      var delim = text.indexOf(';') >= 0 ? ';' : text.indexOf('\t') >= 0 ? '\t' : ':';
+      var lines = text.split('\n');
+      var csvLines = ['Chinese,Romanization,English'];
+      var sectionNum = 0;
+      lines.forEach(function(line) {
+        line = line.trim();
+        if (!line) { sectionNum++; csvLines.push('Section ' + sectionNum + ',,'); return; }
+        var parts = line.split(delim);
+        if (parts.length < 2) return;
+        var chinese = parts[0].trim();
+        var rest = parts.slice(1).join(delim).trim();
+        var roman = '', english = rest;
+        var parenMatch = rest.match(/^(.*?)\s*\(([^)]+)\)\s*$/);
+        if (parenMatch) { english = parenMatch[1].trim(); roman = parenMatch[2].trim(); }
+        function esc(s) { return s.indexOf(',') >= 0 ? '"' + s.replace(/"/g, '""') + '"' : s; }
+        csvLines.push(esc(chinese) + ',' + esc(roman) + ',' + esc(english));
+      });
+      loadCsvText(csvLines.join('\n'), txtFile.name, 3); // TXT converter always emits 3 cols
+    };
+    reader.readAsText(txtFile);
+  } else if (csvFile) {
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      loadCsvText(e.target.result, csvFile.name);
+    };
+    reader.readAsText(csvFile);
+  } else {
+    setStatus('No data file found — loaded ' + mp4Files.length + ' video(s) only');
+  }
+});
+
+// ── DROP FILE (single CSV or XLSX) ──
+document.getElementById('fileInput').addEventListener('change', function() {
+  var file = this.files[0];
+  if (!file) return;
+  document.getElementById('folderName').textContent = file.name;
+
+  if (/\.xlsx?$/i.test(file.name)) {
+    // Parse XLSX with SheetJS
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      var wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+      // Populate the sheet dropdown for selection
+      gdriveWorkbook = wb;
+      var sel = document.getElementById('sheetSelect');
+      sel.innerHTML = '<option value="">-- select sheet --</option>';
+      wb.SheetNames.forEach(function(name) {
+        var opt = document.createElement('option');
+        opt.value = name; opt.textContent = name;
+        sel.appendChild(opt);
+      });
+      sel.disabled = false;
+      if (wb.SheetNames.length === 1) {
+        sel.value = wb.SheetNames[0];
+        onSheetSelect();
+      } else {
+        setStatus('Loaded "' + file.name + '" — ' + wb.SheetNames.length + ' sheet(s). Pick a sheet.');
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  } else if (/\.txt$/i.test(file.name)) {
+    // TXT file — detect delimiter and convert to CSV
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      var text = e.target.result;
+      var delim = text.indexOf(';') >= 0 ? ';' : text.indexOf('\t') >= 0 ? '\t' : ':';
+      var lines = text.split('\n');
+      var csvLines = ['Chinese,Romanization,English'];
+      var sectionNum = 0;
+      lines.forEach(function(line) {
+        line = line.trim();
+        if (!line) {
+          // Empty line = section break
+          sectionNum++;
+          csvLines.push('Section ' + sectionNum + ',,');
+          return;
+        }
+        var parts = line.split(delim);
+        if (parts.length < 2) return;
+        var chinese = parts[0].trim();
+        var rest = parts.slice(1).join(delim).trim();
+        // Extract romanization from parentheses: "english (romanization)"
+        var roman = '', english = rest;
+        var parenMatch = rest.match(/^(.*?)\s*\(([^)]+)\)\s*$/);
+        if (parenMatch) {
+          english = parenMatch[1].trim();
+          roman = parenMatch[2].trim();
+        }
+        // CSV-escape fields with commas
+        function esc(s) { return s.indexOf(',') >= 0 ? '"' + s.replace(/"/g, '""') + '"' : s; }
+        csvLines.push(esc(chinese) + ',' + esc(roman) + ',' + esc(english));
+      });
+      loadCsvText(csvLines.join('\n'), file.name, 3); // TXT converter always emits 3 cols
+    };
+    reader.readAsText(file);
+  } else {
+    // Plain CSV
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      loadCsvText(e.target.result, file.name);
+    };
+    reader.readAsText(file);
+  }
+});
+
+// ── SHEETS API (auto-load from Dropbox) ──
+var sheetsData = null; // { sheetName: [[row], ...], ... }
+var DEFAULT_SHEET = 'chinese'; // partial match — picks first sheet containing this
+
+async function fetchSheets() {
+  try {
+    var resp = await fetch('/api/sheets?lang=chinese');
+    if (resp.ok) return await resp.json();
+  } catch (e) {}
+  // Fallback to local sheets.json (for static servers without API routes)
+  try {
+    var resp2 = await fetch('/sheets.json');
+    if (resp2.ok) return await resp2.json();
+  } catch (e) {}
+  return null;
+}
+
+function populateSheetDropdown(data) {
+  var dd = document.getElementById('sheetDropdown');
+  dd.innerHTML = '';
+  var names = Object.keys(data);
+  names.forEach(function(name) {
+    var opt = document.createElement('option');
+    opt.value = name;
+    opt.textContent = name;
+    dd.appendChild(opt);
+  });
+  return names;
+}
+
+function loadSheetByName(name) {
+  if (!sheetsData || !sheetsData[name]) return;
+  var rows = sheetsData[name];
+
+  // Parse CSV-style rows (same logic as loadCsvText / onSheetSelect)
+  allRows = [];
+  for (var i = 1; i < rows.length; i++) {
+    var colA = (rows[i][0] || '').trim();
+    var colB = (rows[i][1] || '').trim();
+    var colC = (rows[i][2] || '').trim();
+
+    if (!colA && !colB && !colC) continue;
+
+    if (colA && !colB && !colC) {
+      if (/^(Dialogue|Scene|Chapter|Part|Section|Lesson|Unit|Genesis|Exodus|Leviticus|Numbers|Deuteronomy|Joshua|Judges|Ruth|Samuel|Kings|Chronicles|Ezra|Nehemiah|Esther|Job|Psalm|Psalms|Proverbs|Ecclesiastes|Song|Isaiah|Jeremiah|Lamentations|Ezekiel|Daniel|Hosea|Joel|Amos|Obadiah|Jonah|Micah|Nahum|Habakkuk|Zephaniah|Haggai|Zechariah|Malachi|Matthew|Mark|Luke|John|Acts|Romans|Corinthians|Galatians|Ephesians|Philippians|Colossians|Thessalonians|Timothy|Titus|Philemon|Hebrews|James|Peter|Jude|Revelation|Verse)\s/i.test(colA)) {
+        allRows.push({ chinese: '', romanization: '', english: '', sectionHeader: colA, contextLine: '' });
+      } else {
+        allRows.push({ chinese: '', romanization: '', english: '', sectionHeader: '', contextLine: colA });
+      }
+    } else {
+      allRows.push({ chinese: colA, romanization: colB, english: colC, sectionHeader: '', contextLine: '' });
+    }
+  }
+
+
+  setStatus('Loaded ' + allRows.length + ' lines from "' + name + '"');
+  refreshRows();
+}
+
+function onSheetDropdownChange(name) {
+  if (!name || !sheetsData) return;
+  loadSheetByName(name);
+}
+
+async function initFromApi() {
+  sheetsData = await fetchSheets();
+  if (!sheetsData) {
+    document.getElementById('sheetDropdown').innerHTML = '<option value="">No data</option>';
+    return;
+  }
+
+  var names = populateSheetDropdown(sheetsData);
+  if (!names.length) return;
+
+  // Auto-select sheet matching DEFAULT_SHEET
+  var match = names.find(function(n) { return n.toLowerCase().indexOf(DEFAULT_SHEET) !== -1; });
+  var selected = match || names[0];
+  document.getElementById('sheetDropdown').value = selected;
+  loadSheetByName(selected);
+}
+
+// ── TABLE VIEW ──
+function toggleTableView() {
+  tableViewOn = !tableViewOn;
+  document.getElementById('toggleTableView').className = 'toggle-chip' + (tableViewOn ? ' on' : '');
+
+  var linesContainer = document.getElementById('linesContainer');
+  var tableContainer = document.getElementById('tableViewContainer');
+
+  if (tableViewOn) {
+    if (deckViewOn) { deckViewOn = false; document.getElementById('toggleDeckView').className = 'toggle-chip'; document.getElementById('deckViewContainer').classList.remove('active'); }
+    linesContainer.style.display = 'none';
+    tableContainer.classList.add('active');
+    renderTableView();
+  } else {
+    linesContainer.style.display = '';
+    tableContainer.classList.remove('active');
+    if (dataTableInstance) {
+      dataTableInstance.destroy();
+      dataTableInstance = null;
+    }
+    document.getElementById('tableViewInner').innerHTML = '';
+  }
+}
+
+function renderTableView() {
+  var container = document.getElementById('tableViewInner');
+
+  // Show ALL rows: section headers, sentences, and vocab
+  var displayRows = [];
+  filteredRows.forEach(function(row, origIdx) {
+    if (row.sectionHeader || row.chinese || row.contextLine) {
+      displayRows.push({ row: row, idx: origIdx });
+    }
+  });
+
+  if (displayRows.length === 0) {
+    container.innerHTML = '<p style="text-align:center;color:#888;padding:40px;">No data loaded</p>';
+    return;
+  }
+
+  var html = '<table id="vocabDataTable" class="display" style="width:100%">';
+  html += '<thead><tr>';
+  html += '<th style="width:5%;">#</th>';
+  html += '<th style="width:5%;">Play</th>';
+  html += '<th style="width:30%;">Chinese</th>';
+  html += '<th style="width:20%;">Romanization</th>';
+  html += '<th style="width:40%;">English</th>';
+  html += '</tr></thead><tbody>';
+
+  displayRows.forEach(function(item, n) {
+    var isHeader = !!item.row.sectionHeader;
+    var isCtx = !!item.row.contextLine;
+    var hasCJK = isCtx && /[\u4e00-\u9fff\u3400-\u4dbf]/.test(item.row.contextLine);
+
+    if (isHeader) {
+      html += '<tr style="background:#e0e7ff;"><td>' + (n + 1) + '</td><td></td>';
+      html += '<td style="font-size:13px;font-weight:700;color:#2563eb;letter-spacing:1px;">' + escHtml(item.row.sectionHeader) + '</td>';
+      html += '<td></td><td></td></tr>';
+    } else if (isCtx && hasCJK) {
+      html += '<tr style="background:#fefce8;" data-row-idx="' + item.idx + '">';
+      html += '<td>' + (n + 1) + '</td>';
+      html += '<td><button class="tbl-play-btn" onclick="tblSpeak(' + item.idx + ', this)" title="Play TTS">&#9654;</button></td>';
+      html += '<td class="tbl-chinese">' + escHtml(item.row.contextLine) + '</td>';
+      html += '<td class="tbl-rom" style="font-size:11px;color:#92400e;">sentence</td>';
+      html += '<td></td></tr>';
+    } else if (isCtx) {
+      html += '<tr style="background:#f0f4ff;" data-row-idx="' + item.idx + '"><td>' + (n + 1) + '</td><td></td>';
+      html += '<td style="font-size:13px;color:#1d4ed8;font-style:italic;">' + escHtml(item.row.contextLine) + '</td>';
+      html += '<td></td><td></td></tr>';
+    } else {
+      html += '<tr data-row-idx="' + item.idx + '">';
+      html += '<td>' + (n + 1) + '</td>';
+      html += '<td><button class="tbl-play-btn" onclick="tblSpeak(' + item.idx + ', this)" title="Play TTS">&#9654;</button></td>';
+      html += '<td class="tbl-chinese">' + escHtml(item.row.chinese) + '</td>';
+      html += '<td class="tbl-rom">' + escHtml(item.row.romanization || '') + '</td>';
+      html += '<td>' + escHtml(item.row.english || '') + '</td>';
+      html += '</tr>';
+    }
+  });
+
+  html += '</tbody></table>';
+  container.innerHTML = html;
+
+  // Suppress DataTables alert popups — log to console instead
+  $.fn.dataTable.ext.errMode = 'none';
+
+  // Initialize DataTable
+  if (dataTableInstance) {
+    dataTableInstance.destroy();
+    dataTableInstance = null;
+  }
+  dataTableInstance = $('#vocabDataTable').DataTable({
+    pageLength: 50,
+    lengthMenu: [25, 50, 100, 200],
+    order: [],
+    language: {
+      search: 'Filter:',
+      lengthMenu: 'Show _MENU_ rows',
+      info: 'Showing _START_ to _END_ of _TOTAL_ entries',
+    }
+  });
+}
+
+function tblSpeak(idx, btnEl) {
+  stopSpeaking();
+  // Clear all play button highlights
+  document.querySelectorAll('.tbl-play-btn.speaking').forEach(function(el) {
+    el.classList.remove('speaking');
+  });
+
+  // Re-anchor , / . nav to this row
+  document.querySelectorAll('#vocabDataTable tr.tbl-current').forEach(function(el) {
+    el.classList.remove('tbl-current');
+  });
+  var tr = btnEl.closest('tr');
+  if (tr) tr.classList.add('tbl-current');
+
+  var row = filteredRows[idx];
+  if (!row) return;
+  var text = row.chinese || row.contextLine || '';
+  if (!text) return;
+
+  btnEl.classList.add('speaking');
+  copyToClipboard(text);
+
+  speakText(text, function() {
+    btnEl.classList.remove('speaking');
+  });
+}
+
+// ── TABLE ROW NAV: , prev playable row, . next playable row (highlight + speak) ──
+function tblNavRow(dir) {
+  if (!dataTableInstance) return;
+  var allNodes = dataTableInstance.rows({ search: 'applied', order: 'current' }).nodes().toArray();
+  var playable = allNodes.filter(function(tr) { return tr.querySelector('.tbl-play-btn'); });
+  if (!playable.length) return;
+
+  // Anchor on the row carrying .tbl-current; none → '.' starts at first, ',' at last
+  var cur = -1;
+  playable.forEach(function(tr, i) { if (tr.classList.contains('tbl-current')) cur = i; });
+  var target = cur + dir;
+  if (cur === -1 && dir === -1) target = playable.length - 1;
+  if (target < 0 || target >= playable.length) return;
+
+  var tr = playable[target];
+
+  // Jump to the DataTables page containing the row if it isn't on the current page
+  var pos = allNodes.indexOf(tr);
+  var page = Math.floor(pos / dataTableInstance.page.len());
+  if (page !== dataTableInstance.page()) {
+    dataTableInstance.page(page).draw(false);
+  }
+
+  tr.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+  var idx = parseInt(tr.getAttribute('data-row-idx'), 10);
+  var btn = tr.querySelector('.tbl-play-btn');
+  if (!isNaN(idx) && btn) tblSpeak(idx, btn);
+}
+
+document.addEventListener('keydown', function(e) {
+  if (!tableViewOn || !dataTableInstance) return;
+  if (e.target.matches('input, textarea, select')) return;
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  // a — re-speak the highlighted row
+  if (e.key === 'a') {
+    var curTr = document.querySelector('#vocabDataTable tr.tbl-current');
+    var curBtn = curTr ? curTr.querySelector('.tbl-play-btn') : null;
+    if (!curBtn) return;
+    e.preventDefault();
+    tblSpeak(parseInt(curTr.getAttribute('data-row-idx'), 10), curBtn);
+    return;
+  }
+  if (e.key !== ',' && e.key !== '.') return;
+  e.preventDefault();
+  tblNavRow(e.key === '.' ? 1 : -1);
+});
+
+// ── DECK VIEW ──
+function toggleDeckView() {
+  deckViewOn = !deckViewOn;
+  document.getElementById('toggleDeckView').className = 'toggle-chip' + (deckViewOn ? ' on' : '');
+  var linesContainer = document.getElementById('linesContainer');
+  var tableContainer = document.getElementById('tableViewContainer');
+  var deckContainer = document.getElementById('deckViewContainer');
+  if (deckViewOn) {
+    if (tableViewOn) {
+      tableViewOn = false;
+      document.getElementById('toggleTableView').className = 'toggle-chip';
+      tableContainer.classList.remove('active');
+      if (dataTableInstance) { dataTableInstance.destroy(); dataTableInstance = null; }
+      document.getElementById('tableViewInner').innerHTML = '';
+    }
+    linesContainer.style.display = 'none';
+    deckContainer.classList.add('active');
+    startDeckSession();
+  } else {
+    linesContainer.style.display = '';
+    deckContainer.classList.remove('active');
+  }
+}
+function shuffleDeckArray(arr) {
+  var a = arr.slice();
+  for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var tmp = a[i]; a[i] = a[j]; a[j] = tmp; }
+  return a;
+}
+function getDeckVocabIndices() {
+  var indices = [];
+  filteredRows.forEach(function(row, i) {
+    if (row.sectionHeader) return;
+    if (row.chinese) { indices.push(i); return; }
+    if (row.contextLine && /[\u4e00-\u9fff\u3400-\u4dbf]/.test(row.contextLine)) indices.push(i);
+  });
+  return indices;
+}
+function dedupeDeckIndices(indices) {
+  var seen = {};
+  return indices.filter(function(i) {
+    var row = filteredRows[i];
+    var text = row.chinese || row.contextLine || '';
+    var key = text.split(' ').join('');
+    if (!key || seen[key]) return false; // skip duplicate glossed words / repeated sentences
+    seen[key] = true;
+    return true;
+  });
+}
+function startDeckSession() {
+  var vocabIndices = dedupeDeckIndices(getDeckVocabIndices());
+  if (vocabIndices.length === 0) return;
+  deckQueue = shuffleDeckArray(vocabIndices);
+  deckTotal = deckQueue.length;
+  deckCleared = 0; deckFlipped = false; deckMissedSet = new Set();
+  document.getElementById('deckStage').style.display = '';
+  document.querySelector('.deck-progress-row').style.display = '';
+  document.getElementById('deckDoneScreen').classList.add('deck-hidden');
+  document.getElementById('deckSaveStatus').textContent = '';
+  var saveMissedBtn = document.getElementById('deckSaveMissedBtn');
+  var saveBothBtn = document.getElementById('deckSaveBothBtn');
+  saveMissedBtn.textContent = 'Copy missed CSV'; saveMissedBtn.style.background = '#16a34a'; saveMissedBtn.disabled = false;
+  saveBothBtn.textContent = 'Copy missed + remaining'; saveBothBtn.style.background = '#2563eb'; saveBothBtn.disabled = false;
+  deckNextCard();
+}
+function deckUpdateProgress() {
+  document.getElementById('deckProgressLabel').textContent = deckCleared + ' / ' + deckTotal;
+  var pct = deckTotal ? (deckCleared / deckTotal) * 100 : 0;
+  document.getElementById('deckProgressFill').style.width = pct + '%';
+}
+function deckNextCard() {
+  deckFlipped = false;
+  var cardEl = document.getElementById('deckCard');
+  cardEl.classList.remove('flipped'); cardEl.style.transform = ''; cardEl.style.opacity = ''; cardEl.style.transition = 'none';
+  if (deckQueue.length === 0) { deckCurrent = null; deckUpdateProgress(); deckFinish(); return; }
+  deckCurrent = deckQueue.shift();
+  var item = filteredRows[deckCurrent];
+  var isSentenceOnly = !!item.contextLine && !item.chinese && !item.romanization && !item.english;
+  document.getElementById('deckWordText').textContent = item.chinese || item.contextLine || '';
+  document.getElementById('deckRomText').textContent = item.romanization || '';
+  document.getElementById('deckDefText').textContent = item.english || (isSentenceOnly ? 'Did you understand it?' : '');
+  document.getElementById('deckEyebrow').textContent = isSentenceOnly ? 'sentence' : 'in queue: ' + (deckQueue.length + 1);
+  var flipHint = cardEl.querySelector('.deck-flip-hint');
+  if (isSentenceOnly) {
+    // Pre-flip so X/✓ are immediately usable — no answer to reveal
+    deckFlipped = true;
+    cardEl.classList.add('flipped');
+    if (flipHint) flipHint.style.display = 'none';
+  } else {
+    if (flipHint) flipHint.style.display = '';
+  }
+  deckUpdateProgress();
+}
+function deckFinish() {
+  document.getElementById('deckStage').style.display = 'none';
+  document.querySelector('.deck-progress-row').style.display = 'none';
+  document.getElementById('deckMissedCount').style.display = 'none';
+  document.getElementById('deckRemainingCount').style.display = 'none';
+  var doneEl = document.getElementById('deckDoneScreen'); doneEl.classList.remove('deck-hidden');
+  document.getElementById('deckDoneStats').textContent = 'You cleared all ' + deckTotal + ' words in this deck.';
+  var missedEl = document.getElementById('deckMissedStats');
+  var saveBtn = document.getElementById('deckDoneSaveBtn');
+  document.getElementById('deckDoneSaveStatus').textContent = '';
+  if (deckMissedSet.size > 0) {
+    missedEl.textContent = deckMissedSet.size + ' word(s) you missed at least once.';
+    saveBtn.style.display = ''; saveBtn.textContent = 'Copy missed CSV'; saveBtn.style.background = '#16a34a'; saveBtn.disabled = false;
+  } else { missedEl.textContent = 'Perfect run — no misses!'; saveBtn.style.display = 'none'; }
+}
+function deckUpdateSaveButtons() {
+  var hasMissed = deckMissedSet.size > 0, hasRemaining = deckQueue.length > 0;
+  var missedCountEl = document.getElementById('deckMissedCount');
+  if (hasMissed) { missedCountEl.style.display = ''; missedCountEl.textContent = deckMissedSet.size + ' missed'; } else { missedCountEl.style.display = 'none'; }
+  var remainingEl = document.getElementById('deckRemainingCount');
+  if (hasRemaining) { remainingEl.style.display = ''; remainingEl.textContent = deckQueue.length + ' remaining'; } else { remainingEl.style.display = 'none'; }
+  document.getElementById('deckSaveBothBtn').style.display = '';
+}
+function deckFlipCard() {
+  if (deckFlipped) return;
+  deckFlipped = true;
+  document.getElementById('deckCard').classList.add('flipped');
+}
+function deckGrade(correct) {
+  if (deckCurrent === null) return;
+  if (!correct) { deckQueue.push(deckCurrent); deckMissedSet.add(deckCurrent); } else { deckCleared++; }
+  deckFlashStamp(correct);
+  deckAnimateOut(correct, function() { deckNextCard(); deckUpdateSaveButtons(); });
+}
+function deckFlashStamp(correct) {
+  var el = document.getElementById(correct ? 'deckStampRight' : 'deckStampLeft');
+  el.style.transition = 'none'; el.style.opacity = '1';
+  requestAnimationFrame(function() { el.style.transition = 'opacity .4s ease'; el.style.opacity = '0'; });
+}
+function deckAnimateOut(correct, cb) {
+  var cardEl = document.getElementById('deckCard');
+  cardEl.style.transition = 'transform .25s ease, opacity .25s ease';
+  cardEl.style.transform = 'translateX(' + (correct ? '120%' : '-120%') + ') rotate(' + (correct ? 10 : -10) + 'deg)';
+  cardEl.style.opacity = '0';
+  setTimeout(function() { cardEl.style.transition = 'none'; cb(); }, 220);
+}
+document.getElementById('deckCard').addEventListener('click', function() { deckFlipCard(); });
+document.querySelectorAll('.deck-side-btn.correct').forEach(function(btn) {
+  btn.addEventListener('click', function() { deckGrade(true); });
+});
+document.querySelectorAll('.deck-side-btn.miss').forEach(function(btn) {
+  btn.addEventListener('click', function() { deckGrade(false); });
+});
+document.getElementById('deckRevealBtn').addEventListener('click', function() { deckFlipCard(); });
+document.getElementById('deckRestartBtn').addEventListener('click', function() { startDeckSession(); });
+// ── DECK KEYBOARD SHORTCUTS: ← again, ↑/Space flip, → got it ──
+document.addEventListener('keydown', function(e) {
+  if (!deckViewOn || deckCurrent === null) return;
+  if (e.target.matches('input, textarea, select')) return;
+  if (e.key === 'ArrowLeft') { e.preventDefault(); deckGrade(false); }
+  else if (e.key === 'ArrowRight') { e.preventDefault(); deckGrade(true); }
+  else if (e.key === 'ArrowUp' || e.key === ' ') { e.preventDefault(); deckFlipCard(); }
+});
+function deckSaveMissedToSheet(mode) {
+  if (mode === 'missed' && deckMissedSet.size === 0) return;
+  if (mode === 'both' && deckMissedSet.size === 0 && deckQueue.length === 0 && deckCurrent === null) return;
+  var csvRows = [], added = new Set();
+  var sortedMissed = Array.from(deckMissedSet).sort(function(a, b) { return a - b; });
+  sortedMissed.forEach(function(fi) {
+    var item = filteredRows[fi];
+    if (item && (item.chinese || item.contextLine)) {
+      csvRows.push([item.chinese || item.contextLine, item.romanization || '', item.english || '']);
+      added.add(fi);
+    }
+  });
+  if (mode === 'both') {
+    deckQueue.forEach(function(fi) {
+      if (!added.has(fi)) {
+        var item = filteredRows[fi];
+        if (item && (item.chinese || item.contextLine)) {
+          csvRows.push([item.chinese || item.contextLine, item.romanization || '', item.english || '']);
+          added.add(fi);
+        }
+      }
+    });
+    if (deckCurrent !== null && !added.has(deckCurrent)) {
+      var item = filteredRows[deckCurrent];
+      if (item && (item.chinese || item.contextLine)) {
+        csvRows.push([item.chinese || item.contextLine, item.romanization || '', item.english || '']);
+        added.add(deckCurrent);
+      }
+    }
+  }
+  function csvEsc(s) { s = String(s); return (s.indexOf(',') >= 0 || s.indexOf('"') >= 0 || s.indexOf('\n') >= 0) ? '"' + s.replace(/"/g, '""') + '"' : s; }
+  var lines = ['Chinese,Romanization,English'];
+  csvRows.forEach(function(r) { lines.push(r.map(csvEsc).join(',')); });
+  var csv = lines.join('\n');
+  var statusEl = document.getElementById('deckSaveStatus');
+  var textarea = document.getElementById('deckCsvTextarea');
+  textarea.value = csv;
+  navigator.clipboard.writeText(csv).then(function() {
+    statusEl.textContent = '\u2705 Copied ' + csvRows.length + ' term' + (csvRows.length === 1 ? '' : 's') + ' to clipboard';
+    setTimeout(function() { statusEl.textContent = ''; }, 3000);
+  }).catch(function() {
+    statusEl.textContent = 'Tap and select all in the box below to copy';
+  });
+}
+
+// ── TTS SELECTION TOOLTIP ──
+var TTS_TOOLTIP_LANGS = [
+  { key: 'A', label: '粵', lang: 'zh-HK', title: 'Cantonese' },
+  { key: 'M', label: '普', lang: 'zh-CN', title: 'Mandarin'  },
+  { key: 'E', label: 'En', lang: 'en-US', title: 'English'   },
+  { key: 'P', label: 'Es', lang: 'es-ES', title: 'Spanish'   },
+  { key: 'K', label: '한', lang: 'ko-KR', title: 'Korean'    },
+  { key: 'F', label: 'Fr', lang: 'fr-FR', title: 'French'    },
+  { key: 'G', label: 'Ελ', lang: 'el-GR', title: 'Greek'     },
+  { key: 'H', label: 'עב', lang: 'he-IL', title: 'Hebrew'    },
+];
+var TTS_TOOLTIP_STORAGE = 'chineseTts-tooltip-visible';
+var ttsTooltipEl = null;
+var ttsSettingsPanelOpen = false;
+
+function ttsTooltipGetVisible() {
+  try { return JSON.parse(localStorage.getItem(TTS_TOOLTIP_STORAGE)) || {}; } catch(e) { return {}; }
+}
+function ttsTooltipIsVisible(key) {
+  var v = ttsTooltipGetVisible(); return !(key in v) || v[key];
+}
+function ttsTooltipToggleLang(key) {
+  var v = ttsTooltipGetVisible(); v[key] = !ttsTooltipIsVisible(key);
+  try { localStorage.setItem(TTS_TOOLTIP_STORAGE, JSON.stringify(v)); } catch(e) {}
+  ttsTooltipRenderSettings();
+}
+function ttsTooltipSetAll(visible) {
+  var v = {}; TTS_TOOLTIP_LANGS.forEach(function(l) { v[l.key] = visible; });
+  try { localStorage.setItem(TTS_TOOLTIP_STORAGE, JSON.stringify(v)); } catch(e) {}
+  ttsTooltipRenderSettings();
+}
+
+function ttsTooltipSpeakText(text, lang) {
+  window.speechSynthesis.cancel();
+  var utt = new SpeechSynthesisUtterance(text);
+  utt.lang = lang;
+  utt.rate = lang.startsWith('zh') ? 0.8 : (lang.startsWith('es') || lang.startsWith('fr')) ? 0.9 : 1;
+  var voices = window.speechSynthesis.getVoices();
+  if (voices.length > 0) {
+    var v = voices.find(function(vv) { return vv.lang === lang && vv.name.includes('Google'); });
+    if (!v) v = voices.find(function(vv) { return vv.lang === lang && (vv.name.includes('Enhanced') || vv.name.includes('Premium')); });
+    if (!v) v = voices.find(function(vv) { return vv.lang === lang; });
+    if (!v && lang === 'zh-HK') v = voices.find(function(vv) { return vv.lang.startsWith('yue'); });
+    if (!v && lang.startsWith('zh')) v = voices.find(function(vv) { return vv.lang.startsWith('zh'); });
+    if (!v) v = voices.find(function(vv) { return vv.lang.split('-')[0] === lang.split('-')[0]; });
+    if (v) utt.voice = v;
+  }
+  window.speechSynthesis.speak(utt);
+}
+
+function ttsTooltipRemove() {
+  if (ttsTooltipEl) { ttsTooltipEl.remove(); ttsTooltipEl = null; }
+  ttsSettingsPanelOpen = false;
+}
+
+function ttsTooltipRenderSettings() {
+  if (!ttsTooltipEl) return;
+  var panel = ttsTooltipEl.querySelector('#tts-tooltip-settings');
+  if (!panel) return;
+  var allVisible = TTS_TOOLTIP_LANGS.every(function(l) { return ttsTooltipIsVisible(l.key); });
+  var html = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">' +
+    '<span style="color:#7ec8e3;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;">TTS Buttons</span>' +
+    '<button id="tts-settings-close" style="background:none;border:none;color:#888;font-size:16px;cursor:pointer;">&times;</button>' +
+    '</div>' +
+    '<button id="tts-settings-all" style="display:block;width:100%;margin-bottom:8px;padding:4px 0;background:none;border:1px solid #444;border-radius:5px;color:#aaa;font-size:11px;cursor:pointer;text-align:center;">' +
+    (allVisible ? 'Deselect All' : 'Select All') + '</button>';
+  TTS_TOOLTIP_LANGS.forEach(function(l) {
+    html += '<label style="display:flex;align-items:center;gap:8px;padding:5px 0;cursor:pointer;color:#ddd;font-size:13px;">' +
+      '<input type="checkbox" data-key="' + l.key + '"' + (ttsTooltipIsVisible(l.key) ? ' checked' : '') + ' style="cursor:pointer;accent-color:#7ec8e3;">' +
+      l.label + ' \u2014 ' + l.title + '</label>';
+  });
+  panel.innerHTML = html;
+  panel.style.display = ttsSettingsPanelOpen ? 'block' : 'none';
+  panel.querySelector('#tts-settings-close').addEventListener('mousedown', function(e) {
+    e.preventDefault(); ttsSettingsPanelOpen = false; panel.style.display = 'none';
+  });
+  panel.querySelector('#tts-settings-all').addEventListener('mousedown', function(e) {
+    e.preventDefault(); ttsTooltipSetAll(!allVisible);
+  });
+  panel.querySelectorAll('input[type="checkbox"]').forEach(function(cb) {
+    cb.addEventListener('change', function() { ttsTooltipToggleLang(cb.dataset.key); });
+  });
+}
+
+function ttsTooltipShow(x, y, text) {
+  ttsTooltipRemove();
+  var el = document.createElement('div');
+  el.id = 'bible-tts-tooltip';
+  el.style.cssText = 'position:fixed;left:' + Math.min(x, window.innerWidth - 240) + 'px;top:' + Math.max(y - 52, 8) + 'px;z-index:99999;display:flex;align-items:center;gap:4px;background:#1a1a2e;border:1px solid #7ec8e3;border-radius:8px;padding:4px 6px;box-shadow:0 4px 16px rgba(0,0,0,.5);white-space:nowrap;';
+  var inner = '';
+  TTS_TOOLTIP_LANGS.forEach(function(l) {
+    if (!ttsTooltipIsVisible(l.key)) return;
+    inner += '<button data-lang="' + l.lang + '" title="' + l.title + '" class="tts-tt-btn" style="border:none;border-radius:6px;cursor:pointer;padding:4px 8px;font-size:12px;font-weight:700;background:#2a2a4a;color:#eee;">' + l.label + '</button>';
+  });
+  inner += '<button id="tts-tt-gear" title="Choose visible languages" style="border:none;background:none;color:#888;cursor:pointer;font-size:13px;padding:4px;">&#9881;</button>';
+  inner += '<div id="tts-tooltip-settings" style="position:absolute;top:100%;left:0;margin-top:6px;background:#1a1a2e;border:1px solid #7ec8e3;border-radius:10px;padding:12px 14px;box-shadow:0 8px 28px rgba(0,0,0,.6);min-width:190px;z-index:1;display:none;"></div>';
+  el.innerHTML = inner;
+  document.body.appendChild(el);
+  ttsTooltipEl = el;
+  el.querySelectorAll('.tts-tt-btn').forEach(function(btn) {
+    btn.addEventListener('mousedown', function(e) { e.preventDefault(); ttsTooltipSpeakText(text, btn.dataset.lang); ttsTooltipRemove(); });
+    btn.addEventListener('mouseenter', function() { btn.style.background = '#7ec8e3'; btn.style.color = '#000'; });
+    btn.addEventListener('mouseleave', function() { btn.style.background = '#2a2a4a'; btn.style.color = '#eee'; });
+  });
+  el.querySelector('#tts-tt-gear').addEventListener('mousedown', function(e) {
+    e.preventDefault(); e.stopPropagation(); ttsSettingsPanelOpen = !ttsSettingsPanelOpen; ttsTooltipRenderSettings();
+  });
+  ttsTooltipRenderSettings();
+}
+
+document.addEventListener('mouseup', function(e) {
+  if (e.target.closest && e.target.closest('#bible-tts-tooltip')) return;
+  setTimeout(function() {
+    var sel = window.getSelection();
+    var text = sel ? sel.toString().trim() : '';
+    if (!text) { ttsTooltipRemove(); return; }
+    ttsTooltipShow(e.clientX, e.clientY, text);
+  }, 10);
+});
+document.addEventListener('mousedown', function(e) {
+  if (e.target.closest && e.target.closest('#bible-tts-tooltip')) return;
+  ttsTooltipRemove();
+});
+
+// ── DROPBOX BUCKET PUSH / PULL ──
+var DBX_TOKEN = null;
+
+function dbxBucketPath(n) { return '/flashcards/vercel/buckets' + n + '.txt'; }
+
+function dbxSetAuthBtn() {
+  var btn = document.getElementById('dbxAuthBtn');
+  if (!btn) return;
+  if (DBX_TOKEN) {
+    btn.textContent = '● Dropbox'; btn.style.color = '#0061fe'; btn.style.borderColor = '#0061fe'; btn.title = 'Connected — click to sign out';
+  } else {
+    btn.textContent = 'Dropbox'; btn.style.color = '#555'; btn.style.borderColor = '#ccc'; btn.title = 'Sign in to Dropbox';
+  }
+}
+
+async function dbxGetAppKey() {
+  if (['localhost', '127.0.0.1'].includes(window.location.hostname)) {
+    var k = localStorage.getItem('dropbox-app-key') || '';
+    if (!k) { k = prompt('Dropbox App Key:') || ''; if (k) localStorage.setItem('dropbox-app-key', k); }
+    return k;
+  }
+  try { var r = await fetch('/api/dropbox-key'); return (await r.json()).key || ''; } catch(e) { return ''; }
+}
+
+function dbxMakeVerifier() {
+  var a = new Uint8Array(64); crypto.getRandomValues(a);
+  return btoa(String.fromCharCode.apply(null, a)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+
+async function dbxMakeChallenge(v) {
+  var d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(v));
+  return btoa(String.fromCharCode.apply(null, new Uint8Array(d))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+
+async function dbxSignIn(pendingAction) {
+  var key = await dbxGetAppKey();
+  if (!key) { alert('Dropbox App Key not configured'); return; }
+  if (pendingAction) sessionStorage.setItem('dbx_pending', pendingAction);
+  var v = dbxMakeVerifier();
+  var c = await dbxMakeChallenge(v);
+  var uri = window.location.origin + window.location.pathname;
+  var authUrl = 'https://www.dropbox.com/oauth2/authorize?client_id=' + key +
+    '&response_type=code&code_challenge=' + c + '&code_challenge_method=S256&redirect_uri=' + encodeURIComponent(uri) + '&token_access_type=online';
+  localStorage.setItem('dbx_verifier', v);
+  var popup = window.open(authUrl, 'dropbox_auth', 'width=520,height=680,scrollbars=yes,resizable=yes');
+  if (!popup) {
+    localStorage.removeItem('dbx_verifier'); sessionStorage.setItem('dbx_verifier', v);
+    window.location.href = authUrl;
+  }
+}
+
+async function dbxHandleRedirect() {
+  var params = new URLSearchParams(window.location.search);
+  var code = params.get('code');
+  if (!code) return;
+  var v = localStorage.getItem('dbx_verifier') || sessionStorage.getItem('dbx_verifier');
+  var key = await dbxGetAppKey();
+  if (!v || !key) return;
+  var uri = window.location.origin + window.location.pathname;
+  try {
+    var r = await fetch('https://api.dropboxapi.com/oauth2/token', {
+      method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ code: code, grant_type: 'authorization_code', client_id: key, redirect_uri: uri, code_verifier: v }).toString()
+    });
+    var d = await r.json();
+    localStorage.removeItem('dbx_verifier'); sessionStorage.removeItem('dbx_verifier');
+    if (d.access_token) {
+      if (window.opener && !window.opener.closed) { window.opener.postMessage({ dropboxToken: d.access_token }, window.location.origin); window.close(); return; }
+      DBX_TOKEN = d.access_token; window.history.replaceState({}, document.title, window.location.pathname);
+    } else { if (window.opener && !window.opener.closed) window.close(); }
+  } catch(e) { console.error('Dropbox auth:', e); if (window.opener && !window.opener.closed) window.close(); }
+}
+
+async function dbxDownload(path) {
+  var r = await fetch('https://content.dropboxapi.com/2/files/download', {
+    method: 'POST', headers: { Authorization: 'Bearer ' + DBX_TOKEN, 'Dropbox-API-Arg': JSON.stringify({ path: path }) }
+  });
+  if (r.status === 401) { DBX_TOKEN = null; dbxSetAuthBtn(); throw new Error('Session expired — sign in again'); }
+  if (r.status === 409) throw new Error('File not found in Dropbox');
+  if (!r.ok) throw new Error('Download failed (' + r.status + ')');
+  return await r.text();
+}
+
+async function dbxUpload(path, content) {
+  var r = await fetch('https://content.dropboxapi.com/2/files/upload', {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + DBX_TOKEN, 'Dropbox-API-Arg': JSON.stringify({ path: path, mode: { '.tag': 'overwrite' }, mute: true }), 'Content-Type': 'application/octet-stream' },
+    body: content
+  });
+  if (r.status === 401) { DBX_TOKEN = null; dbxSetAuthBtn(); throw new Error('Session expired — sign in again'); }
+  if (!r.ok) throw new Error('Upload failed (' + r.status + ')');
+}
+
+function dbxPopulateBucketSelects() {
+  ['dbxPullBucketNum', 'dbxPushBucketNum'].forEach(function(id) {
+    var sel = document.getElementById(id); if (!sel) return;
+    sel.innerHTML = '';
+    for (var i = 1; i <= 10; i++) { var opt = document.createElement('option'); opt.value = i; opt.textContent = 'Bucket ' + i; sel.appendChild(opt); }
+  });
+}
+
+document.getElementById('dbxAuthBtn').addEventListener('click', function() {
+  if (DBX_TOKEN) {
+    try { fetch('https://api.dropboxapi.com/2/auth/token/revoke', { method: 'POST', headers: { Authorization: 'Bearer ' + DBX_TOKEN } }); } catch(e) {}
+    DBX_TOKEN = null; dbxSetAuthBtn();
+  } else { dbxSignIn(''); }
+});
+
+document.getElementById('dbxPullBtn').addEventListener('click', async function() {
+  var n = document.getElementById('dbxPullBucketNum').value;
+  var statusEl = document.getElementById('dbxPullStatus');
+  if (!DBX_TOKEN) { statusEl.textContent = 'Signing in\u2026'; await dbxSignIn('pull:' + n); return; }
+  var btn = this; btn.disabled = true; btn.textContent = 'Loading\u2026'; statusEl.textContent = '';
+  try {
+    var text = await dbxDownload(dbxBucketPath(n));
+    document.getElementById('pasteCsvInput').value = text;
+    var csvLines = text.trim().split('\n');
+    var firstDataLine = csvLines.length > 1 ? csvLines[1] : csvLines[0];
+    var detectedCols = firstDataLine.split(',').length >= 3 ? '3' : '2';
+    var rCol = document.querySelector('input[name="csvColMode"][value="' + detectedCols + '"]');
+    if (rCol && !rCol.checked) rCol.click();
+    loadPastedCsv();
+    statusEl.textContent = '\u2705 Loaded bucket ' + n;
+    setTimeout(function() { statusEl.textContent = ''; }, 2500);
+  } catch(e) { statusEl.textContent = '\u274c ' + e.message; }
+  finally { btn.disabled = false; btn.textContent = '\u2193 Load bucket'; }
+});
+
+var _dbxPendingPush = null; // { n, csvRows, csv }
+
+function dbxBuildPushPayload() {
+  var n = document.getElementById('dbxPushBucketNum').value;
+  var statusEl = document.getElementById('dbxPushStatus');
+  var csvRows = [], added = new Set();
+  Array.from(deckMissedSet).sort(function(a,b){return a-b;}).forEach(function(fi) {
+    var item = filteredRows[fi]; if (item && (item.chinese || item.contextLine)) { csvRows.push([item.chinese || item.contextLine, item.romanization || '', item.english || '']); added.add(fi); }
+  });
+  deckQueue.forEach(function(fi) {
+    if (!added.has(fi)) { var item = filteredRows[fi]; if (item && (item.chinese || item.contextLine)) { csvRows.push([item.chinese || item.contextLine, item.romanization || '', item.english || '']); added.add(fi); } }
+  });
+  if (deckCurrent !== null && !added.has(deckCurrent)) {
+    var item = filteredRows[deckCurrent]; if (item && (item.chinese || item.contextLine)) { csvRows.push([item.chinese || item.contextLine, item.romanization || '', item.english || '']); added.add(deckCurrent); }
+  }
+  if (csvRows.length === 0) { statusEl.textContent = 'Nothing to push \u2014 no missed or remaining cards.'; return null; }
+  function csvEsc(s) { s = String(s); return (s.indexOf(',') >= 0 || s.indexOf('"') >= 0 || s.indexOf('\n') >= 0) ? '"' + s.replace(/"/g, '""') + '"' : s; }
+  var lines = ['Chinese,Romanization,English'];
+  csvRows.forEach(function(r) { lines.push(r.map(csvEsc).join(',')); });
+  return { n: n, csvRows: csvRows, csv: lines.join('\n') };
+}
+
+document.getElementById('dbxPushBtn').addEventListener('click', async function() {
+  var payload = dbxBuildPushPayload();
+  if (!payload) return;
+  var statusEl = document.getElementById('dbxPushStatus');
+  if (!DBX_TOKEN) { statusEl.textContent = 'Signing in\u2026'; await dbxSignIn('push:' + payload.n); return; }
+  _dbxPendingPush = payload;
+  var confirmEl = document.getElementById('dbxPushConfirm');
+  document.getElementById('dbxPushConfirmMsg').textContent = 'Push ' + payload.csvRows.length + ' terms to bucket ' + payload.n + '?';
+  confirmEl.style.display = 'flex';
+});
+
+document.getElementById('dbxPushCancelBtn').addEventListener('click', function() {
+  document.getElementById('dbxPushConfirm').style.display = 'none';
+  _dbxPendingPush = null;
+});
+
+document.getElementById('dbxPushConfirmBtn').addEventListener('click', async function() {
+  document.getElementById('dbxPushConfirm').style.display = 'none';
+  if (!_dbxPendingPush) return;
+  var payload = _dbxPendingPush; _dbxPendingPush = null;
+  var statusEl = document.getElementById('dbxPushStatus');
+  var btn = document.getElementById('dbxPushBtn');
+  btn.disabled = true; btn.textContent = 'Pushing\u2026'; statusEl.textContent = '';
+  try {
+    await dbxUpload(dbxBucketPath(payload.n), payload.csv);
+    statusEl.textContent = '\u2705 Pushed ' + payload.csvRows.length + ' terms \u2192 bucket ' + payload.n;
+    setTimeout(function() { statusEl.textContent = ''; }, 3000);
+  } catch(e) { statusEl.textContent = '\u274c ' + e.message; }
+  finally { btn.disabled = false; btn.textContent = '\u2191 Push (missed&rem.)'; }
+});
+
+function dbxResumePending() {
+  var pending = sessionStorage.getItem('dbx_pending'); if (!pending) return;
+  sessionStorage.removeItem('dbx_pending');
+  if (pending.startsWith('pull:')) { document.getElementById('dbxPullBucketNum').value = pending.slice(5); document.getElementById('dbxPullBtn').click(); }
+  else if (pending.startsWith('push:')) { document.getElementById('dbxPushBucketNum').value = pending.slice(5); document.getElementById('dbxPushBtn').click(); }
+}
+
+window.addEventListener('message', function(event) {
+  if (event.origin !== window.location.origin) return;
+  if (event.data && event.data.dropboxToken) { DBX_TOKEN = event.data.dropboxToken; dbxSetAuthBtn(); dbxResumePending(); }
+});
+
+(async function dbxBoot() {
+  dbxPopulateBucketSelects();
+  await dbxHandleRedirect();
+  dbxSetAuthBtn();
+  if (DBX_TOKEN) dbxResumePending();
+})();
+
+// ── INIT ──
+loadApiKey();
+setTtsEngine(localStorage.getItem('chineseTts_ttsEngine') || 'browser');
+var _ov = localStorage.getItem('chineseTts_openaiVoice'); if (_ov) document.getElementById('openaiVoiceSelect').value = _ov;
+var _ev = localStorage.getItem('chineseTts_elevenVoice'); if (_ev) document.getElementById('elevenVoiceSelect').value = _ev;
+setTtsLang(ttsLang); // sync language select + dialect buttons with saved pref
+if (window.EMBEDDED_CSV_TEXT) {
+  // Standalone file baked by script_csv_to_html.py — data embedded, skip the sheets API
+  document.getElementById('folderName').textContent = window.EMBEDDED_CSV_NAME || 'embedded.csv';
+  loadCsvText(window.EMBEDDED_CSV_TEXT, window.EMBEDDED_CSV_NAME || 'embedded.csv', window.EMBEDDED_COL_MODE || 3);
+  if (window.EMBEDDED_TABLE_VIEW && !tableViewOn) toggleTableView();
+} else {
+  initFromApi();
+}
+</script>
+</body>
+</html>

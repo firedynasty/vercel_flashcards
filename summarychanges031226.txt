@@ -1,0 +1,32 @@
+Summary of Changes - 2026-03-12
+
+/Users/stanleytan/documents/technical/github/vercel_flashcards
+
+1. Dropbox Image Viewer Mode (flashcards.html)
+   - Added IMG dropdown in nav bar that lists subfolders from dropbox:/blob_vercel_replacement/images/
+   - Selecting a folder (e.g. brilliant-1, brilliant-2-harder-subject) loads images and replaces the flashcard view
+   - Prev/Next buttons and arrow keys cycle through images when in image mode
+   - Counter shows current image position (e.g. 1/10)
+   - Red X button exits image mode and returns to flashcards
+   - Click on image toggles between small (50vh) and expanded (90vh) size
+   - Memory-safe: revokes previous objectURL on each image switch
+
+2. 3-State Canvas Expand (flashcards.html)
+   - Expand button now cycles through 3 states instead of 2:
+     - Expand: default small square canvas
+     - Taller: wide (full flashcard width), original height
+     - Shrink: wide + double height, then back to small
+
+3. Music Player Dropbox Integration (music.html)
+   - Added new music.html page with route in vercel.json
+   - DB sign-in button with Dropbox PKCE OAuth flow
+   - DB Playlists dropdown lists subfolders from dropbox:/blob_vercel_replacement/music
+   - Selecting a folder fetches temporary links for audio files and loads them into the player
+   - Hid the hardcoded collection selector (calm_repeat/psalms/worship)
+
+4. Dropbox Lyrics Loader (music.html)
+   - DB Lyrics dropdown in Lyrics Viewer section lists .txt files from dropbox:/blob_vercel_replacement/lyrics
+   - Selecting a file downloads and displays lyrics using the existing formatter
+   - Lines starting with "." are treated as comments and filtered out (hidden from display)
+   - Prev/Next buttons work with DB lyrics when active
+   - Switching between DB lyrics and hardcoded lyrics resets the other selector

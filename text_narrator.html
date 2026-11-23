@@ -802,6 +802,7 @@ const KOKORO_LANG_LABEL = {
 };
 
 function inferVoiceInfo(voice) {
+  if (!voice) return { label: 'Narrator', colorClass: 'voice-narrator', lang: 'en', tooltip: 'narrator' };
   // Try to parse Kokoro naming: <lang><gender>_<name>
   const m = voice.match(/^([a-z])([mf])_(.+)$/);
   if (m) {

@@ -1,0 +1,15 @@
+⏺ That's all three pieces done:
+
+  1. generate_sheets.py — run python generate_sheets.py workbook.xlsx → produces
+   sheets.json, then upload to Dropbox with rclone
+  2. api/sheets.js — proxies DROPBOX_SHEETS_URL, same pattern as the video
+  viewer
+  3. learn-chinese-tts.html — on page load, fetches /api/sheets, populates a
+  dropdown in the sticky bar, auto-selects the first sheet matching "chinese",
+  and loads it. No sign-in needed.
+
+  The Google Sheets sign-in still works as a fallback if you want to load
+  something not in the xlsx. The dropdown sits at the left of the sticky bar so
+  you can switch sheets anytime.
+
+download the xslx from Google Sheets (chinese)

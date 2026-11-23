@@ -1,0 +1,16 @@
+⏺ Now I have the full picture. The changes needed are: title, subtitle, remove  
+  dialect toggle, rename chinese→korean throughout (CSS class, JS variable, DOM 
+  IDs), fix browser TTS lang to ko-KR, swap CJK detection regex for Hangul,     
+  update spreadsheet hint and search default, update export text. I'll do it all
+   in one pass.    i
+from 
+learn-chinese-tts
+
+to learn-korean-tts
+
+
+
+and I adjusted what were called scene headers , the sentences before each vocab pair
+
+
+

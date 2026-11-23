@@ -9,7 +9,8 @@ Usage:
     python generate_sheets.py xlsxs/chinese.xlsx   -> chinese_xlsx/sheets.json
 
 Deploy:
-    rclone copy spanish_xlsx/sheets.json dropbox:/vercel_flashcards/spanish_sheets.json
+    rclone purge dropbox:/vercel_flashcards/spanish_sheets.json  # remove if exists as folder
+    rclone copyto spanish_xlsx/sheets.json dropbox:/vercel_flashcards/spanish_sheets.json
     rclone link dropbox:/vercel_flashcards/spanish_sheets.json
     # Then update Vercel with the link (append &raw=1):
     vercel env rm DROPBOX_SHEETS_SPANISH_URL production -y
@@ -53,7 +54,8 @@ def main():
     print(f"{out_path} written — {len(out)} sheet(s): {', '.join(out.keys())}")
     print()
     print("Deploy commands:")
-    print(f"  rclone copy {out_path} dropbox:/vercel_flashcards/{basename}_sheets.json")
+    print(f"  rclone purge dropbox:/vercel_flashcards/{basename}_sheets.json  # remove if exists as folder")
+    print(f"  rclone copyto {out_path} dropbox:/vercel_flashcards/{basename}_sheets.json")
     print(f"  rclone link dropbox:/vercel_flashcards/{basename}_sheets.json")
     print(f"  vercel env rm DROPBOX_SHEETS_{lang}_URL production -y")
     print(f'  echo "<LINK>&raw=1" | vercel env add DROPBOX_SHEETS_{lang}_URL production')
