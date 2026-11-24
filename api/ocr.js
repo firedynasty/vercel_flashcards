@@ -22,8 +22,8 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: 'Invalid access code' });
   }
 
-  // If GEMINI_API_KEY is set, use Gemini (OCR_MODEL: gemini-3.8-flash [default]
-  // or gemini-3.8-flash-lite). Otherwise fall back to OpenAI as before.
+  // If GEMINI_API_KEY is set, use Gemini (OCR_MODEL: gemini-3.5-flash-lite [default],
+  // or gemini-3.8-flash for better handwriting accuracy). Otherwise fall back to OpenAI as before.
   const geminiKey = process.env.GEMINI_API_KEY;
   const apiKey = process.env.OPENAI_API_KEY;
   if (!geminiKey && !apiKey) {
@@ -40,7 +40,7 @@ export default async function handler(req, res) {
 
   if (geminiKey) {
     try {
-      const model = process.env.OCR_MODEL || 'gemini-3.8-flash';
+      const model = process.env.OCR_MODEL || 'gemini-3.5-flash-lite';
       const response = await fetch(
         'https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(model) + ':generateContent',
         {
