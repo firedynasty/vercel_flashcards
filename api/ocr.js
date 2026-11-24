@@ -52,17 +52,21 @@ export default async function handler(req, res) {
           }),
         }
       );
-      if (!response.ok) {
+      if (response.ok) {
+        const data = await response.json();
+        const raw = (data.candidates?.[0]?.content?.parts || []).map(p => p.text || '').join('');
+        return res.status(200).json({ text: raw.split(/\s+/).join(' ').trim() });
+      }
+      // Rate-limited (e.g. free-tier daily cap): fall through to OpenAI if configured.
+      if (!(response.status === 429 && apiKey)) {
         const errData = await response.json().catch(() => ({}));
         return res.status(response.status).json({ error: errData.error?.message || 'Gemini request failed' });
       }
-      const data = await response.json();
-      const raw = (data.candidates?.[0]?.content?.parts || []).map(p => p.text || '').join('');
-      return res.status(200).json({ text: raw.split(/\s+/).join(' ').trim() });
     } catch (err) {
-      return res.status(500).json({ error: 'OCR request failed: ' + err.message });
+      if (!apiKey) return res.status(500).json({ error: 'OCR request failed: ' + err.message });
     }
   }
+  if (!apiKey) return res.status(500).json({ error: 'OPENAI_API_KEY not configured on server' });
 
   try {
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
