@@ -190,6 +190,7 @@
         <button style="display:none;" class="ml-2 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold bg-amber-500 text-white hover:bg-amber-600" id="notesBtn" title="Open notes (synced to Dropbox)">save *</button>
         <button class="ml-2 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700" id="ocrBtn" title="Extract text (English) — asks canvas or image if one is loaded">OCR</button>
         <button class="ml-2 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700" id="ocrChinBtn" title="Extract text (Chinese) — asks canvas or image if one is loaded">中文</button>
+        <button class="ml-2 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold bg-slate-600 text-white hover:bg-slate-700" id="ocrModelBtn" title="Choose the OCR model">Model: Auto</button>
         <button style="display:none;" class="ml-2 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700" id="txtNotesBtn" title="Open text notes (synced to Dropbox)">Notes</button>
         <button class="ml-2 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-700" id="gnSignInBtn" title="Sign in with Google">G Sign In</button>
         <button class="ml-2 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold bg-indigo-500 text-white hover:bg-indigo-600 disabled:opacity-50" id="gnRecentBtn" disabled title="Pick a recent Google Doc">Recent ▾</button>
@@ -205,6 +206,15 @@
          z-index) that extends below it. position:fixed here, with its screen
          coordinates set from gnRecentBtn's own rect in JS, escapes that clip. -->
     <div id="gnRecentDropdown" hidden style="position:fixed; z-index:500; background:#1e293b; border:1px solid #334155; border-radius:8px; box-shadow:0 4px 14px rgba(0,0,0,0.35); min-width:220px; max-width:320px; max-height:240px; overflow-y:auto;"></div>
+
+    <!-- OCR model picker -->
+    <div id="ocrModelOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.72); z-index:320; align-items:center; justify-content:center; padding:20px;">
+      <div style="background:#1e293b; border-radius:16px; width:100%; max-width:340px; padding:20px; display:flex; flex-direction:column; gap:10px;">
+        <span style="color:#a8d8ea; font-weight:700; font-size:1rem;">OCR model</span>
+        <div id="ocrModelOptions" style="display:flex; flex-direction:column; gap:8px;"></div>
+        <button id="ocrModelCloseBtn" style="padding:10px 0; font-size:13px; border:none; border-radius:8px; background:#334155; color:#e2e8f0; cursor:pointer;">Close</button>
+      </div>
+    </div>
 
     <!-- OCR source picker: asks "canvas or loaded image?" before running OCR.
          Only shown when a reference image is actually loaded — otherwise
@@ -1339,21 +1349,120 @@
         // with a message suitable to show directly to the user. On an
         // invalid access code (401), also clears it so the next attempt
         // re-prompts instead of failing silently forever.
-        async function ocrExtractText(base64, chinese, accessCode) {
-            const resp = await fetch('/api/ocr', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ accessCode, imageBase64: base64, chinese }),
+        // OCR model choice, remembered. 'auto' = Gemini → Ollama → OpenAI.
+        const OCR_MODELS = [
+            { id: 'auto',        label: 'Auto',                 sub: 'Gemini → Ollama → OpenAI' },
+            { id: 'gemini-lite', label: 'Gemini 3.5 Flash-Lite', sub: 'cheapest, fastest' },
+            { id: 'gemini-flash',label: 'Gemini 3.8 Flash',      sub: 'better on messy handwriting' },
+            { id: 'ollama',      label: 'Ollama gemma3:27b',     sub: 'local, needs Ollama reachable' },
+            { id: 'openai',      label: 'OpenAI gpt-4o-mini',    sub: 'paid' },
+        ];
+        const GEMINI_IDS = { 'gemini-lite': 'gemini-3.5-flash-lite', 'gemini-flash': 'gemini-3.8-flash' };
+        function ocrModelChoice() {
+            const v = localStorage.getItem('ocr-model-choice');
+            return OCR_MODELS.some(m => m.id === v) ? v : 'auto';
+        }
+        function ocrModelRefresh() {
+            const cur = ocrModelChoice();
+            document.getElementById('ocrModelBtn').textContent = 'Model: ' + OCR_MODELS.find(m => m.id === cur).label.replace(/^Gemini /, 'G ').replace(/^OpenAI.*/, 'OpenAI').replace(/^Ollama.*/, 'Ollama');
+            const box = document.getElementById('ocrModelOptions');
+            box.innerHTML = '';
+            OCR_MODELS.forEach(m => {
+                const b = document.createElement('button');
+                const on = m.id === cur;
+                b.style.cssText = 'text-align:left; padding:10px 12px; border:2px solid ' + (on ? '#60a5fa' : 'transparent') + '; border-radius:8px; background:' + (on ? '#1d4ed8' : '#334155') + '; color:#fff; cursor:pointer;';
+                b.innerHTML = '<div style="font-weight:600; font-size:14px;"></div><div style="font-size:11px; color:#cbd5e1;"></div>';
+                b.children[0].textContent = (on ? '✓ ' : '') + m.label;
+                b.children[1].textContent = m.sub;
+                b.addEventListener('click', () => {
+                    localStorage.setItem('ocr-model-choice', m.id);
+                    ocrModelRefresh();
+                    document.getElementById('ocrModelOverlay').style.display = 'none';
+                });
+                box.appendChild(b);
             });
-            const data = await resp.json();
-            if (!resp.ok) {
+        }
+        document.getElementById('ocrModelBtn').addEventListener('click', () => {
+            ocrModelRefresh();
+            document.getElementById('ocrModelOverlay').style.display = 'flex';
+        });
+        document.getElementById('ocrModelCloseBtn').addEventListener('click', () => {
+            document.getElementById('ocrModelOverlay').style.display = 'none';
+        });
+        ocrModelRefresh();
+
+        async function ocrExtractText(base64, chinese, accessCode) {
+            const call = async (extra) => {
+                const resp = await fetch('/api/ocr', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(Object.assign({ accessCode, imageBase64: base64, chinese }, extra)),
+                });
+                const data = await resp.json().catch(() => ({}));
                 if (resp.status === 401) {
                     localStorage.removeItem('ocr-access-code');
                     throw new Error('Invalid access code — cleared, try again.');
                 }
-                throw new Error(data.error || 'Request failed');
+                return { ok: resp.ok, data };
+            };
+            const choice = ocrModelChoice();
+            const fail = (r) => { throw new Error(r.data.error || 'Request failed'); };
+
+            if (choice === 'openai') {
+                const o = await call({ provider: 'openai' });
+                if (!o.ok) fail(o);
+                return o.data.text || '';
             }
-            return data.text || '';
+            if (choice === 'ollama') {
+                const t = await ocrViaOllama(base64, chinese);
+                if (t === null) throw new Error('Ollama not reachable (check it is running and OLLAMA_ORIGINS allows this site)');
+                return t;
+            }
+            // 1) Gemini (server). On failure the server answers { fallback: true }.
+            const g = await call({ chain: true, geminiModel: GEMINI_IDS[choice] });
+            if (g.ok) return g.data.text || '';
+            if (choice !== 'auto' || !g.data.fallback) fail(g);
+            // 2) Ollama (this computer / Mac Studio), straight from the browser.
+            try {
+                const t = await ocrViaOllama(base64, chinese);
+                if (t !== null) return t;
+            } catch (e) { console.warn('Ollama OCR failed:', e); }
+            // 3) OpenAI (server).
+            const o = await call({ provider: 'openai' });
+            if (!o.ok) fail(o);
+            return o.data.text || '';
+        }
+
+        // Vision model on Ollama. Tries the Mac Studio, then localhost. Returns
+        // the text, or null if no host is reachable (caller moves on to OpenAI).
+        // The Vercel site needs OLLAMA_ORIGINS to allow it, and the browser only
+        // lets an https page reach http://localhost (not http://…local hosts).
+        const OCR_OLLAMA_HOSTS = ['http://Stanleys-Mac-Studio.local:11434', 'http://localhost:11434'];
+        const OCR_OLLAMA_MODEL = 'gemma3:27b';
+        async function ocrViaOllama(base64, chinese) {
+            const prompt = chinese
+                ? 'This is an image of handwritten Chinese notes written with a stylus on a canvas. Transcribe all the Chinese characters exactly. If a character is ambiguous, infer the most likely character from context. Preserve line breaks. Output only the transcribed text, nothing else.'
+                : 'This is an image of handwritten notes written with a stylus on a canvas. Transcribe all the text. If a transcribed word is not a real English word, correct it to the closest real word that fits the context — for example "decribe" should become "describe", "specifility" should become "specificity". Preserve line breaks. Output only the transcribed text, nothing else.';
+            for (const host of OCR_OLLAMA_HOSTS) {
+                try {
+                    const tags = await fetch(host + '/api/tags', { signal: AbortSignal.timeout(3000) });
+                    if (!tags.ok) continue;
+                    const r = await fetch(host + '/api/chat', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        signal: AbortSignal.timeout(120000),
+                        body: JSON.stringify({
+                            model: OCR_OLLAMA_MODEL,
+                            stream: false,
+                            messages: [{ role: 'user', content: prompt, images: [base64] }],
+                        }),
+                    });
+                    if (!r.ok) continue;
+                    const raw = (await r.json()).message?.content || '';
+                    return raw.split(/\s+/).join(' ').trim();
+                } catch (e) { /* unreachable or blocked: try the next host */ }
+            }
+            return null;
         }
 
         async function ocrRun(chinese) {

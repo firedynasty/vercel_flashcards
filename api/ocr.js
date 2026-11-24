@@ -11,7 +11,10 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { accessCode, imageBase64, chinese } = req.body;
+  // provider: 'openai' skips Gemini. chain: true means the caller (imageNotes) has
+  // its own next fallback (browser -> Ollama -> OpenAI), so on a Gemini failure
+  // return { error, fallback: true } instead of falling back to OpenAI here.
+  const { accessCode, imageBase64, chinese, provider, chain, geminiModel } = req.body;
 
   if (!accessCode) {
     return res.status(400).json({ error: 'Access code required' });
@@ -38,9 +41,12 @@ export default async function handler(req, res) {
     ? 'This is an image of handwritten Chinese notes written with a stylus on a canvas. Transcribe all the Chinese characters exactly. If a character is ambiguous, infer the most likely character from context. Preserve line breaks. Output only the transcribed text, nothing else.'
     : 'This is an image of handwritten notes written with a stylus on a canvas. Transcribe all the text. If a transcribed word is not a real English word, correct it to the closest real word that fits the context — for example "decribe" should become "describe", "specifility" should become "specificity". Preserve line breaks. Output only the transcribed text, nothing else.';
 
-  if (geminiKey) {
+  if (chain && !geminiKey) return res.status(503).json({ error: 'GEMINI_API_KEY not configured', fallback: true });
+
+  if (geminiKey && provider !== 'openai') {
     try {
-      const model = process.env.OCR_MODEL || 'gemini-3.5-flash-lite';
+      const ALLOWED = ['gemini-3.5-flash-lite', 'gemini-3.8-flash'];
+      const model = ALLOWED.includes(geminiModel) ? geminiModel : (process.env.OCR_MODEL || 'gemini-3.5-flash-lite');
       const response = await fetch(
         'https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(model) + ':generateContent',
         {
@@ -58,11 +64,12 @@ export default async function handler(req, res) {
         return res.status(200).json({ text: raw.split(/\s+/).join(' ').trim() });
       }
       // Rate-limited (e.g. free-tier daily cap): fall through to OpenAI if configured.
-      if (!(response.status === 429 && apiKey)) {
+      if (chain || !(response.status === 429 && apiKey)) {
         const errData = await response.json().catch(() => ({}));
-        return res.status(response.status).json({ error: errData.error?.message || 'Gemini request failed' });
+        return res.status(response.status).json({ error: errData.error?.message || 'Gemini request failed', fallback: !!chain });
       }
     } catch (err) {
+      if (chain) return res.status(502).json({ error: 'Gemini request failed: ' + err.message, fallback: true });
       if (!apiKey) return res.status(500).json({ error: 'OCR request failed: ' + err.message });
     }
   }
