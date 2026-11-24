@@ -1354,7 +1354,7 @@
             { id: 'auto',        label: 'Auto',                 sub: 'Gemini → Ollama → OpenAI' },
             { id: 'gemini-lite', label: 'Gemini 3.5 Flash-Lite', sub: 'cheapest, fastest' },
             { id: 'gemini-flash',label: 'Gemini 3.8 Flash',      sub: 'better on messy handwriting' },
-            { id: 'ollama',      label: 'Ollama gemma3:27b',     sub: 'local, needs Ollama reachable' },
+            { id: 'ollama',      label: 'Ollama Gemma',          sub: 'gemma4:26b (Studio) or gemma4:e4b (laptop)' },
             { id: 'openai',      label: 'OpenAI gpt-4o-mini',    sub: 'paid' },
         ];
         const GEMINI_IDS = { 'gemini-lite': 'gemini-3.5-flash-lite', 'gemini-flash': 'gemini-3.8-flash' };
@@ -1438,7 +1438,8 @@
         // The Vercel site needs OLLAMA_ORIGINS to allow it, and the browser only
         // lets an https page reach http://localhost (not http://…local hosts).
         const OCR_OLLAMA_HOSTS = ['http://Stanleys-Mac-Studio.local:11434', 'http://localhost:11434'];
-        const OCR_OLLAMA_MODEL = 'gemma3:27b';
+        // First of these that a host has installed is used (Studio: gemma4:26b, laptop: gemma4:e4b).
+        const OCR_OLLAMA_MODELS = ['gemma4:26b', 'gemma3:27b', 'gemma4:e4b'];
         async function ocrViaOllama(base64, chinese) {
             const prompt = chinese
                 ? 'This is an image of handwritten Chinese notes written with a stylus on a canvas. Transcribe all the Chinese characters exactly. If a character is ambiguous, infer the most likely character from context. Preserve line breaks. Output only the transcribed text, nothing else.'
@@ -1447,12 +1448,15 @@
                 try {
                     const tags = await fetch(host + '/api/tags', { signal: AbortSignal.timeout(3000) });
                     if (!tags.ok) continue;
+                    const have = ((await tags.json()).models || []).map(m => m.name);
+                    const model = OCR_OLLAMA_MODELS.find(w => have.includes(w) || have.includes(w + ':latest'));
+                    if (!model) continue;
                     const r = await fetch(host + '/api/chat', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         signal: AbortSignal.timeout(120000),
                         body: JSON.stringify({
-                            model: OCR_OLLAMA_MODEL,
+                            model,
                             stream: false,
                             messages: [{ role: 'user', content: prompt, images: [base64] }],
                         }),
