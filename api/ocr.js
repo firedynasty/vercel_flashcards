@@ -11,10 +11,11 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // provider: 'openai' skips Gemini. chain: true means the caller (imageNotes) has
-  // its own next fallback (browser -> Ollama -> OpenAI), so on a Gemini failure
-  // return { error, fallback: true } instead of falling back to OpenAI here.
-  const { accessCode, imageBase64, chinese, provider, chain, geminiModel } = req.body;
+  // provider: 'auto' (default) tries Gemini -> Ollama -> OpenAI; 'gemini', 'ollama'
+  // or 'openai' use just that one. Ollama is only used when OLLAMA_URL is set
+  // (the local server, ocr_server.mjs, sets it); on Vercel it is skipped.
+  const { accessCode, imageBase64, chinese, geminiModel } = req.body;
+  const provider = ['gemini', 'ollama', 'openai'].includes(req.body.provider) ? req.body.provider : 'auto';
 
   if (!accessCode) {
     return res.status(400).json({ error: 'Access code required' });
@@ -25,29 +26,31 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: 'Invalid access code' });
   }
 
-  // If GEMINI_API_KEY is set, use Gemini (OCR_MODEL: gemini-3.5-flash-lite [default],
-  // or gemini-3.8-flash for better handwriting accuracy). Otherwise fall back to OpenAI as before.
-  const geminiKey = process.env.GEMINI_API_KEY;
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!geminiKey && !apiKey) {
-    return res.status(500).json({ error: 'Neither GEMINI_API_KEY nor OPENAI_API_KEY configured on server' });
-  }
-
   if (!imageBase64) {
     return res.status(400).json({ error: 'Missing imageBase64' });
   }
 
+  const geminiKey = process.env.GEMINI_API_KEY;
+  const openaiKey = process.env.OPENAI_API_KEY;
+  const ollamaUrl = (process.env.OLLAMA_URL || '').replace(/\/$/, '');
+
   const prompt = chinese
     ? 'This is an image of handwritten Chinese notes written with a stylus on a canvas. Transcribe all the Chinese characters exactly. If a character is ambiguous, infer the most likely character from context. Preserve line breaks. Output only the transcribed text, nothing else.'
     : 'This is an image of handwritten notes written with a stylus on a canvas. Transcribe all the text. If a transcribed word is not a real English word, correct it to the closest real word that fits the context — for example "decribe" should become "describe", "specifility" should become "specificity". Preserve line breaks. Output only the transcribed text, nothing else.';
+  const tidy = (raw) => String(raw || '').split(/\s+/).join(' ').trim();
 
-  if (chain && !geminiKey) return res.status(503).json({ error: 'GEMINI_API_KEY not configured', fallback: true });
+  async function errMsg(label, response) {
+    const d = await response.json().catch(() => ({}));
+    return label + ': ' + (d.error?.message || d.error || ('HTTP ' + response.status));
+  }
 
-  if (geminiKey && provider !== 'openai') {
-    try {
+  // Each step returns text or throws an Error whose message is shown to the user.
+  const steps = {
+    async gemini() {
+      if (!geminiKey) throw new Error('Gemini: GEMINI_API_KEY not configured');
       const ALLOWED = ['gemini-3.5-flash-lite', 'gemini-3.8-flash'];
       const model = ALLOWED.includes(geminiModel) ? geminiModel : (process.env.OCR_MODEL || 'gemini-3.5-flash-lite');
-      const response = await fetch(
+      const r = await fetch(
         'https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(model) + ':generateContent',
         {
           method: 'POST',
@@ -58,61 +61,61 @@ export default async function handler(req, res) {
           }),
         }
       );
-      if (response.ok) {
-        const data = await response.json();
-        const raw = (data.candidates?.[0]?.content?.parts || []).map(p => p.text || '').join('');
-        return res.status(200).json({ text: raw.split(/\s+/).join(' ').trim() });
-      }
-      // Rate-limited (e.g. free-tier daily cap): fall through to OpenAI if configured.
-      if (chain || !(response.status === 429 && apiKey)) {
-        const errData = await response.json().catch(() => ({}));
-        return res.status(response.status).json({ error: errData.error?.message || 'Gemini request failed', fallback: !!chain });
-      }
-    } catch (err) {
-      if (chain) return res.status(502).json({ error: 'Gemini request failed: ' + err.message, fallback: true });
-      if (!apiKey) return res.status(500).json({ error: 'OCR request failed: ' + err.message });
+      if (!r.ok) throw new Error(await errMsg('Gemini', r));
+      const data = await r.json();
+      return tidy((data.candidates?.[0]?.content?.parts || []).map(p => p.text || '').join(''));
+    },
+
+    async ollama() {
+      if (!ollamaUrl) throw new Error('Ollama: not available here (only via the local server, npm run ocr)');
+      const t = await fetch(ollamaUrl + '/api/tags', { signal: AbortSignal.timeout(3000) })
+        .catch(() => { throw new Error('Ollama: Mac Studio not reachable at ' + ollamaUrl); });
+      if (!t.ok) throw new Error('Ollama: tags HTTP ' + t.status);
+      const have = ((await t.json()).models || []).map(m => m.name);
+      const wanted = process.env.OLLAMA_MODEL ? [process.env.OLLAMA_MODEL] : ['gemma4:26b', 'gemma3:27b'];
+      const model = wanted.find(w => have.includes(w) || have.includes(w + ':latest'));
+      if (!model) throw new Error('Ollama: none of ' + wanted.join(', ') + ' installed on the Studio');
+      const r = await fetch(ollamaUrl + '/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: AbortSignal.timeout(120000),
+        body: JSON.stringify({ model, stream: false, think: false, keep_alive: '30m', messages: [{ role: 'user', content: prompt, images: [imageBase64] }] }),
+      });
+      if (!r.ok) throw new Error('Ollama (' + model + '): ' + (await r.text()).slice(0, 200));
+      return tidy((await r.json()).message?.content);
+    },
+
+    async openai() {
+      if (!openaiKey) throw new Error('OpenAI: OPENAI_API_KEY not configured');
+      const r = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + openaiKey },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          max_tokens: 4096,
+          messages: [{ role: 'user', content: [
+            { type: 'image_url', image_url: { url: 'data:image/png;base64,' + imageBase64 } },
+            { type: 'text', text: prompt },
+          ] }],
+        }),
+      });
+      if (!r.ok) throw new Error(await errMsg('OpenAI', r));
+      return tidy((await r.json()).choices?.[0]?.message?.content);
+    },
+  };
+
+  const order = provider === 'auto'
+    ? ['gemini', ...(ollamaUrl ? ['ollama'] : []), 'openai'].filter(n => n !== 'gemini' || geminiKey)
+    : [provider];
+
+  const errors = [];
+  for (const name of order) {
+    try {
+      const text = await steps[name]();
+      return res.status(200).json({ text, provider: name });
+    } catch (e) {
+      errors.push(e.message || String(e));
     }
   }
-  if (!apiKey) return res.status(500).json({ error: 'OPENAI_API_KEY not configured on server' });
-
-  try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + apiKey,
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        max_tokens: 4096,
-        messages: [{
-          role: 'user',
-          content: [
-            {
-              type: 'image_url',
-              image_url: { url: 'data:image/png;base64,' + imageBase64 },
-            },
-            {
-              type: 'text',
-              text: chinese
-                ? 'This is an image of handwritten Chinese notes written with a stylus on a canvas. Transcribe all the Chinese characters exactly. If a character is ambiguous, infer the most likely character from context. Preserve line breaks. Output only the transcribed text, nothing else.'
-                : 'This is an image of handwritten notes written with a stylus on a canvas. Transcribe all the text. If a transcribed word is not a real English word, correct it to the closest real word that fits the context — for example "decribe" should become "describe", "specifility" should become "specificity". Preserve line breaks. Output only the transcribed text, nothing else.',
-            },
-          ],
-        }],
-      }),
-    });
-
-    if (!response.ok) {
-      const errData = await response.json().catch(() => ({}));
-      return res.status(response.status).json({ error: errData.error?.message || 'OpenAI request failed' });
-    }
-
-    const data = await response.json();
-    const raw = data.choices?.[0]?.message?.content || '';
-    const text = raw.split(/\s+/).join(' ').trim();
-    return res.status(200).json({ text });
-  } catch (err) {
-    return res.status(500).json({ error: 'OCR request failed: ' + err.message });
-  }
+  return res.status(502).json({ error: errors.join(' → ') });
 }

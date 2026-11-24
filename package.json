@@ -4,7 +4,8 @@
   "description": "Language flashcards app with Vercel Blob storage",
   "scripts": {
     "start": "npx serve .",
-    "dev": "npx serve ."
+    "dev": "npx serve .",
+    "ocr": "node ocr_server.mjs"
   },
   "dependencies": {
     "@vercel/blob": "^0.23.0"

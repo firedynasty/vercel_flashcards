@@ -1354,7 +1354,7 @@
             { id: 'auto',        label: 'Auto',                 sub: 'Gemini → Ollama → OpenAI' },
             { id: 'gemini-lite', label: 'Gemini 3.5 Flash-Lite', sub: 'cheapest, fastest' },
             { id: 'gemini-flash',label: 'Gemini 3.8 Flash',      sub: 'better on messy handwriting' },
-            { id: 'ollama',      label: 'Ollama Gemma',          sub: 'gemma4:26b (Studio) or gemma4:e4b (laptop)' },
+            { id: 'ollama',      label: 'Ollama (Mac Studio)',          sub: 'Mac Studio gemma4:26b — only via npm run ocr' },
             { id: 'openai',      label: 'OpenAI gpt-4o-mini',    sub: 'paid' },
         ];
         const GEMINI_IDS = { 'gemini-lite': 'gemini-3.5-flash-lite', 'gemini-flash': 'gemini-3.8-flash' };
@@ -1391,82 +1391,41 @@
         });
         ocrModelRefresh();
 
-        async function ocrExtractText(base64, chinese, accessCode) {
-            const call = async (extra) => {
-                const resp = await fetch('/api/ocr', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(Object.assign({ accessCode, imageBase64: base64, chinese }, extra)),
-                });
-                const data = await resp.json().catch(() => ({}));
-                if (resp.status === 401) {
-                    localStorage.removeItem('ocr-access-code');
-                    throw new Error('Invalid access code — cleared, try again.');
-                }
-                return { ok: resp.ok, data };
-            };
-            const choice = ocrModelChoice();
-            const fail = (r) => { throw new Error(r.data.error || 'Request failed'); };
-
-            if (choice === 'openai') {
-                const o = await call({ provider: 'openai' });
-                if (!o.ok) fail(o);
-                return o.data.text || '';
-            }
-            if (choice === 'ollama') {
-                const t = await ocrViaOllama(base64, chinese);
-                if (t === null) throw new Error('Ollama not reachable (check it is running and OLLAMA_ORIGINS allows this site)');
-                return t;
-            }
-            // 1) Gemini (server). On failure the server answers { fallback: true }.
-            const g = await call({ chain: true, geminiModel: GEMINI_IDS[choice] });
-            if (g.ok) return g.data.text || '';
-            if (choice !== 'auto' || !g.data.fallback) fail(g);
-            // 2) Ollama (this computer / Mac Studio), straight from the browser.
-            try {
-                const t = await ocrViaOllama(base64, chinese);
-                if (t !== null) return t;
-            } catch (e) { console.warn('Ollama OCR failed:', e); }
-            // 3) OpenAI (server).
-            const o = await call({ provider: 'openai' });
-            if (!o.ok) fail(o);
-            return o.data.text || '';
+        // Downscales a base64 PNG so its long side is at most maxSide px. Smaller
+        // images encode and transcribe faster with little loss on handwriting.
+        function ocrShrink(base64, maxSide) {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.onload = () => {
+                    const k = Math.min(1, maxSide / Math.max(img.naturalWidth, img.naturalHeight));
+                    if (k >= 1) { resolve(base64); return; }
+                    const c = document.createElement('canvas');
+                    c.width = Math.round(img.naturalWidth * k);
+                    c.height = Math.round(img.naturalHeight * k);
+                    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+                    resolve(c.toDataURL('image/png').split(',')[1]);
+                };
+                img.onerror = () => resolve(base64);
+                img.src = 'data:image/png;base64,' + base64;
+            });
         }
 
-        // Vision model on Ollama. Tries the Mac Studio, then localhost. Returns
-        // the text, or null if no host is reachable (caller moves on to OpenAI).
-        // The Vercel site needs OLLAMA_ORIGINS to allow it, and the browser only
-        // lets an https page reach http://localhost (not http://…local hosts).
-        const OCR_OLLAMA_HOSTS = ['http://Stanleys-Mac-Studio.local:11434', 'http://localhost:11434'];
-        // First of these that a host has installed is used (Studio: gemma4:26b, laptop: gemma4:e4b).
-        const OCR_OLLAMA_MODELS = ['gemma4:26b', 'gemma3:27b', 'gemma4:e4b'];
-        async function ocrViaOllama(base64, chinese) {
-            const prompt = chinese
-                ? 'This is an image of handwritten Chinese notes written with a stylus on a canvas. Transcribe all the Chinese characters exactly. If a character is ambiguous, infer the most likely character from context. Preserve line breaks. Output only the transcribed text, nothing else.'
-                : 'This is an image of handwritten notes written with a stylus on a canvas. Transcribe all the text. If a transcribed word is not a real English word, correct it to the closest real word that fits the context — for example "decribe" should become "describe", "specifility" should become "specificity". Preserve line breaks. Output only the transcribed text, nothing else.';
-            for (const host of OCR_OLLAMA_HOSTS) {
-                try {
-                    const tags = await fetch(host + '/api/tags', { signal: AbortSignal.timeout(3000) });
-                    if (!tags.ok) continue;
-                    const have = ((await tags.json()).models || []).map(m => m.name);
-                    const model = OCR_OLLAMA_MODELS.find(w => have.includes(w) || have.includes(w + ':latest'));
-                    if (!model) continue;
-                    const r = await fetch(host + '/api/chat', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        signal: AbortSignal.timeout(120000),
-                        body: JSON.stringify({
-                            model,
-                            stream: false,
-                            messages: [{ role: 'user', content: prompt, images: [base64] }],
-                        }),
-                    });
-                    if (!r.ok) continue;
-                    const raw = (await r.json()).message?.content || '';
-                    return raw.split(/\s+/).join(' ').trim();
-                } catch (e) { /* unreachable or blocked: try the next host */ }
+        async function ocrExtractText(base64, chinese, accessCode) {
+            base64 = await ocrShrink(base64, 1400);
+            const choice = ocrModelChoice();
+            const provider = choice.startsWith('gemini') ? 'gemini' : choice;   // auto | gemini | ollama | openai
+            const resp = await fetch('/api/ocr', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ accessCode, imageBase64: base64, chinese, provider, geminiModel: GEMINI_IDS[choice] }),
+            });
+            const data = await resp.json().catch(() => ({}));
+            if (resp.status === 401) {
+                localStorage.removeItem('ocr-access-code');
+                throw new Error('Invalid access code — cleared, try again.');
             }
-            return null;
+            if (!resp.ok) throw new Error(data.error || 'Request failed');
+            return data.text || '';
         }
 
         async function ocrRun(chinese) {
