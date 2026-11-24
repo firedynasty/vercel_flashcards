@@ -1,0 +1,1706 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+  <title>Quiz Chat</title>
+  <style>
+    /* ==========================================================================
+       CSS VARIABLES & THEME (Light & Dark via prefers-color-scheme)
+       ========================================================================== */
+    :root {
+      --bg-color: #f8fafc;
+      --surface-color: #ffffff;
+      --surface-subtle: #f1f5f9;
+      --border-color: #cbd5e1;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --primary-active: #1e40af;
+      --primary-text: #ffffff;
+      --bubble-ai: #f1f5f9;
+      --bubble-ai-border: #e2e8f0;
+      --bubble-ai-text: #1e293b;
+      --bubble-user: #2563eb;
+      --bubble-user-text: #ffffff;
+      --danger: #dc2626;
+      --danger-hover: #b91c1c;
+      --danger-text: #ffffff;
+      --warning-bg: #fffbeb;
+      --warning-border: #fde68a;
+      --warning-text: #92400e;
+      --status-online: #16a34a;
+      --status-offline: #dc2626;
+      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg-color: #0b0f19;
+        --surface-color: #151d30;
+        --surface-subtle: #1e293b;
+        --border-color: #334155;
+        --text-main: #f8fafc;
+        --text-muted: #94a3b8;
+        --primary: #3b82f6;
+        --primary-hover: #2563eb;
+        --primary-active: #1d4ed8;
+        --primary-text: #ffffff;
+        --bubble-ai: #1e293b;
+        --bubble-ai-border: #2c3a52;
+        --bubble-ai-text: #f1f5f9;
+        --bubble-user: #2563eb;
+        --bubble-user-text: #ffffff;
+        --danger: #ef4444;
+        --danger-hover: #dc2626;
+        --danger-text: #ffffff;
+        --warning-bg: #2d2105;
+        --warning-border: #78350f;
+        --warning-text: #fde68a;
+        --status-online: #22c55e;
+        --status-offline: #ef4444;
+        --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.3);
+        --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
+      }
+    }
+
+    /* ==========================================================================
+       MOBILE-FIRST RESET & TYPOGRAPHY (Samsung Fold Cover Screen Ready)
+       ========================================================================== */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      height: 100%;
+      width: 100%;
+      overflow-x: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Helvetica Neue", Arial, sans-serif;
+      font-size: 16px; /* Must be >=16px to prevent mobile auto-zoom */
+      line-height: 1.5;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+    }
+
+    button, input, select, textarea {
+      font-family: inherit;
+      font-size: 16px; /* Avoid auto-zoom on mobile focus */
+      color: inherit;
+    }
+
+    /* Touch-friendly buttons (minimum 44px tall) */
+    .btn {
+      min-height: 44px;
+      padding: 10px 16px;
+      border-radius: 8px;
+      border: 1px solid transparent;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      user-select: none;
+      transition: background-color 0.15s ease, opacity 0.15s ease, transform 0.05s ease;
+      touch-action: manipulation;
+    }
+
+    .btn:active:not(:disabled) {
+      transform: scale(0.98);
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-primary {
+      background-color: var(--primary);
+      color: var(--primary-text);
+    }
+    .btn-primary:hover:not(:disabled) {
+      background-color: var(--primary-hover);
+    }
+
+    .btn-secondary {
+      background-color: var(--surface-subtle);
+      color: var(--text-main);
+      border-color: var(--border-color);
+    }
+    .btn-secondary:hover:not(:disabled) {
+      background-color: var(--border-color);
+    }
+
+    .btn-danger {
+      background-color: var(--danger);
+      color: var(--danger-text);
+    }
+    .btn-danger:hover:not(:disabled) {
+      background-color: var(--danger-hover);
+    }
+
+    .btn-icon {
+      width: 44px;
+      height: 44px;
+      padding: 0;
+      border-radius: 8px;
+      background: transparent;
+      border: none;
+      font-size: 20px;
+      color: var(--text-muted);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .btn-icon:hover {
+      background: var(--surface-subtle);
+      color: var(--text-main);
+    }
+
+    /* ==========================================================================
+       MAIN APP LAYOUT
+       ========================================================================== */
+    #appContainer {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      height: 100dvh; /* Dynamic viewport height for mobile keyboards */
+      max-width: 820px;
+      margin: 0 auto;
+      position: relative;
+      background-color: var(--surface-color);
+      box-shadow: var(--shadow-sm);
+    }
+
+    /* Top Bar */
+    header {
+      min-height: 54px;
+      padding: 6px 14px;
+      background-color: var(--surface-color);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-shrink: 0;
+      z-index: 10;
+    }
+
+    .header-info {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .header-title {
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      line-height: 1.2;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--text-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: var(--text-muted);
+      flex-shrink: 0;
+    }
+    .status-dot.online { background-color: var(--status-online); }
+    .status-dot.offline { background-color: var(--status-offline); }
+
+    /* Views */
+    .view-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    /* ==========================================================================
+       SETUP VIEW
+       ========================================================================== */
+    #setupView {
+      padding: 16px;
+      overflow-y: auto;
+      gap: 14px;
+    }
+
+    .setup-instructions {
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+
+    .paste-box {
+      width: 100%;
+      min-height: 240px;
+      flex: 1;
+      padding: 12px 14px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      background-color: var(--surface-subtle);
+      color: var(--text-main);
+      resize: vertical;
+      line-height: 1.5;
+    }
+    .paste-box:focus {
+      outline: 2px solid var(--primary);
+      border-color: transparent;
+      background-color: var(--surface-color);
+    }
+
+    .counter-bar {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .warning-box {
+      padding: 10px 14px;
+      border-radius: 8px;
+      background-color: var(--warning-bg);
+      border: 1px solid var(--warning-border);
+      color: var(--warning-text);
+      font-size: 13px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .warning-box .btn {
+      align-self: flex-start;
+      min-height: 36px;
+      padding: 6px 12px;
+      font-size: 13px;
+    }
+
+    /* ==========================================================================
+       CHAT VIEW
+       ========================================================================== */
+    #chatView {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    #messagesContainer {
+      flex: 1;
+      overflow-y: auto;
+      padding: 14px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      scroll-behavior: smooth;
+    }
+
+    .message-wrapper {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+    }
+
+    .message-wrapper.user {
+      align-items: flex-end;
+    }
+    .message-wrapper.assistant {
+      align-items: flex-start;
+    }
+    .message-wrapper.system {
+      align-items: center;
+    }
+
+    .message-bubble {
+      max-width: 90%;
+      padding: 10px 14px;
+      border-radius: 16px;
+      font-size: 15px;
+      line-height: 1.5;
+      word-break: break-word;
+      overflow-wrap: break-word;
+    }
+
+    .message-wrapper.user .message-bubble {
+      background-color: var(--bubble-user);
+      color: var(--bubble-user-text);
+      border-bottom-right-radius: 4px;
+    }
+
+    .message-wrapper.assistant .message-bubble {
+      background-color: var(--bubble-ai);
+      color: var(--bubble-ai-text);
+      border: 1px solid var(--bubble-ai-border);
+      border-bottom-left-radius: 4px;
+    }
+
+    .message-wrapper.system .message-bubble {
+      background-color: var(--surface-subtle);
+      color: var(--text-muted);
+      border: 1px solid var(--border-color);
+      font-size: 12px;
+      padding: 4px 12px;
+      border-radius: 12px;
+      max-width: 95%;
+      text-align: center;
+    }
+
+    /* Bubble text formatting (clean DOM elements, safe) */
+    .bubble-paragraph {
+      margin-bottom: 8px;
+    }
+    .bubble-paragraph:last-child {
+      margin-bottom: 0;
+    }
+    .bubble-list {
+      margin: 6px 0 8px 20px;
+    }
+    .bubble-list li {
+      margin-bottom: 4px;
+    }
+
+    /* Quick Action Chips Bar */
+    .quick-actions-bar {
+      display: flex;
+      gap: 8px;
+      padding: 6px 12px;
+      background-color: var(--surface-color);
+      border-top: 1px solid var(--border-color);
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      flex-shrink: 0;
+    }
+
+    .chip-btn {
+      min-height: 38px;
+      padding: 6px 12px;
+      border-radius: 19px;
+      border: 1px solid var(--border-color);
+      background-color: var(--surface-subtle);
+      color: var(--text-main);
+      font-size: 13px;
+      font-weight: 500;
+      white-space: nowrap;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      touch-action: manipulation;
+    }
+    .chip-btn:hover:not(:disabled) {
+      background-color: var(--border-color);
+    }
+    .chip-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .chip-btn-primary {
+      background-color: var(--primary);
+      color: var(--primary-text);
+      border-color: var(--primary);
+    }
+    .chip-btn-primary:hover:not(:disabled) {
+      background-color: var(--primary-hover);
+    }
+
+    /* Bottom Input Bar */
+    .chat-input-bar {
+      padding: 8px 12px;
+      background-color: var(--surface-color);
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      align-items: flex-end;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .chat-textarea {
+      flex: 1;
+      min-height: 44px;
+      max-height: 120px;
+      padding: 10px 12px;
+      border-radius: 22px;
+      border: 1px solid var(--border-color);
+      background-color: var(--surface-subtle);
+      color: var(--text-main);
+      resize: none;
+      line-height: 1.4;
+    }
+    .chat-textarea:focus {
+      outline: 2px solid var(--primary);
+      border-color: transparent;
+      background-color: var(--surface-color);
+    }
+
+    /* ==========================================================================
+       SETTINGS MODAL / DRAWER
+       ========================================================================== */
+    .modal-backdrop {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.45);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .modal-card {
+      background: var(--surface-color);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      width: 100%;
+      max-width: 440px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      box-shadow: var(--shadow-md);
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .modal-title {
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .form-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+    .form-input, .form-select {
+      min-height: 44px;
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      background-color: var(--surface-subtle);
+      color: var(--text-main);
+      width: 100%;
+    }
+    .form-input:focus, .form-select:focus {
+      outline: 2px solid var(--primary);
+      background-color: var(--surface-color);
+    }
+
+    .help-text {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    /* Banner for connection alert */
+    #connectionBanner {
+      padding: 10px 14px;
+      background-color: var(--warning-bg);
+      border-bottom: 1px solid var(--warning-border);
+      color: var(--warning-text);
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+  </style>
+</head>
+<body>
+
+<div id="appContainer">
+
+  <!-- Persistent Header -->
+  <header>
+    <div class="header-info">
+      <div class="header-title">Quiz Chat</div>
+      <div class="status-badge" id="statusBadge" title="Click to test connection">
+        <span class="status-dot" id="statusDot"></span>
+        <span id="statusText">Connecting...</span>
+      </div>
+    </div>
+    <div>
+      <button class="btn-icon" id="settingsBtn" title="Settings" aria-label="Settings">⚙️</button>
+    </div>
+  </header>
+
+  <!-- Connection Failure Banner -->
+  <div id="connectionBanner" class="hidden">
+    <div id="connectionBannerText">Is the Studio awake? Is OLLAMA_ORIGINS set on it?</div>
+    <button class="btn btn-secondary" style="min-height:36px; padding:4px 10px; font-size:12px;" onclick="API.testConnection()">Retry</button>
+  </div>
+
+  <!-- SETUP VIEW (Paste text & start) -->
+  <div id="setupView" class="view-container">
+    <div class="setup-instructions">
+      Paste what you just read below. The local Ollama model will summarize it, then quiz you one question at a time to test comprehension.
+    </div>
+
+    <!-- Long text warning -->
+    <div id="textWarningBox" class="warning-box hidden">
+      <span id="textWarningMsg">Warning: Text is very long.</span>
+      <button class="btn btn-secondary" id="truncateBtn" type="button">Truncate to first 12,000 words</button>
+    </div>
+
+    <textarea
+      id="pasteInput"
+      class="paste-box"
+      placeholder="Paste what you just read here (minimum 200 characters)..."
+      aria-label="Pasted text"
+    ></textarea>
+
+    <div class="counter-bar">
+      <span id="charCount">0 characters (min 200)</span>
+      <span id="wordCount">0 words</span>
+    </div>
+
+    <button id="startQuizBtn" class="btn btn-primary" style="width: 100%;" disabled>
+      Start Quiz
+    </button>
+  </div>
+
+  <!-- CHAT VIEW (Active conversation) -->
+  <div id="chatView" class="view-container hidden">
+    <!-- Message history -->
+    <div id="messagesContainer"></div>
+
+    <!-- Quick action chips -->
+    <div class="quick-actions-bar">
+      <button class="chip-btn" id="askBtn" title="Toggle Ask mode to ask a side question">❓ Ask</button>
+      <button class="chip-btn" id="showAnswerBtn" title="Reveal the answer and wait before the next question">💡 Show answer</button>
+      <button class="chip-btn chip-btn-primary hidden" id="nextQuestionBtn" title="Proceed to the next question">➡️ Next question</button>
+      <button class="chip-btn" id="skipQuestionBtn" title="Skip this question">⏩ Skip question</button>
+      <button class="chip-btn" id="endQuizBtn" title="Finish and see your score">🏁 End quiz</button>
+      <button class="chip-btn" id="downloadTranscriptBtn" title="Download text transcript">💾 Transcript</button>
+      <button class="chip-btn" id="newTextBtn" title="Clear and paste new text">📄 New text</button>
+    </div>
+
+    <!-- Pinned input row -->
+    <div class="chat-input-bar">
+      <textarea
+        id="userInput"
+        class="chat-textarea"
+        placeholder="Type your answer..."
+        rows="1"
+        aria-label="Your answer"
+      ></textarea>
+      <button id="sendBtn" class="btn btn-primary" style="min-width: 60px;" title="Send (Enter)">
+        Send
+      </button>
+      <button id="stopBtn" class="btn btn-danger hidden" style="min-width: 60px;" title="Stop generating">
+        Stop
+      </button>
+    </div>
+  </div>
+
+  <!-- SETTINGS MODAL -->
+  <div id="settingsModal" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title">Settings</div>
+        <button class="btn-icon" id="closeSettingsBtn" aria-label="Close settings">✕</button>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="settingHost">Ollama Host URL</label>
+        <input class="form-input" id="settingHost" type="url" placeholder="http://Stanleys-Mac-Studio.local:11434">
+        <span class="help-text">Candidates tested: 1) Stanleys-Mac-Studio.local:11434, 2) localhost:11434</span>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="settingModel">Model Name</label>
+        <input class="form-input" id="settingModel" type="text" placeholder="gemma4:26b">
+        <span class="help-text">E.g., gemma4:26b (Studio) or qwen3.5:9b (laptop/local)</span>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="settingNumQuestions">Number of Questions</label>
+        <input class="form-input" id="settingNumQuestions" type="number" min="1" max="50" value="8">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="settingQuizStyle">Quiz Style</label>
+        <select class="form-select" id="settingQuizStyle">
+          <option value="mixed">Mixed (Recall, Reasoning & Explanation)</option>
+          <option value="recall">Recall only (Facts, names, definitions)</option>
+          <option value="explain">Explain-in-own-words (Why/how, synthesis)</option>
+        </select>
+      </div>
+
+      <button id="saveSettingsBtn" class="btn btn-primary" style="width: 100%;">Save & Reconnect</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ==========================================================================
+   1. CONFIG
+   ========================================================================== */
+const CONFIG = {
+  storageKey: 'quiz_chat_settings_v2', // v2: only explicit overrides are saved, never the auto-picked host
+  defaultQuestionCount: 8,
+  minCharsToStart: 200,
+  maxWordsRecommended: 12000,
+  connectionTimeoutMs: 3000,
+  // Context window is sized once per quiz (changing num_ctx makes Ollama reload the model).
+  numCtxMin: 8192,
+  numCtxMax: 49152, // prompt reading slows sharply past ~48k tokens on the Studio
+  charsPerToken: 3, // conservative estimate
+  tokensPerQuestion: 1100, // room for each answer + feedback + next question + side ask
+  tokensReserve: 2000, // summary + final report + system prompt rules
+  // Candidate hosts tried in order with 3s timeout
+  candidateHosts: [
+    { url: 'http://Stanleys-Mac-Studio.local:11434', defaultModel: 'gemma4:26b', label: 'Mac Studio' },
+    { url: 'http://localhost:11434', defaultModel: 'qwen3.5:9b', label: 'Localhost' }
+  ]
+};
+
+/* ==========================================================================
+   2. SYSTEM_PROMPT (Easy to edit rules)
+   ========================================================================== */
+function buildSystemPrompt(sourceText, quizStyle, totalQuestions) {
+  let styleInstruction = '';
+  if (quizStyle === 'recall') {
+    styleInstruction = 'Focus strictly on factual recall: specific names, terms, facts, numbers, and clear direct details.';
+  } else if (quizStyle === 'explain') {
+    styleInstruction = 'Focus strictly on deep comprehension: ask "why" and "how" questions, asking the user to synthesize concepts and explain them in their own words.';
+  } else {
+    styleInstruction = 'Balance the quiz across factual recall, "why/how" reasoning, and asking the user to explain key concepts in their own words.';
+  }
+
+  return `You are a rigorous, encouraging comprehension tutor testing the user on the SOURCE TEXT provided below.
+
+---
+SOURCE TEXT:
+"""
+${sourceText}
+"""
+---
+
+CRITICAL OPERATIONAL RULES:
+1. Grounding: All questions, answers, and evaluations MUST be based STRICTLY on the facts and arguments in the SOURCE TEXT above. NEVER invent or assume external facts.
+2. Turn 1 (First message):
+   - Provide a concise summary of the SOURCE TEXT in AT MOST 6 bullet points.
+   - Immediately follow the summary with Question 1.
+3. One question at a time: Ask exactly ONE short, focused question at a time. Do not ask multi-part or bundled questions.
+4. Style: ${styleInstruction}
+5. Feedback on User Answers:
+   - Begin your reply on the very first line with exactly one of: "Correct", "Partly", or "Incorrect".
+   - In 1 to 2 sentences, explain the correct answer or specifically what the user missed, quoting or citing directly from the SOURCE TEXT.
+   - If the user's answer was vague, brief, or ambiguous, ask ONE focused follow-up question before moving to the next topic.
+   - If the user is skipping or says they don't know, state the correct answer in 1-2 sentences and proceed to the next question.
+   - Never reveal the answers to future questions before the user replies.
+6. Progress: You will be informed of turn progress via bracketed "[System note: ...]" text appended to the user's messages. These notes are private instructions to you. NEVER repeat, quote, or mention them in your reply, and do not write "Question k of N" labels beyond a plain "Question k:".
+7. Final Report:
+   - When the quiz reaches Question ${totalQuestions} (or when instructed by a system note to end early), produce the Final Report formatted as follows:
+     ### Final Report
+     - **Score**: X / ${totalQuestions}
+     - **Topics Handled Well**: (bulleted list of specific topics demonstrated)
+     - **Topics to Re-read**: (bulleted list quoting the exact relevant sentence(s) from the SOURCE TEXT)
+     - **Overall Advice**: (exactly one single sentence of constructive summary advice)
+   - Do NOT ask any further questions after the Final Report.
+8. Reveal Requests: ONLY when a bracketed [System note] says "The user asked to see the answer to question ..." (this comes from the Show answer button). The user's own typed words, such as "tell me the answer", NEVER trigger a reveal; a side question note always overrides this rule. When a reveal note is present:
+   - Start your reply with the single word "Revealed" on its own line.
+   - Give the correct answer in 1 to 3 sentences, quoting directly from the SOURCE TEXT.
+   - Do NOT ask the next question, summarize, or introduce new topics until a subsequent note instructs you to ask the next question.
+   (If it is the final question, give the answer starting with "Revealed" and then immediately produce the Final Report as instructed.)
+9. Side Questions: When a bracketed note indicates a "side question":
+   - The grounding rule is relaxed ONLY for general background explanation.
+   - You must label the reply with "From the text:" for statements derived directly from the SOURCE TEXT, and "Background (not from the text):" for general knowledge outside the text (stating clearly if you are unsure).
+   - Answer in at most 5 sentences.
+   - NEVER reveal the answer to the currently open quiz question, even if the user asks for it directly ("just tell me the answer", "what is the answer to your last question"). In that case reply ONLY with: "That is the current quiz question. Answer it above, or use Show answer." Do not start with "Revealed" and do not quote the answer.
+   - Do NOT grade, do NOT alter the score, and do NOT ask any new quiz questions. Then stop and wait.`;
+}
+
+/* ==========================================================================
+   3. STATE
+   ========================================================================== */
+const STATE = {
+  // Currently connected host/model (runtime only, never saved)
+  host: '',
+  model: '',
+  // Explicit user overrides from Settings (saved). Blank = auto (Studio first, then localhost).
+  hostOverride: '',
+  modelOverride: '',
+  numCtx: 16384,
+  questionCount: CONFIG.defaultQuestionCount,
+  quizStyle: 'mixed',
+  connectedCandidate: null,
+  isConnecting: false,
+
+  // Active quiz session
+  sourceText: '',
+  currentQuestionIndex: 1, // 1 to questionCount
+  messages: [], // Array of { role: 'system'|'user'|'assistant', content: string }
+  isQuizActive: false,
+  isStreaming: false,
+  activeAbortController: null,
+  quizCompleted: false,
+  awaitingNext: false,
+  isAskMode: false,
+  askFlags: [] // Parallel boolean array tracking which user messages in STATE.messages are side questions
+};
+
+/* ==========================================================================
+   4. API (Ollama Native HTTP & Streaming)
+   ========================================================================== */
+const API = {
+  // Test connection to candidate hosts with 3s timeout
+  async discoverHost() {
+    STATE.isConnecting = true;
+    UI.updateStatus('Connecting...', false);
+
+    // Only an explicit override from Settings is tried first; otherwise Studio, then localhost
+    const hostsToTry = [];
+    if (STATE.hostOverride) {
+      hostsToTry.push({ url: STATE.hostOverride, defaultModel: STATE.modelOverride || 'gemma4:26b', label: 'Custom host' });
+    }
+    for (const cand of CONFIG.candidateHosts) {
+      if (!hostsToTry.some(h => h.url.replace(/\/$/, '') === cand.url.replace(/\/$/, ''))) {
+        hostsToTry.push(cand);
+      }
+    }
+
+    let found = null;
+    for (const cand of hostsToTry) {
+      const cleanUrl = cand.url.replace(/\/$/, '');
+      try {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), CONFIG.connectionTimeoutMs);
+
+        const res = await fetch(`${cleanUrl}/api/tags`, {
+          method: 'GET',
+          signal: controller.signal
+        });
+        clearTimeout(timer);
+
+        if (res.ok) {
+          const data = await res.json();
+          const availableModels = (data.models || []).map(m => m.name || m.model || '');
+
+          // Pick model: explicit override -> candidate default -> first available -> fallback
+          let chosenModel = STATE.modelOverride;
+          if (!chosenModel || (availableModels.length > 0 && !availableModels.includes(chosenModel))) {
+            if (availableModels.includes(cand.defaultModel)) {
+              chosenModel = cand.defaultModel;
+            } else if (availableModels.length > 0) {
+              chosenModel = availableModels[0];
+            } else {
+              chosenModel = cand.defaultModel;
+            }
+          }
+
+          found = {
+            url: cleanUrl,
+            model: chosenModel,
+            label: cand.label,
+            models: availableModels
+          };
+          break;
+        }
+      } catch (err) {
+        // Continue to next candidate
+      }
+    }
+
+    STATE.isConnecting = false;
+    if (found) {
+      STATE.connectedCandidate = found;
+      STATE.host = found.url;
+      STATE.model = found.model;
+      UI.updateStatus(`${found.label} (${found.model})`, true);
+      UI.setConnectionBanner(false);
+      return true;
+    } else {
+      STATE.connectedCandidate = null;
+      STATE.host = '';
+      UI.updateStatus('Disconnected', false);
+      UI.setConnectionBanner(true);
+      return false;
+    }
+  },
+
+  async testConnection() {
+    // Result is shown in the status badge / banner; no blocking alert
+    return this.discoverHost();
+  },
+
+  // Send full message history to Ollama and stream reply
+  async streamChat(messages, onChunk, onDone, onError) {
+    if (!STATE.host) {
+      const ok = await this.discoverHost();
+      if (!ok) {
+        onError(new Error('Cannot reach Ollama. Check host and model settings.'));
+        return;
+      }
+    }
+
+    const endpoint = `${STATE.host.replace(/\/$/, '')}/api/chat`;
+    const payload = {
+      model: STATE.model,
+      messages: messages,
+      stream: true,
+      think: false,
+      options: {
+        num_ctx: STATE.numCtx
+      }
+    };
+
+    STATE.activeAbortController = new AbortController();
+
+    try {
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal: STATE.activeAbortController.signal
+      });
+
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`Ollama Error ${response.status}: ${text || response.statusText}`);
+      }
+
+      if (!response.body) {
+        throw new Error('ReadableStream not supported on this browser.');
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop(); // keep partial line
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed) continue;
+          try {
+            const parsed = JSON.parse(trimmed);
+            if (parsed.message && parsed.message.content) {
+              onChunk(parsed.message.content);
+            }
+            if (parsed.done) {
+              // Final chunk received
+            }
+          } catch (e) {
+            // Ignore corrupted partial JSON lines
+          }
+        }
+      }
+
+      // Flush remainder if any
+      if (buffer.trim()) {
+        try {
+          const parsed = JSON.parse(buffer.trim());
+          if (parsed.message && parsed.message.content) {
+            onChunk(parsed.message.content);
+          }
+        } catch (e) {}
+      }
+
+      onDone();
+    } catch (err) {
+      if (err.name === 'AbortError') {
+        onDone(true); // cancelled by user
+      } else {
+        onError(err);
+      }
+    } finally {
+      STATE.activeAbortController = null;
+    }
+  }
+};
+
+/* ==========================================================================
+   5. UI CONTROLLER & HELPERS
+   ========================================================================== */
+const UI = {
+  // Elements cache
+  elements: {},
+
+  init() {
+    this.elements = {
+      appContainer: document.getElementById('appContainer'),
+      statusBadge: document.getElementById('statusBadge'),
+      statusDot: document.getElementById('statusDot'),
+      statusText: document.getElementById('statusText'),
+      connectionBanner: document.getElementById('connectionBanner'),
+      settingsBtn: document.getElementById('settingsBtn'),
+      settingsModal: document.getElementById('settingsModal'),
+      closeSettingsBtn: document.getElementById('closeSettingsBtn'),
+      saveSettingsBtn: document.getElementById('saveSettingsBtn'),
+      settingHost: document.getElementById('settingHost'),
+      settingModel: document.getElementById('settingModel'),
+      settingNumQuestions: document.getElementById('settingNumQuestions'),
+      settingQuizStyle: document.getElementById('settingQuizStyle'),
+
+      setupView: document.getElementById('setupView'),
+      pasteInput: document.getElementById('pasteInput'),
+      charCount: document.getElementById('charCount'),
+      wordCount: document.getElementById('wordCount'),
+      textWarningBox: document.getElementById('textWarningBox'),
+      textWarningMsg: document.getElementById('textWarningMsg'),
+      truncateBtn: document.getElementById('truncateBtn'),
+      startQuizBtn: document.getElementById('startQuizBtn'),
+
+      chatView: document.getElementById('chatView'),
+      messagesContainer: document.getElementById('messagesContainer'),
+      askBtn: document.getElementById('askBtn'),
+      showAnswerBtn: document.getElementById('showAnswerBtn'),
+      nextQuestionBtn: document.getElementById('nextQuestionBtn'),
+      skipQuestionBtn: document.getElementById('skipQuestionBtn'),
+      endQuizBtn: document.getElementById('endQuizBtn'),
+      downloadTranscriptBtn: document.getElementById('downloadTranscriptBtn'),
+      newTextBtn: document.getElementById('newTextBtn'),
+      userInput: document.getElementById('userInput'),
+      sendBtn: document.getElementById('sendBtn'),
+      stopBtn: document.getElementById('stopBtn')
+    };
+
+    this.bindEvents();
+    this.syncSettingsInputs();
+  },
+
+  bindEvents() {
+    // Setup text input tracking
+    this.elements.pasteInput.addEventListener('input', () => this.handlePasteChange());
+
+    // Truncate button
+    this.elements.truncateBtn.addEventListener('click', () => {
+      const text = this.elements.pasteInput.value;
+      const words = text.trim().split(/\s+/);
+      if (words.length > CONFIG.maxWordsRecommended) {
+        this.elements.pasteInput.value = words.slice(0, CONFIG.maxWordsRecommended).join(' ');
+        this.handlePasteChange();
+      }
+    });
+
+    // Start quiz
+    this.elements.startQuizBtn.addEventListener('click', () => this.startQuiz());
+
+    // Chat input auto-expand & send on Enter (without shift)
+    this.elements.userInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        this.handleSendMessage();
+      }
+    });
+
+    this.elements.userInput.addEventListener('input', () => {
+      this.elements.userInput.style.height = 'auto';
+      this.elements.userInput.style.height = Math.min(this.elements.userInput.scrollHeight, 120) + 'px';
+    });
+
+    this.elements.sendBtn.addEventListener('click', () => this.handleSendMessage());
+
+    this.elements.stopBtn.addEventListener('click', () => {
+      if (STATE.activeAbortController) {
+        STATE.activeAbortController.abort();
+      }
+    });
+
+    // Quick Action Chips
+    this.elements.askBtn.addEventListener('click', () => this.toggleAskMode());
+    this.elements.showAnswerBtn.addEventListener('click', () => this.handleShowAnswer());
+    this.elements.nextQuestionBtn.addEventListener('click', () => this.handleNextQuestion());
+    this.elements.skipQuestionBtn.addEventListener('click', () => this.handleSkipQuestion());
+    this.elements.endQuizBtn.addEventListener('click', () => this.handleEndQuizEarly());
+    this.elements.downloadTranscriptBtn.addEventListener('click', () => this.downloadTranscript());
+    this.elements.newTextBtn.addEventListener('click', () => this.handleNewText());
+
+    // Settings Modal
+    this.elements.settingsBtn.addEventListener('click', () => {
+      this.syncSettingsInputs();
+      this.elements.settingsModal.classList.remove('hidden');
+    });
+
+    this.elements.closeSettingsBtn.addEventListener('click', () => {
+      this.elements.settingsModal.classList.add('hidden');
+    });
+
+    this.elements.settingsModal.addEventListener('click', (e) => {
+      if (e.target === this.elements.settingsModal) {
+        this.elements.settingsModal.classList.add('hidden');
+      }
+    });
+
+    this.elements.saveSettingsBtn.addEventListener('click', () => {
+      STATE.hostOverride = this.elements.settingHost.value.trim();
+      STATE.modelOverride = this.elements.settingModel.value.trim();
+      STATE.questionCount = Math.max(1, parseInt(this.elements.settingNumQuestions.value, 10) || CONFIG.defaultQuestionCount);
+      STATE.quizStyle = this.elements.settingQuizStyle.value;
+      STATE.saveSettings();
+      this.elements.settingsModal.classList.add('hidden');
+      API.testConnection();
+    });
+
+    this.elements.statusBadge.addEventListener('click', () => {
+      API.testConnection();
+    });
+  },
+
+  handlePasteChange() {
+    const text = this.elements.pasteInput.value;
+    const charLen = text.length;
+    const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+
+    this.elements.charCount.textContent = `${charLen.toLocaleString()} characters (min ${CONFIG.minCharsToStart})`;
+    this.elements.wordCount.textContent = `${words.toLocaleString()} words`;
+
+    // Enable / disable start button
+    this.elements.startQuizBtn.disabled = charLen < CONFIG.minCharsToStart;
+
+    // Check ~12,000 words limit
+    if (words > CONFIG.maxWordsRecommended) {
+      this.elements.textWarningBox.classList.remove('hidden');
+      this.elements.textWarningMsg.textContent = `Warning: Text is ~${words.toLocaleString()} words (recommended limit is ~${CONFIG.maxWordsRecommended.toLocaleString()} words for context reliability).`;
+    } else {
+      this.elements.textWarningBox.classList.add('hidden');
+    }
+  },
+
+  updateStatus(text, isOnline) {
+    this.elements.statusText.textContent = text;
+    this.elements.statusDot.className = 'status-dot ' + (isOnline ? 'online' : 'offline');
+  },
+
+  setConnectionBanner(show) {
+    if (show) {
+      this.elements.connectionBanner.classList.remove('hidden');
+    } else {
+      this.elements.connectionBanner.classList.add('hidden');
+    }
+  },
+
+  syncSettingsInputs() {
+    this.elements.settingHost.value = STATE.hostOverride || '';
+    this.elements.settingModel.value = STATE.modelOverride || '';
+    this.elements.settingNumQuestions.value = STATE.questionCount;
+    this.elements.settingQuizStyle.value = STATE.quizStyle;
+  },
+
+  switchView(viewName) {
+    if (viewName === 'setup') {
+      this.elements.setupView.classList.remove('hidden');
+      this.elements.chatView.classList.add('hidden');
+    } else {
+      this.elements.setupView.classList.add('hidden');
+      this.elements.chatView.classList.remove('hidden');
+    }
+  },
+
+  // Strip <think>...</think> tags and incomplete <think> streaming blocks
+  cleanModelText(raw) {
+    if (!raw) return '';
+    // Strip complete <think>...</think>
+    let cleaned = raw.replace(/<think>[\s\S]*?<\/think>/gi, '');
+    // Strip incomplete <think> at end of stream
+    cleaned = cleaned.replace(/<think>[\s\S]*$/gi, '');
+    // Strip any lingering </think>
+    cleaned = cleaned.replace(/<\/think>/gi, '');
+    // Strip echoed coordination notes, complete or still streaming: [System note: ...]
+    cleaned = cleaned.replace(/\[System note:[^\]]*\]/gi, '');
+    cleaned = cleaned.replace(/\[System note:[^\]]*$/i, '');
+    return cleaned.trimStart();
+  },
+
+  // Safely render formatted text into a bubble using DOM nodes (NO innerHTML)
+  renderSafeTextIntoBubble(bubbleElement, rawText) {
+    const text = this.cleanModelText(rawText);
+    bubbleElement.textContent = ''; // clear safely
+
+    if (!text) {
+      const em = document.createElement('em');
+      em.style.opacity = '0.6';
+      em.textContent = 'Thinking...';
+      bubbleElement.appendChild(em);
+      return;
+    }
+
+    // Split text into paragraphs / lines
+    const lines = text.split('\n');
+    let currentList = null;
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const trimmed = line.trim();
+
+      // Check for bullet list item: "* " or "- "
+      const bulletMatch = trimmed.match(/^[-*•]\s+(.*)$/);
+      if (bulletMatch) {
+        if (!currentList) {
+          currentList = document.createElement('ul');
+          currentList.className = 'bubble-list';
+          bubbleElement.appendChild(currentList);
+        }
+        const li = document.createElement('li');
+        this.appendInlineFormattedText(li, bulletMatch[1]);
+        currentList.appendChild(li);
+        continue;
+      }
+
+      // Check for numbered list item: "1. "
+      const numMatch = trimmed.match(/^(\d+)\.\s+(.*)$/);
+      if (numMatch) {
+        if (!currentList) {
+          currentList = document.createElement('ol');
+          currentList.className = 'bubble-list';
+          bubbleElement.appendChild(currentList);
+        }
+        const li = document.createElement('li');
+        this.appendInlineFormattedText(li, numMatch[2]);
+        currentList.appendChild(li);
+        continue;
+      }
+
+      // Not a list item
+      currentList = null;
+
+      if (!trimmed) {
+        // Blank line: spacer paragraph
+        continue;
+      }
+
+      // Check if it's a heading
+      const headingMatch = trimmed.match(/^#{1,4}\s+(.*)$/);
+      if (headingMatch) {
+        const strong = document.createElement('div');
+        strong.style.fontWeight = '700';
+        strong.style.margin = '8px 0 4px 0';
+        this.appendInlineFormattedText(strong, headingMatch[1]);
+        bubbleElement.appendChild(strong);
+        continue;
+      }
+
+      const p = document.createElement('div');
+      p.className = 'bubble-paragraph';
+      this.appendInlineFormattedText(p, line);
+      bubbleElement.appendChild(p);
+    }
+  },
+
+  // Safe inline formatting: handles **bold** and `code` without innerHTML
+  appendInlineFormattedText(parentEl, text) {
+    // Regex matches **bold** or `code`
+    const regex = /(\*\*.*?\*\*|`.*?`)/g;
+    const parts = text.split(regex);
+
+    for (const part of parts) {
+      if (!part) continue;
+      if (part.startsWith('**') && part.endsWith('**') && part.length >= 4) {
+        const strong = document.createElement('strong');
+        strong.textContent = part.slice(2, -2);
+        parentEl.appendChild(strong);
+      } else if (part.startsWith('`') && part.endsWith('`') && part.length >= 2) {
+        const code = document.createElement('code');
+        code.style.background = 'rgba(0,0,0,0.06)';
+        code.style.padding = '2px 4px';
+        code.style.borderRadius = '4px';
+        code.textContent = part.slice(1, -1);
+        parentEl.appendChild(code);
+      } else {
+        parentEl.appendChild(document.createTextNode(part));
+      }
+    }
+  },
+
+  // Append a message bubble to chat container
+  addMessageBubble(role, initialText = '') {
+    const wrapper = document.createElement('div');
+    wrapper.className = `message-wrapper ${role}`;
+
+    const bubble = document.createElement('div');
+    bubble.className = 'message-bubble';
+
+    wrapper.appendChild(bubble);
+    this.elements.messagesContainer.appendChild(wrapper);
+
+    if (role === 'system') {
+      bubble.textContent = initialText;
+    } else {
+      this.renderSafeTextIntoBubble(bubble, initialText);
+    }
+
+    this.scrollToBottom();
+    return bubble;
+  },
+
+  scrollToBottom() {
+    this.elements.messagesContainer.scrollTop = this.elements.messagesContainer.scrollHeight;
+  },
+
+  toggleAskMode(forceState) {
+    if (STATE.isStreaming || !STATE.isQuizActive) return;
+    STATE.isAskMode = typeof forceState === 'boolean' ? forceState : !STATE.isAskMode;
+    this.setStreamingState(STATE.isStreaming);
+  },
+
+  setStreamingState(isStreaming) {
+    STATE.isStreaming = isStreaming;
+    this.elements.sendBtn.classList.toggle('hidden', isStreaming);
+    this.elements.stopBtn.classList.toggle('hidden', !isStreaming);
+
+    // Update Ask button toggle styling
+    if (this.elements.askBtn) {
+      this.elements.askBtn.classList.toggle('chip-btn-primary', STATE.isAskMode);
+      this.elements.askBtn.disabled = isStreaming;
+    }
+
+    if (isStreaming) {
+      this.elements.userInput.disabled = true;
+      this.elements.sendBtn.disabled = true;
+      if (this.elements.showAnswerBtn) this.elements.showAnswerBtn.disabled = true;
+      this.elements.skipQuestionBtn.disabled = true;
+      this.elements.endQuizBtn.disabled = true;
+      if (this.elements.nextQuestionBtn) this.elements.nextQuestionBtn.disabled = true;
+    } else if (STATE.isAskMode) {
+      this.elements.userInput.disabled = false;
+      this.elements.sendBtn.disabled = false;
+      this.elements.sendBtn.textContent = 'Ask';
+      this.elements.userInput.placeholder = 'Ask a question about the text...';
+      // Show answer / Skip do nothing while waiting for "Next question", so disable them
+      if (this.elements.showAnswerBtn) this.elements.showAnswerBtn.disabled = STATE.quizCompleted || STATE.awaitingNext;
+      this.elements.skipQuestionBtn.disabled = STATE.quizCompleted || STATE.awaitingNext;
+      this.elements.endQuizBtn.disabled = STATE.quizCompleted;
+      if (this.elements.nextQuestionBtn) {
+        this.elements.nextQuestionBtn.classList.toggle('hidden', !STATE.awaitingNext);
+        this.elements.nextQuestionBtn.disabled = false;
+      }
+      this.elements.userInput.focus();
+    } else {
+      this.elements.sendBtn.textContent = 'Send';
+      if (STATE.quizCompleted) {
+        this.elements.userInput.disabled = true;
+        this.elements.sendBtn.disabled = true;
+        if (this.elements.showAnswerBtn) this.elements.showAnswerBtn.disabled = true;
+        this.elements.skipQuestionBtn.disabled = true;
+        this.elements.endQuizBtn.disabled = true;
+        if (this.elements.nextQuestionBtn) this.elements.nextQuestionBtn.classList.add('hidden');
+        this.elements.userInput.placeholder = 'Quiz finished. Use "New text" to start another, or "❓ Ask" to discuss.';
+      } else if (STATE.awaitingNext) {
+        this.elements.userInput.disabled = true;
+        this.elements.sendBtn.disabled = true;
+        if (this.elements.showAnswerBtn) this.elements.showAnswerBtn.disabled = true;
+        this.elements.skipQuestionBtn.disabled = true;
+        this.elements.endQuizBtn.disabled = false;
+        if (this.elements.nextQuestionBtn) {
+          this.elements.nextQuestionBtn.classList.remove('hidden');
+          this.elements.nextQuestionBtn.disabled = false;
+        }
+        this.elements.userInput.placeholder = 'Click "➡️ Next question" to continue...';
+      } else {
+        this.elements.userInput.disabled = false;
+        this.elements.sendBtn.disabled = false;
+        if (this.elements.showAnswerBtn) this.elements.showAnswerBtn.disabled = false;
+        this.elements.skipQuestionBtn.disabled = false;
+        this.elements.endQuizBtn.disabled = false;
+        if (this.elements.nextQuestionBtn) this.elements.nextQuestionBtn.classList.add('hidden');
+        this.elements.userInput.placeholder = 'Type your answer...';
+        this.elements.userInput.focus();
+      }
+    }
+  },
+
+  // Size the context window once per quiz so Ollama doesn't reload the model mid-quiz
+  computeNumCtx(sourceText, questionCount) {
+    const needed = Math.ceil(sourceText.length / CONFIG.charsPerToken)
+      + CONFIG.tokensReserve
+      + questionCount * CONFIG.tokensPerQuestion;
+    const rounded = Math.ceil(needed / 2048) * 2048;
+    return {
+      numCtx: Math.min(CONFIG.numCtxMax, Math.max(CONFIG.numCtxMin, rounded)),
+      capped: rounded > CONFIG.numCtxMax
+    };
+  },
+
+  async startQuiz() {
+    const text = this.elements.pasteInput.value.trim();
+    if (text.length < CONFIG.minCharsToStart) return;
+
+    STATE.sourceText = text;
+    STATE.currentQuestionIndex = 1;
+    STATE.isQuizActive = true;
+    STATE.quizCompleted = false;
+    STATE.awaitingNext = false;
+    STATE.isAskMode = false;
+    STATE.askFlags = [false]; // index-aligned with STATE.messages; slot 0 is the system prompt
+    STATE.messages = [];
+
+    const ctx = this.computeNumCtx(text, STATE.questionCount);
+    STATE.numCtx = ctx.numCtx;
+
+    // Clear chat UI
+    this.elements.messagesContainer.textContent = '';
+    this.switchView('chat');
+
+    // Build system prompt
+    const systemPrompt = buildSystemPrompt(STATE.sourceText, STATE.quizStyle, STATE.questionCount);
+    STATE.messages.push({ role: 'system', content: systemPrompt });
+
+    this.addMessageBubble('system', `Quiz started (${STATE.questionCount} questions • Style: ${STATE.quizStyle} • Context ${STATE.numCtx.toLocaleString()})`);
+    if (ctx.capped) {
+      this.addMessageBubble('system', 'Long text: context is capped, so the end of the text may be cut off. Consider truncating.');
+    }
+
+    // Kick off Turn 1 (summary + question 1). Not counted as an answer.
+    const ok = await this.submitTurn({
+      prompt: 'Please provide the summary of the source text (max 6 bullets) and Question 1 now.',
+      advance: false
+    });
+    if (!ok) {
+      // Nothing was asked yet, so go back to the paste screen (text is kept)
+      STATE.isQuizActive = false;
+      this.switchView('setup');
+    }
+  },
+
+  // One conversational turn. Only counts (advances the question number) if the reply completes.
+  // On error, Stop or empty reply everything is rolled back and the typed answer is restored.
+  async submitTurn({ prompt, displayText = '', restoreText = '', isFinal = false, advance = true, isAsk = false }) {
+    const snapshot = STATE.messages.length;
+    const userBubble = displayText ? this.addMessageBubble('user', displayText) : null;
+    STATE.messages.push({ role: 'user', content: prompt });
+    STATE.askFlags.push(isAsk);
+
+    const ok = await this.runModelTurn(isFinal);
+    if (ok) {
+      if (advance) STATE.currentQuestionIndex++;
+      return true;
+    }
+
+    // Roll back so history and counter stay consistent
+    STATE.messages.length = snapshot;
+    STATE.askFlags.length = snapshot;
+    if (userBubble && userBubble.parentElement) userBubble.parentElement.remove();
+    if (restoreText) {
+      this.elements.userInput.value = restoreText;
+      this.elements.userInput.style.height = 'auto';
+      this.elements.userInput.style.height = Math.min(this.elements.userInput.scrollHeight, 120) + 'px';
+    }
+    return false;
+  },
+
+  async handleSendMessage() {
+    if (STATE.isStreaming || !STATE.isQuizActive) return;
+    if (STATE.isAskMode) {
+      await this.handleAskQuestion();
+      return;
+    }
+    if (STATE.quizCompleted || STATE.awaitingNext) return;
+    const text = this.elements.userInput.value.trim();
+    if (!text) return;
+
+    this.elements.userInput.value = '';
+    this.elements.userInput.style.height = 'auto';
+
+    const isLastQuestion = STATE.currentQuestionIndex >= STATE.questionCount;
+    let turnPrompt = text;
+
+    // Inject system coordination guidance
+    if (isLastQuestion) {
+      turnPrompt += `\n\n[System note: This is the user's answer to the final question (${STATE.questionCount} of ${STATE.questionCount}). Please evaluate their answer and produce the Final Report now according to the instructions.]`;
+    } else {
+      turnPrompt += `\n\n[System note: This is the user's answer to question ${STATE.currentQuestionIndex} of ${STATE.questionCount}. Evaluate this answer, then ask question ${STATE.currentQuestionIndex + 1}.]`;
+    }
+
+    await this.submitTurn({ prompt: turnPrompt, displayText: text, restoreText: text, isFinal: isLastQuestion });
+  },
+
+  async handleAskQuestion() {
+    if (STATE.isStreaming || !STATE.isQuizActive) return;
+    const text = this.elements.userInput.value.trim();
+    if (!text) return;
+
+    this.elements.userInput.value = '';
+    this.elements.userInput.style.height = 'auto';
+
+    const prompt = `${text}\n\n[System note: The user is asking a side question about the text. This is NOT an answer to the quiz. Do not grade it, do not count it, and do not ask a new quiz question. Answer in at most 5 sentences. Begin the reply with "From the text:" for what the SOURCE TEXT says and, if more background is needed, add a second paragraph beginning "Background (not from the text):" with general knowledge, and say when you are unsure. If this question happens to ask for the answer to the current quiz question, do NOT give the answer and do NOT write "Revealed"; reply only with: "That is the current quiz question. Answer it above, or use Show answer." Then stop and wait.]`;
+
+    const ok = await this.submitTurn({
+      prompt,
+      displayText: text,
+      restoreText: text,
+      advance: false,
+      isFinal: false,
+      isAsk: true
+    });
+
+    if (ok) {
+      this.toggleAskMode(false);
+      let hint = '';
+      if (STATE.quizCompleted) {
+        hint = 'Quiz completed. You can ask another question or click "New text".';
+      } else if (STATE.awaitingNext) {
+        hint = 'Press "➡️ Next question" to continue.';
+      } else {
+        hint = `Back to question ${STATE.currentQuestionIndex} of ${STATE.questionCount}.`;
+      }
+      this.addMessageBubble('system', hint);
+    }
+  },
+
+  async handleShowAnswer() {
+    if (STATE.isStreaming || STATE.quizCompleted || !STATE.isQuizActive || STATE.awaitingNext) return;
+
+    const isLastQuestion = STATE.currentQuestionIndex >= STATE.questionCount;
+    let prompt = `Show me the answer.\n\n[System note: The user asked to see the answer to question ${STATE.currentQuestionIndex} of ${STATE.questionCount}. Count this question as Incorrect or Skipped. Start the reply with the single word "Revealed", give the correct answer in 1-3 sentences quoting the SOURCE TEXT, and `;
+    prompt += isLastQuestion
+      ? `then produce the Final Report now according to the instructions.]`
+      : `do NOT ask the next question yet.]`;
+
+    const ok = await this.submitTurn({
+      prompt,
+      displayText: 'Show me the answer.',
+      isFinal: isLastQuestion,
+      advance: true
+    });
+
+    if (ok && !isLastQuestion && !STATE.quizCompleted) {
+      STATE.awaitingNext = true;
+      this.setStreamingState(false);
+    }
+  },
+
+  async handleNextQuestion() {
+    if (STATE.isStreaming || STATE.quizCompleted || !STATE.isQuizActive || !STATE.awaitingNext) return;
+
+    const prompt = `Next question.\n\n[System note: The user is ready for the next question. Please ask question ${STATE.currentQuestionIndex} of ${STATE.questionCount} now (one short question, no recap).]`;
+
+    const ok = await this.submitTurn({
+      prompt,
+      displayText: 'Next question.',
+      advance: false
+    });
+
+    if (ok) {
+      STATE.awaitingNext = false;
+      this.setStreamingState(false);
+    }
+  },
+
+  async handleSkipQuestion() {
+    if (STATE.isStreaming || STATE.quizCompleted || !STATE.isQuizActive || STATE.awaitingNext) return;
+
+    const isLastQuestion = STATE.currentQuestionIndex >= STATE.questionCount;
+    let prompt = `I don't know / Skip this question.\n\n[System note: The user skipped question ${STATE.currentQuestionIndex} of ${STATE.questionCount}. Count this as Incorrect or Skipped, briefly explain the correct answer in 1-2 sentences using only the source text, and `;
+    prompt += isLastQuestion
+      ? `provide the Final Report now.]`
+      : `proceed directly to question ${STATE.currentQuestionIndex + 1}.]`;
+
+    await this.submitTurn({ prompt, displayText: "I don't know / Skip this question.", isFinal: isLastQuestion });
+  },
+
+  async handleEndQuizEarly() {
+    if (STATE.isStreaming || STATE.quizCompleted || !STATE.isQuizActive) return;
+    if (!confirm('End quiz now and view your current score and report?')) return;
+
+    STATE.awaitingNext = false;
+    STATE.isAskMode = false;
+    const answered = STATE.currentQuestionIndex - 1; // questions fully answered so far
+    const scope = answered > 0
+      ? `after ${answered} answered question(s). Score out of ${answered}, not out of ${STATE.questionCount}.`
+      : `before answering any question. Report that no questions were answered and give a short note on what to re-read.`;
+    const prompt = `End quiz early.\n\n[System note: The user requested to end the quiz early ${scope} Generate the Final Report now based only on the questions completed so far.]`;
+
+    await this.submitTurn({ prompt, displayText: 'End quiz.', isFinal: true, advance: false });
+  },
+
+  // Streams one assistant reply into a new bubble. Returns true only if a non-empty reply completed.
+  async runModelTurn(isFinalTurn = false) {
+    this.setStreamingState(true);
+    const bubble = this.addMessageBubble('assistant', '');
+    let accumulatedText = '';
+    let ok = false;
+    let failure = '';
+
+    await API.streamChat(
+      STATE.messages,
+      (chunk) => {
+        accumulatedText += chunk;
+        this.renderSafeTextIntoBubble(bubble, accumulatedText);
+        this.scrollToBottom();
+      },
+      (wasCancelled) => {
+        const cleaned = this.cleanModelText(accumulatedText);
+        if (wasCancelled) {
+          failure = 'Stopped. Nothing was counted (a typed answer is put back in the box).';
+        } else if (!cleaned.trim()) {
+          failure = 'The model returned an empty reply. Nothing was counted, so try again.';
+        } else {
+          ok = true;
+          this.renderSafeTextIntoBubble(bubble, cleaned);
+          STATE.messages.push({ role: 'assistant', content: cleaned });
+          STATE.askFlags.push(false);
+          if (isFinalTurn || /#+\s*final report/i.test(cleaned)) {
+            STATE.quizCompleted = true;
+            STATE.awaitingNext = false;
+          }
+        }
+      },
+      (error) => {
+        failure = `Error: ${error.message}. Nothing was counted. Is the Studio awake? Is Ollama running?`;
+      }
+    );
+
+    if (!ok) {
+      if (bubble.parentElement) bubble.parentElement.remove();
+      this.addMessageBubble('system', `⚠️ ${failure}`);
+    }
+    this.setStreamingState(false);
+    if (ok && STATE.quizCompleted) {
+      this.addMessageBubble('system', '🎉 Quiz completed! Download your transcript below, or start a new text.');
+    }
+    return ok;
+  },
+
+  handleNewText() {
+    if (STATE.isQuizActive && !STATE.quizCompleted) {
+      if (!confirm('Start a new text? Your current quiz will be cleared.')) return;
+    }
+    STATE.isQuizActive = false;
+    STATE.awaitingNext = false;
+    STATE.isAskMode = false;
+    STATE.askFlags = [];
+    STATE.messages = [];
+    this.switchView('setup');
+    this.elements.pasteInput.focus();
+  },
+
+  downloadTranscript() {
+    if (STATE.messages.length === 0) {
+      alert('No quiz history to download.');
+      return;
+    }
+
+    const dateStr = new Date().toISOString().replace('T', ' ').substring(0, 19);
+    const hostInfo = `${STATE.host} (${STATE.model})`;
+
+    let transcript = `QUIZ CHAT TRANSCRIPT\n`;
+    transcript += `Generated: ${dateStr}\n`;
+    transcript += `Host / Model: ${hostInfo}\n`;
+    transcript += `Quiz Style: ${STATE.quizStyle} | Target Questions: ${STATE.questionCount}\n\n`;
+
+    transcript += `================================================================================\n`;
+    transcript += `SOURCE TEXT\n`;
+    transcript += `================================================================================\n`;
+    transcript += `${STATE.sourceText}\n\n`;
+
+    transcript += `================================================================================\n`;
+    transcript += `QUIZ CONVERSATION\n`;
+    transcript += `================================================================================\n\n`;
+
+    for (let i = 0; i < STATE.messages.length; i++) {
+      const msg = STATE.messages[i];
+      // Skip the system prompt and the hidden kickoff instruction (index 1)
+      if (msg.role === 'system' || i === 1) continue;
+      // Strip internal coordination notes from user display transcript
+      let text = msg.content;
+      if (msg.role === 'user') {
+        text = text.replace(/\[System note:.*?\]/gs, '').trim();
+        if (STATE.askFlags && STATE.askFlags[i]) {
+          text = `[ASK] ${text}`;
+        }
+      }
+      const label = msg.role === 'user' ? 'ME' : 'TUTOR (Ollama)';
+      transcript += `[${label}]:\n${text}\n\n`;
+    }
+
+    const blob = new Blob([transcript], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `quiz-chat-transcript-${Date.now()}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+};
+
+/* ==========================================================================
+   STATE PERSISTENCE (localStorage wrapped in try/catch)
+   ========================================================================== */
+STATE.loadSettings = function() {
+  try {
+    const raw = localStorage.getItem(CONFIG.storageKey);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed.hostOverride) this.hostOverride = parsed.hostOverride;
+      if (parsed.modelOverride) this.modelOverride = parsed.modelOverride;
+      if (parsed.questionCount) this.questionCount = parsed.questionCount;
+      if (parsed.quizStyle) this.quizStyle = parsed.quizStyle;
+    }
+  } catch (e) {
+    console.warn('Could not read settings from localStorage:', e);
+  }
+};
+
+STATE.saveSettings = function() {
+  try {
+    const data = {
+      hostOverride: this.hostOverride,
+      modelOverride: this.modelOverride,
+      questionCount: this.questionCount,
+      quizStyle: this.quizStyle
+    };
+    localStorage.setItem(CONFIG.storageKey, JSON.stringify(data));
+  } catch (e) {
+    console.warn('Could not save settings to localStorage:', e);
+  }
+};
+
+/* ==========================================================================
+   APPLICATION ENTRY POINT
+   ========================================================================== */
+window.addEventListener('DOMContentLoaded', async () => {
+  STATE.loadSettings();
+  UI.init();
+  // Auto-connect to candidate hosts on startup
+  await API.discoverHost();
+});
+</script>
+</body>
+</html>
